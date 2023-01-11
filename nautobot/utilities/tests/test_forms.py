@@ -718,7 +718,6 @@ class DynamicFilterFormTest(TestCase):
                     ("tags", "Tags"),
                     ("tenant", "Tenant (slug or ID)"),
                     ("tenant_group", "Tenant Group (slug)"),
-                    ("tenant_group_id", "Tenant Group (ID)"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
                     ("time_zone", "Time zone"),
                     ("vlan_groups", "Vlan groups (slug or ID)"),

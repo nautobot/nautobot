@@ -122,7 +122,7 @@ class TenancyForm(forms.Form):
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
-        query_params={"tenant_group_id": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )
 
 

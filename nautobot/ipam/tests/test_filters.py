@@ -912,7 +912,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_vlan_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
-        params = {"vlan_group_id": [groups[0].pk, groups[1].pk]}
+        params = {"vlan_group": [groups[0].pk, groups[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups))
         params = {"vlan_group": [groups[0].slug, groups[1].slug]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups))

@@ -12,6 +12,7 @@ from nautobot.utilities.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
     SearchFilter,
     TagFilter,
@@ -483,16 +484,11 @@ class VLANFilterSet(
         label="Device (ID)",
         field_name="pk",
     )
-    vlan_group_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="VLAN Group (ID)",
+        label="VLAN Group (slug or ID)",
     )
-    vlan_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="vlan_group__slug",
-        queryset=VLANGroup.objects.all(),
-        to_field_name="slug",
-        label="VLAN Group",
-    )
+
     tag = TagFilter()
 
     class Meta:

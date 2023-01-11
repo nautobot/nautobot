@@ -281,7 +281,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_tenant_group(self):
         tenant_groups = self.tenant_groups[:2]
-        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
+        params = {"tenant_group": [tenant_groups[0].pk, tenant_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

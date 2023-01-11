@@ -18,22 +18,17 @@
 
 ### Renamed Database Fields
 
-| Model         | Renamed Field | New Name     |
-|---------------|---------------|--------------|
-| Device        | `device_role` | `role`       |
-| InventoryItem | `child_items` | `children`   |
-|               | `level`       | `tree_depth` |
-| RackGroup     | `level`       | `tree_depth` |
-| Region        | `level`       | `tree_depth` |
-| TenantGroup   | `level`       | `tree_depth` |
-
-### Renamed Foregin Key Fields
-
-| Model         | Renamed Foregin Key    | New Name                 |
-|---------------|------------------------|--------------------------|
-| VLAN          | `group`                | `vlan_group`             |
-| Service       | `ipaddresses`          | `ip_addresses`           |
-| Tenant        | `group`                | `tenant_group`           |
+| Model         | Renamed Field          | New Name        |
+|---------------|------------------------|-----------------|
+| Device        | `device_role`          | `role`          |
+| InventoryItem | `child_items`          | `children`      |
+|               | `level`                | `tree_depth`    |
+| RackGroup     | `level`                | `tree_depth`    |
+| Region        | `level`                | `tree_depth`    |
+| Service       | `ipaddresses`          | `ip_addresses`  |
+| Tenant        | `group`                | `tenant_group`  |
+| TenantGroup   | `level`                | `tree_depth`    |
+| VLAN          | `group`                | `vlan_group`    |
 
 ### Removed Database Fields
 
@@ -75,13 +70,17 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 ### Renamed Serializer Fields
 
-| Model         | Renamed Field | New Name     |
-|---------------|---------------|--------------|
-| Device        | `device_role` | `role`       |
-| InventoryItem | `_depth`      | `tree_depth` |
-| RackGroup     | `_depth`      | `tree_depth` |
-| Region        | `_depth`      | `tree_depth` |
-| TenantGroup   | `_depth`      | `tree_depth` |
+| Model         | Renamed Field | New Name        |
+|---------------|---------------|-----------------|
+| Device        | `device_role` | `role`          |
+| InventoryItem | `_depth`      | `tree_depth`    |
+| RackGroup     | `_depth`      | `tree_depth`    |
+| Region        | `_depth`      | `tree_depth`    |
+| Service       | `ipaddresses` | `ip_addresses`  |
+| Tenant        | `group`       | `tenant_group`  |
+| TenantGroup   | `_depth`      | `tree_depth`    |
+| VLAN          | `group`       | `vlan_group`    |
+
 
 ### Removed Serializer Fields
 
@@ -125,7 +124,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0.md#enhanced-filter-fields-2804) in v2.x.
 
-| Model                 | Enhanced Filter Field| Changes                                                  | UI and Rest API endpoints Available in v2.X|
+| Model                 | Enhanced Filter Field| Changes                                                    | UI and Rest API endpoints Available in v2.X|
 |-----------------------|----------------------|------------------------------------------------------------|----------------------------------------------|
 | ConsolePort           | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
 | ConsoleServerPort     | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
@@ -160,9 +159,11 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | RackReservation       | `user`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-reservations/?user=<uuid/slug>`|
 | RearPort              | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`|
 | Region                | `parent`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+| Tenant                | `tenant_group`       | Enhanced to support primary key UUIDs in addition to slugs | `/tenancy/tenants/?tenant_group=<uuid/slug>`|
 | VirtualChassis        | `site`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
 |                       | `master`             | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
 |                       | `tenant`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`|
+| VLAN                  | `vlan_group`         | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`|
 
 ### Corrected Filter Fields
 
@@ -185,10 +186,13 @@ Below is a table documenting [removed redundant filter field changes](../release
 
 | Model              | Removed Filter Field | UI and API endpoints that are no longer supported in v2.X                             |
 |--------------------|----------------------|---------------------------------------------------------------------------------------|
+| Aggregate          | `tenant_group_id`    | instead of `/ipam/aggregate/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`       |
+| Circuit            | `tenant_group_id`    | instead of `/circuits/circuits/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`    |
 | CircuitTermination | `region_id`          | instead of `/circuits/circuit-terminations/?region_id=<uuid>`, use `region=<uuid>`    |
 |                    | `site_id`            | instead of `/circuits/circuit-terminations/?site_id=<uuid>`, use `site=<uuid>`        |
 | Cluster            | `region_id`          | instead of `/virtualization/clusters/?region_id=<uuid>`, use `region=<uuid>`          |
 |                    | `site_id`            | instead of `/virtualization/clusters/?site_id=<uuid>` , use `site=<uuid>`             |
+|                    | `tenant_group_id`    | instead of `/virtualization/clusters/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`|
 | ConfigContext      | `role_id`            | instead of `/extras/config-contexts/?role_id=<uuid>`, use `role=<uuid>`               |
 | ConsolePort        | `region_id`          | instead of `/dcim/console-ports/?region_id=<uuid>`, use `region=<uuid>`               |
 |                    | `device_id`          | instead of `/dcim/console-ports/?device_id=<uuid>`, use `device=<uuid>`               |
@@ -196,12 +200,13 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `device_id`          | instead of `/dcim/console-server-ports/?device_id=<uuid>`, use `device=<uuid>`        |
 | Device             | `region_id`          | instead of `/dcim/devices/?region_id=<uuid>`, use `region=<uuid>`                     |
 |                    | `site_id`            | instead of `/dcim/devices/?site_id=<uuid>`, use `site=<uuid>`                         |
+|                    | `tenant_group_id`    | instead of `/dcim/devices/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`         |
 |                    | `manufacturer_id`    | instead of `/dcim/devices/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`         |
 |                    | `model`              | instead of `/dcim/devices/?model=<uuid>`, use `device_type=<uuid>`                    |
 |                    | `role_id`            | instead of `/dcim/devices/?role_id=<uuid>`, use `role=<uuid>`                         |
 |                    | `platform_id`        | instead of `/dcim/devices/?platform_id=<uuid>`, use `platform=<uuid>`                 |
 |                    | `secrets_group_id`   | instead of `/dcim/devices/?secrets_group_id=<uuid>`, use `secrets_group=<uuid>`       |
-|                    | `pass_through_ports` | instead of `/dcim/devices/?pass_through_ports=<bool>`, use `has_front                 |rear_ports`      |
+|                    | `pass_through_ports` | instead of `/dcim/devices/?pass_through_ports=<bool>`, use `has_front/rear_ports`     |
 | DeviceBay          | `region_id`          | instead of `/dcim/device-bays/?region_id=<uuid>`, use `region=<uuid>`                 |
 |                    | `device_id`          | instead of `/dcim/device-bays/?device_id=<uuid>`, use `device=<uuid>`                 |
 | DeviceType         | `manufacturer_id`    | instead of `/dcim/device-types/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`    |
@@ -215,8 +220,11 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `device_id`          | instead of `/dcim/inventory-items/?device_id=<uuid>`, use `device=<uuid>`             |
 |                    | `parent_id`          | instead of `/dcim/inventory-items/?parent_id=<uuid>`, use `parent=<uuid>`             |
 |                    | `manufacturer_id`    | instead of `/dcim/inventory-items/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>` |
+| IPAddress          | `tenant_group_id`    | instead of `/ipam/ip-addresses/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`    |
+| Location           | `tenant_group_id`    | instead of `/dcim/locations/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`       |
 | Rack               | `region_id`          | instead of `/dcim/racks/?region_id=<uuid>`, use `region=<uuid>`                       |
 |                    | `site_id`            | instead of `/dcim/racks/?site_id=<uuid>`, use `site=<uuid>`                           |
+|                    | `tenant_group_id`    | instead of `/dcim/racks/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`           |
 |                    | `group_id`           | instead of `/dcim/racks/?group_id=<uuid>`, use `group=<uuid>`                         |
 |                    | `role_id`            | instead of `/dcim/racks/?role_id=<uuid>`, use `role=<uuid>`                           |
 | RackGroup          | `region_id`          | instead of `/dcim/rack-groups/?region_id=<uuid>`, use `region=<uuid>`                 |
@@ -224,11 +232,13 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `parent_id`          | instead of `/dcim/rack-groups/?parent_id=<uuid>`, use `parent=<uuid>`                 |
 | RackReservation    | `rack_id`            | instead of `/dcim/rack-reservations/?rack_id=<uuid>`, use `rack=<uuid>`               |
 |                    | `group_id`           | instead of `/dcim/rack-reservations/?group_id=<uuid>`, use `group=<uuid>`             |
+|                    | `tenant_group_id`    | instead of `/dcim/rack-reservations/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`|
 |                    | `user_id`            | instead of `/dcim/rack-reservations/?user_id=<uuid>`, use `user=<uuid>`               |
 |                    | `site_id`            | instead of `/dcim/rack-reservations/?site_id=<uuid>`, use `site=<uuid>`               |
 | RearPort           | `region_id`          | instead of `/dcim/rear-ports/?region_id=<uuid>`, use `region=<uuid>`                  |
 |                    | `device_id`          | instead of `/dcim/rear-ports/?device_id=<uuid>`, use `device=<uuid>`                  |
 | Region             | `parent_id`          | instead of `/dcim/regions/?parent_id=<uuid>`, use `parent=<uuid>`                     |
+| RouteTarget        | `tenant_group_id`    | instead of `/ipam/route-targets/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`   |
 | Platform           | `manufacturer_id`    | instead of `/dcim/platforms/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`       |
 | PowerOutlet        | `region_id`          | instead of `/dcim/power-outlets/?region_id=<uuid>`, use `region=<uuid>`               |
 |                    | `device_id`          | instead of `/dcim/power-outlets/?device_id=<uuid>`, use `device=<uuid>`               |
@@ -243,12 +253,21 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `device_id`          | instead of `/dcim/power-ports/?device_id=<uuid>`, use `device=<uuid>`                 |
 | Prefix             | `region_id`          | instead of `/ipam/prefixes/?region_id=<uuid>`, use `region=<uuid>`                    |
 |                    | `site_id`            | instead of `/ipam/prefixes/?site_id=<uuid>`, use `site=<uuid>`                        |
+|                    | `tenant_group_id`    | instead of `/ipam/prefixes/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`        |
 | Site               | `region_id`          | instead of `/dcim/sites/?region_id=<uuid>`, use `region=<uuid>`                       |
+|                    | `tenant_group_id`    | instead of `/dcim/sites/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`           |
+| Tenant             | `group`              | instead of `/tenancy/tenants/?group=<slug>`, use `tenant_group=<slug>`                |
+|                    | `group_id`           | instead of `/tenancy/tenants/?group_id=<uuid>`, use `tenant_group=<uuid>`             |
 | VirtualChassis     | `region_id`          | instead of `/dcim/virtual-chassis/?region_id=<uuid>`, use `region=<uuid>`             |
 |                    | `site_id`            | instead of `/dcim/virtual-chassis/?site_id=<uuid>`, use `site=<uuid>`                 |
 |                    | `master_id`          | instead of `/dcim/virtual-chassis/?master_id=<uuid>`, use `master=<uuid>`             |
 |                    | `tenant_id`          | instead of `/dcim/virtual-chassis/?tenant_id=<uuid>`, use `tenant=<uuid>`             |
+| VirtualMachine     | `tenant_group_id`    | instead of `/dcim/virtual-machine/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>` |
 | VLANGroup          | `region_id`          | instead of `/ipam/vlan-groups/?region_id=<uuid>`, use `region=<uuid>`                 |
 |                    | `site_id`            | instead of `/ipam/vlan-groups/?site_id=<uuid>`, use `site=<uuid>`                     |
-| VLAN               | `region_id`          | instead of `/ipam/vlans/?region_id=<uuid>`, use `region=<uuid>`                       |
+| VLAN               | `group_id`           | instead of `/ipam/vlans/?group_id=<uuid>`, use `vlan_group=<uuid>`                    |
+|                    | `group`              | instead of `/ipam/vlans/?group=<slug>`, use `vlan_group=<slug>`                       |   
+|                    | `region_id`          | instead of `/ipam/vlans/?region_id=<uuid>`, use `region=<uuid>`                       |
 |                    | `site_id`            | instead of `/ipam/vlans/?site_id=<uuid>`, use `site=<uuid>`                           |
+|                    | `tenant_group_id`    | instead of `/ipam/vlans/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`           |
+| VRF                | `tenant_group_id`    | instead of `/ipam/vrfs/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`            |
