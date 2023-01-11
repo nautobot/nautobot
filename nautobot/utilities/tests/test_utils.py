@@ -623,7 +623,7 @@ class NautobotFakeRequestTest(TestCase):
         self.assertEqual(fake_request.user, self.user)
 
     def test_fake_request_json_no_extra_db_access(self):
-        """Verify that serializing and deserializing a NautobotFakeRequest as JSON doesn't necessarily access the DB."""
+        """Verify that serializing and deserializing a NautobotFakeRequest as JSON doesn't unnecessarily access the DB."""
         real_request = self.get_with_user("/")
         fake_request = copy_safe_request(real_request)
         with self.assertNumQueries(0):
@@ -637,7 +637,7 @@ class NautobotFakeRequestTest(TestCase):
             new_fake_request.user
 
     def test_fake_request_pickle_no_extra_db_access(self):
-        """Verify that pickling and unpickling a NautobotFakeRequest doesn't necessarily access the DB."""
+        """Verify that pickling and unpickling a NautobotFakeRequest doesn't unnecessarily access the DB."""
         real_request = self.get_with_user("/")
         fake_request = copy_safe_request(real_request)
         with self.assertNumQueries(0):
