@@ -103,7 +103,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
-    tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
+    tags = models.ManyToManyField(to="core.Tag", related_name="+", blank=True)
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
     objects = ConfigContextQuerySet.as_manager()

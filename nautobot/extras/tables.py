@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
+from nautobot.core.models import Tag, TaggedItem
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -31,7 +32,6 @@ from .models import (
     GitRepository,
     GraphQLQuery,
 )
-from .models import Job as JobModel
 from .models import (
     JobHook,
     JobLogEntry,
@@ -44,10 +44,9 @@ from .models import (
     Secret,
     SecretsGroup,
     Status,
-    Tag,
-    TaggedItem,
     Webhook,
 )
+from .models import Job as JobModel
 from .registry import registry
 
 TAGGED_ITEM = """

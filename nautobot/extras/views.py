@@ -22,6 +22,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
 from nautobot.core.forms import restrict_form_fields
+from nautobot.core.models import Tag, TaggedItem
 from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils import (
@@ -63,7 +64,6 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
 )
-from .models import Job as JobModel
 from .models import (
     JobHook,
     JobLogEntry,
@@ -77,10 +77,9 @@ from .models import (
     SecretsGroup,
     SecretsGroupAssociation,
     Status,
-    Tag,
-    TaggedItem,
     Webhook,
 )
+from .models import Job as JobModel
 from .registry import registry
 
 logger = logging.getLogger(__name__)

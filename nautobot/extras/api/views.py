@@ -24,6 +24,7 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin, ModelViewSet, ReadOnlyModelViewSet
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
+from nautobot.core.models import Tag, TaggedItem
 from nautobot.core.utils import (
     SerializerForAPIVersions,
     copy_safe_request,
@@ -60,8 +61,6 @@ from nautobot.extras.models import (
     SecretsGroup,
     SecretsGroupAssociation,
     Status,
-    Tag,
-    TaggedItem,
     Webhook,
 )
 from nautobot.extras.utils import get_job_content_type, get_worker_count

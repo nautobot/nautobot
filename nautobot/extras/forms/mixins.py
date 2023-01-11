@@ -8,14 +8,15 @@ from django.db.models import Q
 from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.forms import (
     BulkEditForm,
-    CommentField,
     CSVModelChoiceField,
     CSVModelForm,
+    CommentField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.core.models import Tag
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, RelationshipSideChoices, RelationshipTypeChoices
-from nautobot.extras.models import CustomField, Note, Relationship, RelationshipAssociation, Status, Tag
+from nautobot.extras.models import CustomField, Note, Relationship, RelationshipAssociation, Status
 
 logger = logging.getLogger(__name__)
 

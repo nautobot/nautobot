@@ -1,7 +1,8 @@
 import graphene_django_optimizer as gql_optimizer
 
-from nautobot.extras.models import Status, Tag, DynamicGroup
-from nautobot.extras.filters import StatusFilterSet, TagFilterSet, DynamicGroupFilterSet
+from nautobot.core.models import Tag
+from nautobot.extras.filters import DynamicGroupFilterSet, StatusFilterSet, TagFilterSet
+from nautobot.extras.models import DynamicGroup, Status
 
 
 class TagType(gql_optimizer.OptimizedDjangoObjectType):

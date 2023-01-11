@@ -6,7 +6,8 @@ from django.utils.text import slugify
 from nautobot.core.choices import ColorChoices
 from nautobot.core.factory import OrganizationalModelFactory
 from nautobot.core.factory.utils import get_random_instances
-from nautobot.extras.models import Status, Tag
+from nautobot.core.models import Tag
+from nautobot.extras.models import Status
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 
 

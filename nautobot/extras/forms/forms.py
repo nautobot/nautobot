@@ -8,21 +8,21 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.forms import (
     APISelect,
     APISelectMultiple,
     BootstrapMixin,
     BulkEditForm,
     BulkEditNullBooleanSelect,
-    ColorSelect,
-    CommentField,
     CSVContentTypeField,
     CSVModelChoiceField,
     CSVModelForm,
     CSVMultipleChoiceField,
     CSVMultipleContentTypeField,
+    ColorSelect,
+    CommentField,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -34,6 +34,7 @@ from nautobot.core.forms import (
     TagFilterField,
     add_blank_choice,
 )
+from nautobot.core.models import Tag
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobExecutionType,
@@ -68,7 +69,6 @@ from nautobot.extras.models import (
     SecretsGroup,
     SecretsGroupAssociation,
     Status,
-    Tag,
     Webhook,
 )
 from nautobot.extras.registry import registry

@@ -5,6 +5,7 @@ from rest_framework import serializers
 from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.models import Tag
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
@@ -287,7 +288,7 @@ class NestedTagSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
 
     class Meta:
-        model = models.Tag
+        model = Tag
         fields = ["id", "url", "name", "slug", "color"]
 
 

@@ -13,6 +13,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.deprecation import class_deprecated_in_favor_of
+from nautobot.core.models import Tag
 from nautobot.core.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceRoleSerializer,
@@ -60,7 +61,6 @@ from nautobot.extras.models import (
     SecretsGroup,
     SecretsGroupAssociation,
     Status,
-    Tag,
     Webhook,
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
@@ -72,10 +72,6 @@ from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
 from .fields import MultipleChoiceJSONField
-
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import NestedComputedFieldSerializer  # noqa: F401
 from .nested_serializers import (  # noqa: F401
     NestedConfigContextSchemaSerializer,
     NestedConfigContextSerializer,
@@ -101,6 +97,10 @@ from .nested_serializers import (  # noqa: F401
     NestedTagSerializer,
     NestedWebhookSerializer,
 )
+
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import NestedComputedFieldSerializer  # noqa: F401
 from .relationships import RelationshipModelSerializerMixin
 
 #

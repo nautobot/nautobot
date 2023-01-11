@@ -8,6 +8,7 @@ from django.db.models import Q
 from funcy import once_per
 
 from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
+from nautobot.core.models import Tag
 
 
 # 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.
@@ -60,7 +61,6 @@ class TaggableManagerMonkeyMixin:
             self._install_hotfix(cls)
 
     def formfield(self, form_class=DynamicModelMultipleChoiceField, **kwargs):
-        from nautobot.extras.models.tags import Tag
 
         queryset = Tag.objects.filter(
             Q(

@@ -16,8 +16,9 @@ from drf_spectacular.utils import extend_schema_field
 from taggit.managers import TaggableManager
 
 from nautobot.core import constants, forms, utils
-from nautobot.dcim import fields as dcim_fields, forms as dcim_forms
-from nautobot.extras import models as extras_models
+from nautobot.core.models import Tag
+from nautobot.dcim import fields as dcim_fields
+from nautobot.dcim import forms as dcim_forms
 
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ class TagFilter(django_filters.ModelMultipleChoiceFilter):
         kwargs.setdefault("field_name", "tags__slug")
         kwargs.setdefault("to_field_name", "slug")
         kwargs.setdefault("conjoined", True)
-        kwargs.setdefault("queryset", extras_models.Tag.objects.all())
+        kwargs.setdefault("queryset", Tag.objects.all())
 
         super().__init__(*args, **kwargs)
 

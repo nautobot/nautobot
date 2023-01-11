@@ -4,6 +4,7 @@ from nautobot.core.models.customfields import CustomFieldModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.mixins import DynamicGroupMixin, NotesMixin
 from nautobot.core.models.relationships import RelationshipModel
+from nautobot.core.models.tags import Tag, TaggedItem
 from nautobot.core.models.tree_query import TreeModel
 
 __all__ = (
@@ -16,4 +17,6 @@ __all__ = (
     "PrimaryModel",
     "RelationshipModel",
     "TreeModel",
+    "Tag",
+    "TaggedItem",
 )

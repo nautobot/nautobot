@@ -12,6 +12,7 @@ from nautobot.core.filters import (
     SearchFilter,
     TagFilter,
 )
+from nautobot.core.models import Tag
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -66,7 +67,6 @@ from nautobot.extras.models import (
     SecretsGroup,
     SecretsGroupAssociation,
     Status,
-    Tag,
     Webhook,
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery

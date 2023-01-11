@@ -1,6 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
+from nautobot.core.models import Tag
 from nautobot.extras import views
 from nautobot.extras.models import (
     ComputedField,
@@ -13,16 +14,14 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    Note,
     JobHook,
+    Note,
     Relationship,
     Secret,
     SecretsGroup,
     Status,
-    Tag,
     Webhook,
 )
-
 
 app_name = "extras"
 urlpatterns = [

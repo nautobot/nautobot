@@ -16,6 +16,7 @@ from django.utils.text import slugify
 
 from nautobot.core.celery import nautobot_task
 from nautobot.core.git import GitRepo
+from nautobot.core.models import Tag
 from nautobot.core.utils import copy_safe_request
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import (
@@ -33,7 +34,6 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
-    Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
