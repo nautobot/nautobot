@@ -81,7 +81,6 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 | TenantGroup   | `_depth`      | `tree_depth`    |
 | VLAN          | `group`       | `vlan_group`    |
 
-
 ### Removed Serializer Fields
 
 | Model/Endpoint | Removed Field        | Comments                             |
@@ -266,7 +265,7 @@ Below is a table documenting [removed redundant filter field changes](../release
 | VLANGroup          | `region_id`          | instead of `/ipam/vlan-groups/?region_id=<uuid>`, use `region=<uuid>`                 |
 |                    | `site_id`            | instead of `/ipam/vlan-groups/?site_id=<uuid>`, use `site=<uuid>`                     |
 | VLAN               | `group_id`           | instead of `/ipam/vlans/?group_id=<uuid>`, use `vlan_group=<uuid>`                    |
-|                    | `group`              | instead of `/ipam/vlans/?group=<slug>`, use `vlan_group=<slug>`                       |   
+|                    | `group`              | instead of `/ipam/vlans/?group=<slug>`, use `vlan_group=<slug>`                       |
 |                    | `region_id`          | instead of `/ipam/vlans/?region_id=<uuid>`, use `region=<uuid>`                       |
 |                    | `site_id`            | instead of `/ipam/vlans/?site_id=<uuid>`, use `site=<uuid>`                           |
 |                    | `tenant_group_id`    | instead of `/ipam/vlans/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`           |
