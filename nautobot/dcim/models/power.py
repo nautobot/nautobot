@@ -4,6 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 
+from nautobot.core.models import PrimaryModel
 from nautobot.core.validators import ExclusionValidator
 from nautobot.dcim.choices import PowerFeedPhaseChoices, PowerFeedSupplyChoices, PowerFeedTypeChoices
 from nautobot.dcim.constants import (
@@ -11,7 +12,7 @@ from nautobot.dcim.constants import (
     POWERFEED_MAX_UTILIZATION_DEFAULT,
     POWERFEED_VOLTAGE_DEFAULT,
 )
-from nautobot.extras.models import StatusModel, TaggedModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 
 from .device_components import CableTermination, PathEndpoint
@@ -37,7 +38,7 @@ __all__ = (
     "relationships",
     "webhooks",
 )
-class PowerPanel(TaggedModel):
+class PowerPanel(PrimaryModel):
     """
     A distribution point for electrical power; e.g. a data center RPP.
     """
@@ -117,7 +118,7 @@ class PowerPanel(TaggedModel):
     "statuses",
     "webhooks",
 )
-class PowerFeed(TaggedModel, PathEndpoint, CableTermination, StatusModel):
+class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     """
     An electrical circuit delivered from a PowerPanel.
     """

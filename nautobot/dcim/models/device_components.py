@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.urls import reverse
 
 from nautobot.core.fields import NaturalOrderingField
-from nautobot.core.models import TreeModel
+from nautobot.core.models import PrimaryModel, TreeModel
 from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.models.utils import CollateAsChar
 from nautobot.core.ordering import naturalize_interface
@@ -31,7 +31,7 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 from nautobot.dcim.fields import MACAddressCharField
-from nautobot.extras.models import Status, StatusModel, TaggedModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 
 __all__ = (
@@ -50,7 +50,7 @@ __all__ = (
 )
 
 
-class ComponentModel(TaggedModel):
+class ComponentModel(PrimaryModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """

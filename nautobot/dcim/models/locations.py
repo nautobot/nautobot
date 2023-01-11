@@ -6,11 +6,10 @@ from django.urls import reverse
 from timezone_field import TimeZoneField
 
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
-from nautobot.core.models import TreeModel
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models import OrganizationalModel, PrimaryModel, TreeModel
 from nautobot.core.models.utils import TreeQuerySet
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import StatusModel, TaggedModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import FeatureQuery, extras_features
 
 
@@ -136,7 +135,7 @@ class LocationQuerySet(TreeQuerySet):
     "statuses",
     "webhooks",
 )
-class Location(TreeModel, StatusModel, TaggedModel):
+class Location(TreeModel, StatusModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 

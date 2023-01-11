@@ -20,7 +20,7 @@ from django_celery_beat.managers import ExtendedManager
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField, JSONArrayField
-from nautobot.core.models import BaseModel, CustomFieldModel, OrganizationalModel
+from nautobot.core.models import BaseModel, CustomFieldModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils import slugify_dots_to_dashes
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
@@ -34,7 +34,6 @@ from nautobot.extras.constants import (
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
-from nautobot.extras.models.tags import TaggedModel
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
@@ -64,7 +63,7 @@ JOB_LOGS = "job_logs"
     "relationships",
     "webhooks",
 )
-class Job(TaggedModel):
+class Job(PrimaryModel):
     """
     Database model representing an installed Job class.
     """

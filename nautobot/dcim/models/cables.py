@@ -10,13 +10,13 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.core.fields import ColorField
-from nautobot.core.models.generics import BaseModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.utils import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import decompile_path_node, object_to_path_node, path_node_to_object
-from nautobot.extras.models import Status, StatusModel, TaggedModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 
 from .device_components import FrontPort, RearPort
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
     "statuses",
     "webhooks",
 )
-class Cable(TaggedModel, StatusModel):
+class Cable(PrimaryModel, StatusModel):
     """
     A physical connection between two endpoints.
     """

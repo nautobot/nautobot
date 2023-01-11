@@ -16,6 +16,11 @@ class Migration(migrations.Migration):
         ("extras", "0055_alter_joblogentry_scheduledjob_webhook_fields"),
     ]
 
+    # This migration is used to move the `Tag` and `TaggedItem` models from the `extras`
+    # to the `core`. This is done by renaming the database tables for the models to match the
+    # naming convention used in the `core`. The migration also updates the `many-to-many` fields
+    # of other models in the `extras`, `circuits`, `dcim`, `ipam`, `tenancy`, `virtualization`
+    # to use the `core.Tag` model instead of the `extras.Tag` model, same for `extras.TaggedItem`.
     operations = [
         migrations.SeparateDatabaseAndState(
             state_operations=[

@@ -2,9 +2,8 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_query import TreeModel
-from nautobot.extras.models.tags import TaggedModel
 from nautobot.extras.utils import extras_features
 
 __all__ = (
@@ -57,7 +56,7 @@ class TenantGroup(TreeModel, OrganizationalModel):
     "relationships",
     "webhooks",
 )
-class Tenant(TaggedModel):
+class Tenant(PrimaryModel):
     """
     A Tenant represents an organization served by the Nautobot owner. This is typically a customer or an internal
     department.

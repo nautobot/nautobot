@@ -7,10 +7,9 @@ from django.urls import reverse
 from jinja2.exceptions import TemplateSyntaxError, UndefinedError
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel, OrganizationalModel
+from nautobot.core.models import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils import render_jinja2
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.models.tags import TaggedModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError
 from nautobot.extras.utils import extras_features
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
     "relationships",
     "webhooks",
 )
-class Secret(TaggedModel):
+class Secret(PrimaryModel):
     """
     Data model providing access to a "secret" such as a device credential or a systems-integration token.
 

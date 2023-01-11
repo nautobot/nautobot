@@ -12,10 +12,10 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.core.fields import AutoSlugField, JSONArrayField
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils import UtilizationData, array_to_string
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Status, StatusModel, TaggedModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
     "relationships",
     "webhooks",
 )
-class VRF(TaggedModel):
+class VRF(PrimaryModel):
     """
     A virtual routing and forwarding (VRF) table represents a discrete layer three forwarding domain (e.g. a routing
     table). Prefixes and IPAddresses can optionally be assigned to VRFs. (Prefixes and IPAddresses not assigned to a VRF
@@ -132,7 +132,7 @@ class VRF(TaggedModel):
     "relationships",
     "webhooks",
 )
-class RouteTarget(TaggedModel):
+class RouteTarget(PrimaryModel):
     """
     A BGP extended community used to control the redistribution of routes among VRFs, as defined in RFC 4364.
     """
@@ -227,7 +227,7 @@ class RIR(OrganizationalModel):
     "relationships",
     "webhooks",
 )
-class Aggregate(TaggedModel):
+class Aggregate(PrimaryModel):
     """
     An aggregate exists at the root level of the IP address space hierarchy in Nautobot. Aggregates are used to organize
     the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
@@ -437,7 +437,7 @@ class Role(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(TaggedModel, StatusModel):
+class Prefix(PrimaryModel, StatusModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
     Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
@@ -756,7 +756,7 @@ class Prefix(TaggedModel, StatusModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(TaggedModel, StatusModel):
+class IPAddress(PrimaryModel, StatusModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -1133,7 +1133,7 @@ class VLANGroup(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class VLAN(TaggedModel, StatusModel):
+class VLAN(PrimaryModel, StatusModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
     Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
@@ -1290,7 +1290,7 @@ class VLAN(TaggedModel, StatusModel):
     "relationships",
     "webhooks",
 )
-class Service(TaggedModel):
+class Service(PrimaryModel):
     """
     A Service represents a layer-four service (e.g. HTTP or SSH) running on a Device or VirtualMachine. A Service may
     optionally be tied to one or more specific IPAddresses belonging to its parent.

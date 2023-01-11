@@ -74,10 +74,10 @@ Moving forward in Nautobot, all models should have a `slug` field. This field ca
 from django.db import models
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.extras.models.tags import TaggedModel
+from nautobot.core.models import PrimaryModel
 
 
-class ExampleModel(TaggedModel):
+class ExampleModel(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from='name')
 ```
