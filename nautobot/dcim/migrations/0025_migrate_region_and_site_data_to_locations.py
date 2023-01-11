@@ -24,14 +24,19 @@ def create_region_location_type_locations(region_class, location_class, region_l
         .select_related("parent")
     )
     for region in regions:
-        location_class.objects.create(
-            location_type=region_lt,
-            name=region.name,
-            description=region.description,
-            parent=location_class.objects.get(name=region.parent.name, location_type=region_lt)
-            if region.parent
-            else None,
-        )
+        try:
+            location_class.objects.create(
+                location_type=region_lt,
+                name=region.name,
+                description=region.description,
+                parent=location_class.objects.get(name=region.parent.name, location_type=region_lt)
+                if region.parent
+                else None,
+            )
+        except IntegrityError as e:
+            logger.error(
+                f"{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
+            )
 
 
 def create_site_location_type_locations(
@@ -106,7 +111,7 @@ def create_site_location_type_locations(
                 location_class.objects.bulk_create(location_instances, batch_size=1000)
             except IntegrityError as e:
                 logger.error(
-                    f"\n{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
+                    f"{e.args[0]} \nPlease consider changing the slug attribute of this Site instance to resolve this conflict."
                 )
             count = 0
             location_instances = []
@@ -118,7 +123,7 @@ def create_site_location_type_locations(
             location_class.objects.bulk_create(location_instances, batch_size=1000)
         except IntegrityError as e:
             logger.error(
-                f"\n{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
+                f"{e.args[0]} \nPlease consider changing the slug attribute of this Site instance to resolve this conflict."
             )
 
     # Set existing top level locations to have site locations as their parents

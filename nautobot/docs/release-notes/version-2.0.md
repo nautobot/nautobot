@@ -23,12 +23,12 @@ Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `
 The `Site` and `Region` models have been removed in v2.0 and have been replaced with `Location` of specific `LocationType`. As a result, the existing `Site` and `Region` data will be migrated to corresponding `LocationType` and `Location` objects. Here is what to expect:
 
 1. If you do not have any `Site` and `Region` instances in your existing database, running this data migration will do nothing.
-2. If you only have `Region` instances in your existing database, a `LocationType` named "Region" will be created and for each legacy `Region` instance, a corresponding `Location` instance with the same attributes (`name`, `description`, etc.) and hierarchy will be created.
+2. If you only have `Region` instances in your existing database, a `LocationType` named **Region** will be created and for each legacy `Region` instance, a corresponding `Location` instance with the same attributes (`name`, `description`, etc.) and hierarchy will be created.
 3. If you only have `Site` instances in your existing database:
 
-    - A `LocationType` named "Site" will be created and every root level `LocationType` in your database will have the new "Site" `LocationType` as their parent.
+    - A `LocationType` named **Site** will be created and every preexisting root level `LocationType` in your database will be updated to have the new **Site** `LocationType` as their parent.
 
-    - For each legacy `Site` instance, a corresponding `Location` instance with the same attributes (`name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude`, etc.) will be created.
+    - For each legacy `Site` instance, a corresponding `Location` instance with the same attributes (`name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude`, etc.) will be created, and any preexisting `Locations` in your database will be updated to have the appropriate "site" `Locations` as their parents.
 
     - Model instances that had a `site` field (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` corresponding to that `Site`. All other attributes on these models will remain unchanged.
 
@@ -50,7 +50,7 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - Every pre-existing root-level `LocationType` in your database will be updated to have the new `LocationType` named **Site** as its `parent`.
 
-    - For each legacy `Site` instance, a corresponding "Site" `Location` instance with the same attributes (`name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude`, etc.) will be created with its parent set to the corresponding "Region" `Location` if any.
+    - For each legacy `Site` instance, a corresponding "site" `Location` instance with the same attributes (`name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude`, etc.) will be created with its parent set to the corresponding "region" `Location` if any.
 
         - If you have `Site` instances in your database without a `Region` assigned to them, one additional `Location` named **Global Region** of `LocationType` **Region** will be created and each `Location` of `LocationType` **Site** created from the legacy region-less `Site` instances will have the **Global Region** `Location` as their parent.
 
