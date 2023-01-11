@@ -10,6 +10,10 @@ If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading 
 
 ### Added
 
+#### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
+
+DeviceRole, RackRole, IPAM Role, and IPAddressRoleChoices have all been merged into a single generic Role model. A role can now be created and associated to one or more of the content-types that previously implemented role as a field. These model content-types include dcim.device, dcim.rack, virtualization.virtualmachine, ipam.ipaddress, ipam.prefix, and ipam.vlan.
+
 #### Added Site Fields to Location ([#2954](https://github.com/nautobot/nautobot/issues/2954))
 
 Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
@@ -116,6 +120,12 @@ This has been addressed in v2.x as follows:
 
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#corrected-filter-fields)
 
+#### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
+
+The `DeviceRole`, `RackRole`, `ipam.Role`, and `IPAddressRoleChoices` have all been removed and replaced with a `extras.Role` model, This means that all references to any of the replaced models and choices now points to this generic role model.
+
+In addition, the `role` field of the `IPAddress` model has also been changed from a choice field to a foreign key related field to the `extras.Role` model.
+
 ### Removed
 
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
@@ -137,5 +147,9 @@ Now in v2.x, that format is no longer supported. Instead, you would use:
 `/dcim/devices/?site=<uuid>`
 
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
+
+#### Removed RQ support ([#2523](https://github.com/nautobot/nautobot/issue/2523))
+
+Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
 
 <!-- towncrier release notes start -->

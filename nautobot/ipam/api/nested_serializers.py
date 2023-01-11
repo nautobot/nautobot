@@ -10,7 +10,6 @@ __all__ = [
     "NestedIPAddressSerializer",
     "NestedPrefixSerializer",
     "NestedRIRSerializer",
-    "NestedRoleSerializer",
     "NestedRouteTargetSerializer",
     "NestedServiceSerializer",
     "NestedVLANGroupSerializer",
@@ -88,16 +87,6 @@ class NestedAggregateSerializer(WritableNestedSerializer):
 #
 # VLANs
 #
-
-
-class NestedRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:role-detail")
-    prefix_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.Role
-        fields = ["id", "url", "name", "slug", "prefix_count", "vlan_count"]
 
 
 class NestedVLANGroupSerializer(WritableNestedSerializer):

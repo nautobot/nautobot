@@ -10,7 +10,6 @@ from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Location,
@@ -22,7 +21,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
+from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
 from nautobot.ipam.models import Prefix
 from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
 from nautobot.utilities.forms.widgets import APISelectMultiple, MultiValueCharInput
@@ -49,7 +48,7 @@ class DynamicGroupTestBase(TestCase):
             model="device Type 1",
             slug="device-type-1",
         )
-        cls.device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        cls.device_role = Role.objects.get_for_model(Device).first()
         cls.status_active = Status.objects.get_for_model(Device).get(slug="active")
         cls.status_planned = Status.objects.get_for_model(Device).get(slug="planned")
         cls.status_staged = Status.objects.get_for_model(Device).get(slug="staged")
@@ -58,14 +57,14 @@ class DynamicGroupTestBase(TestCase):
             Device.objects.create(
                 name="device-site-1",
                 status=cls.status_active,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[0],
             ),
             Device.objects.create(
                 name="device-site-2",
                 status=cls.status_active,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 serial="abc123",
                 site=cls.sites[1],
@@ -73,14 +72,14 @@ class DynamicGroupTestBase(TestCase):
             Device.objects.create(
                 name="device-site-3",
                 status=cls.status_planned,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[2],
             ),
             Device.objects.create(
                 name="device-site-4",
                 status=cls.status_staged,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[3],
             ),

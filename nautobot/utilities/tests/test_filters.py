@@ -11,7 +11,9 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
+from nautobot.dcim.models import Device
 from nautobot.extras import models as extras_models
+from nautobot.extras.models import Role
 from nautobot.ipam import factory as ipam_factory
 from nautobot.ipam import models as ipam_models
 from nautobot.utilities import filters, testing, utils
@@ -727,12 +729,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         dcim_models.DeviceType.objects.bulk_create(device_types)
 
-        device_roles = (
-            dcim_models.DeviceRole(name="Device Role 1", slug="device-role-1"),
-            dcim_models.DeviceRole(name="Device Role 2", slug="device-role-2"),
-            dcim_models.DeviceRole(name="Device Role 3", slug="device-role-3"),
-        )
-        dcim_models.DeviceRole.objects.bulk_create(device_roles)
+        device_roles = Role.objects.get_for_model(Device)
 
         device_statuses = extras_models.Status.objects.get_for_model(dcim_models.Device)
         device_status_map = {ds.slug: ds for ds in device_statuses.all()}
@@ -766,7 +763,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
             dcim_models.Device(
                 name="Device 1",
                 device_type=device_types[0],
-                device_role=device_roles[0],
+                role=device_roles[0],
                 platform=platforms[0],
                 serial="ABC",
                 asset_tag="1001",
@@ -781,7 +778,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
             dcim_models.Device(
                 name="Device 2",
                 device_type=device_types[1],
-                device_role=device_roles[1],
+                role=device_roles[1],
                 platform=platforms[1],
                 serial="DEF",
                 asset_tag="1002",
@@ -795,7 +792,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
             dcim_models.Device(
                 name="Device 3",
                 device_type=device_types[2],
-                device_role=device_roles[2],
+                role=device_roles[2],
                 platform=platforms[2],
                 serial="GHI",
                 asset_tag="1003",

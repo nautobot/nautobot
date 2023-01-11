@@ -73,11 +73,14 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Application        | Django/Python                   |
 | Database           | PostgreSQL 9.6+ or MySQL 8.0+   |
 | Cache              | Redis/django-cacheops           |
-| Task queuing       | Redis/Celery/django-rq          |
+| Task queuing       | Redis/Celery                    |
 | Live device access | NAPALM                          |
 
 +++ 1.1.0
     MySQL support was added.
+
+--- 2.0.0
+    django-rq support was removed.
 
 The following diagram displays how data travels through Nautobot's application stack.
 

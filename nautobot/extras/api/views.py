@@ -30,6 +30,7 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
+from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -49,6 +50,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -1115,6 +1117,17 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+# Roles
+#
+
+
+class RoleViewSet(NautobotModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = serializers.RoleSerializer
+    filterset_class = RoleFilterSet
 
 
 #

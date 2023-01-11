@@ -1,4 +1,5 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
+from .roles import Role, RoleRequiredRoleModelMixin, RoleModelMixin
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
@@ -58,6 +59,9 @@ __all__ = (
     "Relationship",
     "RelationshipModel",
     "RelationshipAssociation",
+    "Role",
+    "RoleRequiredRoleModelMixin",
+    "RoleModelMixin",
     "ScheduledJob",
     "ScheduledJobs",
     "Secret",

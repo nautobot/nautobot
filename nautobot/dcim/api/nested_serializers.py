@@ -12,7 +12,6 @@ __all__ = [
     "NestedConsoleServerPortTemplateSerializer",
     "NestedDeviceBaySerializer",
     "NestedDeviceBayTemplateSerializer",
-    "NestedDeviceRoleSerializer",
     "NestedDeviceSerializer",
     "NestedDeviceTypeSerializer",
     "NestedFrontPortSerializer",
@@ -32,7 +31,6 @@ __all__ = [
     "NestedPowerPortTemplateSerializer",
     "NestedRackGroupSerializer",
     "NestedRackReservationSerializer",
-    "NestedRackRoleSerializer",
     "NestedRackSerializer",
     "NestedRearPortSerializer",
     "NestedRearPortTemplateSerializer",
@@ -97,15 +95,6 @@ class NestedRackGroupSerializer(WritableNestedSerializer, TreeModelSerializerMix
     class Meta:
         model = models.RackGroup
         fields = ["id", "url", "name", "slug", "rack_count", "tree_depth"]
-
-
-class NestedRackRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
-    rack_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.RackRole
-        fields = ["id", "url", "name", "slug", "rack_count"]
 
 
 class NestedRackSerializer(WritableNestedSerializer):
@@ -227,16 +216,6 @@ class NestedDeviceBayTemplateSerializer(WritableNestedSerializer):
 #
 # Devices
 #
-
-
-class NestedDeviceRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.DeviceRole
-        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count"]
 
 
 class NestedPlatformSerializer(WritableNestedSerializer):

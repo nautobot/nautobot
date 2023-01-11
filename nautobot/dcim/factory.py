@@ -13,7 +13,6 @@ from nautobot.dcim.choices import DeviceRedundancyGroupFailoverStrategyChoices, 
 from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     Manufacturer,
     Platform,
@@ -29,7 +28,6 @@ from nautobot.extras.models import Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.factory import random_instance, UniqueFaker
 from nautobot.virtualization.models import Cluster
 
@@ -119,20 +117,6 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
 
     has_comments = factory.Faker("pybool")
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
-
-
-class DeviceRoleFactory(OrganizationalModelFactory):
-    class Meta:
-        model = DeviceRole
-        exclude = ("has_description",)
-
-    # Slug isn't defined here since it will always inherit from name.
-    name = factory.Sequence(lambda n: f"Fake Device Role {n}")
-    color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
-    vm_role = factory.Faker("pybool")
-
-    has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class ManufacturerFactory(OrganizationalModelFactory):

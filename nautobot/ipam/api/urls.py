@@ -18,7 +18,6 @@ router.register("rirs", views.RIRViewSet)
 router.register("aggregates", views.AggregateViewSet)
 
 # Prefixes
-router.register("roles", views.RoleViewSet)
 router.register("prefixes", views.PrefixViewSet)
 
 # IP addresses
