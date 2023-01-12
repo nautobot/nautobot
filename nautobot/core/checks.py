@@ -40,6 +40,13 @@ W005 = Warning(
     obj=settings,
 )
 
+W006 = Warning(
+    "CACHEOPS_ENABLED is set to True but cachops is no longer supported in v1.5.8. It can still be used but may lead to "
+    "inaccurate data responses. Cacheops will be removed in a later release.",
+    id="nautobot.core.W006",
+    obj=settings,
+)
+
 
 class E006(Error):
     msg = "RQ_QUEUES must define at least the minimum set of required queues"
@@ -107,4 +114,11 @@ def check_minimum_rq_queues(app_configs, **kwargs):
 def check_maintenance_mode(app_configs, **kwargs):
     if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
         return [E005]
+    return []
+
+
+@register(Tags.compatibility)
+def check_cacheops_enabled(app_configs, **kwargs):
+    if settings.CACHEOPS_ENABLED:
+        return [W006]
     return []
