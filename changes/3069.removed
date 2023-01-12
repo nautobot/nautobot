@@ -1,1 +1,0 @@
-Removed `parent` property from `Interface` and `VMInterface` models. Use `Interface.device` and `VMInterface.virtual_machine` fields instead.
