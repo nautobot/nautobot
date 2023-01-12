@@ -722,11 +722,11 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         VMInterface.objects.bulk_create(child_interfaces)
-        with self.subTest("Children"):
+        with self.subTest("Child Interfaces"):
             params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-        with self.subTest("Has children"):
+        with self.subTest("Has child Interfaces"):
             params = {"has_child_interfaces": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 

@@ -228,7 +228,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 
         if self.local_config_context_schema and not self.local_config_context_data:
             raise ValidationError(
-                {"local_config_context_schema": "Local context data must exist for a schema to be applied."}
+                {"local_config_context_schema": "Local config context data must exist for a schema to be applied."}
             )
 
         # Validate data against schema
