@@ -389,6 +389,22 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
+@media (max-width: 1176px){
+    .navbar-nav .open .dropdown-menu {
+        position: static;
+        float: none;
+        width: auto;
+        margin-top: 0;
+        background-color: transparent;
+        border: 0;
+        -webkit-box-shadow: none;
+        box-shadow: none;
+    }
+    #navbar {
+        overflow-y: auto !important;
+    }
+}
+
 
 /* Filters */
 .filter-container {
