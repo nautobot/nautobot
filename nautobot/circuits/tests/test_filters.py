@@ -214,7 +214,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_circuit_type(self):
         circuit_type = CircuitType.objects.first()
-        params = {"circuit_type_id": [circuit_type.pk]}
+        params = {"circuit_type": [circuit_type.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"circuit_type": [circuit_type.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)

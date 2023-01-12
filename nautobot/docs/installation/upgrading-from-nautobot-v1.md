@@ -105,8 +105,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 | Model                 | Renamed Filter Field | New Name          | UI and Rest API endpoints Available in v2.X       |
 |-----------------------|----------------------|-------------------|---------------------------------------------------|
-| Circuit               | `type`               | `circuit_type`    | `circuits/circuits/?circuit_type=<slug>`          |
-|                       | `type_id`            | `circuit_type_id` | `circuits/circuits/?circuit_type_id=<uuid>`       |
+| Circuit               | `type`               | `circuit_type`    | `circuits/circuits/?circuit_type=<uuid/slug>`     |
 | ConsolePort           | `cabled`             | `has_cable`       | `/dcim/console-ports/?has_cable=True/False`       |
 | ConsoleServerPort     | `cabled`             | `has_cable`       | `/dcim/console-server-ports/?has_cable=True/False`|
 | Device                | `device_type_id`     | `device_type`     | `/dcim/devices/?device_type=<uuid/slug>`          |
@@ -127,8 +126,9 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0.md#enhanced-filter-fields-2804) in v2.x.
 
-| Model                 | Enhanced Filter Field| Changes                                                  | UI and Rest API endpoints Available in v2.X|
+| Model                 | Enhanced Filter Field| Changes                                                    | UI and Rest API endpoints Available in v2.X|
 |-----------------------|----------------------|------------------------------------------------------------|----------------------------------------------|
+| Circuit               | `circuit_type`       | Enhanced to support primary key UUIDs in addition to slugs | `circuits/circuits/?circuit_type=<uuid/slug>`|
 | ConsolePort           | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
 | ConsoleServerPort     | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
 | Device                | `manufacturer`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
@@ -187,6 +187,7 @@ Below is a table documenting [removed redundant filter field changes](../release
 
 | Model              | Removed Filter Field | UI and API endpoints that are no longer supported in v2.X                             |
 |--------------------|----------------------|---------------------------------------------------------------------------------------|
+| Circuit            | `type_id`            | instead of `circuits/circuits/?type_id=<uuid>`, use `circuit_type=<uuid>`             |
 | CircuitTermination | `region_id`          | instead of `/circuits/circuit-terminations/?region_id=<uuid>`, use `region=<uuid>`    |
 |                    | `site_id`            | instead of `/circuits/circuit-terminations/?site_id=<uuid>`, use `site=<uuid>`        |
 | Cluster            | `region_id`          | instead of `/virtualization/clusters/?region_id=<uuid>`, use `region=<uuid>`          |

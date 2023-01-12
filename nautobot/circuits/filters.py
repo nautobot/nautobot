@@ -12,6 +12,7 @@ from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -145,15 +146,10 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID)",
     )
-    circuit_type_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=CircuitType.objects.all(),
-        label="Circuit type (ID)",
-    )
-    circuit_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="circuit_type__slug",
+    circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
         to_field_name="slug",
-        label="Circuit type (slug)",
+        label="Circuit type (slug or ID)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
         field_name="circuit_terminations__site",
