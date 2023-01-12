@@ -11,11 +11,9 @@
 
 | Model        | Field          | Changes                                                                      |
 |--------------|----------------|------------------------------------------------------------------------------|
-| Interface    | `parent`       | No longer shadows the `device` field. Use `device` instead                   |
 | JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead                            |
 |              | `log_object`   | No longer accepts `null` values, use `""` instead                            |
 | ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead                            |
-| VMInterface  | `parent`       | No longer shadows the `virtual_machine` field. Use `virtual_machine` instead |
 | Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead                            |
 
 ### Renamed Database Fields
