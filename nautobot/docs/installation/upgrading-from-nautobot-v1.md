@@ -9,12 +9,12 @@
 
 ### Database Behavior Changes
 
-| Model        | Field          | Changes                                                                      |
-|--------------|----------------|------------------------------------------------------------------------------|
-| JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead                            |
-|              | `log_object`   | No longer accepts `null` values, use `""` instead                            |
-| ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead                            |
-| Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead                            |
+| Model        | Field          | Changes                                           |
+|--------------|----------------|---------------------------------------------------|
+| JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
+|              | `log_object`   | No longer accepts `null` values, use `""` instead |
+| ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead |
+| Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead |
 
 ### Renamed Database Fields
 
@@ -60,11 +60,11 @@
 
 The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed and replaced by a single `extras.Role` model. This means that any references to the removed models in the code now use the `extras.Role` model instead.
 
-| Removed Model     | Replaced With  |
-|-------------------|----------------|
-| `dcim.DeviceRole` | `extras.Role`  |
-| `dcim.RackRole`   | `extras.Role`  |
-| `ipam.Role`       | `extras.Role`  |
+| Removed Model     | Replaced With |
+|-------------------|---------------|
+| `dcim.DeviceRole` | `extras.Role` |
+| `dcim.RackRole`   | `extras.Role` |
+| `ipam.Role`       | `extras.Role` |
 
 ## GraphQL and REST API Changes
 
@@ -79,19 +79,19 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 ### Renamed Serializer Fields
 
-| Model                 | Renamed Field           | New Name                      |
-|-----------------------|-------------------------|-------------------------------|
-| Cluster               | `group`                 | `cluster_group`               |
-|                       | `type`                  | `cluster_type`                |
-| Device                | `device_role`           | `role`                        |
-|                       | `local_context_data`    | `local_config_context_data`   |
-|                       | `local_context_schema`  | `local_config_context_schema` |
-| InventoryItem         | `_depth`                | `tree_depth`                  |
-| RackGroup             | `_depth`                | `tree_depth`                  |
-| Region                | `_depth`                | `tree_depth`                  |
-| TenantGroup           | `_depth`                | `tree_depth`                  |
-| VirtualMachine        | `local_context_data`    | `local_config_context_data`   |
-|                       | `local_context_schema`  | `local_config_context_schema` |
+| Model                 | Renamed Field          | New Name                      |
+|-----------------------|------------------------|-------------------------------|
+| Cluster               | `group`                | `cluster_group`               |
+|                       | `type`                 | `cluster_type`                |
+| Device                | `device_role`          | `role`                        |
+|                       | `local_context_data`   | `local_config_context_data`   |
+|                       | `local_context_schema` | `local_config_context_schema` |
+| InventoryItem         | `_depth`               | `tree_depth`                  |
+| RackGroup             | `_depth`               | `tree_depth`                  |
+| Region                | `_depth`               | `tree_depth`                  |
+| TenantGroup           | `_depth`               | `tree_depth`                  |
+| VirtualMachine        | `local_context_data`   | `local_config_context_data`   |
+|                       | `local_context_schema` | `local_config_context_schema` |
 
 ### Removed Serializer Fields
 
@@ -103,39 +103,39 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` are no longer available. Instead,  use the `/extras/roles/` endpoint to retrieve and manipulate `role` data.
 
-| Removed Endpoints      | Replaced With      |
-|------------------------|--------------------|
-| `/dcim/device-roles/`  | `/extras/roles/`  |
-| `/dcim/rack-roles/`    | `/extras/roles/`  |
-| `/ipam/roles/`         | `/extras/roles/`  |
+| Removed Endpoints     | Replaced With    |
+|-----------------------|------------------|
+| `/dcim/device-roles/` | `/extras/roles/` |
+| `/dcim/rack-roles/`   | `/extras/roles/` |
+| `/ipam/roles/`        | `/extras/roles/` |
 
 ## UI, GraphQL, and REST API Filter Changes
 
 ### Renamed Filter Fields
 
-| Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
-|-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
-| ConsolePort           | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
-| ConsoleServerPort     | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
-| Device                | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
-|                       | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
-|                       | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
-|                       | `local_context_schema_id` | `local_config_context_schema_id` | `/dcim/devices/?local_config_context_schema_id=<uuid>`                    |
-|                       | `local_context_schema`    | `local_config_context_schema`    | `/dcim/devices/?local_config_context_schema=<slug>`                       |
-|                       | `rack_group_id`           | `rack_group`                     | `/dcim/devices/?rack_group=<uuid/slug>`                                   |
-|                       | `rack_id`                 | `rack`                           | `/dcim/devices/?rack=<uuid/slug>`                                         |
-|                       | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
-| FrontPort             | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
-| Interface             | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
-| InventoryItem         | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
-|                       | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
-| PowerFeed             | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
-| PowerOutlet           | `cabled`                  | `has_cable`                      |  `/dcim/power-outlets/?has_cable=True/False`                              |
-| PowerPort             | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
-| RearPort              | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
-| VirtualMachine        | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
-|                       | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
-|                       | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
+| Model             | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
+|-------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
+| ConsolePort       | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
+| ConsoleServerPort | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
+| Device            | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
+|                   | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
+|                   | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
+|                   | `local_context_schema_id` | `local_config_context_schema_id` | `/dcim/devices/?local_config_context_schema_id=<uuid>`                    |
+|                   | `local_context_schema`    | `local_config_context_schema`    | `/dcim/devices/?local_config_context_schema=<slug>`                       |
+|                   | `rack_group_id`           | `rack_group`                     | `/dcim/devices/?rack_group=<uuid/slug>`                                   |
+|                   | `rack_id`                 | `rack`                           | `/dcim/devices/?rack=<uuid/slug>`                                         |
+|                   | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
+| FrontPort         | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
+| Interface         | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
+| InventoryItem     | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
+|                   | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
+| PowerFeed         | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
+| PowerOutlet       | `cabled`                  | `has_cable`                      |  `/dcim/power-outlets/?has_cable=True/False`                              |
+| PowerPort         | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
+| RearPort          | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
+| VirtualMachine    | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
+|                   | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
+|                   | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
 
 ### Enhanced Filter Fields
 
