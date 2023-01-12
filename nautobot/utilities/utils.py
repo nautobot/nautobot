@@ -18,11 +18,11 @@ from django.core.serializers import serialize
 from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
-from django.utils.tree import Node
-
 from django.template import engines
+from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
+from django.utils.tree import Node
 from django_filters import (
     BooleanFilter,
     DateFilter,
@@ -475,24 +475,66 @@ class NautobotFakeRequest:
     def __init__(self, _dict):
         self.__dict__ = _dict
 
+    def _get_user(self):
+        """Lazy lookup function for self.user."""
+        if not self._cached_user:
+            User = get_user_model()
+            self._cached_user = User.objects.get(pk=self._user_pk)
+        return self._cached_user
+
+    def _init_user(self):
+        """Set up self.user as a lazy attribute, similar to a real Django Request object."""
+        self._cached_user = None
+        self.user = SimpleLazyObject(self._get_user)
+
     def nautobot_serialize(self):
         """
-        Serialize a json representation that is safe to pass to celery
+        Serialize a JSON representation that is safe to pass to Celery.
+
+        This function is called from nautobot.core.celery.NautobotKombuJSONEncoder.
         """
         data = copy.deepcopy(self.__dict__)
-        data["user"] = data["user"].pk
+        # We don't want to try to pickle/unpickle or serialize/deserialize the actual User object,
+        # but make sure we do store its PK so that we can look it up on-demand after being deserialized.
+        if "_user_pk" not in data:
+            # We have a user but haven't stored its PK yet, so look it up and store it
+            data["_user_pk"] = data.pop("user").pk
+        else:
+            # We already have stored the PK, and we need to AVOID actually resolving the lazy user reference.
+            data.pop("user")
         return data
 
     @classmethod
     def nautobot_deserialize(cls, data):
         """
-        Deserialize a json representation that is safe to pass to celery and return an actual instance
-        """
-        User = get_user_model()
+        Deserialize a JSON representation that is safe to pass to Celery and return a NautobotFakeRequest instance.
 
+        This function is registered for usage by Celery in nautobot/core/celery/__init__.py
+        """
         obj = cls(data)
-        obj.user = User.objects.get(pk=obj.user)
+        obj._init_user()
         return obj
+
+    def __getstate__(self):
+        """
+        Implement `pickle` serialization API.
+
+        It turns out that Celery uses pickle internally in apply_async()/send_job() even if we have configured Celery
+        to use JSON for all I/O (and we do, see settings.py), so we need to support pickle and JSON both.
+        """
+        return self.nautobot_serialize()
+
+    def __setstate__(self, state):
+        """
+        Implement `pickle` deserialization API.
+
+        It turns out that Celery uses pickle internally in apply_async()/send_job() even if we have configured Celery
+        to use JSON for all I/O (and we do, see settings.py), so we need to support pickle and JSON both.
+        """
+        # Generic __setstate__ behavior
+        self.__dict__.update(state)
+        # Set up lazy `self.user` attribute based on `state["_user_pk"]`
+        self._init_user()
 
 
 def copy_safe_request(request):

@@ -1,12 +1,19 @@
+import pickle
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import TestCase
+from django.test import RequestFactory
 
 from nautobot.core.settings_funcs import is_truthy
+from nautobot.dcim.models import Device, Region, Site
+from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
+from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
+from nautobot.dcim.tables import DeviceTable, SiteTable
 from nautobot.extras.models import JobHook, Status, Tag
 from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
+from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 from nautobot.utilities.exceptions import FilterSetFieldNotFound
 from nautobot.utilities.forms import (
     DatePicker,
@@ -14,9 +21,12 @@ from nautobot.utilities.forms import (
     DynamicModelMultipleChoiceField,
     MultipleContentTypeField,
 )
+from nautobot.utilities.testing import TestCase
 from nautobot.utilities.utils import (
+    NautobotFakeRequest,
     build_lookup_label,
     convert_querydict_to_factory_formset_acceptable_querydict,
+    copy_safe_request,
     deepmerge,
     dict_to_filter_params,
     ensure_content_type_and_field_name_inquery_params,
@@ -37,10 +47,6 @@ from nautobot.utilities.utils import (
     slugify_dots_to_dashes,
     slugify_dashes_to_underscores,
 )
-from nautobot.dcim.models import Device, Region, Site
-from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
-from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
-from nautobot.dcim.tables import DeviceTable, SiteTable
 
 from example_plugin.models import ExampleModel
 
@@ -587,3 +593,59 @@ class LookupRelatedFunctionTest(TestCase):
             ensure_content_type_and_field_name_inquery_params({"field_name": "name", "content_type": "dcim.abc"})
         self.assertEqual(str(err.exception.args[0]), "content_type not found")
         self.assertEqual(err.exception.code, 404)
+
+
+class NautobotFakeRequestTest(TestCase):
+    """Test the NautobotFakeRequest class."""
+
+    def setUp(self):
+        """Create the RequestFactory."""
+        super().setUp()
+        self.factory = RequestFactory()
+
+    def get_with_user(self, url):
+        """RequestFactory() doesn't run middleware, so simulate it."""
+        request = self.factory.get(url)
+        request.user = self.user
+        return request
+
+    def test_copy_safe_request(self):
+        """Test that copy_safe_request() produces a realistic looking NautobotFakeRequest."""
+        real_request = self.get_with_user("/")
+        fake_request = copy_safe_request(real_request)
+        self.assertEqual(real_request.POST, fake_request.POST)
+        self.assertEqual(real_request.GET, fake_request.GET)
+        self.assertEqual(real_request.user, fake_request.user)
+        self.assertEqual(real_request.path, fake_request.path)
+        for key in fake_request.META.keys():
+            self.assertIn(key, HTTP_REQUEST_META_SAFE_COPY)
+            self.assertEqual(real_request.META[key], fake_request.META[key])
+        self.assertEqual(fake_request.user, self.user)
+
+    def test_fake_request_json_no_extra_db_access(self):
+        """Verify that serializing and deserializing a NautobotFakeRequest as JSON doesn't unnecessarily access the DB."""
+        real_request = self.get_with_user("/")
+        fake_request = copy_safe_request(real_request)
+        with self.assertNumQueries(0):
+            new_fake_request = NautobotFakeRequest.nautobot_deserialize(fake_request.nautobot_serialize())
+        # After creating the new instance, its `user` is a lazy attribute, which should evaluate on demand:
+        with self.assertNumQueries(1):
+            new_fake_request.user
+            self.assertEqual(new_fake_request.user, self.user)
+        # It should then be cached and not require re-lookup from the DB
+        with self.assertNumQueries(0):
+            new_fake_request.user
+
+    def test_fake_request_pickle_no_extra_db_access(self):
+        """Verify that pickling and unpickling a NautobotFakeRequest doesn't unnecessarily access the DB."""
+        real_request = self.get_with_user("/")
+        fake_request = copy_safe_request(real_request)
+        with self.assertNumQueries(0):
+            new_fake_request = pickle.loads(pickle.dumps(fake_request))
+        # After creating the new instance, its `user` is a lazy attribute, which should evaluate on demand:
+        with self.assertNumQueries(1):
+            new_fake_request.user
+            self.assertEqual(new_fake_request.user, self.user)
+        # It should then be cached and not require re-lookup from the DB
+        with self.assertNumQueries(0):
+            new_fake_request.user
