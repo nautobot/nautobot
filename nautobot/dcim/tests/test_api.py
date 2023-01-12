@@ -1723,7 +1723,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
 
         cls.interfaces_not_belonging_to_same_device_data = [
             [
-                "parent_interface",
+                "parent",
                 {
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
@@ -1825,13 +1825,13 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-            field_name_mapping = {"lag": "LAG", "parent_interface": "parent"}
-            field_name = field_name_mapping[name] if name in field_name_mapping else name
+            field_name = name.upper() if name == "lag" else name
+            error_field_name = f"{name}_interface" if name == "parent" else name
 
-            interface = Interface.objects.get(id=payload[name])
+            interface = Interface.objects.get(id=payload[error_field_name])
             self.assertEqual(
-                str(response.data[name][0]),
-                f"The selected {field_name} interface ({interface}) belongs to {interface.device}, which is "
+                str(response.data[error_field_name][0]),
+                f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
                 f"not part of virtual chassis {self.virtual_chassis}.",
             )
 
