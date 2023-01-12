@@ -649,7 +649,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
 
         # Initialize primary_for_parent if IP address is already assigned
         if self.instance.present_in_database and self.instance.assigned_object:
-            parent = getattr(self.instance.assigned_object, "device", self.instance.assigned_object.virtual_machine)
+            parent = self.instance.assigned_object.parent
             if (
                 self.instance.address.version == 4
                 and parent.primary_ip4_id == self.instance.pk
@@ -698,22 +698,15 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
         primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
 
-        # Assign this IPAddress as the primary for the associated Device
-        if interface and self.cleaned_data["primary_for_parent"] and isinstance(interface, Interface):
-            setattr(interface.device, primary_ip_attr, ipaddress)
-            interface.device.save()
+        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
+        if interface and self.cleaned_data["primary_for_parent"]:
+            setattr(interface.parent, primary_ip_attr, ipaddress)
+            interface.parent.save()
 
-        # Assign this IPAddress as the primary for the associated VirtualMachine
-        elif interface and self.cleaned_data["primary_for_parent"] and isinstance(interface, VMInterface):
-            setattr(interface.virtual_machine, primary_ip_attr, ipaddress)
-            interface.virtual_machine.save()
-
-        # Or clear it as the primary, saving the `original_assigned_object.device` or `original_assigned_object.virtual_machine`
-        # if `_primary_ip_unset_by_form` was set in `clean()`
+        # Or clear it as the primary, saving the `original_assigned_object.parent` if
+        # `_primary_ip_unset_by_form` was set in `clean()`
         elif primary_ip_unset_by_form:
-            parent = getattr(
-                ipaddress._original_assigned_object, "device", ipaddress._original_assigned_object.virtual_machine
-            )
+            parent = ipaddress._original_assigned_object.parent
             setattr(parent, primary_ip_attr, None)
             parent.save()
 
