@@ -78,7 +78,7 @@ Simply querying the `/api/dcim/devices/` API route provides:
           "vc_position": null,
           "vc_priority": null,
           "comments": "",
-          "local_context_data": null,
+          "local_config_context_data": null,
           "tags": [],
           "custom_fields": {},
           "config_context": {},

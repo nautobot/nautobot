@@ -75,8 +75,8 @@ class ClusterTable(BaseTable):
     name = tables.LinkColumn()
     tenant = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
-    type = tables.Column(linkify=True)
-    group = tables.Column(linkify=True)
+    cluster_type = tables.Column(linkify=True)
+    cluster_group = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"cluster_id": "pk"},
@@ -94,8 +94,8 @@ class ClusterTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "type",
-            "group",
+            "cluster_type",
+            "cluster_group",
             "tenant",
             "site",
             "device_count",
@@ -105,8 +105,8 @@ class ClusterTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            "type",
-            "group",
+            "cluster_type",
+            "cluster_group",
             "tenant",
             "site",
             "device_count",

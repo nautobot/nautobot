@@ -755,7 +755,7 @@ class DeviceSerializer(
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
     device_redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
-    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Device
@@ -786,8 +786,8 @@ class DeviceSerializer(
             "device_redundancy_group",
             "device_redundancy_group_priority",
             "comments",
-            "local_context_schema",
-            "local_context_data",
+            "local_config_context_schema",
+            "local_config_context_data",
         ]
         validators = []
 
