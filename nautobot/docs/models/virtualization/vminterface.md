@@ -14,7 +14,3 @@ The following operational statuses are available by default:
     - Added `bridge` field.
     - Added `parent_interface` field.
     - Added `status` field.
-
-+/- 2.0.0
-    - Renamed `parent_interface` field to `parent`.
-    - Renamed `child_interfaces` field to `children`.
