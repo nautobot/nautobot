@@ -149,8 +149,6 @@ class AdminGroup(Group):
     Proxy contrib.auth.models.Group for the admin UI
     """
 
-    Group._meta.get_field("permissions").related_name = "groups"
-
     class Meta:
         verbose_name = "Group"
         proxy = True

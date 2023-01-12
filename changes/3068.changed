@@ -1,1 +1,1 @@
-Renamed reverse-relation `user_set` to `users` on the Group model. Renamed reverse-relation `group` to `groups` on the Permission model.
+Renamed reverse-relation `user_set` to `users` on the Group model.
