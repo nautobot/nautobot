@@ -10,7 +10,7 @@ import yaml
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.ipam.models import VLAN
 
 from nautobot.extras.choices import (
@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     GitRepository,
     JobLogEntry,
     JobResult,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -61,11 +62,11 @@ class GitTest(TransactionTestCase):
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
-        self.role = DeviceRole.objects.create(name="router", slug="router")
+        self.role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).get(slug="active")
         self.device = Device.objects.create(
             name="test-device",
-            device_role=self.role,
+            role=self.role,
             device_type=self.device_type,
             site=self.site,
             status=self.device_status,

@@ -15,7 +15,7 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Role,
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
@@ -510,7 +511,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     (name, weight, description, etc.), while all other keys in the dictionary will go into the record's "data" field.
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
-    the reason is that the serializer only allows us to identify related objects (Region, Site, DeviceRole, etc.)
+    the reason is that the serializer only allows us to identify related objects (Region, Site, Role, etc.)
     by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
@@ -535,7 +536,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         ("regions", Region),
         ("sites", Site),
         ("device_types", DeviceType),
-        ("roles", DeviceRole),
+        ("roles", Role),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
         ("clusters", Cluster),

@@ -5,7 +5,6 @@ from nautobot.dcim.choices import DeviceFaceChoices, InterfaceStatusChoices, Int
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
     Platform,
@@ -13,7 +12,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import SecretsGroup, Status
+from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
@@ -42,13 +41,13 @@ class DeviceTestCase(TestCase):
         ).first()
         cls.manufacturer = cls.device_type.manufacturer
         cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
-        cls.device_role = DeviceRole.objects.first()
+        cls.device_role = Role.objects.get_for_model(Device).first()
 
         Device.objects.create(
             name="Device 1",
             status=Status.objects.get_for_model(Device).get(slug="active"),
             device_type=cls.device_type,
-            device_role=cls.device_role,
+            role=cls.device_role,
             site=cls.site,
             rack=cls.rack,
             position=1,
@@ -62,7 +61,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -81,7 +80,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "test",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -100,7 +99,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -120,7 +119,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -138,7 +137,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -158,11 +157,11 @@ class LabelTestCase(TestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             site=site,
         )
 
@@ -199,17 +198,17 @@ class TestCableCSVForm(TestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
         cls.device_1 = Device.objects.create(
             name="Device 1",
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             site=site,
         )
         cls.device_2 = Device.objects.create(
             name="Device 2",
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             site=site,
         )
         cls.interface_1 = Interface.objects.create(
@@ -254,25 +253,25 @@ class TestInterfaceCSVForm(TestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         cls.devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
         )

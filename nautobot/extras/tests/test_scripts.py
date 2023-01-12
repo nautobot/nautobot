@@ -2,7 +2,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from netaddr import IPAddress, IPNetwork
 
-from nautobot.dcim.models import DeviceRole
+from nautobot.dcim.models import Device
+from nautobot.extras.models import Role
 
 from .example_jobs.script_variables import (
     BooleanVarScript,
@@ -118,10 +119,10 @@ class ScriptVariablesTest(TestCase):
     def test_objectvar(self):
         # Populate some objects
         for i in range(1, 6):
-            DeviceRole(name=f"Device Role {i}", slug=f"device-role-{i}").save()
+            Role(name=f"Device Role {i}", slug=f"device-role-{i}").save()
 
         # Validate valid data
-        data = {"var1": DeviceRole.objects.first().pk}
+        data = {"var1": Role.objects.get_for_model(Device).first().pk}
         form = ObjectVarScript().as_form(data)
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["var1"].pk, data["var1"])
@@ -129,10 +130,10 @@ class ScriptVariablesTest(TestCase):
     def test_multiobjectvar(self):
         # Populate some objects
         for i in range(1, 6):
-            DeviceRole(name=f"Device Role {i}", slug=f"device-role-{i}").save()
+            Role(name=f"Device Role {i}", slug=f"device-role-{i}").save()
 
         # Validate valid data
-        data = {"var1": [role.pk for role in DeviceRole.objects.all()[:3]]}
+        data = {"var1": [role.pk for role in Role.objects.all()[:3]]}
         form = MultiObjectVarScript().as_form(data)
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["var1"][0].pk, data["var1"][0])

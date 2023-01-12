@@ -14,6 +14,7 @@ from nautobot.extras.models import (
     TaggedItem,
 )
 from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.roles import RoleModelMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
@@ -252,7 +253,7 @@ class Cluster(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
+class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
     """
     A virtual machine which runs inside a Cluster.
     """
@@ -277,14 +278,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         null=True,
     )
     name = models.CharField(max_length=64, db_index=True)
-    role = models.ForeignKey(
-        to="dcim.DeviceRole",
-        on_delete=models.PROTECT,
-        related_name="virtual_machines",
-        limit_choices_to={"vm_role": True},
-        blank=True,
-        null=True,
-    )
     primary_ip4 = models.OneToOneField(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,

@@ -25,7 +25,9 @@ __all__ = [
     "NestedNoteSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
+    "NestedRoleSerializer",
     "NestedScheduledJobSerializer",
+    "NestedSecretsGroupAssociationSerializer",
     "NestedSecretSerializer",
     "NestedSecretsGroupSerializer",
     "NestedStatusSerializer",
@@ -210,6 +212,14 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
     class Meta:
         model = models.RelationshipAssociation
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
+
+
+class NestedRoleSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
+
+    class Meta:
+        model = models.Role
+        fields = ["id", "url", "name", "slug"]
 
 
 class NestedScheduledJobSerializer(BaseModelSerializer):
