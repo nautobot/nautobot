@@ -1015,7 +1015,7 @@ Default:
     "disable_existing_loggers": False,
     "formatters": {
         "normal": {
-            "format": "asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
             "datefmt": "%H:%M:%S",
         },
         "verbose": {
