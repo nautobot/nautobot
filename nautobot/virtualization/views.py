@@ -25,7 +25,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 
 class ClusterTypeListView(generic.ObjectListView):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     filterset = filters.ClusterTypeFilterSet
     table = tables.ClusterTypeTable
 
@@ -39,15 +39,15 @@ class ClusterTypeView(generic.ObjectView):
         # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
-            .filter(type=instance)
-            .prefetch_related("group", "site", "tenant")
+            .filter(cluster_type=instance)
+            .prefetch_related("cluster_group", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
         )
 
         cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("type")
+        cluster_table.columns.hide("cluster_type")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -76,7 +76,7 @@ class ClusterTypeBulkImportView(generic.BulkImportView):
 
 
 class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     table = tables.ClusterTypeTable
 
 
@@ -86,7 +86,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class ClusterGroupListView(generic.ObjectListView):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     filterset = filters.ClusterGroupFilterSet
     table = tables.ClusterGroupTable
 
@@ -100,15 +100,15 @@ class ClusterGroupView(generic.ObjectView):
         # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
-            .filter(group=instance)
-            .prefetch_related("type", "site", "tenant")
+            .filter(cluster_group=instance)
+            .prefetch_related("cluster_type", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
         )
 
         cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("group")
+        cluster_table.columns.hide("cluster_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -137,7 +137,7 @@ class ClusterGroupBulkImportView(generic.BulkImportView):
 
 
 class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     table = tables.ClusterGroupTable
 
 
@@ -194,7 +194,7 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 class ClusterBulkEditView(generic.BulkEditView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Cluster.objects.prefetch_related("type", "group", "site")
+    queryset = Cluster.objects.prefetch_related("cluster_type", "cluster_group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
@@ -202,7 +202,7 @@ class ClusterBulkEditView(generic.BulkEditView):
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Cluster.objects.prefetch_related("type", "group", "site")
+    queryset = Cluster.objects.prefetch_related("cluster_type", "cluster_group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 

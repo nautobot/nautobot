@@ -189,7 +189,7 @@ SEARCH_TYPES = OrderedDict(
             "cluster",
             {
                 # v2 TODO(jathan): Replace prefetch_related with select_related
-                "queryset": Cluster.objects.prefetch_related("type", "group").annotate(
+                "queryset": Cluster.objects.prefetch_related("cluster_type", "cluster_group").annotate(
                     device_count=count_related(Device, "cluster"),
                     vm_count=count_related(VirtualMachine, "cluster"),
                 ),

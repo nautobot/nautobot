@@ -1419,7 +1419,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "vc_priority": None,
             "comments": "A new device",
             "tags": [t.pk for t in Tag.objects.get_for_model(Device)],
-            "local_context_data": None,
+            "local_config_context_data": None,
             "cf_crash-counter": -1,
             "cr_router-id": None,
         }
@@ -1588,7 +1588,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), form_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a device with local context that conforms to that schema
@@ -1600,8 +1600,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.add_device")
 
         form_data = self.form_data.copy()
-        form_data["local_context_schema"] = schema.pk
-        form_data["local_context_data"] = '{"foo": "bar"}'
+        form_data["local_config_context_schema"] = schema.pk
+        form_data["local_config_context_data"] = '{"foo": "bar"}'
 
         # Try POST with model-level permission
         request = {
@@ -1609,10 +1609,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Device X").local_context_schema.pk, schema.pk)
+        self.assertEqual(self._get_queryset().get(name="Device X").local_config_context_schema.pk, schema.pk)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_local_context_schema_validation_fails(self):
+    def test_local_config_context_schema_validation_fails(self):
         """
         Given a config context schema
         And a device with local context that *does not* conform to that schema
@@ -1624,8 +1624,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.add_device")
 
         form_data = self.form_data.copy()
-        form_data["local_context_schema"] = schema.pk
-        form_data["local_context_data"] = '{"foo": "bar"}'
+        form_data["local_config_context_schema"] = schema.pk
+        form_data["local_config_context_data"] = '{"foo": "bar"}'
 
         # Try POST with model-level permission
         request = {
@@ -2793,7 +2793,7 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "slug": "region-chi",
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": statuses[3].pk,
-            "local_context_data": None,
+            "local_config_context_data": None,
         }
 
         cls.csv_data = (

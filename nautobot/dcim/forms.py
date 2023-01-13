@@ -1867,13 +1867,13 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "tenant",
             "comments",
             "tags",
-            "local_context_data",
-            "local_context_schema",
+            "local_config_context_data",
+            "local_config_context_schema",
         ]
         help_texts = {
             "role": "The function this device serves",
             "serial": "Chassis serial number",
-            "local_context_data": "Local config context data overwrites all source contexts in the final rendered "
+            "local_config_context_data": "Local config context data overwrites all source contexts in the final rendered "
             "config context",
         }
         widgets = {
