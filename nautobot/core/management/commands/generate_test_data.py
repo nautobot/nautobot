@@ -126,5 +126,17 @@ Type 'yes' to continue, or 'no' to cancel: """
         DeviceTypeFactory.create_batch(20)
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(10)
+        # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
+        # CircuitTypeFactory.create_batch(10)
+        # ProviderFactory.create_batch(10)
+        # CircuitFactory.create_batch(10)
+        # UserFactory.create_batch(10)
+        # RackFactory.create_batch(10)
+        # RackReservationFactory.create_batch(10)
+        # ClusterTypeFactory.create_batch(10)
+        # ClusterGroupFactory.create_batch(10)
+        # ClusterFactory.create_batch(10)
+        # VirtualMachineFactory.create_batch(10)
+        # We need to remove them from there and enable them here instead, but that will require many test updates.
 
         self.stdout.write(self.style.SUCCESS("Database populated successfully!"))
