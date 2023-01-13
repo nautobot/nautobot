@@ -1,3 +1,4 @@
+from nautobot.circuits import factory
 from nautobot.circuits.filters import (
     CircuitFilterSet,
     CircuitTerminationFilterSet,
@@ -8,7 +9,6 @@ from nautobot.circuits.filters import (
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Role, Status
-from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
 
 
@@ -91,161 +91,50 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     filterset = CircuitFilterSet
     tenancy_related_name = "circuits"
 
+    generic_filter_tests = (
+        # (filter_name, field_name if different from filter name)
+        ["cid"],
+        ["install_date"],
+        ["commit_rate"],
+        ["provider_id", "provider__pk"],
+        ["provider", "provider__slug"],
+        ["provider_network_id", "terminations__provider_network"],
+        ["type_id", "type__pk"],
+        ["type", "type__slug"],
+        ["status", "status__slug"],
+        ["region_id", "terminations__site__region__pk"],  # failed no valid test data
+        ["region", "terminations__site__region__slug"],  # failed no valid test data
+        ["site_id", "terminations__site__pk"],
+        ["site", "terminations__site__slug"],
+    )
+
     @classmethod
     def setUpTestData(cls):
 
-        cls.regions = Region.objects.filter(sites__isnull=False).distinct()[:3]
+        factory.CircuitTypeFactory.create_batch(10)
+        factory.ProviderFactory.create_batch(10)
+        factory.CircuitFactory.create_batch(20)
+        factory.CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
+        factory.CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
+        factory.CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
+        factory.CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
 
-        cls.sites = (
-            Site.objects.filter(region=cls.regions[0]).first(),
-            Site.objects.filter(region=cls.regions[1]).first(),
-            Site.objects.filter(region=cls.regions[2]).first(),
-        )
-
-        tenants = Tenant.objects.filter(group__isnull=False)
-
-        circuit_types = (
-            CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1"),
-            CircuitType.objects.create(name="Test Circuit Type 2", slug="test-circuit-type-2"),
-        )
-
-        providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1"),
-            Provider.objects.create(name="Provider 2", slug="provider-2"),
-        )
-
-        provider_network = (
-            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[1]),
-        )
-        ProviderNetwork.objects.bulk_create(provider_network)
-
-        circ_statuses = Status.objects.get_for_model(Circuit)
-        circ_status_map = {s.slug: s for s in circ_statuses.all()}
-
-        circuits = (
-            Circuit.objects.create(
-                provider=providers[0],
-                tenant=tenants[0],
-                type=circuit_types[0],
-                cid="Test Circuit 1",
-                install_date="2020-01-01",
-                commit_rate=1000,
-                status=circ_status_map["active"],
-            ),
-            Circuit.objects.create(
-                provider=providers[0],
-                tenant=tenants[0],
-                type=circuit_types[0],
-                cid="Test Circuit 2",
-                install_date="2020-01-02",
-                commit_rate=2000,
-                status=circ_status_map["active"],
-            ),
-            Circuit.objects.create(
-                provider=providers[0],
-                tenant=tenants[1],
-                type=circuit_types[0],
-                cid="Test Circuit 3",
-                install_date="2020-01-03",
-                commit_rate=3000,
-                status=circ_status_map["planned"],
-            ),
-            Circuit.objects.create(
-                provider=providers[1],
-                tenant=tenants[1],
-                type=circuit_types[1],
-                cid="Test Circuit 4",
-                install_date="2020-01-04",
-                commit_rate=4000,
-                status=circ_status_map["planned"],
-            ),
-            Circuit.objects.create(
-                provider=providers[1],
-                tenant=tenants[2],
-                type=circuit_types[1],
-                cid="Test Circuit 5",
-                install_date="2020-01-05",
-                commit_rate=5000,
-                status=circ_status_map["offline"],
-            ),
-            Circuit.objects.create(
-                provider=providers[1],
-                tenant=tenants[2],
-                type=circuit_types[1],
-                cid="Test Circuit 6",
-                install_date="2020-01-06",
-                commit_rate=6000,
-                status=circ_status_map["offline"],
-            ),
-        )
-
-        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[1], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[2], site=cls.sites[2], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[3], provider_network=provider_network[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[5], provider_network=provider_network[2], term_side="A")
-
-    def test_cid(self):
-        params = {"cid": ["Test Circuit 1", "Test Circuit 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_install_date(self):
-        params = {"install_date": ["2020-01-01", "2020-01-02"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_commit_rate(self):
-        params = {"commit_rate": ["1000", "2000"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_provider(self):
-        provider = Provider.objects.first()
-        params = {"provider_id": [provider.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"provider": [provider.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_provider_network(self):
-        provider_network = ProviderNetwork.objects.all()[:2]
-        params = {"provider_network_id": [provider_network[0].pk, provider_network[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_type(self):
-        circuit_type = CircuitType.objects.first()
-        params = {"type_id": [circuit_type.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"type": [circuit_type.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_status(self):
-        statuses = list(Status.objects.get_for_model(Circuit)[:2])
-        params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(status__slug__in=params["status"]).count(),
-        )
-
-    def test_region(self):
-        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
-        cts = CircuitTermination.objects.filter(site__region__in=params["region_id"])
-        circuit_count = cts.values_list("circuit", flat=True).count()
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
-        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-        cts = CircuitTermination.objects.filter(site__region__slug__in=params["region"])
-        circuit_count = cts.values_list("circuit", flat=True).count()
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
-
-    def test_site(self):
-        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
-        cts = CircuitTermination.objects.filter(site__in=params["site_id"])
-        circuit_count = cts.values_list("circuit", flat=True).count()
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
-        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
-        cts = CircuitTermination.objects.filter(site__slug__in=params["site"])
-        circuit_count = cts.values_list("circuit", flat=True).count()
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
+    def test_filters_generic(self):
+        for test in self.generic_filter_tests:
+            filter_name = test[0]
+            field_name = test[1] if len(test) == 2 else test[0]
+            with self.subTest(f"{self.queryset.model._meta.object_name} filter {filter_name}"):
+                if field_name is None:
+                    field_name = filter_name
+                test_data = self.get_filterset_test_values(field_name)
+                print(f"{filter_name} test data:")
+                print(test_data)
+                params = {filter_name: test_data}
+                filterset_result = self.filterset(params, self.queryset).qs
+                print(f"filterset_result: {filterset_result}")
+                qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
+                print(f"qs_result: {qs_result.values_list(field_name, flat=True)}")
+                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]

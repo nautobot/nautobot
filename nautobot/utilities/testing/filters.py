@@ -36,12 +36,15 @@ class FilterTestCases:
             qs_count = queryset.count()
             values_with_count = queryset.values(field_name).annotate(count=Count(field_name)).order_by("count")
             for value in values_with_count:
+                # skip null values
+                if value[field_name] is None:
+                    continue
                 # randomly break out of loop after 2 values have been selected
                 if len(test_values) > 1 and random.choice([True, False]):
                     break
                 if value["count"] < qs_count:
                     qs_count -= value["count"]
-                    test_values.append(value[field_name])
+                    test_values.append(str(value[field_name]))
 
             if len(test_values) < 2:
                 raise ValueError(

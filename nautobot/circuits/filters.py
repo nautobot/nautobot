@@ -12,6 +12,8 @@ from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -140,6 +142,10 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         to_field_name="slug",
         label="Provider (slug)",
     )
+    provider_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ProviderNetwork.objects.all(),
+        label="Provider Network (ID or slug)",
+    )
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
         field_name="terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
@@ -183,11 +189,25 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         to_field_name="slug",
         label="Region (slug)",
     )
+    has_terminations = RelatedMembershipBooleanFilter(
+        field_name="terminations",
+        label="Has terminations",
+    )
     tags = TagFilter()
 
     class Meta:
         model = Circuit
-        fields = ["id", "cid", "install_date", "commit_rate"]
+        fields = [
+            "id",
+            "cid",
+            "install_date",
+            "commit_rate",
+            "comments",
+            "description",
+            "termination_a",
+            "termination_z",
+            "terminations",
+        ]
 
 
 class CircuitTerminationFilterSet(

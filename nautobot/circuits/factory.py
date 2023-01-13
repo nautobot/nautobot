@@ -98,6 +98,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
     class Meta:
         model = CircuitTermination
         exclude = (
+            "has_region",
             "has_site",
             "has_location",
             "has_port_speed",
@@ -118,8 +119,16 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             if getattr(self.circuit, f"termination_{random_side.lower()}") is None:
                 return random_side
 
-    has_site = factory.Faker("pybool")
-    site = factory.Maybe("has_site", random_instance(dcim_models.Site, allow_null=False))
+    has_region = None  # overridable attribute to force site that has a region
+    has_site = factory.Maybe("has_region", True, factory.Faker("pybool"))
+
+    @factory.lazy_attribute
+    def site(self):
+        if self.has_region:
+            return factory.random.randgen.choice(dcim_models.Site.objects.filter(region__isnull=False))
+        if self.has_site:
+            return factory.random.randgen.choice(dcim_models.Site.objects.all())
+        return None
 
     has_location = factory.Maybe("has_site", factory.Faker("pybool"), False)
     location = factory.Maybe(
@@ -132,11 +141,11 @@ class CircuitTerminationFactory(PrimaryModelFactory):
 
     @factory.lazy_attribute
     def provider_network(self):
-        # site and provider_network are mutually exclusive but if site is null provider_network is required
+        # site and provider_network are mutually exclusive but cannot both be null
         if self.has_site:
             return None
         if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
-            return ProviderNetwork.objects.filter(provider=self.circuit.provider).first()
+            return factory.random.randgen.choice(ProviderNetwork.objects.filter(provider=self.circuit.provider))
         return ProviderNetworkFactory(provider=self.circuit.provider)
 
     has_port_speed = factory.Faker("pybool")
