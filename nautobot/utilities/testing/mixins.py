@@ -187,6 +187,9 @@ class NautobotTestCaseMixin:
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
                 new_model_dict[k] = sorted(v)
+            elif k == "data_schema" and isinstance(v, str):
+                # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                new_model_dict[k] = self.standardize_json(v)
             else:
                 new_model_dict[k] = v
 
@@ -197,6 +200,9 @@ class NautobotTestCaseMixin:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
+                elif k == "data_schema" and isinstance(v, str):
+                    # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                    relevant_data[k] = self.standardize_json(v)
                 else:
                     relevant_data[k] = v
 
@@ -213,6 +219,11 @@ class NautobotTestCaseMixin:
     #
     # Convenience methods
     #
+
+    def standardize_json(self, jsonText):
+        obj = json.loads(jsonText)
+        newJsonText = json.dumps(obj, sort_keys=True)
+        return newJsonText
 
     @classmethod
     def create_tags(cls, *names):
