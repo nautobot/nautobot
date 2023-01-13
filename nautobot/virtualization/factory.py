@@ -37,20 +37,20 @@ class ClusterFactory(PrimaryModelFactory):
         model = Cluster
         exclude = (
             "has_comments",
-            "has_group",
+            "has_cluster_group",
             "has_location",
             "has_site",
             "has_tenant",
         )
 
     name = UniqueFaker("color")
-    type = random_instance(ClusterType, allow_null=False)
+    cluster_type = random_instance(ClusterType, allow_null=False)
 
     has_comments = factory.Faker("pybool")
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(ClusterGroup), None)
+    has_cluster_group = factory.Faker("pybool")
+    cluster_group = factory.Maybe("has_cluster_group", random_instance(ClusterGroup), None)
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
