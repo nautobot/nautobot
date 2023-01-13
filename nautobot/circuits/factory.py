@@ -113,7 +113,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
 
     @factory.lazy_attribute
     def term_side(self):
-        side_choices = [c[0] for c in choices.CircuitTerminationSideChoices.CHOICES]
+        side_choices = choices.CircuitTerminationSideChoices.values()
         for random_side in faker.Faker().random_elements(elements=side_choices, unique=True, length=len(side_choices)):
             if getattr(self.circuit, f"termination_{random_side.lower()}") is None:
                 return random_side
