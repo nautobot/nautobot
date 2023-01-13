@@ -4,7 +4,7 @@
 
 
 {% block buttons %}
-        {% if perms.extras.add_customfield %}
+        {% if object.clone_fields and perms.extras.add_customfield %}
             {% clone_button object %}
         {% endif %}
         {% if perms.extras.change_customfield %}

@@ -53,8 +53,7 @@ class GroupViewSet(ModelViewSet):
 
 
 class TokenViewSet(ModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_relatedn
-    queryset = RestrictedQuerySet(model=Token).prefetch_related("user")
+    queryset = RestrictedQuerySet(model=Token).select_related("user")
     serializer_class = serializers.TokenSerializer
     filterset_class = filters.TokenFilterSet
 

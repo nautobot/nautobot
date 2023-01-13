@@ -34,6 +34,11 @@ class NautobotTestRunner(DiscoverRunner):
 
         super().__init__(**kwargs)
 
+    def setup_test_environment(self, **kwargs):
+        super().setup_test_environment(**kwargs)
+        # Remove 'testserver' that Django "helpfully" adds automatically to ALLOWED_HOSTS, masking issues like #3065
+        settings.ALLOWED_HOSTS.remove("testserver")
+
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)
 

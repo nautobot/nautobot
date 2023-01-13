@@ -1,4 +1,5 @@
 from typing import Optional, Sequence
+from unittest import skipIf
 import uuid
 
 from django.conf import settings
@@ -29,7 +30,7 @@ __all__ = (
 
 @tag("unit")
 @override_settings(PAGINATE_COUNT=65000)
-class TestCase(_TestCase, mixins.NautobotTestCaseMixin):
+class TestCase(mixins.NautobotTestCaseMixin, _TestCase):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):
@@ -774,6 +775,31 @@ class ViewTestCases:
                 self.assertIn(instance1.get_absolute_url(), content, msg=content)
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
+        @skipIf(
+            "example_plugin" not in settings.PLUGINS,
+            "example_plugin not in settings.PLUGINS",
+        )
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_view_plugin_banner(self):
+            """
+            If example plugin is installed, check if the plugin banner is rendered correctly in ObjectListView.
+            """
+            # Add model-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try GET with model-level permission
+            response = self.client.get(self._get_url("list"))
+            self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+
+            # Check plugin banner is rendered correctly
+            self.assertIn(
+                f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
+            )
+
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
         Create multiple instances using a single form. Expects the creation of three new instances by default.
@@ -1327,3 +1353,53 @@ class ViewTestCases:
         """
 
         maxDiff = None
+        bulk_add_data = None
+        """Used for bulk-add (distinct from bulk-create) view testing; self.bulk_create_data will be used if unset."""
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_add_component(self):
+            """Test bulk-adding this component to devices/virtual-machines."""
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            initial_count = self._get_queryset().count()
+
+            data = (self.bulk_add_data or self.bulk_create_data).copy()
+
+            # Load the device-bulk-add or virtualmachine-bulk-add form
+            if "device" in data:
+                url = reverse(f"dcim:device_bulk_add_{self.model._meta.model_name}")
+                request = {
+                    "path": url,
+                    "data": testing.post_data({"pk": data["device"]}),
+                }
+            else:
+                url = reverse(f"virtualization:virtualmachine_bulk_add_{self.model._meta.model_name}")
+                request = {
+                    "path": url,
+                    "data": testing.post_data({"pk": data["virtual_machine"]}),
+                }
+            self.assertHttpStatus(self.client.post(**request), 200)
+
+            # Post to the device-bulk-add or virtualmachine-bulk-add form to create records
+            if "device" in data:
+                data["pk"] = data.pop("device")
+            else:
+                data["pk"] = data.pop("virtual_machine")
+            data["_create"] = ""
+            request["data"] = testing.post_data(data)
+            self.assertHttpStatus(self.client.post(**request), 302)
+
+            updated_count = self._get_queryset().count()
+            self.assertEqual(updated_count, initial_count + self.bulk_create_count)
+
+            matching_count = 0
+            for instance in self._get_queryset().all():
+                try:
+                    self.assertInstanceEqual(instance, (self.bulk_add_data or self.bulk_create_data))
+                    matching_count += 1
+                except AssertionError:
+                    pass
+            self.assertEqual(matching_count, self.bulk_create_count)
