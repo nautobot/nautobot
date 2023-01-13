@@ -60,7 +60,7 @@ class ProviderFilterSet(NautobotFilterSet):
         to_field_name="slug",
         label="Location (slug or ID)",
     )
-    tag = TagFilter()
+    tags = TagFilter()
 
     class Meta:
         model = Provider
@@ -96,7 +96,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         to_field_name="slug",
         label="Provider (slug)",
     )
-    tag = TagFilter()
+    tags = TagFilter()
 
     class Meta:
         model = ProviderNetwork
@@ -183,7 +183,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         to_field_name="slug",
         label="Region (slug)",
     )
-    tag = TagFilter()
+    tags = TagFilter()
 
     class Meta:
         model = Circuit

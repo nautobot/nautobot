@@ -115,6 +115,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 | Model             | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
 |-------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
+| Circuit           | `tag`                     | `tags`                           | `/circuits/circuits/?tags=<slug>`                                         |
 | ConsolePort       | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
 | ConsoleServerPort | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
 | Device            | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
@@ -130,8 +131,10 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | InventoryItem     | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
 |                   | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
 | PowerFeed         | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
-| PowerOutlet       | `cabled`                  | `has_cable`                      |  `/dcim/power-outlets/?has_cable=True/False`                              |
+| PowerOutlet       | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
 | PowerPort         | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
+| Provider          | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
+| ProviderNetwork   | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
 | RearPort          | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
 | VirtualMachine    | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
 |                   | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |

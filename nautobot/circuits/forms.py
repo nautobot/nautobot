@@ -95,7 +95,7 @@ class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     field_order = ["q"]
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -153,7 +153,7 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
     field_order = ["q", "provider_id"]
     q = forms.CharField(required=False, label="Search")
     provider_id = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), required=False, label="Provider")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -297,7 +297,7 @@ class CircuitFilterForm(
         label="Provider Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
