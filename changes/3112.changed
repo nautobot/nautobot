@@ -1,0 +1,1 @@
+Converted eligible `prefetch_related()` to `select_related()` queries. Users should note a perforamnce gain from this change, but note that cacheops is no longer recomended in v1.5 and this change will likely result in invalide data responses if cacheops remains enabled in your environment. Cacheops will be removed entirely in a future release.
