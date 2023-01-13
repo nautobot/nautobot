@@ -16,7 +16,7 @@
             <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
                 <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
             </li>
-        {% endif %} 
+        {% endif %}
 {% endblock extra_nav_tabs %}
 
 
@@ -116,15 +116,15 @@
                 <tr>
                     <td>Cluster</td>
                     <td>
-                        {% if object.cluster.group %}
-                            {{ object.cluster.group|hyperlinked_object }} /
+                        {% if object.cluster.cluster_group %}
+                            {{ object.cluster.cluster_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.cluster|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
                     <td>Cluster Type</td>
-                    <td>{{ object.cluster.type }}</td>
+                    <td>{{ object.cluster.cluster_type }}</td>
                 </tr>
             </table>
         </div>

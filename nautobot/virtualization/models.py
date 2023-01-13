@@ -135,8 +135,8 @@ class Cluster(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
-    group = models.ForeignKey(
+    cluster_type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
+    cluster_group = models.ForeignKey(
         to=ClusterGroup,
         on_delete=models.PROTECT,
         related_name="clusters",
@@ -166,10 +166,10 @@ class Cluster(PrimaryModel):
     )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "type", "group", "site", "location", "tenant", "comments"]
+    csv_headers = ["name", "cluster_type", "cluster_group", "site", "location", "tenant", "comments"]
     clone_fields = [
-        "type",
-        "group",
+        "cluster_type",
+        "cluster_group",
         "tenant",
         "site",
         "location",
@@ -228,8 +228,8 @@ class Cluster(PrimaryModel):
     def to_csv(self):
         return (
             self.name,
-            self.type.name,
-            self.group.name if self.group else None,
+            self.cluster_type.name,
+            self.cluster_group.name if self.cluster_group else None,
             self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,

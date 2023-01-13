@@ -113,25 +113,25 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
             ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
         )
 
-        Cluster.objects.create(name="Cluster 1", type=cluster_types[0], group=cluster_groups[0])
-        Cluster.objects.create(name="Cluster 2", type=cluster_types[0], group=cluster_groups[0])
-        Cluster.objects.create(name="Cluster 3", type=cluster_types[0], group=cluster_groups[0])
+        Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])
+        Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])
+        Cluster.objects.create(name="Cluster 3", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])
 
         cls.create_data = [
             {
                 "name": "Cluster 4",
-                "type": cluster_types[1].pk,
-                "group": cluster_groups[1].pk,
+                "cluster_type": cluster_types[1].pk,
+                "cluster_group": cluster_groups[1].pk,
             },
             {
                 "name": "Cluster 5",
-                "type": cluster_types[1].pk,
-                "group": cluster_groups[1].pk,
+                "cluster_type": cluster_types[1].pk,
+                "cluster_group": cluster_groups[1].pk,
             },
             {
                 "name": "Cluster 6",
-                "type": cluster_types[1].pk,
-                "group": cluster_groups[1].pk,
+                "cluster_type": cluster_types[1].pk,
+                "cluster_group": cluster_groups[1].pk,
             },
         ]
 
@@ -150,8 +150,8 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         clustergroup = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=clustertype, group=clustergroup),
-            Cluster.objects.create(name="Cluster 2", type=clustertype, group=clustergroup),
+            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, cluster_group=clustergroup),
+            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, cluster_group=clustergroup),
         )
 
         statuses = Status.objects.get_for_model(VirtualMachine)
@@ -159,19 +159,19 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=clusters[0],
-            local_context_data={"A": 1},
+            local_config_context_data={"A": 1},
             status=statuses[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
-            local_context_data={"B": 2},
+            local_config_context_data={"B": 2},
             status=statuses[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
-            local_context_data={"C": 3},
+            local_config_context_data={"C": 3},
             status=statuses[0],
         )
 
@@ -238,7 +238,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a vm with local context that conforms to that schema
@@ -249,7 +249,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         )
         self.add_permissions("virtualization.change_virtualmachine")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(VirtualMachine.objects.get(name="Virtual Machine 1")),
@@ -258,9 +258,9 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
 
-    def test_local_context_schema_schema_validation_fails(self):
+    def test_local_config_context_schema_schema_validation_fails(self):
         """
         Given a config context schema
         And a vm with local context that *does not* conform to that schema
@@ -272,7 +272,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         # Add object-level permission
         self.add_permissions("virtualization.change_virtualmachine")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(VirtualMachine.objects.get(name="Virtual Machine 2")),
@@ -295,7 +295,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
-        cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
+        cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
 
         interfaces = (
