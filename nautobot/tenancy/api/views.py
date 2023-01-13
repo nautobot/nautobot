@@ -39,17 +39,20 @@ class TenantGroupViewSet(NautobotModelViewSet):
 
 
 class TenantViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (it should stay for tags)
-    queryset = Tenant.objects.prefetch_related("group", "tags").annotate(
-        circuit_count=count_related(Circuit, "tenant"),
-        device_count=count_related(Device, "tenant"),
-        ipaddress_count=count_related(IPAddress, "tenant"),
-        prefix_count=count_related(Prefix, "tenant"),
-        rack_count=count_related(Rack, "tenant"),
-        site_count=count_related(Site, "tenant"),
-        virtualmachine_count=count_related(VirtualMachine, "tenant"),
-        vlan_count=count_related(VLAN, "tenant"),
-        vrf_count=count_related(VRF, "tenant"),
+    queryset = (
+        Tenant.objects.select_related("group")
+        .prefetch_related("tags")
+        .annotate(
+            circuit_count=count_related(Circuit, "tenant"),
+            device_count=count_related(Device, "tenant"),
+            ipaddress_count=count_related(IPAddress, "tenant"),
+            prefix_count=count_related(Prefix, "tenant"),
+            rack_count=count_related(Rack, "tenant"),
+            site_count=count_related(Site, "tenant"),
+            virtualmachine_count=count_related(VirtualMachine, "tenant"),
+            vlan_count=count_related(VLAN, "tenant"),
+            vrf_count=count_related(VRF, "tenant"),
+        )
     )
     serializer_class = serializers.TenantSerializer
     filterset_class = filters.TenantFilterSet

@@ -48,10 +48,13 @@ class ClusterGroupViewSet(NautobotModelViewSet):
 
 
 class ClusterViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Cluster.objects.prefetch_related("type", "group", "tenant", "site", "tags").annotate(
-        device_count=count_related(Device, "cluster"),
-        virtualmachine_count=count_related(VirtualMachine, "cluster"),
+    queryset = (
+        Cluster.objects.select_related("type", "group", "tenant", "site")
+        .prefetch_related("tags")
+        .annotate(
+            device_count=count_related(Device, "cluster"),
+            virtualmachine_count=count_related(VirtualMachine, "cluster"),
+        )
     )
     serializer_class = serializers.ClusterSerializer
     filterset_class = filters.ClusterFilterSet
@@ -63,8 +66,7 @@ class ClusterViewSet(NautobotModelViewSet):
 
 
 class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VirtualMachine.objects.prefetch_related(
+    queryset = VirtualMachine.objects.select_related(
         "cluster__site",
         "platform",
         "primary_ip4",
@@ -72,8 +74,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
         "status",
         "role",
         "tenant",
-        "tags",
-    )
+    ).prefetch_related("tags")
     filterset_class = filters.VirtualMachineFilterSet
 
     def get_serializer_class(self):
@@ -115,10 +116,12 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
 class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VMInterface.objects.prefetch_related(
-        "virtual_machine", "parent_interface", "bridge", "status", "tags", "tagged_vlans"
-    )
+    queryset = VMInterface.objects.select_related(
+        "virtual_machine",
+        "parent_interface",
+        "bridge",
+        "status",
+    ).prefetch_related("tags", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
     # v2 TODO(jathan): Replace prefetch_related with select_related
