@@ -215,9 +215,15 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     def test_circuit_type(self):
         circuit_type = CircuitType.objects.first()
         params = {"circuit_type": [circuit_type.pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(circuit_type__in=params["circuit_type"]),
+        )
         params = {"circuit_type": [circuit_type.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(circuit_type__slug__in=params["circuit_type"]),
+        )
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(Circuit)[:2])

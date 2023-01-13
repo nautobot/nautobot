@@ -27,10 +27,10 @@
 |                      | `powerfeed`                             | `dcim_powerfeed_related`                       |
 |                      | `poweroutlet`                           | `dcim_poweroutlet_related`                     |
 |                      | `powerport`                             | `dcim_powerport_related`                       |
-| Circuit              | `type`                                  | `circuit_type`                                 |
-|                      | `termination_a`                         | `circuit_termination_a`                        |
+| Circuit              | `termination_a`                         | `circuit_termination_a`                        |
 |                      | `termination_z`                         | `circuit_termination_z`                        |
 |                      | `terminations`                          | `circuit_terminations`                         |
+|                      | `type`                                  | `circuit_type`                                 |
 | Cluster              | `group`                                 | `cluster_group`                                |
 |                      | `type`                                  | `cluster_type`                                 |
 | ConfigContextSchema  | `device_set`                            | `dcim_device_related`                          |
@@ -92,11 +92,11 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 | Model                 | Renamed Field          | New Name                      |
 |-----------------------|------------------------|-------------------------------|
-| Circuit               | `type`                 | `circuit_type`                |
-|                       | `termination_a`        | `circuit_termination_a`       |
+| Circuit               | `termination_a`        | `circuit_termination_a`       |
 |                       | `termination_z`        | `circuit_termination_z`       |
+|                       | `type`                 | `circuit_type`                |
 | Cluster               | `group`                | `cluster_group`               |
-|                       | `type`                 | `cluster_type`                |  
+|                       | `type`                 | `cluster_type`                |
 | Device                | `device_role`          | `role`                        |
 |                       | `local_context_data`   | `local_config_context_data`   |
 |                       | `local_context_schema` | `local_config_context_schema` |
@@ -129,7 +129,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 | Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
 |-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
-| Circuit               | `type`                    | `circuit_type`                   | `circuits/circuits/?circuit_type=<uuid/slug>`                             |
+| Circuit               | `type`                    | `circuit_type`                   | `/circuits/circuits/?circuit_type=<uuid/slug>`                            |
 | ConsolePort           | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
 | ConsoleServerPort     | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
 | Device                | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
@@ -158,7 +158,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 | Model                 | Enhanced Filter Field| Changes                                                    | UI and Rest API endpoints Available in v2.X|
 |-----------------------|----------------------|------------------------------------------------------------|----------------------------------------------|
-| Circuit               | `circuit_type`       | Enhanced to support primary key UUIDs in addition to slugs | `circuits/circuits/?circuit_type=<uuid/slug>`|
+| Circuit               | `circuit_type`       | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`|
 | ConsolePort           | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
 | ConsoleServerPort     | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
 | Device                | `manufacturer`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
@@ -217,7 +217,7 @@ Below is a table documenting [removed redundant filter field changes](../release
 
 | Model              | Removed Filter Field | UI and API endpoints that are no longer supported in v2.X                             |
 |--------------------|----------------------|---------------------------------------------------------------------------------------|
-| Circuit            | `type_id`            | instead of `circuits/circuits/?type_id=<uuid>`, use `circuit_type=<uuid>`             |
+| Circuit            | `type_id`            | instead of `/circuits/circuits/?type_id=<uuid>`, use `circuit_type=<uuid>`            |
 | CircuitTermination | `region_id`          | instead of `/circuits/circuit-terminations/?region_id=<uuid>`, use `region=<uuid>`    |
 |                    | `site_id`            | instead of `/circuits/circuit-terminations/?site_id=<uuid>`, use `site=<uuid>`        |
 | Cluster            | `region_id`          | instead of `/virtualization/clusters/?region_id=<uuid>`, use `region=<uuid>`          |

@@ -58,7 +58,7 @@ Circuit.objects.create(
 Circuit.objects.filter(circuit_type="circuit-type-2")
 ```
 
-Check out more Foreign Key related changes documented in this table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
+Check out more Foreign Key related changes documented in the table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 In addition to the changes made to Foreign Key fields' own names, some of their `related_names` are also renamed:
 
@@ -74,7 +74,7 @@ Now in v2.x, we have renamed the Foreign Key field `circuit`'s `related_name` at
 Circuit.objects.filter(circuit_terminations__site__in=["ams01", "ams02", "atl03"])
 ```
 
-Check out more `related-name` changes documented in this table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
+Check out more `related-name` changes documented in the table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
