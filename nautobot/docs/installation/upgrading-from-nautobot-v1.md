@@ -18,19 +18,25 @@
 
 ### Renamed Database Fields
 
-| Model         | Renamed Field          | New Name                 |
-|---------------|------------------------|--------------------------|
-| CablePath     | `circuittermination`   | `circuit_terminations`   |
-| Circuit       | `type`                 | `circuit_type`           |
-|               | `termination_a`        | `circuit_termination_a`  |
-|               | `termination_z`        | `circuit_termination_b`  |
-|               | `terminations`         | `circuit_terminations`   |
-| Device        | `device_role`          | `role`                   |
-| InventoryItem | `child_items`          | `children`               |
-|               | `level`                | `tree_depth`             |
-| RackGroup     | `level`                | `tree_depth`             |
-| Region        | `level`                | `tree_depth`             |
-| TenantGroup   | `level`                | `tree_depth`             |
+| Model         | Renamed Field          | New Name                             |
+|---------------|------------------------|--------------------------------------|
+| CablePath     | `circuittermination`   | `circuits_circuittermination_related`|
+|               | `consoleport`          | `dcim_consoleport_related`           |
+|               | `consoleserverport`    | `dcim_consoleserverport_related`     |
+|               | `interface`            | `dcim_interface_related`             |
+|               | `powerfeed`            | `dcim_powerfeed_related`             |
+|               | `poweroutlet`          | `dcim_poweroutlet_related`           |
+|               | `powerport`            | `dcim_powerport_related`             |
+| Circuit       | `type`                 | `circuit_type`                       |
+|               | `termination_a`        | `circuit_termination_a`              |
+|               | `termination_z`        | `circuit_termination_z`              |
+|               | `terminations`         | `circuit_terminations`               |
+| Device        | `device_role`          | `role`                               |
+| InventoryItem | `child_items`          | `children`                           |
+|               | `level`                | `tree_depth`                         |
+| RackGroup     | `level`                | `tree_depth`                         |
+| Region        | `level`                | `tree_depth`                         |
+| TenantGroup   | `level`                | `tree_depth`                         |
 
 ### Removed Database Fields
 
@@ -76,7 +82,7 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 |---------------|------------------|--------------------------|
 | Circuit       | `type`           | `circuit_type`           |
 |               | `termination_a`  | `circuit_termination_a`  |
-|               | `termination_z`  | `circuit_termination_b`  |  
+|               | `termination_z`  | `circuit_termination_z`  |  
 | Device        | `device_role`    | `role`                   |
 | InventoryItem | `_depth`         | `tree_depth`             |
 | RackGroup     | `_depth`         | `tree_depth`             |

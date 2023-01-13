@@ -73,7 +73,9 @@ SEARCH_TYPES = OrderedDict(
             "circuit",
             {
                 # v2 TODO(jathan): Replace prefetch_related with select_related
-                "queryset": Circuit.objects.prefetch_related("type", "provider", "tenant", "terminations__site"),
+                "queryset": Circuit.objects.prefetch_related(
+                    "type", "provider", "tenant", "circuit_terminations__site"
+                ),
                 "filterset": CircuitFilterSet,
                 "table": CircuitTable,
                 "url": "circuits:circuit_list",

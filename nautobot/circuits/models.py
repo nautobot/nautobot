@@ -317,9 +317,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     xconnect_id = models.CharField(max_length=50, blank=True, verbose_name="Cross-connect ID")
     pp_info = models.CharField(max_length=100, blank=True, verbose_name="Patch panel/port(s)")
     description = models.CharField(max_length=200, blank=True)
-    _path = models.ForeignKey(
-        to="dcim.CablePath", on_delete=models.SET_NULL, null=True, blank=True, related_name="circuit_terminations"
-    )
 
     class Meta:
         ordering = ["circuit", "term_side"]

@@ -58,23 +58,23 @@ Circuit.objects.create(
 Circuit.objects.filter(circuit_type="circuit-type-2")
 ```
 
-Check out more Foregin Key related changes documented in this table [Renamed Foregin Key Fields](../installation/upgrading-from-nautobot-v1.md#renamed-foregin-key-fields)
+Check out more Foreign Key related changes documented in this table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 In addition to the changes made to Foreign Key fields' own names, some of their `related_names` are also renamed:
 
 For example in v1.x, to query `Circuit` objects with `CircuitTermination` instances located in sites ["ams01", "ams02", "atl03"], you would do:
 
 ```python
-Circuit.objects.filter(terminations__site=["ams01", "ams02", "atl03"])
+Circuit.objects.filter(terminations__site__in=["ams01", "ams02", "atl03"])
 ```
 
 Now in v2.x, we have renamed the Foreign Key field `circuit`'s `related_name` attribute `terminations` on `CircuitTermination` Model to `circuit_terminations`, the same operations would look like:
 
 ```python
-Circuit.objects.filter(circuit_terminations__site=["ams01", "ams02", "atl03"])
+Circuit.objects.filter(circuit_terminations__site__in=["ams01", "ams02", "atl03"])
 ```
 
-Check out more `related-name` changes documented in this table [Renamed Foregin Key Related Names](../installation/upgrading-from-nautobot-v1.md#renamed-foregin-key-related-names)
+Check out more `related-name` changes documented in this table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
