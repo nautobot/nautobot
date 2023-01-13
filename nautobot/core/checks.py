@@ -41,7 +41,7 @@ W005 = Warning(
 )
 
 W006 = Warning(
-    "CACHEOPS_ENABLED is set to True but cachops is no longer supported in v1.5.8. It can still be used but may lead to "
+    "CACHEOPS_ENABLED is set to True but cacheops is no longer recommended in v1.5. It can still be used but may lead to "
     "inaccurate data responses. Cacheops will be removed in a later release.",
     id="nautobot.core.W006",
     obj=settings,
