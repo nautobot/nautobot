@@ -346,9 +346,9 @@ def common_test_data(cls):
 
     cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
     clusters = (
-        Cluster.objects.create(name="Cluster 1", type=cluster_type, site=sites[0], location=loc0),
-        Cluster.objects.create(name="Cluster 2", type=cluster_type, site=sites[1]),
-        Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2]),
+        Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, site=sites[0], location=loc0),
+        Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, site=sites[1]),
+        Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, site=sites[2]),
     )
 
     VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0])
@@ -630,7 +630,7 @@ def common_test_data(cls):
         serial="DEF",
         position=2,
         secrets_group=secrets_groups[1],
-        local_context_data={"foo": 123},
+        local_config_context_data={"foo": 123},
     )
     Device.objects.create(
         name="Device 3",
@@ -2983,12 +2983,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             params = {"has_device_bays": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_local_context_data(self):
+    def test_local_config_context_data(self):
         with self.subTest():
-            params = {"local_context_data": True}
+            params = {"local_config_context_data": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         with self.subTest():
-            params = {"local_context_data": False}
+            params = {"local_config_context_data": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):

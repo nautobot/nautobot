@@ -239,8 +239,8 @@ class ConfigContextTest(TestCase):
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(
             name="Cluster",
-            group=cluster_group,
-            type=cluster_type,
+            cluster_group=cluster_group,
+            cluster_type=cluster_type,
             site=self.site,
             location=self.location,
         )
@@ -391,14 +391,14 @@ class ConfigContextSchemaTestCase(TestCase):
             device_type=device_type,
             role=device_role,
             status=status,
-            local_context_data=context_data,
+            local_config_context_data=context_data,
         )
 
         # Virtual Machine
         cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
-        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
+        cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
-            name="virtual_machine", cluster=cluster, status=status, local_context_data=context_data
+            name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data
         )
 
     def test_existing_config_context_valid_schema_applied(self):
@@ -441,12 +441,12 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_device_valid_schema_applied(self):
         """
-        Given an existing device object with local_context_data
+        Given an existing device object with local_config_context_data
         And a config context schema object with a json schema
-        And the device local_context_data is valid for the schema
+        And the device local_config_context_data is valid for the schema
         Assert calling clean on the device object DOES NOT raise a ValidationError
         """
-        self.device.local_context_schema = self.schema_validation_pass
+        self.device.local_config_context_schema = self.schema_validation_pass
 
         try:
             self.device.full_clean()
@@ -455,13 +455,13 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_device_invalid_schema_applied(self):
         """
-        Given an existing device object with local_context_data
+        Given an existing device object with local_config_context_data
         And a config context schema object with a json schema
-        And the device local_context_data is NOT valid for the schema
+        And the device local_config_context_data is NOT valid for the schema
         Assert calling clean on the device object DOES raise a ValidationError
         """
         for schema in self.schemas_validation_fail:
-            self.device.local_context_schema = schema
+            self.device.local_config_context_schema = schema
 
             with self.assertRaises(ValidationError):
                 self.device.full_clean()
@@ -479,12 +479,12 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_virtual_machine_valid_schema_applied(self):
         """
-        Given an existing virtual machine object with local_context_data
+        Given an existing virtual machine object with local_config_context_data
         And a config context schema object with a json schema
-        And the virtual machine local_context_data is valid for the schema
+        And the virtual machine local_config_context_data is valid for the schema
         Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
         """
-        self.virtual_machine.local_context_schema = self.schema_validation_pass
+        self.virtual_machine.local_config_context_schema = self.schema_validation_pass
 
         try:
             self.virtual_machine.full_clean()
@@ -493,13 +493,13 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_virtual_machine_invalid_schema_applied(self):
         """
-        Given an existing virtual machine object with local_context_data
+        Given an existing virtual machine object with local_config_context_data
         And a config context schema object with a json schema
-        And the virtual machine local_context_data is NOT valid for the schema
+        And the virtual machine local_config_context_data is NOT valid for the schema
         Assert calling clean on the virtual machine object DOES raise a ValidationError
         """
         for schema in self.schemas_validation_fail:
-            self.virtual_machine.local_context_schema = schema
+            self.virtual_machine.local_config_context_schema = schema
 
             with self.assertRaises(ValidationError):
                 self.virtual_machine.full_clean()

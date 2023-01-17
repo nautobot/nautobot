@@ -21,7 +21,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
 
         # Virtualization cluster for VirtualMachine
         cluster = getattr(obj, "cluster", None)
-        cluster_group = getattr(cluster, "group", None)
+        cluster_group = getattr(cluster, "cluster_group", None)
 
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
@@ -112,7 +112,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         }
         base_query = Q(
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
-            Q(cluster_groups=OuterRef("cluster__group")) | Q(cluster_groups=None),
+            Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
             Q(clusters=OuterRef("cluster")) | Q(clusters=None),
             Q(tenant_groups=OuterRef("tenant__tenant_group")) | Q(tenant_groups=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),

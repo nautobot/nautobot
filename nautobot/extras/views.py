@@ -279,12 +279,16 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.device_set.prefetch_related("tenant", "site", "rack", "device_type", "role", "primary_ip"),
+            data=instance.dcim_device_related.prefetch_related(
+                "tenant", "site", "rack", "device_type", "role", "primary_ip"
+            ),
             orderable=False,
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
             ],
@@ -298,12 +302,16 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
+            data=instance.virtualization_virtualmachine_related.prefetch_related(
+                "cluster", "role", "tenant", "primary_ip"
+            ),
             orderable=False,
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
             ],
