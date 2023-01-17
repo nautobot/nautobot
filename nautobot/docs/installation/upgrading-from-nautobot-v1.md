@@ -42,7 +42,6 @@
 |                     | `local_context_schema`                  | `local_config_context_schema`                  |
 | VLAN                | `group`                                 | `vlan_group`                                   |
 
-
 ### Removed Database Fields
 
 | Model         | Removed Field |
@@ -99,7 +98,6 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 | VirtualMachine        | `local_context_data`   | `local_config_context_data`   |
 |                       | `local_context_schema` | `local_config_context_schema` |
 | VLAN                  | `group`                | `vlan_group`                  |
-
 
 ### Removed Serializer Fields
 
