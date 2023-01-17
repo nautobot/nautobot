@@ -1491,7 +1491,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                                 component_form = self.model_form(component_data)
                                 if component_form.is_valid():
                                     instance = component_form.save()
-                                    logger.debug(f"Created {instance} on {instance.device}")
+                                    logger.debug(f"Created {instance} on {instance.parent}")
                                     new_components.append(instance)
                                 else:
                                     for (
