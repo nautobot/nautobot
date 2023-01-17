@@ -153,27 +153,27 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 |-----------------------|-----------------------|------------------------------------------------------------|----------------------------------------------|
 | ConsolePort           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
 | ConsoleServerPort     | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
-| Device                | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
+| Device                | `cluster_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
 |                       | `device_type_id`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`|
-|                       | `role`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`|
-|                       | `platform`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`|
-|                       | `rack_group_id`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`|
-|                       | `rack_id`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`|
-|                       | `cluster_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
+|                       | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
 |                       | `model`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`|
+|                       | `platform`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`|
+|                       | `role`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`|
+|                       | `rack_id`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`|
+|                       | `rack_group_id`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`|
 |                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`|
 |                       | `secrets_group`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?secrets_group=<uuid/slug>`|
-|                       | `virtual_chassis_id`  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`|
 |                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`|
-| DeviceBay             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`|
-|                       | `cable`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+|                       | `virtual_chassis_id`  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`|
+| DeviceBay             | `cable`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+|                       | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`|
 | DeviceType            | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/device-types/?manufacturer=<uuid/slug>`|
 | FrontPort             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/front-ports/?device=<uuid/name>`
 | Interface             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/interfaces/?device=<uuid/name>`|
-| InventoryItem         | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`|
-|                       | `device`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`|
+| InventoryItem         | `device`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`|
 |                       | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`|
 |                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...`|
+|                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`|
 | Platform              | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/platforms/?manufacturer=<uuid/slug>`|
 | PowerFeed             | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`|
 | PowerOutlet           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`|
@@ -185,8 +185,8 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | RearPort              | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`|
 | Region                | `parent`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
 | Tenant                | `tenant_group`        | Enhanced to support primary key UUIDs in addition to slugs | `/tenancy/tenants/?tenant_group=<uuid/slug>`|
-| VirtualChassis        | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
-|                       | `master`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
+| VirtualChassis        | `master`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
+|                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
 |                       | `tenant`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`|
 | VLAN                  | `vlan_group`          | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`|
 
@@ -201,9 +201,9 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 |        | `device_bays`          | `/dcim/devices/?device_bays=True`          | `/dcim/devices/?device_bays=<uuid>` or `?has_device_bays=<True/False>`                  |
 |        | `front_ports`          | `/dcim/devices/?front_ports=True`          | `/dcim/devices/?front_ports=<uuid>` or `?has_front_ports=<True/False>`                  |
 |        | `interfaces`           | `/dcim/devices/?interfaces=True`           | `/dcim/devices/?interfaces=<uuid>` or `?has_interfaces=<True/False>`                    |
-|        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 |        | `power_ports`          | `/dcim/devices/?power_ports=True`          | `/dcim/devices/?power_ports=<uuid>` or `?has_power_ports=<True/False>`                  |
 |        | `power_outlets`        | `/dcim/devices/?power_outlets=True`        | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`              |
+|        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 
 ### Removed Redundant Filter Fields
 
@@ -223,58 +223,59 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `device_id`          | instead of `/dcim/console-ports/?device_id=<uuid>`, use `device=<uuid>`               |
 | ConsoleServerPort  | `region_id`          | instead of `/dcim/console-server-ports/?region_id=<uuid>`, use `region=<uuid>`        |
 |                    | `device_id`          | instead of `/dcim/console-server-ports/?device_id=<uuid>`, use `device=<uuid>`        |
-| Device             | `region_id`          | instead of `/dcim/devices/?region_id=<uuid>`, use `region=<uuid>`                     |
+| Device             | `manufacturer_id`    | instead of `/dcim/devices/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`         |
+|                    | `model`              | instead of `/dcim/devices/?model=<uuid>`, use `device_type=<uuid>`                    |
+|                    | `pass_through_ports` | instead of `/dcim/devices/?pass_through_ports=<bool>`, use `has_front/rear_ports`     |
+|                    | `platform_id`        | instead of `/dcim/devices/?platform_id=<uuid>`, use `platform=<uuid>`                 |
+|                    | `region_id`          | instead of `/dcim/devices/?region_id=<uuid>`, use `region=<uuid>`                     |
+|                    | `role_id`            | instead of `/dcim/devices/?role_id=<uuid>`, use `role=<uuid>`                         |
+|                    | `secrets_group_id`   | instead of `/dcim/devices/?secrets_group_id=<uuid>`, use `secrets_group=<uuid>`       |
 |                    | `site_id`            | instead of `/dcim/devices/?site_id=<uuid>`, use `site=<uuid>`                         |
 |                    | `tenant_group_id`    | instead of `/dcim/devices/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`         |
-|                    | `manufacturer_id`    | instead of `/dcim/devices/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`         |
-|                    | `model`              | instead of `/dcim/devices/?model=<uuid>`, use `device_type=<uuid>`                    |
-|                    | `role_id`            | instead of `/dcim/devices/?role_id=<uuid>`, use `role=<uuid>`                         |
-|                    | `platform_id`        | instead of `/dcim/devices/?platform_id=<uuid>`, use `platform=<uuid>`                 |
-|                    | `secrets_group_id`   | instead of `/dcim/devices/?secrets_group_id=<uuid>`, use `secrets_group=<uuid>`       |
-|                    | `pass_through_ports` | instead of `/dcim/devices/?pass_through_ports=<bool>`, use `has_front/rear_ports`     |
-| DeviceBay          | `region_id`          | instead of `/dcim/device-bays/?region_id=<uuid>`, use `region=<uuid>`                 |
-|                    | `device_id`          | instead of `/dcim/device-bays/?device_id=<uuid>`, use `device=<uuid>`                 |
+| DeviceBay          | `device_id`          | instead of `/dcim/device-bays/?device_id=<uuid>`, use `device=<uuid>`                 |
+|                    | `region_id`          | instead of `/dcim/device-bays/?region_id=<uuid>`, use `region=<uuid>`                 |
 | DeviceType         | `manufacturer_id`    | instead of `/dcim/device-types/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`    |
-| FrontPort          | `region_id`          | instead of `/dcim/front-ports/?region_id=<uuid>`, use `region=<uuid>`                 |
-|                    | `device_id`          | instead of `/dcim/front-ports/?device_id=<uuid>`, use `device=<uuid>`                 |
-| Interface          | `region_id`          | instead of `/dcim/interfaces/?region_id=<uuid>`, use `region=<uuid>`                  |
-|                    | `device_id`          | instead of `/dcim/interfaces/?device_id=<uuid>`, use `device=<uuid>`                  |
+| FrontPort          | `device_id`          | instead of `/dcim/front-ports/?device_id=<uuid>`, use `device=<uuid>`                 |
+|                    | `region_id`          | instead of `/dcim/front-ports/?region_id=<uuid>`, use `region=<uuid>`                 |
+| Interface          | `device_id`          | instead of `/dcim/interfaces/?device_id=<uuid>`, use `device=<uuid>`                  |
 |                    | `lag_id`             | instead of `/dcim/interfaces/?lag_id=<uuid>`, use `lag=<uuid>`                        |
-| InventoryItem      | `region_id`          | instead of `/dcim/inventory-items/?region_id=<uuid>`, use `region=<uuid>`             |
-|                    | `site_id`            | instead of `/dcim/inventory-items/?site_id=<uuid>`, use `site=<uuid>`                 |
-|                    | `device_id`          | instead of `/dcim/inventory-items/?device_id=<uuid>`, use `device=<uuid>`             |
-|                    | `parent_id`          | instead of `/dcim/inventory-items/?parent_id=<uuid>`, use `parent=<uuid>`             |
+|                    | `region_id`          | instead of `/dcim/interfaces/?region_id=<uuid>`, use `region=<uuid>`                  |
+| InventoryItem      | `device_id`          | instead of `/dcim/inventory-items/?device_id=<uuid>`, use `device=<uuid>`             |
 |                    | `manufacturer_id`    | instead of `/dcim/inventory-items/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>` |
+|                    | `parent_id`          | instead of `/dcim/inventory-items/?parent_id=<uuid>`, use `parent=<uuid>`             |
+|                    | `region_id`          | instead of `/dcim/inventory-items/?region_id=<uuid>`, use `region=<uuid>`             |
+|                    | `site_id`            | instead of `/dcim/inventory-items/?site_id=<uuid>`, use `site=<uuid>`                 |
 | IPAddress          | `tenant_group_id`    | instead of `/ipam/ip-addresses/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`    |
 | Location           | `tenant_group_id`    | instead of `/dcim/locations/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`       |
-| Rack               | `region_id`          | instead of `/dcim/racks/?region_id=<uuid>`, use `region=<uuid>`                       |
+| Rack               | `group_id`           | instead of `/dcim/racks/?group_id=<uuid>`, use `group=<uuid>`                         |
+|                    | `region_id`          | instead of `/dcim/racks/?region_id=<uuid>`, use `region=<uuid>`                       |
+|                    | `role_id`            | instead of `/dcim/racks/?role_id=<uuid>`, use `role=<uuid>`                           |
 |                    | `site_id`            | instead of `/dcim/racks/?site_id=<uuid>`, use `site=<uuid>`                           |
 |                    | `tenant_group_id`    | instead of `/dcim/racks/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`           |
-|                    | `group_id`           | instead of `/dcim/racks/?group_id=<uuid>`, use `group=<uuid>`                         |
-|                    | `role_id`            | instead of `/dcim/racks/?role_id=<uuid>`, use `role=<uuid>`                           |
 | RackGroup          | `region_id`          | instead of `/dcim/rack-groups/?region_id=<uuid>`, use `region=<uuid>`                 |
 |                    | `site_id`            | instead of `/dcim/rack-groups/?site_id=<uuid>`, use `site=<uuid>`                     |
 |                    | `parent_id`          | instead of `/dcim/rack-groups/?parent_id=<uuid>`, use `parent=<uuid>`                 |
-| RackReservation    | `rack_id`            | instead of `/dcim/rack-reservations/?rack_id=<uuid>`, use `rack=<uuid>`               |
-|                    | `group_id`           | instead of `/dcim/rack-reservations/?group_id=<uuid>`, use `group=<uuid>`             |
+| RackReservation    | `group_id`           | instead of `/dcim/rack-reservations/?group_id=<uuid>`, use `group=<uuid>`             |
+|                    | `rack_id`            | instead of `/dcim/rack-reservations/?rack_id=<uuid>`, use `rack=<uuid>`               |
 |                    | `tenant_group_id`    | instead of `/dcim/rack-reservations/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`|
-|                    | `user_id`            | instead of `/dcim/rack-reservations/?user_id=<uuid>`, use `user=<uuid>`               |
 |                    | `site_id`            | instead of `/dcim/rack-reservations/?site_id=<uuid>`, use `site=<uuid>`               |
-| RearPort           | `region_id`          | instead of `/dcim/rear-ports/?region_id=<uuid>`, use `region=<uuid>`                  |
-|                    | `device_id`          | instead of `/dcim/rear-ports/?device_id=<uuid>`, use `device=<uuid>`                  |
+|                    | `user_id`            | instead of `/dcim/rack-reservations/?user_id=<uuid>`, use `user=<uuid>`               |
+| RearPort           | `device_id`          | instead of `/dcim/rear-ports/?device_id=<uuid>`, use `device=<uuid>`                  |
+|                    | `region_id`          | instead of `/dcim/rear-ports/?region_id=<uuid>`, use `region=<uuid>`                  |
 | Region             | `parent_id`          | instead of `/dcim/regions/?parent_id=<uuid>`, use `parent=<uuid>`                     |
 | RouteTarget        | `tenant_group_id`    | instead of `/ipam/route-targets/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`   |
 | Platform           | `manufacturer_id`    | instead of `/dcim/platforms/?manufacturer_id=<uuid>`, use `manufacturer=<uuid>`       |
-| PowerOutlet        | `region_id`          | instead of `/dcim/power-outlets/?region_id=<uuid>`, use `region=<uuid>`               |
-|                    | `device_id`          | instead of `/dcim/power-outlets/?device_id=<uuid>`, use `device=<uuid>`               |
-| PowerFeed          | `region_id`          | instead of `/dcim/power-feeds/?region_id=<uuid>`, use `region=<uuid>`                 |
-|                    | `site_id`            | instead of `/dcim/power-feeds/?site_id=<uuid>`, use `site=<uuid>`                     |
-|                    | `power_panel_id`     | instead of `/dcim/power-feeds/?power_panel_id=<uuid>`, use `power_panel=<uuid>`       |
+| PowerOutlet        | `device_id`          | instead of `/dcim/power-outlets/?device_id=<uuid>`, use `device=<uuid>`               |
+|                    | `region_id`          | instead of `/dcim/power-outlets/?region_id=<uuid>`, use `region=<uuid>`               |
+| PowerFeed          | `power_panel_id`     | instead of `/dcim/power-feeds/?power_panel_id=<uuid>`, use `power_panel=<uuid>`       |
 |                    | `rack_id`            | instead of `/dcim/power-feeds/?rack_id=<uuid>`, use `rack=<uuid>`                     |
-| PowerPanel         | `region_id`          | instead of `/dcim/power-panels/?region_id=<uuid>`, use `region=<uuid>`                |
+|                    | `region_id`          | instead of `/dcim/power-feeds/?region_id=<uuid>`, use `region=<uuid>`                 |
+|                    | `site_id`            | instead of `/dcim/power-feeds/?site_id=<uuid>`, use `site=<uuid>`                     |
+| PowerPanel         | `rack_group_id`      | instead of `/dcim/power-panels/?rack_group_id=<uuid>`, use `rack_group=<uuid>`        |
+|                    | `region_id`          | instead of `/dcim/power-panels/?region_id=<uuid>`, use `region=<uuid>`                |
 |                    | `site_id`            | instead of `/dcim/power-panels/?site_id=<uuid>`, use `site=<uuid>`                    |
-|                    | `rack_group_id`      | instead of `/dcim/power-panels/?rack_group_id=<uuid>`, use `rack_group=<uuid>`        |
-| PowerPort          | `region_id`          | instead of `/dcim/power-ports/?region_id=<uuid>`, use `region=<uuid>`                 |
+| PowerPort          | `device_id`          | instead of `/dcim/power-ports/?device_id=<uuid>`, use `device=<uuid>`                 |
+|                    | `region_id`          | instead of `/dcim/power-ports/?region_id=<uuid>`, use `region=<uuid>`                 |
 |                    | `device_id`          | instead of `/dcim/power-ports/?device_id=<uuid>`, use `device=<uuid>`                 |
 | Prefix             | `region_id`          | instead of `/ipam/prefixes/?region_id=<uuid>`, use `region=<uuid>`                    |
 |                    | `site_id`            | instead of `/ipam/prefixes/?site_id=<uuid>`, use `site=<uuid>`                        |
@@ -283,9 +284,9 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `tenant_group_id`    | instead of `/dcim/sites/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`           |
 | Tenant             | `group`              | instead of `/tenancy/tenants/?group=<slug>`, use `tenant_group=<slug>`                |
 |                    | `group_id`           | instead of `/tenancy/tenants/?group_id=<uuid>`, use `tenant_group=<uuid>`             |
-| VirtualChassis     | `region_id`          | instead of `/dcim/virtual-chassis/?region_id=<uuid>`, use `region=<uuid>`             |
+| VirtualChassis     | `master_id`          | instead of `/dcim/virtual-chassis/?master_id=<uuid>`, use `master=<uuid>`             |
+|                    | `region_id`          | instead of `/dcim/virtual-chassis/?region_id=<uuid>`, use `region=<uuid>`             |
 |                    | `site_id`            | instead of `/dcim/virtual-chassis/?site_id=<uuid>`, use `site=<uuid>`                 |
-|                    | `master_id`          | instead of `/dcim/virtual-chassis/?master_id=<uuid>`, use `master=<uuid>`             |
 |                    | `tenant_id`          | instead of `/dcim/virtual-chassis/?tenant_id=<uuid>`, use `tenant=<uuid>`             |
 | VirtualMachine     | `tenant_group_id`    | instead of `/dcim/virtual-machine/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>` |
 | VLANGroup          | `region_id`          | instead of `/ipam/vlan-groups/?region_id=<uuid>`, use `region=<uuid>`                 |
