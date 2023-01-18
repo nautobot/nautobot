@@ -124,16 +124,10 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             filter_name = test[0]
             field_name = test[1] if len(test) == 2 else test[0]
             with self.subTest(f"{self.queryset.model._meta.object_name} filter {filter_name}"):
-                if field_name is None:
-                    field_name = filter_name
                 test_data = self.get_filterset_test_values(field_name)
-                print(f"{filter_name} test data:")
-                print(test_data)
                 params = {filter_name: test_data}
                 filterset_result = self.filterset(params, self.queryset).qs
-                print(f"filterset_result: {filterset_result}")
                 qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
-                print(f"qs_result: {qs_result.values_list(field_name, flat=True)}")
                 self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
     def test_search(self):

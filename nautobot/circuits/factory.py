@@ -125,9 +125,9 @@ class CircuitTerminationFactory(PrimaryModelFactory):
     @factory.lazy_attribute
     def site(self):
         if self.has_region:
-            return factory.random.randgen.choice(dcim_models.Site.objects.filter(region__isnull=False))
+            return faker.Faker().random_element(elements=dcim_models.Site.objects.filter(region__isnull=False))
         if self.has_site:
-            return factory.random.randgen.choice(dcim_models.Site.objects.all())
+            return faker.Faker().random_element(elements=dcim_models.Site.objects.all())
         return None
 
     has_location = factory.Maybe("has_site", factory.Faker("pybool"), False)
@@ -145,7 +145,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
         if self.has_site:
             return None
         if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
-            return factory.random.randgen.choice(ProviderNetwork.objects.filter(provider=self.circuit.provider))
+            return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))
         return ProviderNetworkFactory(provider=self.circuit.provider)
 
     has_port_speed = factory.Faker("pybool")
