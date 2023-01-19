@@ -12,6 +12,7 @@ from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -46,13 +47,12 @@ class ProviderFilterSet(NautobotFilterSet):
     site_id = django_filters.ModelMultipleChoiceFilter(
         field_name="circuits__terminations__site",
         queryset=Site.objects.all(),
-        label="Site",
+        label="Site (ID) - Deprecated (use site filter)",
     )
-    site = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuits__terminations__site__slug",
         queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuits__terminations__location__slug",
@@ -88,13 +88,11 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     )
     provider_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (ID)",
+        label="Provider (ID) - Deprecated (use provider filter)",
     )
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
+        label="Provider (ID or slug)",
     )
     tag = TagFilter()
 
@@ -132,13 +130,11 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
     provider_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (ID)",
+        label="Provider (ID) - Deprecated (use provider filter)",
     )
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
+        label="Provider (ID or slug)",
     )
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
         field_name="terminations__provider_network",
@@ -147,24 +143,21 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
     type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
-        label="Circuit type (ID)",
+        label="Circuit type (ID) - Deprecated (use type filter)",
     )
-    type = django_filters.ModelMultipleChoiceFilter(
-        field_name="type__slug",
+    type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
-        to_field_name="slug",
-        label="Circuit type (slug)",
+        label="Circuit type (ID or slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
         field_name="terminations__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
+        label="Site (ID) - Deprecated (use site filter)",
     )
-    site = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="terminations__site__slug",
         queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
         field_name="terminations__location__slug",

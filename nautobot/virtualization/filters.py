@@ -94,24 +94,23 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
-        label="Parent group (ID)",
+        label="Parent group (ID) - Deprecated (use cluster_group filter)",
     )
-    cluster_group = django_filters.ModelMultipleChoiceFilter(
+    cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
-        label="Parent group (slug)",
+        label="Parent group (ID or slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_type",
         queryset=ClusterType.objects.all(),
-        label="Cluster type (ID)",
+        label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
-    cluster_type = django_filters.ModelMultipleChoiceFilter(
+    cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster_type__slug",
         queryset=ClusterType.objects.all(),
-        to_field_name="slug",
-        label="Cluster type (slug)",
+        label="Cluster type (ID or slug)",
     )
     tag = TagFilter()
 
@@ -136,24 +135,24 @@ class VirtualMachineFilterSet(
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
-        label="Cluster group (ID)",
+        label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
-    cluster_group = django_filters.ModelMultipleChoiceFilter(
+    cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster__cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
-        label="Cluster group (slug)",
+        label="Cluster group (ID or slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
-        label="Cluster type (ID)",
+        label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
-    cluster_type = django_filters.ModelMultipleChoiceFilter(
+    cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster__cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
-        label="Cluster type (slug)",
+        label="Cluster type (ID or slug)",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
@@ -173,13 +172,13 @@ class VirtualMachineFilterSet(
     site_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
+        label="Site (ID) - Deprecated (use site filter)",
     )
-    site = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster__site__slug",
         queryset=Site.objects.all(),
         to_field_name="slug",
-        label="Site (slug)",
+        label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
@@ -189,13 +188,13 @@ class VirtualMachineFilterSet(
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        label="Platform (ID)",
+        label="Platform (ID) - Deprecated (use platform filter)",
     )
-    platform = django_filters.ModelMultipleChoiceFilter(
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="platform__slug",
         queryset=Platform.objects.all(),
         to_field_name="slug",
-        label="Platform (slug)",
+        label="Platform (ID or slug)",
     )
     mac_address = MultiValueMACAddressFilter(
         field_name="interfaces__mac_address",
@@ -265,24 +264,24 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
-        label="Cluster (ID)",
+        label="Cluster (ID) - Deprecated (use cluster filter)",
     )
-    cluster = django_filters.ModelMultipleChoiceFilter(
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="virtual_machine__cluster__name",
         queryset=Cluster.objects.all(),
         to_field_name="name",
-        label="Cluster",
+        label="Cluster (ID or name)",
     )
     virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine",
         queryset=VirtualMachine.objects.all(),
-        label="Virtual machine (ID)",
+        label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
-    virtual_machine = django_filters.ModelMultipleChoiceFilter(
+    virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="virtual_machine__name",
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual machine",
+        label="Virtual machine (ID or name)",
     )
     parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
