@@ -197,15 +197,9 @@ class UserFilter(NautobotFilterSet):
     - A PK-based filter **should** be made available as well, generally with a name suffixed by `_id`. For example:
 
 ```python
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
+    provider = NaturalKeyorPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
-    )
-    provider_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Provider.objects.all(),
-        label="Provider (ID)",
+        label="Provider (ID or slug)",
     )
 ```
 
