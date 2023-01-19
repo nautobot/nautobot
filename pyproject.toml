@@ -193,7 +193,7 @@ selenium = "~4.7.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
 # Change log management and generation
-towncrier = "~22.8.0"
+towncrier = "~22.12.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~2.2.0"
 
