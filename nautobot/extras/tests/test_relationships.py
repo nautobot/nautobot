@@ -13,13 +13,13 @@ from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
-from nautobot.utilities.tables import RelationshipColumn
-from nautobot.utilities.testing import TestCase
-from nautobot.utilities.forms import (
+from nautobot.core.tables import RelationshipColumn
+from nautobot.core.testing import TestCase
+from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.utilities.utils import get_route_for_model
+from nautobot.core.utils.utils import get_route_for_model
 
 
 class RelationshipBaseTest(TestCase):

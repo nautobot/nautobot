@@ -4,7 +4,7 @@ from django.test import override_settings
 
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class PrefixHierarchyTest(SeleniumTestCase):

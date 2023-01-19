@@ -23,9 +23,9 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
-from nautobot.utilities.forms.widgets import APISelectMultiple, MultiValueCharInput
-from nautobot.utilities.testing import TestCase
+from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
+from nautobot.core.testing import TestCase
 
 
 class DynamicGroupTestBase(TestCase):

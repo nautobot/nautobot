@@ -63,7 +63,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
   . nautobot.extras.tasks.process_webhook
   . nautobot.extras.tasks.provision_field
   . nautobot.extras.tasks.update_custom_field_choice_data
-  . nautobot.utilities.tasks.get_releases
+  . nautobot.core.tasks.get_releases
 
 [2021-07-01 21:32:40,680: INFO/MainProcess] Connected to redis://localhost:6379/0
 [2021-07-01 21:32:40,690: INFO/MainProcess] mingle: searching for neighbors

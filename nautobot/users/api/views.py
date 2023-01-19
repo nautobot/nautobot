@@ -12,8 +12,8 @@ from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
 from nautobot.core.api.views import ModelViewSet
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.utils import deepmerge
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.utils import deepmerge
 from . import serializers
 
 

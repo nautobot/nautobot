@@ -8,9 +8,9 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
 from nautobot.core.models import BaseModel
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.fields import ColorField
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.choices import ColorChoices
+from nautobot.core.fields import ColorField
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 #

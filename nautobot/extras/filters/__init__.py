@@ -64,8 +64,8 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,

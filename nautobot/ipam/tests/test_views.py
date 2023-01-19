@@ -20,8 +20,8 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import ViewTestCases
-from nautobot.utilities.testing.utils import extract_page_body
+from nautobot.core.testing import ViewTestCases
+from nautobot.core.testing.utils import extract_page_body
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):

@@ -4,7 +4,7 @@ from django.db.models.query import QuerySet
 
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Note
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
 
 
 User = get_user_model()

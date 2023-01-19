@@ -12,7 +12,7 @@ from nautobot.dcim.models import (
     PowerPortTemplate,
     RearPortTemplate,
 )
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,

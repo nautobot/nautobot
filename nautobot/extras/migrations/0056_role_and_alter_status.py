@@ -5,7 +5,6 @@ from django.db import migrations, models
 import nautobot.core.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.utils
-import nautobot.utilities.fields
 import uuid
 
 
@@ -42,7 +41,7 @@ class Migration(migrations.Migration):
                     "slug",
                     nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
                 ),
-                ("color", nautobot.utilities.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("weight", models.PositiveSmallIntegerField(blank=True, null=True)),
                 (

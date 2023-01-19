@@ -4,7 +4,7 @@ from django_tables2.utils import Accessor
 from nautobot.dcim.models import Rack, RackGroup, RackReservation
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     LinkedCountColumn,

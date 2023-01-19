@@ -4,7 +4,7 @@ from nautobot.dcim.models import Location, LocationType
 from nautobot.dcim.tables.template_code import TREE_LINK
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,

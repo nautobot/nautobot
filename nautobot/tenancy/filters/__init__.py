@@ -6,8 +6,8 @@ from nautobot.extras.filters import NautobotFilterSet
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.filters import (
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,

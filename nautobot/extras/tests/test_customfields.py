@@ -15,9 +15,9 @@ from nautobot.dcim.tables import SiteTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.tables import CustomFieldColumn
-from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
-from nautobot.utilities.testing.utils import post_data
+from nautobot.core.tables import CustomFieldColumn
+from nautobot.core.testing import APITestCase, CeleryTestCase, TestCase
+from nautobot.core.testing.utils import post_data
 from nautobot.virtualization.models import VirtualMachine
 
 

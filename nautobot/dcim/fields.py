@@ -4,7 +4,7 @@ from django.db import models
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.utilities.fields import JSONArrayField
+from nautobot.core.fields import JSONArrayField
 from .lookups import PathContains
 
 

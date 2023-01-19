@@ -34,7 +34,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
 )
-from nautobot.utilities.testing import TransactionTestCase
+from nautobot.core.testing import TransactionTestCase
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")

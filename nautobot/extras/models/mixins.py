@@ -8,8 +8,8 @@ from django.db.models import Q
 from django.urls import NoReverseMatch, reverse
 from funcy import once_per
 
-from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
-from nautobot.utilities.utils import get_route_for_model
+from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
+from nautobot.core.utils.utils import get_route_for_model
 
 
 class DynamicGroupMixin:

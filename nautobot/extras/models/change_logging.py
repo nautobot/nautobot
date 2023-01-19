@@ -10,7 +10,7 @@ from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
+from nautobot.core.utils.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
 
 
 #

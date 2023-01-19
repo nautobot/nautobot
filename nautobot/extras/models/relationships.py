@@ -17,13 +17,13 @@ from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequire
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
-from nautobot.utilities.forms import (
+from nautobot.core.utils.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
+from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     widgets,
 )
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 logger = logging.getLogger(__name__)

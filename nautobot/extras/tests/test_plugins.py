@@ -24,7 +24,7 @@ from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.ipam.models import Prefix, IPAddress
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
+from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files

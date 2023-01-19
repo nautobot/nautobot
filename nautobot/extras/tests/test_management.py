@@ -4,7 +4,7 @@ from django.apps import apps
 
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
 
 
 class StatusManagementTestCase(TestCase):

@@ -9,7 +9,7 @@ from nautobot.dcim.filters import (
 from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
     SearchFilter,

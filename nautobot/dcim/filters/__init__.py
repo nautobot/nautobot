@@ -67,8 +67,8 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
     MultiValueCharFilter,

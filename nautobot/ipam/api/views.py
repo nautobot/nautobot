@@ -21,8 +21,8 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
+from nautobot.core.config import get_settings_or_config
+from nautobot.core.utils.utils import (
     count_related,
     SerializerForAPIVersions,
     versioned_serializer_selector,

@@ -12,9 +12,9 @@ from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.fields import ColorField
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.choices import ColorChoices
+from nautobot.core.fields import ColorField
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class ContentTypeRelatedQuerySet(RestrictedQuerySet):

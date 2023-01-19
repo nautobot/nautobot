@@ -613,7 +613,7 @@ Before running integration tests, the `selenium` container must be running. If y
 | ----------------------- | --------------------------------- |
 | (automatic)             | `invoke start --service selenium` |
 
-Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.core.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |

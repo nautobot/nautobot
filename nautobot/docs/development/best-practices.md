@@ -83,10 +83,10 @@ class ExampleModel(PrimaryModel):
 
 ## Getting URL Routes
 
-When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
+When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
 
 ```python
-from nautobot.utilities.utils import get_route_for_model
+from nautobot.core.utils.utils import get_route_for_model
 ```
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.
@@ -170,7 +170,7 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
 - FilterSets **must** publish all model fields from a model, including related fields.
@@ -217,7 +217,7 @@ class UserFilter(NautobotFilterSet):
     - Using the previous field (`provider`) as an example, it would look something like this:
 
 ```python
-    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+    from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
         label="Provider (slug or ID)",

@@ -41,7 +41,7 @@ from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     APISelect,
     APISelectMultiple,
     add_blank_choice,
@@ -66,7 +66,7 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CableLengthUnitChoices,

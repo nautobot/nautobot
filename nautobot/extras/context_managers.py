@@ -7,7 +7,7 @@ from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
-from nautobot.utilities.utils import curry
+from nautobot.core.utils.utils import curry
 
 
 class ChangeContext:

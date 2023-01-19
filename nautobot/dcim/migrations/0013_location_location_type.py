@@ -7,8 +7,7 @@ import nautobot.core.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
-import nautobot.utilities.fields
-import nautobot.utilities.ordering
+import nautobot.core.utils.ordering
 import taggit.managers
 import uuid
 
@@ -86,12 +85,12 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(db_index=True, max_length=100)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
+                    nautobot.core.fields.NaturalOrderingField(
                         "name",
                         blank=True,
                         db_index=True,
                         max_length=100,
-                        naturalize_function=nautobot.utilities.ordering.naturalize,
+                        naturalize_function=nautobot.core.utils.ordering.naturalize,
                     ),
                 ),
                 (

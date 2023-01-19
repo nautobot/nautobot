@@ -2,7 +2,7 @@ from django.urls import reverse
 
 from nautobot.dcim import factory
 from nautobot.dcim.models import Region
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class ListViewFilterTestCase(SeleniumTestCase):

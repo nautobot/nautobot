@@ -1,7 +1,7 @@
 """Utilities for apps to implement data tables."""
 
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,

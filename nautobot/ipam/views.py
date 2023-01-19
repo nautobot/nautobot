@@ -5,9 +5,9 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device, Interface
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
+from nautobot.core.config import get_settings_or_config
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.utils.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from .choices import IPAddressRoleChoices

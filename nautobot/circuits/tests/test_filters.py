@@ -9,7 +9,7 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Role, Status
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
+from nautobot.core.testing import FilterTestCases
 
 
 class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):

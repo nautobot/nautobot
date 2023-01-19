@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 

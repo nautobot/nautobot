@@ -5,8 +5,8 @@ from django.utils import timezone
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import get_changes_for_model
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.utils.utils import get_changes_for_model
 from .choices import ObjectChangeActionChoices
 
 

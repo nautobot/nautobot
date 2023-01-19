@@ -27,10 +27,10 @@ from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
-from nautobot.utilities.forms import restrict_form_fields
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.utils import (
+from nautobot.core.forms import restrict_form_fields
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.tables import ButtonsColumn
+from nautobot.core.utils.utils import (
     copy_safe_request,
     count_related,
     csv_format,
@@ -39,7 +39,7 @@ from nautobot.utilities.utils import (
     prepare_cloned_fields,
     pretty_print_query,
 )
-from nautobot.utilities.views import ObjectPermissionRequiredMixin
+from nautobot.core.views.utility_mixins import ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 

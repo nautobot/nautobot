@@ -5,7 +5,7 @@ from django_tables2.utils import Accessor
 from nautobot.dcim.models import Interface
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -13,7 +13,7 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_boolean
+from nautobot.core.templatetags.helpers import render_boolean
 from nautobot.virtualization.models import VMInterface
 from .models import (
     Aggregate,

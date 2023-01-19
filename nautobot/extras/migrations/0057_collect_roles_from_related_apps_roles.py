@@ -4,7 +4,7 @@ from collections import namedtuple
 from django.db import migrations, models
 
 from nautobot.ipam.choices import IPAddressRoleChoices
-from nautobot.utilities.choices import ColorChoices
+from nautobot.core.choices import ColorChoices
 
 # Role Models that would be integrated into this Role model are referred to as RelatedRoleModels.
 # For Example: DeviceRole, RackRole e.t.c.

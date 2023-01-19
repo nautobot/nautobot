@@ -7,7 +7,7 @@ from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
-from nautobot.utilities.utils import get_changes_for_model
+from nautobot.core.utils.utils import get_changes_for_model
 
 
 # Use the proper swappable User model

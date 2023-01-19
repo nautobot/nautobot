@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import CustomLink
-from nautobot.utilities.utils import render_jinja2
+from nautobot.core.utils.utils import render_jinja2
 
 
 register = template.Library()

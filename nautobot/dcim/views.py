@@ -24,11 +24,11 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.forms import ConfirmationForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.utils import csv_format, count_related
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.forms import ConfirmationForm
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.utils import csv_format, count_related
+from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
 from .api import serializers

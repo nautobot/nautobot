@@ -51,10 +51,10 @@ from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
-from nautobot.utilities.testing.utils import disable_warnings, post_data
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
+from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.utils.utils import slugify_dashes_to_underscores
 
 
 # Use the proper swappable User model

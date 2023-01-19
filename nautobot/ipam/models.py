@@ -16,9 +16,9 @@ from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, UtilizationData
+from nautobot.core.utils.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.utilities.fields import JSONArrayField
+from nautobot.core.fields import JSONArrayField
 from .choices import ServiceProtocolChoices
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,

@@ -23,8 +23,8 @@ from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
-from nautobot.utilities.choices import ButtonColorChoices
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
+from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
 logger = getLogger(__name__)
 
@@ -443,8 +443,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of FilterExtension classes
     """
-    from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
-    from nautobot.utilities.forms.utils import add_field_to_filter_form_class
+    from nautobot.core.utils.utils import get_filterset_for_model, get_form_for_model
+    from nautobot.core.forms.utils import add_field_to_filter_form_class
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, FilterExtension):

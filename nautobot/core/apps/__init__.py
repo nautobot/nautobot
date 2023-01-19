@@ -16,7 +16,7 @@ from graphene.types import generic, String
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
-from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
 
 logger = logging.getLogger("nautobot.core.apps")
@@ -48,6 +48,21 @@ class NautobotConfig(AppConfig):
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
+
+    def get_search_types(self):
+        """Return a dictionary in the form:
+
+        {
+            "modelname": {
+                "queryset": <annotated queryset>,
+                "filterset": <filterset class>,
+                "table": <table class>,
+                "url": <url pattern name for list view, e.g. "circuits:provider_list">
+            },
+            ...
+        }
+        """
+        return {}
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -653,6 +668,20 @@ class CoreConfig(NautobotConfig):
     verbose_name = "Nautobot Core"
 
     def ready(self):
+        # Register netutils jinja2 filters in django_jinja and Django Template
+        from django import template
+        from django_jinja import library
+        from netutils.utils import jinja2_convenience_function
+
+        register = template.Library()
+
+        for name, func in jinja2_convenience_function().items():
+            # Register in django_jinja
+            library.filter(name=name, fn=func)
+
+            # Register in Django Template
+            register.filter(name, func)
+
         from graphene_django.converter import convert_django_field
         from nautobot.core.graphql import BigInteger
 

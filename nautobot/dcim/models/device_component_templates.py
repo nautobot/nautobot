@@ -18,8 +18,8 @@ from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
+from nautobot.core.fields import NaturalOrderingField
+from nautobot.core.utils.ordering import naturalize_interface
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,

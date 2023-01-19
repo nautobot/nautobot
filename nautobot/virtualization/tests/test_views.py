@@ -6,7 +6,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Platform, Site
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import ViewTestCases, post_data
+from nautobot.core.testing import ViewTestCases, post_data
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,

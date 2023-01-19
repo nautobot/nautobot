@@ -1,7 +1,7 @@
 from unittest import mock
 
 from nautobot.extras.utils import get_celery_queues, get_worker_count
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
 
 
 class UtilsTestCase(TestCase):

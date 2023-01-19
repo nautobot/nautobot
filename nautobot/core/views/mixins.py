@@ -30,8 +30,8 @@ from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin,
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.forms import (
+from nautobot.core.error_handlers import handle_protectederror
+from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
     CSVDataField,
@@ -39,11 +39,11 @@ from nautobot.utilities.forms import (
     restrict_form_fields,
 )
 from nautobot.core.views.renderers import NautobotHTMLRenderer
-from nautobot.utilities.utils import (
+from nautobot.core.utils.utils import (
     csv_format,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin
+from nautobot.core.views.utility_mixins import GetReturnURLMixin
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",

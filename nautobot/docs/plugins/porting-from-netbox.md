@@ -12,7 +12,7 @@ The most likely first issue you will encounter will be a module import problem, 
 - `ipam.* -> nautobot.ipam.*`
 - `netbox.* -> nautobot.core.*`
 - `tenancy.* -> nautobot.tenancy.*`
-- `utilities.* -> nautobot.utilities.*`
+- `utilities.* -> nautobot.core.*`
 - `virtualization.* -> nautobot.virtualization.*`
 
 ## Regenerating database migrations

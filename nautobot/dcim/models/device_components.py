@@ -33,11 +33,11 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.tree_queries import TreeModel
-from nautobot.utilities.utils import UtilizationData
+from nautobot.core.fields import NaturalOrderingField
+from nautobot.core.utils.ordering import naturalize_interface
+from nautobot.core.utils.query_functions import CollateAsChar
+from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.utils import UtilizationData
 
 __all__ = (
     "BaseInterface",

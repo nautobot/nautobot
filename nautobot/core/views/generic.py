@@ -23,12 +23,12 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
-from nautobot.core.utilities import check_filter_for_display
+from nautobot.core.views.utils import check_filter_for_display
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.forms import (
+from nautobot.core.error_handlers import handle_protectederror
+from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms import (
     BootstrapMixin,
     BulkRenameForm,
     ConfirmationForm,
@@ -38,11 +38,11 @@ from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.utilities.forms.forms import DynamicFilterFormSet
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.utilities.utils import (
+from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
     get_route_for_model,
@@ -50,7 +50,7 @@ from nautobot.utilities.utils import (
     normalize_querydict,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

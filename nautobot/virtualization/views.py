@@ -12,9 +12,8 @@ from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
-from nautobot.utilities.utils import normalize_querydict
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.utils.utils import count_related, normalize_querydict
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 

@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 

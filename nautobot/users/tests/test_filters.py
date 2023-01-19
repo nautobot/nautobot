@@ -12,7 +12,7 @@ from nautobot.users.filters import (
     UserFilterSet,
 )
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import FilterTestCases
+from nautobot.core.testing import FilterTestCases
 
 
 # Use the proper swappable User model

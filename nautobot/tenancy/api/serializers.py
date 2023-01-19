@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.api import TreeModelSerializerMixin
+from nautobot.core.api.utils import TreeModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.

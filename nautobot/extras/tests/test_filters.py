@@ -70,8 +70,8 @@ from nautobot.extras.models import (
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import FilterTestCases
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 # Use the proper swappable User model

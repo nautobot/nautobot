@@ -21,7 +21,7 @@ from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
@@ -32,10 +32,10 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     add_blank_choice,
 )
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.templatetags.helpers import render_markdown
-from nautobot.utilities.utils import render_jinja2, slugify_dashes_to_underscores
-from nautobot.utilities.validators import validate_regex
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.templatetags.helpers import render_markdown
+from nautobot.core.utils.utils import render_jinja2, slugify_dashes_to_underscores
+from nautobot.core.models.validators import validate_regex
 
 logger = logging.getLogger(__name__)
 

@@ -56,7 +56,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
 
 
@@ -189,7 +189,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -379,7 +379,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -711,7 +711,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -1337,7 +1337,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -2173,7 +2173,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -2541,7 +2541,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -2594,6 +2594,6 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]

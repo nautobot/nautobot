@@ -7,8 +7,8 @@ from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, VLAN, Service
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
-from nautobot.utilities.utils import flatten_iterable
+from nautobot.core.testing import FilterTestCases
+from nautobot.core.utils.utils import flatten_iterable
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
     ClusterGroupFilterSet,

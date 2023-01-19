@@ -19,8 +19,8 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.forms import (
     BulkEditForm,
     CommentField,
     CSVModelChoiceField,

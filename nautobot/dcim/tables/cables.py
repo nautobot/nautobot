@@ -3,7 +3,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.dcim.models import Cable
 from nautobot.extras.tables import StatusTableMixin
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ColorColumn,
     TagColumn,

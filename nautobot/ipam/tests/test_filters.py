@@ -35,7 +35,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
+from nautobot.core.testing import FilterTestCases
 from nautobot.virtualization.models import (
     Cluster,
     ClusterType,

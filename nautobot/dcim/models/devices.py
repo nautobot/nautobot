@@ -18,8 +18,8 @@ from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import NaturalOrderingField
+from nautobot.core.config import get_settings_or_config
+from nautobot.core.fields import NaturalOrderingField
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,

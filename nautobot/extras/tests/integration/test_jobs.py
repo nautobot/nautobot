@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models.jobs import Job, JobLogEntry, JobResult
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class JobResultTest(SeleniumTestCase):

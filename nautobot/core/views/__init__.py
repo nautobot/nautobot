@@ -2,6 +2,7 @@ import os
 import platform
 import sys
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden
@@ -16,13 +17,13 @@ from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
 
-from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
+from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.utilities.config import get_settings_or_config
+from nautobot.core.config import get_settings_or_config
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -119,6 +120,11 @@ class SearchView(View):
         results = []
 
         if form.is_valid():
+
+            SEARCH_TYPES = {}
+            for app_config in apps.get_app_configs():
+                if hasattr(app_config, "get_search_types"):
+                    SEARCH_TYPES.update(app_config.get_search_types())
 
             if form.cleaned_data["obj_type"]:
                 # Searching for a single type of object

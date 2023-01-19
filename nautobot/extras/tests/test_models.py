@@ -46,8 +46,8 @@ from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import TestCase, TransactionTestCase
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,

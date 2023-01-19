@@ -3,12 +3,12 @@ from django.forms import IntegerField
 import django_filters
 
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
     MultiValueNumberFilter,
 )
-from nautobot.utilities.forms import NullableDateField
+from nautobot.core.forms import NullableDateField
 
 
 EXACT_FILTER_TYPES = (

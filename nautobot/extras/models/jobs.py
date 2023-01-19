@@ -44,8 +44,8 @@ from nautobot.extras.utils import (
     get_job_content_type,
     jobs_in_directory,
 )
-from nautobot.utilities.fields import JSONArrayField
-from nautobot.utilities.logging import sanitize
+from nautobot.core.fields import JSONArrayField
+from nautobot.core.utils.logging import sanitize
 
 from .customfields import CustomFieldModel
 

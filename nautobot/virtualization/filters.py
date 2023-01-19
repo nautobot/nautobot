@@ -12,7 +12,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.ipam.models import IPAddress, Service, VLAN
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
@@ -23,7 +23,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.utilities.utils import is_uuid
+from nautobot.core.utils.utils import is_uuid
 
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 

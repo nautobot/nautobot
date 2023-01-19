@@ -4,8 +4,8 @@ from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
 from nautobot.extras.models.tags import TaggedItem
-from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.utils.query_functions import EmptyGroupByJSONBAgg
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class ConfigContextQuerySet(RestrictedQuerySet):

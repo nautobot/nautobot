@@ -36,7 +36,7 @@ from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import random_instance, UniqueFaker
+from nautobot.core.factory import random_instance, UniqueFaker
 from nautobot.virtualization.models import Cluster
 
 

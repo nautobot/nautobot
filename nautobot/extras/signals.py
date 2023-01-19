@@ -17,7 +17,7 @@ from prometheus_client import Counter
 
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.utilities.config import get_settings_or_config
+from nautobot.core.config import get_settings_or_config
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange

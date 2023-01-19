@@ -94,8 +94,8 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
-from nautobot.utilities.utils import flatten_iterable
+from nautobot.core.testing import FilterTestCases
+from nautobot.core.utils.utils import flatten_iterable
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 

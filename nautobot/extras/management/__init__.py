@@ -7,7 +7,7 @@ from nautobot.circuits import choices as circuit_choices
 from nautobot.dcim import choices as dcim_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
-from nautobot.utilities.choices import ColorChoices
+from nautobot.core.choices import ColorChoices
 
 
 # List of 2-tuples of (model_path, choiceset)

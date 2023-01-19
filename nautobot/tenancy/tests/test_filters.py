@@ -6,7 +6,7 @@ from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.testing import FilterTestCases
+from nautobot.core.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests

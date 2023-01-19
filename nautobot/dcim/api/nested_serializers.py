@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
-from nautobot.utilities.api import TreeModelSerializerMixin
+from nautobot.core.api.utils import TreeModelSerializerMixin
 
 __all__ = [
     "NestedCableSerializer",

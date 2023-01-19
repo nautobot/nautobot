@@ -2,8 +2,8 @@ import logging
 
 from cacheops import CacheMiss, cache
 
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.tasks import get_releases
+from nautobot.core.config import get_settings_or_config
+from nautobot.core.tasks import get_releases
 
 logger = logging.getLogger("nautobot.releases")
 

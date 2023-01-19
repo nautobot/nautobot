@@ -1,7 +1,7 @@
 """Navigation Items to add to Nautobot for {{ app_name }}."""
 
 from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonColorChoices
 
 """
 menu_items = (

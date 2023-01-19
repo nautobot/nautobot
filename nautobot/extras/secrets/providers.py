@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 
 from nautobot.extras.secrets import SecretsProvider
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretValueNotFoundError
-from nautobot.utilities.forms import BootstrapMixin
+from nautobot.core.forms import BootstrapMixin
 
 
 class EnvironmentVariableSecretsProvider(SecretsProvider):

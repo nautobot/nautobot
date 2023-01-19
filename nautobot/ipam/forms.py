@@ -23,7 +23,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     add_blank_choice,
     AddressFieldMixin,
     BootstrapMixin,
@@ -42,7 +42,7 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import IPAddressFamilyChoices, ServiceProtocolChoices
 from .constants import (

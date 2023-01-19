@@ -11,8 +11,8 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeModel, TreeQuerySet
+from nautobot.core.fields import NaturalOrderingField
+from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
 
 
 @extras_features(

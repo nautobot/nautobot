@@ -13,7 +13,7 @@ from nautobot.core.apps import (
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner
 from nautobot.extras.plugins import TemplateExtension
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonColorChoices
 
 __all__ = (
     "Banner",

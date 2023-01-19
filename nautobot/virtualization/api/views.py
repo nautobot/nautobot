@@ -9,7 +9,7 @@ from nautobot.extras.api.views import (
     NotesViewSetMixin,
     StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.utils.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,

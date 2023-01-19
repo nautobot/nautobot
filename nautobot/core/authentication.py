@@ -10,7 +10,7 @@ from django.contrib.auth.models import Group
 from django.db.models import Q
 
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import (
+from nautobot.core.utils.permissions import (
     permission_is_exempt,
     resolve_permission,
     resolve_permission_ct,

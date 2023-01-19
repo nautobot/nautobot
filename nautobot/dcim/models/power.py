@@ -14,7 +14,7 @@ from nautobot.dcim.constants import (
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.utilities.validators import ExclusionValidator
+from nautobot.core.models.validators import ExclusionValidator
 from .device_components import CableTermination, PathEndpoint
 
 __all__ = (

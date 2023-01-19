@@ -1,6 +1,6 @@
 from nautobot.extras.models import Tag
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.testing import ViewTestCases
+from nautobot.core.testing import ViewTestCases
 
 
 class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

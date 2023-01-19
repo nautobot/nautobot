@@ -9,7 +9,7 @@ from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
+from nautobot.core.factory import get_random_instances, random_instance, UniqueFaker
 
 
 logger = logging.getLogger(__name__)

@@ -53,7 +53,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.utilities.testing import NautobotTestClient, create_test_user
+from nautobot.core.testing import NautobotTestClient, create_test_user
 
 from nautobot.extras.models import (
     ChangeLoggedModel,

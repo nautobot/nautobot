@@ -14,7 +14,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import render_jinja2
+from nautobot.core.utils.utils import render_jinja2
 
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ from nautobot.extras.forms import (
     NautobotModelForm,
     TagsBulkEditFormMixin,
 )
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     CommentField,
     CSVModelChoiceField,
     DynamicModelChoiceField,

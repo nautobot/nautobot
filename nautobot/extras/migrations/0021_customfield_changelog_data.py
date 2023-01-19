@@ -5,7 +5,7 @@ import json
 import uuid
 
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.utilities.utils import serialize_object
+from nautobot.core.utils.utils import serialize_object
 
 ADDITION = 1
 CHANGE = 2

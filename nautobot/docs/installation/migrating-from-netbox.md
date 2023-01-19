@@ -53,7 +53,7 @@ Depending on the complexity of your scripts, reports, or plugins, and how tightl
 - `ipam.* -> nautobot.ipam.*`
 - `netbox.* -> nautobot.core.*`
 - `tenancy.* -> nautobot.tenancy.*`
-- `utilities.* -> nautobot.utilities.*`
+- `utilities.* -> nautobot.core.*`
 - `virtualization.* -> nautobot.virtualization.*`
 
 ### Update Your other Integration Code

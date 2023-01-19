@@ -10,8 +10,8 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
     APISelectMultiple,
@@ -35,7 +35,7 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from nautobot.extras.choices import (
     JobExecutionType,

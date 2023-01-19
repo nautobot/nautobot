@@ -37,8 +37,8 @@ from nautobot.extras.models import (
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.utilities.git import GitRepo
-from nautobot.utilities.utils import copy_safe_request
+from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.utils import copy_safe_request
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories

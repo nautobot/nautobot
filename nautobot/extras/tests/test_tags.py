@@ -4,7 +4,7 @@ from rest_framework import status
 
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Tag
-from nautobot.utilities.testing import APITestCase, TestCase
+from nautobot.core.testing import APITestCase, TestCase
 
 
 class TaggedItemORMTest(TestCase):

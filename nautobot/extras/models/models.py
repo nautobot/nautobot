@@ -34,7 +34,7 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.utilities.utils import deepmerge, render_jinja2
+from nautobot.core.utils.utils import deepmerge, render_jinja2
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401

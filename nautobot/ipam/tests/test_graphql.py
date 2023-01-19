@@ -4,7 +4,7 @@ from rest_framework import status
 
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.testing import APITestCase
+from nautobot.core.testing import APITestCase
 
 
 class TestPrefix(APITestCase):

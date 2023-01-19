@@ -21,8 +21,8 @@ from nautobot.dcim.utils import (
 from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import BaseModel, PrimaryModel
-from nautobot.utilities.fields import ColorField
-from nautobot.utilities.utils import to_meters
+from nautobot.core.fields import ColorField
+from nautobot.core.utils.utils import to_meters
 from .devices import Device
 from .device_components import FrontPort, RearPort
 
