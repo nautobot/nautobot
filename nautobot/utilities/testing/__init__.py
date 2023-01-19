@@ -3,21 +3,18 @@ import time
 import uuid
 
 from celery.contrib.testing.worker import start_worker
-from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import Client
 from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
 from nautobot.core.celery import app
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import run_job
-from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
 from nautobot.utilities.testing.api import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.filters import FilterTestCases
-from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 from nautobot.utilities.testing.utils import (
     create_test_user,
     disable_warnings,
@@ -40,6 +37,7 @@ __all__ = (
     "ModelTestCase",
     "ModelViewTestCase",
     "NautobotTestCaseMixin",
+    "NautobotTestClient",
     "post_data",
     "run_job_for_testing",
     "TestCase",
@@ -116,19 +114,7 @@ class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
         django.test.TransactionTestCase truncates the database after each test runs. We need at least the default
         statuses present in the database in order to run tests."""
         super().setUp()
-
-        # Re-populate status choices after database truncation by TransactionTestCase
-        populate_status_choices(apps, None)
-
-        # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
-        self.add_permissions(*self.user_permissions)
-
-        # Initialize the test client
-        self.client = Client()
-
-        # Force login explicitly with the first-available backend
-        self.client.force_login(self.user)
+        self.setUpNautobot(client=True, populate_status=True)
 
 
 class CeleryTestCase(TransactionTestCase):

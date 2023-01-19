@@ -337,6 +337,18 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
         }
 
+        cls.bulk_add_data = {
+            "virtual_machine": virtualmachines[1].pk,
+            "name_pattern": "Interface [4-6]",
+            "enabled": True,
+            "status": status_active.pk,
+            "mtu": 1500,
+            "description": "New Description",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "custom_field_1": "Custom field data",
+            "tags": [],
+        }
+
         cls.csv_data = (
             "virtual_machine,name,status",
             "Virtual Machine 2,Interface 4,active",

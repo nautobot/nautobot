@@ -8,8 +8,7 @@ import os
 from nautobot.core.settings import *  # noqa: F401,F403
 from nautobot.core.settings_funcs import parse_redis_connection
 
-# No host checks required during tests
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["nautobot.example.com"]
 
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
