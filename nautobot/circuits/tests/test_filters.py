@@ -94,18 +94,24 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     generic_filter_tests = (
         # (filter_name, field_name if different from filter name)
         ["cid"],
+        ["comments"],
+        ["description"],
         ["install_date"],
         ["commit_rate"],
         ["provider_id", "provider__pk"],
         ["provider", "provider__slug"],
+        ["provider_network", "terminations__provider_network__slug"],
         ["provider_network_id", "terminations__provider_network"],
         ["type_id", "type__pk"],
         ["type", "type__slug"],
         ["status", "status__slug"],
-        ["region_id", "terminations__site__region__pk"],  # failed no valid test data
-        ["region", "terminations__site__region__slug"],  # failed no valid test data
+        ["region_id", "terminations__site__region__pk"],
+        ["region", "terminations__site__region__slug"],
         ["site_id", "terminations__site__pk"],
         ["site", "terminations__site__slug"],
+        ["termination_a"],
+        ["termination_z"],
+        ["terminations"],
     )
 
     @classmethod

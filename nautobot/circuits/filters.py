@@ -143,6 +143,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Provider (slug)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID or slug)",
     )
@@ -193,6 +194,14 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         field_name="terminations",
         label="Has terminations",
     )
+    termination_a = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Termination A (ID)",
+    )
+    termination_z = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Termination Z (ID)",
+    )
     tags = TagFilter()
 
     class Meta:
@@ -204,8 +213,6 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
             "commit_rate",
             "comments",
             "description",
-            "termination_a",
-            "termination_z",
             "terminations",
         ]
 
