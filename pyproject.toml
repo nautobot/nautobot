@@ -73,7 +73,7 @@ django-redis = "~5.2.0"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.0", optional = true}
 # Advanced HTML tables
-django-tables2 = "~2.4.1"
+django-tables2 = "~2.5.0"
 # Tags
 django-taggit = "~3.1.0"
 # Represent time zones in Django
