@@ -16,17 +16,16 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
-        parent_groups = TenantGroup.objects.filter(children__isnull=False)
-        params = {"parent_id": [parent_groups[0].pk, parent_groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            TenantGroup.objects.filter(parent__in=[parent_groups[0], parent_groups[1]]).count(),
-        )
-        params = {"parent": [parent_groups[0].slug, parent_groups[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            TenantGroup.objects.filter(parent__in=[parent_groups[0], parent_groups[1]]).count(),
-        )
+        parent_groups = TenantGroup.objects.filter(children__isnull=False)[:2]
+        params = [
+            {"parent_id": [parent_groups[0].pk, parent_groups[1].pk]},
+            {"parent": [parent_groups[0].pk, parent_groups[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                TenantGroup.objects.filter(parent__in=parent_groups),
+            )
 
 
 class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):

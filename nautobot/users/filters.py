@@ -35,7 +35,7 @@ class UserFilterSet(BaseFilterSet):
         label="Group (ID) - Deprecated (use group filter)",
     )
     group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="groups__name",
+        field_name="groups",
         queryset=Group.objects.all(),
         to_field_name="name",
         label="Group (ID or name)",
@@ -69,7 +69,7 @@ class ObjectPermissionFilterSet(BaseFilterSet):
         label="User (ID) - Deprecated (use user filter)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="users__username",
+        field_name="users",
         queryset=get_user_model().objects.all(),
         to_field_name="username",
         label="User (ID or username)",
@@ -80,7 +80,7 @@ class ObjectPermissionFilterSet(BaseFilterSet):
         label="Group (ID) - Deprecated (use group filter)",
     )
     group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="groups__name",
+        field_name="groups",
         queryset=Group.objects.all(),
         to_field_name="name",
         label="Group (ID or name)",

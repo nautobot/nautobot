@@ -230,17 +230,27 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_group(self):
         groups = ClusterGroup.objects.all()[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [groups[0].slug, groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"group_id": [groups[0].pk, groups[1].pk]},
+            {"group": [groups[0].pk, groups[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(group__in=groups).distinct(),
+            )
 
     def test_type(self):
         types = ClusterType.objects.all()[:2]
-        params = {"type_id": [types[0].pk, types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"type": [types[0].slug, types[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"type_id": [types[0].pk, types[1].pk]},
+            {"type": [types[0].pk, types[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(type__in=types).distinct(),
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -464,17 +474,21 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_cluster_group(self):
         groups = ClusterGroup.objects.all()[:2]
-        params = {"cluster_group_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"cluster_group": [groups[0].slug, groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [{"cluster_group_id": [groups[0].pk, groups[1].pk]}, {"cluster_group": [groups[0].pk, groups[1].slug]}]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(cluster__cluster_group__in=groups).distinct(),
+            )
 
     def test_cluster_type(self):
         types = ClusterType.objects.all()[:2]
-        params = {"cluster_type_id": [types[0].pk, types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"cluster_type": [types[0].slug, types[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [{"cluster_type_id": [types[0].pk, types[1].pk]}, {"cluster_type": [types[0].pk, types[1].slug]}]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(cluster__cluster_type__in=types).distinct(),
+            )
 
     def test_cluster(self):
         clusters = Cluster.objects.all()[:2]
@@ -500,28 +514,30 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_site(self):
         sites = list(self.sites[:2])
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites)
-        )
-        params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites)
-        )
+        params = [{"site_id": [sites[0].pk, sites[1].pk]}, {"site": [sites[0].pk, sites[1].slug]}]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites).distinct()
+            )
 
     def test_role(self):
         roles = self.roles[:2]
-        params = {"role_id": [roles[0].pk, roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(roles))
-        params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(roles))
+        params = [{"role_id": [roles[0].pk, roles[1].pk]}, {"role": [roles[0].pk, roles[1].slug]}]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(roles__in=roles).distinct()
+            )
 
     def test_platform(self):
         platforms = self.platforms[:2]
-        params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
-        params = {"platform": [platforms[0].slug, platforms[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
+        params = [
+            {"platform_id": [platforms[0].pk, platforms[1].pk]},
+            {"platform": [platforms[0].pk, platforms[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(platform__in=platforms).distinct()
+            )
 
     def test_mac_address(self):
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
@@ -563,12 +579,14 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             Cluster.objects.create(name="Cluster 2", type=cluster_types[1]),
             Cluster.objects.create(name="Cluster 3", type=cluster_types[2]),
         )
+        cls.clusters = clusters
 
         vms = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[0]),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=clusters[1]),
             VirtualMachine.objects.create(name="Virtual Machine 3", cluster=clusters[2]),
         )
+        cls.vms = vms
 
         statuses = Status.objects.get_for_model(VMInterface)
 
@@ -776,11 +794,12 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_virtual_machine(self):
-        vms = VirtualMachine.objects.all()[:2]
-        params = {"virtual_machine_id": [vms[0].pk, vms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"virtual_machine": [vms[0].name, vms[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        vms = self.vms[:2]
+        params = [{"virtual_machine_id": [vms[0].pk, vms[1].pk]}, {"virtual_machine": [vms[0].name, vms[1].pk]}]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(virtual_machine__in=vms).distinct()
+            )
 
     def test_mac_address(self):
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
@@ -798,3 +817,12 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(q),
         )
+
+    def test_cluster(self):
+        clusters = self.clusters[:2]
+        params = [{"cluster_id": [clusters[0].pk, clusters[1].pk]}, {"cluster": [clusters[0].name, clusters[1].pk]}]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(virtual_machine__cluster__in=clusters).distinct(),
+            )
