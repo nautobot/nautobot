@@ -279,7 +279,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.device_set.select_related(
+            data=instance.dcim_device_related.select_related(
                 "tenant",
                 "site",
                 "rack",
