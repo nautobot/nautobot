@@ -10,6 +10,7 @@ from nautobot.dcim.models import (
     DeviceRole,
     DeviceType,
     Interface,
+    Location,
     Manufacturer,
     Platform,
     Rack,
@@ -17,6 +18,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -26,6 +28,7 @@ from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
     ContentTypeFilterSet,
+    CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
     GitRepositoryFilterSet,
@@ -47,6 +50,8 @@ from nautobot.extras.filters import (
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -189,6 +194,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         )
         cls.platforms = platforms
 
+        locations = Location.objects.all()[:3]
+        cls.locations = locations
+
         cluster_groups = (
             ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
             ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
@@ -222,6 +230,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             c.clusters.set([clusters[i]])
             c.tenant_groups.set([cls.tenant_groups[i]])
             c.tenants.set([cls.tenants[i]])
+            c.locations.set([cls.locations[i]])
 
     def test_name(self):
         params = {"name": ["Config Context 1", "Config Context 2"]}
@@ -235,17 +244,25 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_region(self):
         regions = Region.objects.all()[:2]
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"region_id": [regions[0].pk, regions[1].pk]},
+            {"region": [regions[0].slug, regions[1].pk]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(regions__in=regions).distinct()
+            )
 
     def test_site(self):
         sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"site_id": [sites[0].pk, sites[1].pk]},
+            {"site": [sites[0].pk, sites[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(sites__in=sites).distinct()
+            )
 
     def test_role(self):
         device_roles = self.device_roles[:2]
@@ -254,26 +271,50 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         params = {"role": [device_roles[0].slug, device_roles[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
+    def test_location(self):
+        locations = self.locations[:2]
+        params = [
+            {"location_id": [locations[0].pk, locations[1].pk]},
+            {"location": [locations[0].pk, locations[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=locations).distinct()
+            )
+
     def test_type(self):
         device_types = self.device_types[:2]
-        params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
-        params = {"device_type": [device_types[0].slug, device_types[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
+        params = [
+            {"device_type_id": [device_types[0].pk, device_types[1].pk]},
+            {"device_type": [device_types[0].pk, device_types[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(device_types__in=device_types).distinct()
+            )
 
     def test_platform(self):
         platforms = self.platforms[:2]
-        params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
-        params = {"platform": [platforms[0].slug, platforms[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
+        params = [
+            {"platform_id": [platforms[0].pk, platforms[1].pk]},
+            {"platform": [platforms[0].pk, platforms[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(platforms__in=platforms).distinct()
+            )
 
     def test_cluster_group(self):
         cluster_groups = ClusterGroup.objects.all()[:2]
-        params = {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"cluster_group": [cluster_groups[0].slug, cluster_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
+            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(cluster_groups__in=cluster_groups).distinct(),
+            )
 
     def test_cluster(self):
         clusters = Cluster.objects.all()[:2]
@@ -282,17 +323,26 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_tenant_group(self):
         tenant_groups = self.tenant_groups[:2]
-        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]},
+            {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].pk]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(tenant_groups__in=tenant_groups).distinct(),
+            )
 
-    def test_tenant_id(self):
+    def test_tenant(self):
         tenants = self.tenants[:2]
-        params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"tenant_id": [tenants[0].pk, tenants[1].pk]},
+            {"tenant": [tenants[0].slug, tenants[1].pk]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(tenants__in=tenants).distinct()
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -373,6 +423,36 @@ class CustomLinkTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         params = {"q": "customlink"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
+    queryset = CustomFieldChoice.objects.all()
+    filterset = CustomFieldChoiceFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        content_type = ContentType.objects.get_for_model(Site)
+        fields = [
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=f"field {num}", required=False)
+            for num in range(3)
+        ]
+        cls.fields = fields
+        for field in fields:
+            field.content_types.set([content_type])
+
+        for num in range(3):
+            CustomFieldChoice.objects.create(field=fields[num], value=f"Custom Field Choice {num}")
+
+    def test_field(self):
+        fields = self.fields[:2]
+        params = [
+            {"field_id": [fields[0].pk, fields[1].pk]},
+            {"field": [fields[0].name, fields[1].pk]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(field__in=fields).distinct()
+            )
 
 
 class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
