@@ -193,7 +193,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Region (ID) - Deprecated (use region filter)",
     )
     region = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="regions__slug",
+        field_name="regions",
         queryset=Region.objects.all(),
         label="Region (ID or slug)",
     )
@@ -203,7 +203,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Site (ID) - Deprecated (use site filter)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="sites__slug",
+        field_name="sites",
         queryset=Site.objects.all(),
         label="Site (ID or slug)",
     )
@@ -213,7 +213,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Location (ID) - Deprecated (use location filter)",
     )
     location = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="locations__slug",
+        field_name="locations",
         queryset=Location.objects.all(),
         label="Location (ID or slug)",
     )
@@ -223,7 +223,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Device Type (ID) - Deprecated (use device_type filter)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device_types__slug",
+        field_name="device_types",
         queryset=DeviceType.objects.all(),
         label="Device Type (ID or slug)",
     )
@@ -233,7 +233,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Platform (ID) - Deprecated (use platform filter)",
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="platforms__slug",
+        field_name="platforms",
         queryset=Platform.objects.all(),
         label="Platform (ID or slug)",
     )
@@ -243,7 +243,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster_groups__slug",
+        field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID or slug)",
     )
@@ -258,7 +258,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tenant group (ID) - Deprecated (use tenant_group filter)",
     )
     tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="tenant_groups__slug",
+        field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
         label="Tenant group (ID or slug)",
     )
@@ -268,7 +268,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tenant (ID) - Deprecated (use tenant filter)",
     )
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="tenants__slug",
+        field_name="tenants",
         queryset=Tenant.objects.all(),
         label="Tenant (ID or slug)",
     )
@@ -364,7 +364,6 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
         label="Field (ID) - Deprecated (use field filter)",
     )
     field = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="field__name",
         queryset=CustomField.objects.all(),
         to_field_name="name",
         label="Field (ID or name)",
@@ -512,7 +511,6 @@ class GitRepositoryFilterSet(NautobotFilterSet):
         label="Secrets group (ID) - Deprecated (use secrets_group filter)",
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="secrets_group__slug",
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (ID or slug)",
     )

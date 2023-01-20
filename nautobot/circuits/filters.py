@@ -50,8 +50,9 @@ class ProviderFilterSet(NautobotFilterSet):
         label="Site (ID) - Deprecated (use site filter)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="circuits__terminations__site__slug",
+        field_name="circuits__terminations__site",
         queryset=Site.objects.all(),
+        # to_field_name="slug",
         label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
@@ -155,7 +156,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Site (ID) - Deprecated (use site filter)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="terminations__site__slug",
+        field_name="terminations__site",
         queryset=Site.objects.all(),
         label="Site (ID or slug)",
     )
