@@ -96,10 +96,6 @@ class LocationType(TreeModel, OrganizationalModel):
                 )
 
         if self.name.lower() in [
-            "region",
-            "regions",
-            "site",
-            "sites",
             "rackgroup",
             "rackgroups",
             "rack group",
@@ -345,14 +341,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
                 if self.site is not None:
                     raise ValidationError(
                         {"site": "A Location cannot have both a parent Location and an associated Site."}
-                    )
-
-            else:  # No parent, which is good, but then we must have a site.
-                if self.site is None:
-                    # Remove this in the future once Site and Region become special cases of Location;
-                    # at that point a "root" LocationType will correctly have no site associated.
-                    raise ValidationError(
-                        {"site": f"A Location of type {self.location_type} must have an associated Site."}
                     )
 
         else:  # Our location type has a parent type of its own
