@@ -1,11 +1,11 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.utils.utils import count_related
 from nautobot.core.views import generic
 from nautobot.dcim.models import Site, Rack, Device, RackReservation
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.utils.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, Cluster
 from . import filters, forms, tables
 from .models import Tenant, TenantGroup

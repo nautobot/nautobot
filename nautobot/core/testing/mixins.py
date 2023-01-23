@@ -12,12 +12,12 @@ from netaddr import IPNetwork
 from rest_framework.test import APIClient
 from taggit.managers import TaggableManager
 
-from nautobot.extras import management
-from nautobot.extras import models as extras_models
-from nautobot.users import models as users_models
 from nautobot.core import fields as core_fields
 from nautobot.core import testing
 from nautobot.core.utils import permissions
+from nautobot.extras import management
+from nautobot.extras import models as extras_models
+from nautobot.users import models as users_models
 
 # Use the proper swappable User model
 User = get_user_model()

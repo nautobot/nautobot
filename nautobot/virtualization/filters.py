@@ -1,17 +1,6 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Location, Platform, Region, Site
-from nautobot.extras.filters import (
-    CustomFieldModelFilterSetMixin,
-    LocalContextModelFilterSetMixin,
-    NautobotFilterSet,
-    RoleModelFilterSetMixin,
-    StatusModelFilterSetMixin,
-)
-from nautobot.ipam.models import IPAddress, Service, VLAN
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
@@ -24,6 +13,17 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.utils import is_uuid
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Location, Platform, Region, Site
+from nautobot.extras.filters import (
+    CustomFieldModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
+    NautobotFilterSet,
+    RoleModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+)
+from nautobot.ipam.models import IPAddress, Service, VLAN
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 

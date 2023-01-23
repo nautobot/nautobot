@@ -1,12 +1,5 @@
 from django import forms
 
-from nautobot.extras.forms import (
-    NautobotFilterForm,
-    CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    TagsBulkEditFormMixin,
-)
 from nautobot.core.forms import (
     CommentField,
     CSVModelChoiceField,
@@ -14,6 +7,13 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     SlugField,
     TagFilterField,
+)
+from nautobot.extras.forms import (
+    NautobotFilterForm,
+    CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
+    NautobotModelForm,
+    TagsBulkEditFormMixin,
 )
 from .models import Tenant, TenantGroup
 

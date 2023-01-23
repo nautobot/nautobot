@@ -4,10 +4,10 @@ import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
 import nautobot.core.fields
+import nautobot.core.utils.ordering
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
-import nautobot.core.utils.ordering
 import taggit.managers
 import uuid
 

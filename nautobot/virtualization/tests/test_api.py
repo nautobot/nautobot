@@ -4,10 +4,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
-from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.choices import VMInterfaceStatusChoices
 from nautobot.virtualization.models import (
     Cluster,

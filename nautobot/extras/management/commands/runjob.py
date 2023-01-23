@@ -7,11 +7,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.test.client import RequestFactory
 from django.utils import timezone
 
+from nautobot.core.utils.utils import copy_safe_request
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import Job, JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.utils import get_job_content_type
-from nautobot.core.utils.utils import copy_safe_request
 
 
 class Command(BaseCommand):

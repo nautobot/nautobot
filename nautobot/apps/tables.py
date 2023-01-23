@@ -1,6 +1,5 @@
 """Utilities for apps to implement data tables."""
 
-from nautobot.extras.tables import StatusTableMixin
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -10,6 +9,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.extras.tables import StatusTableMixin
 
 __all__ = (
     "BaseTable",

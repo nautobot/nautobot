@@ -7,8 +7,8 @@ from django.utils.hashable import make_hashable
 
 from nautobot.core.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
-from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.extras.utils import extras_features, FeatureQuery
 
 
 class StatusQuerySet(RestrictedQuerySet):

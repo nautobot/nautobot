@@ -8,6 +8,8 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import ServiceProtocolChoices
@@ -22,8 +24,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
-from nautobot.core.testing.api import APITransactionTestCase
 
 
 class AppTest(APITestCase):

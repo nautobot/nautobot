@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -24,7 +25,6 @@ from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.ipam.models import Prefix, IPAddress
 from nautobot.users.models import ObjectPermission
-from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files

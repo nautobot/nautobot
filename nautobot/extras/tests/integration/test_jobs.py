@@ -4,9 +4,9 @@ from django.contrib.contenttypes.models import ContentType
 
 from selenium.webdriver.common.keys import Keys
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models.jobs import Job, JobLogEntry, JobResult
-from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class JobResultTest(SeleniumTestCase):

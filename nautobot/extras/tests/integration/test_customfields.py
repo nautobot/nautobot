@@ -2,9 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.core.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 

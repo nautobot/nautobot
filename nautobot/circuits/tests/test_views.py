@@ -9,8 +9,8 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.extras.models import Status, Tag
 from nautobot.core.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
+from nautobot.extras.models import Status, Tag
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):

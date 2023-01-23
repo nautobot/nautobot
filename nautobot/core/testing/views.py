@@ -16,10 +16,10 @@ from tree_queries.models import TreeNode
 from nautobot.core import testing
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
+from nautobot.core.utils import utils
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
-from nautobot.core.utils import utils
 
 __all__ = (
     "TestCase",

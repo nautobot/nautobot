@@ -15,12 +15,12 @@ from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
 import django_filters
 
-from nautobot.extras import utils as extras_utils
 from nautobot.core import choices as core_choices
 from nautobot.core import forms
+from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import utils
-from nautobot.core.forms import widgets
+from nautobot.extras import utils as extras_utils
 
 __all__ = (
     "CommentField",

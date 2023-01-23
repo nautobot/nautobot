@@ -1,8 +1,8 @@
 from django import template
 from django.urls import NoReverseMatch, reverse
 
-from nautobot.extras import models
 from nautobot.core.utils import utils
+from nautobot.extras import models
 
 register = template.Library()
 

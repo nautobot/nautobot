@@ -7,15 +7,14 @@ from django.test import RequestFactory, TestCase
 
 from example_plugin.models import ExampleModel
 
-from nautobot.core import settings_funcs
+from nautobot.core import constants, exceptions, forms, settings_funcs, testing
+from nautobot.core.utils import utils
 from nautobot.dcim import filters
 from nautobot.dcim import forms as dcim_forms
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
-from nautobot.core import constants, exceptions, forms, testing
-from nautobot.core.utils import utils
 
 
 class DictToFilterParamsTest(TestCase):

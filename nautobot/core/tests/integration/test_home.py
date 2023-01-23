@@ -1,9 +1,9 @@
 from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, Provider
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
-from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class HomeTestCase(SeleniumTestCase):

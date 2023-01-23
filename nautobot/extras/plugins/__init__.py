@@ -18,13 +18,13 @@ from nautobot.core.apps import (
     register_menu_items,
     register_homepage_panels,
 )
+from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
-from nautobot.core.choices import ButtonColorChoices
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
 logger = getLogger(__name__)
 

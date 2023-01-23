@@ -5,6 +5,9 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 
+from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
+from nautobot.core.testing import TestCase
 from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
@@ -23,9 +26,6 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
 from nautobot.ipam.models import Prefix
-from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
-from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
-from nautobot.core.testing import TestCase
 
 
 class DynamicGroupTestBase(TestCase):

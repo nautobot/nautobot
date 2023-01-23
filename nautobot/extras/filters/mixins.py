@@ -3,6 +3,11 @@ from django.db.models import Q
 import django_filters
 from django_filters.utils import verbose_lookup_expr
 
+from nautobot.core.constants import (
+    FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NUMERIC_BASED_LOOKUP_MAP,
+)
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -28,11 +33,6 @@ from nautobot.extras.models import (
     Role,
     Status,
 )
-from nautobot.core.constants import (
-    FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NUMERIC_BASED_LOOKUP_MAP,
-)
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.virtualization.models import VirtualMachine
 
 

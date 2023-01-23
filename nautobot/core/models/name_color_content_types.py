@@ -3,8 +3,10 @@ from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.choices import ColorChoices
+from nautobot.core.fields import AutoSlugField, ColorField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
 # caused circular import error
@@ -12,9 +14,6 @@ from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
-from nautobot.core.choices import ColorChoices
-from nautobot.core.fields import ColorField
-from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class ContentTypeRelatedQuerySet(RestrictedQuerySet):

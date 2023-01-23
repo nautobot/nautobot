@@ -11,6 +11,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -46,8 +48,6 @@ from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,

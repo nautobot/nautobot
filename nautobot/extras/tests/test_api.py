@@ -11,6 +11,10 @@ from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing.utils import disable_warnings
+from nautobot.core.utils.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -63,10 +67,6 @@ from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import disable_warnings
-from nautobot.core.utils.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()

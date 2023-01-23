@@ -10,8 +10,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from nautobot.core.models import BaseModel
 from nautobot.core.fields import JSONArrayField
+from nautobot.core.models import BaseModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.utils import flatten_dict
 

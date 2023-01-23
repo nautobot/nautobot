@@ -11,9 +11,9 @@ from rest_framework.serializers import ValidationError
 
 from nautobot.core.api import ValidatedModelSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
-from nautobot.core.api.utils import get_serializer_for_model
 
 
 logger = logging.getLogger(__name__)

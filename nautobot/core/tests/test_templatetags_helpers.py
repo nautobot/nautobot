@@ -5,9 +5,9 @@ from django.templatetags.static import static
 from django.test import TestCase
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
+from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
-from nautobot.core.templatetags import helpers
 
 
 @skipIf(

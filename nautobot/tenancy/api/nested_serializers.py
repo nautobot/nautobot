@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
 from nautobot.core.api import WritableNestedSerializer
-from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.core.api.utils import TreeModelSerializerMixin
+from nautobot.tenancy.models import Tenant, TenantGroup
 
 __all__ = [
     "NestedTenantGroupSerializer",

@@ -3,6 +3,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.core.fields import NaturalOrderingField
+from nautobot.core.models import BaseModel
+from nautobot.core.utils.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
     ConsolePortTypeChoices,
@@ -14,12 +17,9 @@ from nautobot.dcim.choices import (
     PortTypeChoices,
 )
 
-from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import NaturalOrderingField
-from nautobot.core.utils.ordering import naturalize_interface
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,

@@ -23,9 +23,6 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
-from nautobot.core.views.utils import check_filter_for_display
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.core.error_handlers import handle_protectederror
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
@@ -39,9 +36,9 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
@@ -51,6 +48,9 @@ from nautobot.core.utils.utils import (
     prepare_cloned_fields,
 )
 from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.utils import check_filter_for_display
+from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

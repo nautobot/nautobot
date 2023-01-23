@@ -16,10 +16,10 @@ from drf_spectacular.utils import extend_schema_field
 from taggit.managers import TaggableManager
 
 from nautobot.core import constants, forms
+from nautobot.core.utils import utils
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import forms as dcim_forms
 from nautobot.extras import models as extras_models
-from nautobot.core.utils import utils
 
 logger = logging.getLogger(__name__)
 

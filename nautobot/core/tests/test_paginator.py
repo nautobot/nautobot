@@ -6,9 +6,9 @@ from django.contrib.auth import get_user_model
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
 
-from nautobot.dcim import models
 from nautobot.core import testing
 from nautobot.core.utils import paginator
+from nautobot.dcim import models
 
 
 class PaginatorTestCase(testing.TestCase):

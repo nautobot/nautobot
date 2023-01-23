@@ -2,8 +2,8 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
-from nautobot.users.models import ObjectPermission, Token
 from nautobot.core.filters import BaseFilterSet, SearchFilter
+from nautobot.users.models import ObjectPermission, Token
 
 __all__ = (
     "GroupFilterSet",

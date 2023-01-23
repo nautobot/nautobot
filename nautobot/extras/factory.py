@@ -4,11 +4,10 @@ from django.utils.text import slugify
 import factory
 import faker
 
-from nautobot.core.factory import OrganizationalModelFactory
+from nautobot.core.choices import ColorChoices
+from nautobot.core.factory import OrganizationalModelFactory, get_random_instances
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
-from nautobot.core.choices import ColorChoices
-from nautobot.core.factory import get_random_instances
 
 
 class RoleFactory(OrganizationalModelFactory):

@@ -1,7 +1,7 @@
 import django_filters
 
-from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
+from nautobot.tenancy.models import Tenant, TenantGroup
 
 
 class TenancyModelFilterSetMixin(django_filters.FilterSet):

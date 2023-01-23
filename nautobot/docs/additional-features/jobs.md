@@ -657,8 +657,8 @@ When using `TransactionTestCase` (whether from Django or from Nautobot) each tes
 A simple example of a Job test case for 1.3.3 and forward might look like the following:
 
 ```python
-from nautobot.extras.models import Job, JobLogEntry
 from nautobot.core.testing import run_job_for_testing, TransactionTestCase
+from nautobot.extras.models import Job, JobLogEntry
 
 
 class MyJobTestCase(TransactionTestCase):

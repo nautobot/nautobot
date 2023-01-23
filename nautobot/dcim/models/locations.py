@@ -6,13 +6,12 @@ from django.urls import reverse
 
 from timezone_field import TimeZoneField
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.core.fields import NaturalOrderingField
-from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
 
 
 @extras_features(

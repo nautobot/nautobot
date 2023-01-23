@@ -12,11 +12,11 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
-from nautobot.core.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
 

@@ -2,9 +2,9 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
-from nautobot.core.testing import APITestCase
 
 
 class TestPrefix(APITestCase):

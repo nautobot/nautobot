@@ -13,10 +13,10 @@ from django.urls.exceptions import NoReverseMatch
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
-from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
 
 logger = logging.getLogger("nautobot.core.apps")

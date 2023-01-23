@@ -4,8 +4,8 @@ from django.utils.translation import gettext
 import json
 import uuid
 
-from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.core.utils.utils import serialize_object
+from nautobot.extras.choices import ObjectChangeActionChoices
 
 ADDITION = 1
 CHANGE = 2

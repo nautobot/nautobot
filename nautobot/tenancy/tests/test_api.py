@@ -1,7 +1,7 @@
 from django.urls import reverse
 
-from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.tenancy.models import Tenant, TenantGroup
 
 
 class AppTest(APITestCase):

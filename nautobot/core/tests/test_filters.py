@@ -7,6 +7,8 @@ import django_filters
 from taggit.managers import TaggableManager
 from tree_queries.models import TreeNodeForeignKey
 
+from nautobot.core import filters, testing
+from nautobot.core.utils import utils
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import filters as dcim_filters
@@ -16,8 +18,6 @@ from nautobot.extras import models as extras_models
 from nautobot.extras.models import Role
 from nautobot.ipam import factory as ipam_factory
 from nautobot.ipam import models as ipam_models
-from nautobot.core import filters, testing
-from nautobot.core.utils import utils
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):

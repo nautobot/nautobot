@@ -9,6 +9,7 @@ from rest_framework import status
 
 from constance.test import override_config
 
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceStatusChoices,
@@ -17,7 +18,6 @@ from nautobot.dcim.choices import (
     PowerFeedTypeChoices,
     SubdeviceRoleChoices,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -56,7 +56,6 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
-from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
 
 

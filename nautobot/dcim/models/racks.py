@@ -9,18 +9,16 @@ from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
 
+from nautobot.core.config import get_settings_or_config
+from nautobot.core.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.utils import array_to_string, UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
-
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleModelMixin, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.config import get_settings_or_config
-from nautobot.core.fields import NaturalOrderingField, JSONArrayField
-from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.utils.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed

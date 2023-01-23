@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
 from nautobot.circuits.models import CircuitTermination
 from nautobot.dcim.choices import (
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -36,7 +36,6 @@ from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.core.factory import random_instance, UniqueFaker
 from nautobot.virtualization.models import Cluster
 
 

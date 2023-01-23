@@ -11,15 +11,13 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from nautobot.core.config import get_settings_or_config
+from nautobot.core.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
-
 from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.config import get_settings_or_config
-from nautobot.core.fields import NaturalOrderingField
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,

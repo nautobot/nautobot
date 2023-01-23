@@ -27,9 +27,6 @@ from rest_framework.viewsets import GenericViewSet
 from drf_spectacular.utils import extend_schema
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.forms import NoteForm
-from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.core.error_handlers import handle_protectederror
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -38,12 +35,15 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.utils.utils import (
     csv_format,
     prepare_cloned_fields,
 )
+from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utility_mixins import GetReturnURLMixin
+from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.forms import NoteForm
+from nautobot.extras.tables import ObjectChangeTable, NoteTable
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",

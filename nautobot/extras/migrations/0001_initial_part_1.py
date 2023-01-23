@@ -5,11 +5,12 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 import django_cryptography.fields
+
+import nautobot.core.fields
+import nautobot.core.models.validators
 import nautobot.extras.models.customfields
 import nautobot.extras.models.relationships
 import nautobot.extras.utils
-import nautobot.core.fields
-import nautobot.core.models.validators
 import uuid
 
 

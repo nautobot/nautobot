@@ -2,8 +2,8 @@ from django.test import TestCase
 from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
 
-from nautobot.dcim import models as dcim_models
 from nautobot.core.utils import utils
+from nautobot.dcim import models as dcim_models
 
 
 class NautobotJinjaFilterTest(TestCase):

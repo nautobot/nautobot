@@ -1,8 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.dcim.models import PowerFeed, PowerPanel
-from nautobot.extras.tables import StatusTableMixin
 from nautobot.core.tables import (
     BaseTable,
     ChoiceFieldColumn,
@@ -10,6 +8,8 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.models import PowerFeed, PowerPanel
+from nautobot.extras.tables import StatusTableMixin
 from .devices import CableTerminationTable
 
 __all__ = (

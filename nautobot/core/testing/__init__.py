@@ -8,10 +8,6 @@ from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
 from nautobot.core.celery import app
-from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.jobs import run_job
-from nautobot.extras.models import JobResult
-from nautobot.extras.utils import get_job_content_type
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
@@ -24,6 +20,10 @@ from nautobot.core.testing.utils import (
     post_data,
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
+from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.jobs import run_job
+from nautobot.extras.models import JobResult
+from nautobot.extras.utils import get_job_content_type
 
 __all__ = (
     "APITestCase",

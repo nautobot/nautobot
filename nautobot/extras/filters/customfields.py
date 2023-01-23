@@ -2,13 +2,13 @@ from django.db.models import Q
 from django.forms import IntegerField
 import django_filters
 
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
     MultiValueNumberFilter,
 )
 from nautobot.core.forms import NullableDateField
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 
 
 EXACT_FILTER_TYPES = (

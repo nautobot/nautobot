@@ -4,10 +4,6 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
@@ -16,6 +12,10 @@ from nautobot.core.filters import (
     SearchFilter,
     TagFilter,
 )
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Interface
+from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
     Aggregate,

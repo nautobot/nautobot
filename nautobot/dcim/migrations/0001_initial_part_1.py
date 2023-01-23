@@ -4,11 +4,11 @@ import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.dcim.fields
 import nautobot.core.fields
 import nautobot.core.utils.ordering
 import nautobot.core.utils.query_functions
 import nautobot.core.models.validators
+import nautobot.dcim.fields
 import timezone_field.fields
 import uuid
 

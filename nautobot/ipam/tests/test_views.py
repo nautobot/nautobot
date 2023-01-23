@@ -4,6 +4,8 @@ from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
+from nautobot.core.testing import ViewTestCases
+from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Location, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
@@ -20,8 +22,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.core.testing import ViewTestCases
-from nautobot.core.testing.utils import extract_page_body
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):

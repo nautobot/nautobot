@@ -17,13 +17,13 @@ from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
 
+from nautobot.core.config import get_settings_or_config
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.core.config import get_settings_or_config
 
 
 class HomeView(AccessMixin, TemplateView):

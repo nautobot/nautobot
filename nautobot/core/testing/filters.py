@@ -3,8 +3,8 @@ import random
 from django.db.models import Count
 from django.test import tag
 
-from nautobot.tenancy import models
 from nautobot.core.testing import views
+from nautobot.tenancy import models
 
 
 @tag("unit")

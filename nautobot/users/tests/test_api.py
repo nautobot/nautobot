@@ -4,10 +4,10 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.users.filters import GroupFilterSet
-from nautobot.users.models import ObjectPermission, Token
 from nautobot.core.testing import APIViewTestCases, APITestCase
 from nautobot.core.utils.utils import deepmerge
+from nautobot.users.filters import GroupFilterSet
+from nautobot.users.models import ObjectPermission, Token
 
 from rest_framework import HTTP_HEADER_ENCODING
 

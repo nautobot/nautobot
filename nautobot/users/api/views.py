@@ -10,10 +10,10 @@ from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
 from nautobot.core.api.views import ModelViewSet
-from nautobot.users import filters
-from nautobot.users.models import ObjectPermission, Token
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.utils import deepmerge
+from nautobot.users import filters
+from nautobot.users.models import ObjectPermission, Token
 from . import serializers
 
 

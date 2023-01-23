@@ -21,15 +21,9 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.views import generic, viewsets
-from nautobot.dcim.models import Device
-from nautobot.dcim.tables import DeviceTable
-from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
-from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.core.forms import restrict_form_fields
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.tables import ButtonsColumn
+from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils.utils import (
     copy_safe_request,
     count_related,
@@ -39,7 +33,13 @@ from nautobot.core.utils.utils import (
     prepare_cloned_fields,
     pretty_print_query,
 )
+from nautobot.core.views import generic, viewsets
 from nautobot.core.views.utility_mixins import ObjectPermissionRequiredMixin
+from nautobot.dcim.models import Device
+from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.tasks import delete_custom_field_data
+from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
+from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 
