@@ -1,8 +1,6 @@
 import factory
 import faker
 
-from django.db.models import Q
-
 from nautobot.circuits import choices
 from nautobot.circuits.models import CircuitTermination, CircuitType, Circuit, Provider, ProviderNetwork
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
@@ -108,16 +106,13 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             "has_description",
         )
 
-    circuit = random_instance(
-        lambda: Circuit.objects.filter(Q(termination_a__isnull=True) | Q(termination_z__isnull=True)), allow_null=False
+    circuit = factory.LazyAttribute(
+        lambda o: faker.Faker().random_element(
+            elements=Circuit.objects.filter(**{f"termination_{o.term_side.lower()}__isnull": True})
+        )
     )
 
-    @factory.lazy_attribute
-    def term_side(self):
-        side_choices = choices.CircuitTerminationSideChoices.values()
-        for random_side in faker.Faker().random_elements(elements=side_choices, unique=True, length=len(side_choices)):
-            if getattr(self.circuit, f"termination_{random_side.lower()}") is None:
-                return random_side
+    term_side = factory.Faker("random_element", elements=choices.CircuitTerminationSideChoices.values())
 
     has_region = None  # overridable attribute to force site that has a region
     has_site = factory.Maybe("has_region", True, factory.Faker("pybool"))

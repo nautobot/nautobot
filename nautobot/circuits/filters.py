@@ -231,9 +231,18 @@ class CircuitTerminationFilterSet(
             "description": "icontains",
         },
     )
+    circuit = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="cid",
+        queryset=Circuit.objects.all(),
+        label="Circuit (ID or circuit ID)",
+    )
     circuit_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
         label="Circuit",
+    )
+    provider_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ProviderNetwork.objects.all(),
+        label="Provider Network (ID or slug)",
     )
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
@@ -242,4 +251,4 @@ class CircuitTerminationFilterSet(
 
     class Meta:
         model = CircuitTermination
-        fields = ["term_side", "port_speed", "upstream_speed", "xconnect_id"]
+        fields = ["description", "port_speed", "pp_info", "term_side", "upstream_speed", "xconnect_id"]

@@ -1,4 +1,7 @@
+from django.db.models import Q
+
 from nautobot.circuits import factory
+from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.filters import (
     CircuitFilterSet,
     CircuitTerminationFilterSet,
@@ -7,9 +10,8 @@ from nautobot.circuits.filters import (
     ProviderNetworkFilterSet,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Manufacturer, Region, Site
+from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Region, Site
 from nautobot.extras.models import Role, Status
-from nautobot.utilities.filters import RelatedMembershipBooleanFilter
 from nautobot.utilities.testing import FilterTestCases
 
 
@@ -99,16 +101,18 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["description"],
         ["install_date"],
         ["commit_rate"],
-        ["provider_id", "provider__pk"],
+        ["provider_id", "provider__id"],
         ["provider", "provider__slug"],
         ["provider_network", "terminations__provider_network__slug"],
+        ["provider_network", "terminations__provider_network__id"],
         ["provider_network_id", "terminations__provider_network"],
-        ["type_id", "type__pk"],
+        ["type_id", "type__id"],
         ["type", "type__slug"],
         ["status", "status__slug"],
-        ["region_id", "terminations__site__region__pk"],
+        ["region_id", "terminations__site__region__id"],
         ["region", "terminations__site__region__slug"],
-        ["site_id", "terminations__site__pk"],
+        ["region", "terminations__site__region__id"],
+        ["site_id", "terminations__site__id"],
         ["site", "terminations__site__slug"],
         ["termination_a"],
         ["termination_z"],
@@ -126,32 +130,6 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         factory.CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
         factory.CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
 
-    def test_filters_generic(self):
-        for test in self.generic_filter_tests:
-            filter_name = test[0]
-            field_name = test[1] if len(test) == 2 else test[0]
-            with self.subTest(f"{self.queryset.model._meta.object_name} filter {filter_name}"):
-                test_data = self.get_filterset_test_values(field_name)
-                params = {filter_name: test_data}
-                filterset_result = self.filterset(params, self.queryset).qs
-                qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
-                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
-
-    def test_boolean_filters_generic(self):
-        object_name = self.queryset.model._meta.object_name
-        for filter_name, filter in self.filterset.get_filters().items():
-            if not isinstance(filter, RelatedMembershipBooleanFilter):
-                continue
-            field_name = filter.field_name
-            with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (True)"):
-                filterset_result = self.filterset({filter_name: True}, self.queryset).qs
-                qs_result = self.queryset.filter(**{f"{field_name}__isnull": False})
-                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
-            with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (False)"):
-                filterset_result = self.filterset({filter_name: False}, self.queryset).qs
-                qs_result = self.queryset.filter(**{f"{field_name}__isnull": True})
-                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
-
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
@@ -162,18 +140,29 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     queryset = CircuitTermination.objects.all()
     filterset = CircuitTerminationFilterSet
 
+    generic_filter_tests = (
+        ["circuit", "circuit__cid"],
+        ["circuit", "circuit__id"],
+        ["circuit_id"],
+        ["description"],
+        ["port_speed"],
+        ["pp_info"],
+        ["provider_network", "provider_network__slug"],
+        ["provider_network", "provider_network__id"],
+        ["provider_network_id"],
+        ["site", "site__id"],
+        ["site", "site__slug"],
+        ["upstream_speed"],
+        ["xconnect_id"],
+    )
+
     @classmethod
     def setUpTestData(cls):
 
         sites = Site.objects.all()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Test Device Type 1",
-            slug="test-device-type-1",
-        )
+        devicetype = DeviceType.objects.first()
         devicerole = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        device_status = Status.objects.get_for_model(Device).first()
         device1 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
@@ -191,90 +180,26 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         interface1 = Interface.objects.create(device=device1, name="eth0")
         interface2 = Interface.objects.create(device=device2, name="eth0")
 
-        circuit_types = (CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),)
-
-        providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1"),
-            Provider.objects.create(name="Provider 2", slug="provider-2"),
+        factory.CircuitTypeFactory.create_batch(10)
+        factory.ProviderFactory.create_batch(10)
+        factory.CircuitFactory.create_batch(20)
+        factory.CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
+        factory.CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
+        factory.CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
+        factory.CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
+        factory.CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
+        factory.CircuitTerminationFactory.create_batch(
+            size=2,
+            has_site=True,
+            has_location=True,
+            has_port_speed=True,
+            has_upstream_speed=True,
+            has_xconnect_id=True,
+            has_pp_info=True,
+            has_description=True,
         )
 
-        provider_networks = (
-            ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[1]),
-            ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[1]),
-        )
-        ProviderNetwork.objects.bulk_create(provider_networks)
-
-        circuits = (
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 1"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 2"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 3"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 4"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 5"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 6"),
-        )
-
-        Circuit.objects.bulk_create(circuits)
-
-        circuit_terminations = (
-            CircuitTermination.objects.create(
-                circuit=circuits[0],
-                site=sites[0],
-                term_side="A",
-                port_speed=1000,
-                upstream_speed=1000,
-                xconnect_id="ABC",
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[0],
-                site=sites[1],
-                term_side="Z",
-                port_speed=1000,
-                upstream_speed=1000,
-                xconnect_id="DEF",
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[1],
-                site=sites[1],
-                term_side="A",
-                port_speed=2000,
-                upstream_speed=2000,
-                xconnect_id="GHI",
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[1],
-                site=sites[2],
-                term_side="Z",
-                port_speed=2000,
-                upstream_speed=2000,
-                xconnect_id="JKL",
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[2],
-                site=sites[2],
-                term_side="A",
-                port_speed=3000,
-                upstream_speed=3000,
-                xconnect_id="MNO",
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[2],
-                site=sites[0],
-                term_side="Z",
-                port_speed=3000,
-                upstream_speed=3000,
-                xconnect_id="PQR",
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[3], provider_network=provider_networks[0], term_side="A"
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[4], provider_network=provider_networks[1], term_side="A"
-            ),
-            CircuitTermination.objects.create(
-                circuit=circuits[5], provider_network=provider_networks[2], term_side="A"
-            ),
-        )
+        circuit_terminations = CircuitTermination.objects.all()
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -291,47 +216,22 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_term_side(self):
-        params = {"term_side": "A"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
-
-    def test_port_speed(self):
-        params = {"port_speed": ["1000", "2000"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_upstream_speed(self):
-        params = {"upstream_speed": ["1000", "2000"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_xconnect_id(self):
-        params = {"xconnect_id": ["ABC", "DEF"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_circuit_id(self):
-        circuits = Circuit.objects.all()[:2]
-        params = {"circuit_id": [circuits[0].pk, circuits[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_provider_network(self):
-        provider_networks = ProviderNetwork.objects.all()[:2]
-        params = {"provider_network_id": [provider_networks[0].pk, provider_networks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_site(self):
-        sites = Site.objects.all()[:2]
-        params = {"site": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_has_cable(self):
-        params = {"has_cable": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        for choice in CircuitTerminationSideChoices.values():
+            with self.subTest(f"term_side: {choice}"):
+                params = {"term_side": choice}
+                filterset_result = self.filterset(params, self.queryset).qs
+                qs_result = self.queryset.filter(term_side=choice)
+                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
     def test_connected(self):
         params = {"connected": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        filterset_result = self.filterset(params, self.queryset).qs
+        qs_result = self.queryset.filter(_path__is_active=True)
+        self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
         params = {"connected": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
+        filterset_result = self.filterset(params, self.queryset).qs
+        qs_result = self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False))
+        self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
 
 class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):

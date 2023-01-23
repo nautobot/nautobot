@@ -4,6 +4,7 @@ from django.db.models import Count
 from django.test import tag
 
 from nautobot.tenancy import models
+from nautobot.utilities.filters import RelatedMembershipBooleanFilter
 from nautobot.utilities.testing import views
 
 
@@ -34,11 +35,13 @@ class FilterTestCases:
             if queryset is None:
                 queryset = self.queryset
             qs_count = queryset.count()
-            values_with_count = queryset.values(field_name).annotate(count=Count(field_name)).order_by("count")
+            values_with_count = (
+                queryset.filter(**{f"{field_name}__isnull": False})
+                .values(field_name)
+                .annotate(count=Count(field_name))
+                .order_by("count")
+            )
             for value in values_with_count:
-                # skip null values
-                if value[field_name] is None:
-                    continue
                 # randomly break out of loop after 2 values have been selected
                 if len(test_values) > 1 and random.choice([True, False]):
                     break
@@ -58,6 +61,9 @@ class FilterTestCases:
         queryset = None
         filterset = None
 
+        # list of filters to test: (filter_name, optional field_name if different from filter name)
+        generic_filter_tests = []
+
         def test_id(self):
             """Verify that the filterset supports filtering by id."""
             params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -69,6 +75,32 @@ class FilterTestCases:
             """Verify that the filterset reports as invalid when initialized with an unsupported filter parameter."""
             params = {"ice_cream_flavor": ["chocolate"]}
             self.assertFalse(self.filterset(params, self.queryset).is_valid())
+
+        def test_filters_generic(self):
+            for test in self.generic_filter_tests:
+                filter_name = test[0]
+                field_name = test[-1]
+                with self.subTest(f"{self.queryset.model._meta.object_name} filter {filter_name} ({field_name})"):
+                    test_data = self.get_filterset_test_values(field_name)
+                    params = {filter_name: test_data}
+                    filterset_result = self.filterset(params, self.queryset).qs
+                    qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
+                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+
+        def test_boolean_filters_generic(self):
+            object_name = self.queryset.model._meta.object_name
+            for filter_name, filter in self.filterset.get_filters().items():
+                if not isinstance(filter, RelatedMembershipBooleanFilter):
+                    continue
+                field_name = filter.field_name
+                with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (True)"):
+                    filterset_result = self.filterset({filter_name: True}, self.queryset).qs
+                    qs_result = self.queryset.filter(**{f"{field_name}__isnull": False}).distinct()
+                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (False)"):
+                    filterset_result = self.filterset({filter_name: False}, self.queryset).qs
+                    qs_result = self.queryset.filter(**{f"{field_name}__isnull": True}).distinct()
+                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
     class NameSlugFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name and by slug."""
