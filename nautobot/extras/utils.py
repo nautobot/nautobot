@@ -157,7 +157,11 @@ class TaggableClassesQuery(FeaturedQueryMixin):
         return [
             _class
             for _class in apps.get_models()
-            if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
+            if (
+                hasattr(_class, "tags")
+                and isinstance(_class.tags, _TaggableManager)
+                and ".tests." not in _class.__module__  # avoid leakage from nautobot.core.tests.test_filters
+            )
         ]
 
 
