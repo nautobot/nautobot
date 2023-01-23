@@ -178,7 +178,7 @@ mkdocs-material = "~8.5.8"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "0.19.1"
+mkdocstrings = "0.20.0"
 mkdocstrings-python = "0.8.2"
 # Code static analysis
 pylint = {version = "~2.15.0", python = "^3.7.2"}
