@@ -474,6 +474,9 @@ Markdown rendering is supported for log messages.
 !!! note
     Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.core.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
 
++/- 2.0.0
+    The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
+
 ### Accessing Request Data
 
 Details of the current HTTP request (the one being made to execute the job) are available as the instance attribute `self.request`. This can be used to infer, for example, the user executing the job and their client IP address:
@@ -649,6 +652,9 @@ While individual methods within your Job can and should be tested in isolation, 
 ### Nautobot 1.3.3 and later
 
 The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.core.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
+
++/- 2.0.0
+    `run_job_for_testing` was moved from the `nautobot.utilities.testing` module to `nautobot.core.testing`.
 
 Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.core.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 

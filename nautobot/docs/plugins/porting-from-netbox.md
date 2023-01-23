@@ -15,6 +15,9 @@ The most likely first issue you will encounter will be a module import problem, 
 - `utilities.* -> nautobot.core.*`
 - `virtualization.* -> nautobot.virtualization.*`
 
++/- 2.0.0
+    The equivalent of NetBox's `utilities` module moved from `nautobot.utilities` to `nautobot.core`.
+
 ## Regenerating database migrations
 
 In general, your migrations files will not port over easily; you will probably want to delete and re-generate them (`nautobot-server makemigrations <plugin-name>`) instead.

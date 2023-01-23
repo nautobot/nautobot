@@ -14,6 +14,9 @@ By Nautobot convention, **unit** tests must be [tagged](https://docs.djangoproje
 
 By Nautobot convention, **integration** tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.core.testing.integration.SeleniumTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite inherit from this class.
 
++/- 2.0.0
+    The base test classes moved from `nautobot.utilities.testing` to `nautobot.core.testing`.
+
 The `invoke unittest` and `invoke integration-test` commands are intentionally distinct, and the correct tagging of test cases is essential to enforcing the division between these two test categories. We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and manageable continuous development cycle.
 
 ## Base Classes and Code Location
@@ -25,6 +28,9 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 
 - New unit tests **must always** inherit from `nautobot.core.testing.TestCase`. Do not use `django.test.TestCase`.
 - New integration tests **must always** inherit from `nautobot.core.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
+
++/- 2.0.0
+    The base test classes moved from `nautobot.utilities.testing` to `nautobot.core.testing`.
 
 ## Factories
 

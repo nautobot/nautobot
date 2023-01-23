@@ -56,6 +56,9 @@ Depending on the complexity of your scripts, reports, or plugins, and how tightl
 - `utilities.* -> nautobot.core.*`
 - `virtualization.* -> nautobot.virtualization.*`
 
++/- 2.0.0
+    The equivalent of NetBox's `utilities` module moved from `nautobot.utilities` to `nautobot.core`.
+
 ### Update Your other Integration Code
 
 If you have developed any custom integrations or plugins you may need to update some of your calls. Please see the data model changes below for guidance.
