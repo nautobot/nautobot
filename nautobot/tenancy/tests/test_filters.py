@@ -68,7 +68,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_tenants(self):
         """Test the `tenants` filter."""
-        tenants = Tenant.objects.filter(group__isnull=False)
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)
         params = {"tenants": [tenants[0].pk, tenants[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
