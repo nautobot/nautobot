@@ -10,7 +10,7 @@ import yaml
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer, Site
 from nautobot.ipam.models import VLAN
 
 from nautobot.extras.choices import (
@@ -58,6 +58,9 @@ class GitTest(TransactionTestCase):
         self.mock_request.id = uuid.uuid4()
 
         self.site = Site.objects.create(name="Test Site", slug="test-site")
+        self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
+        self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
+        self.location = Location.objects.create(location_type=self.location_type, name="Test Location", site=self.site)
         self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
@@ -69,6 +72,7 @@ class GitTest(TransactionTestCase):
             role=self.role,
             device_type=self.device_type,
             site=self.site,
+            location=self.location,
             status=self.device_status,
         )
 
@@ -118,9 +122,11 @@ class GitTest(TransactionTestCase):
         # TODO(Glenn): populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
+        os.makedirs(os.path.join(path, "config_contexts", "locations"))
         os.makedirs(os.path.join(path, "config_context_schemas"))
         os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
         os.makedirs(os.path.join(path, "export_templates", "ipam", "vlan"))
+
         with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
             yaml.dump(
                 {
@@ -136,33 +142,37 @@ class GitTest(TransactionTestCase):
                 },
                 fd,
             )
-        with open(
-            os.path.join(path, "config_contexts", "devices", "test-device.json"),
-            "w",
-        ) as fd:
+
+        with open(os.path.join(path, "config_contexts", "locations", f"{self.location.slug}.json"), "w") as fd:
+            json.dump(
+                {
+                    "_metadata": {"name": "Location context", "is_active": False},
+                    "domain_name": "example.com",
+                },
+                fd,
+            )
+
+        with open(os.path.join(path, "config_contexts", "devices", f"{self.device.name}.json"), "w") as fd:
             json.dump({"dns-servers": ["8.8.8.8"]}, fd)
+
         with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
             yaml.dump(self.config_context_schema, fd)
-        with open(
-            os.path.join(path, "export_templates", "dcim", "device", "template.j2"),
-            "w",
-        ) as fd:
+
+        with open(os.path.join(path, "export_templates", "dcim", "device", "template.j2"), "w") as fd:
             fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
-        with open(
-            os.path.join(path, "export_templates", "dcim", "device", "template2.html"),
-            "w",
-        ) as fd:
+
+        with open(os.path.join(path, "export_templates", "dcim", "device", "template2.html"), "w") as fd:
             fd.write("<!DOCTYPE html>/n{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
-        with open(
-            os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"),
-            "w",
-        ) as fd:
+
+        with open(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"), "w") as fd:
             fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
+
         return mock.DEFAULT
 
     def empty_repo(self, path, url, *args, **kwargs):
         os.remove(os.path.join(path, "config_contexts", "context.yaml"))
-        os.remove(os.path.join(path, "config_contexts", "devices", "test-device.json"))
+        os.remove(os.path.join(path, "config_contexts", "locations", f"{self.location.slug}.json"))
+        os.remove(os.path.join(path, "config_contexts", "devices", f"{self.device.name}.json"))
         os.remove(os.path.join(path, "config_context_schemas", "schema-1.yaml"))
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
@@ -199,8 +209,8 @@ class GitTest(TransactionTestCase):
         self.assertIsNotNone(export_template_device)
         self.assertEqual(export_template_device.mime_type, "text/plain")
 
-    def assert_config_context_exists(self, name):
-        """Helper function to assert ConfigContext exists"""
+    def assert_explicit_config_context_exists(self, name):
+        """Helper function to assert that an 'explicit' ConfigContext exists and is configured appropriately."""
         config_context = ConfigContext.objects.get(
             name=name,
             owner_object_id=self.repo.pk,
@@ -216,6 +226,21 @@ class GitTest(TransactionTestCase):
             config_context.data,
         )
         self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
+
+    def assert_implicit_config_context_exists(self, name):
+        """Helper function to assert that an 'implicit' ConfigContext exists and is configured appropriately."""
+        config_context = ConfigContext.objects.get(
+            name=name,
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+        )
+        self.assertIsNotNone(config_context)
+        self.assertEqual(1000, config_context.weight)  # default value
+        self.assertEqual("", config_context.description)  # default value
+        self.assertFalse(config_context.is_active)  # explicit metadata
+        self.assertEqual(list(config_context.locations.all()), [self.location])  # implicit from the file path
+        self.assertEqual({"domain_name": "example.com"}, config_context.data)
+        self.assertIsNone(config_context.schema)
 
     def assert_export_template_html_exist(self, name):
         """Helper function to assert ExportTemplate exists"""
@@ -437,8 +462,11 @@ class GitTest(TransactionTestCase):
                     self.job_result.data,
                 )
 
-                # Make sure ConfigContext was successfully loaded from file
-                self.assert_config_context_exists("Frobozz 1000 NTP servers")
+                # Make sure explicit ConfigContext was successfully loaded from file
+                self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
+
+                # Make sure implicit ConfigContext was successfully loaded from file
+                self.assert_implicit_config_context_exists("Location context")
 
                 # Make sure ConfigContextSchema was successfully loaded from file
                 self.assert_config_context_schema_record_exists("Config Context Schema 1")

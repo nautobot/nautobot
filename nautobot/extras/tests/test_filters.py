@@ -1266,6 +1266,26 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             2,
         )
 
+    def test_regression_distinct_2963(self):
+        """
+        Regression tests for issue #2963 to  address `AssertionError` error when combining filtering on
+        relationships with concrete fields.
+
+        Ref: https://github.com/nautobot/nautobot/issues/2963
+        """
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset(
+                {
+                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                    "manufacturer": ["manufacturer-1"],
+                },
+                self.queryset,
+            ).qs.count(),
+            2,
+        )
+
 
 class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Secret.objects.all()

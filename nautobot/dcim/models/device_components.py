@@ -980,6 +980,10 @@ class DeviceBay(ComponentModel):
                     }
                 )
 
+    @property
+    def parent(self):
+        return self.device
+
 
 #
 # Inventory items
