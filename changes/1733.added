@@ -1,0 +1,1 @@
+Added support for filtering on many more fields to the `Tenant` and `TenantGroup` filtersets.
