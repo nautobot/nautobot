@@ -9,6 +9,7 @@ from nautobot.circuits.filters import (
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Role, Status
+from nautobot.utilities.filters import RelatedMembershipBooleanFilter
 from nautobot.utilities.testing import FilterTestCases
 
 
@@ -134,6 +135,21 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
                 params = {filter_name: test_data}
                 filterset_result = self.filterset(params, self.queryset).qs
                 qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
+                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+
+    def test_boolean_filters_generic(self):
+        object_name = self.queryset.model._meta.object_name
+        for filter_name, filter in self.filterset.get_filters().items():
+            if not isinstance(filter, RelatedMembershipBooleanFilter):
+                continue
+            field_name = filter.field_name
+            with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (True)"):
+                filterset_result = self.filterset({filter_name: True}, self.queryset).qs
+                qs_result = self.queryset.filter(**{f"{field_name}__isnull": False})
+                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+            with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (False)"):
+                filterset_result = self.filterset({filter_name: False}, self.queryset).qs
+                qs_result = self.queryset.filter(**{f"{field_name}__isnull": True})
                 self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
     def test_search(self):
