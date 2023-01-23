@@ -156,17 +156,17 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 
 ### Changed
 
-- [#3055](https://github.com/nautobot/nautobot/issues/3055) - Update `setuptools` to `65.5.1` to address `CVE-2022-40897`.
+- [#3055](https://github.com/nautobot/nautobot/issues/3055) - Updated `setuptools` to `65.5.1` to address `CVE-2022-40897`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#3072](https://github.com/nautobot/nautobot/issues/3072) - In Nautobot's unit tests, all HTTP requests are now sent with SERVER_NAME set to `nautobot.example.com` instead of `testserver` (Django's default) and the test configuration for Nautobot itself sets `ALLOWED_HOSTS` to expect `nautobot.example.com`. This is intended to protect against issues such as #3065.
 - [#3077](https://github.com/nautobot/nautobot/issues/3077) - Updated Nautobot release checklist to reflect current branching and pull request process.
-- [#3082](https://github.com/nautobot/nautobot/issues/3082) - Updated `gitpython` to `~3.1.30` to address CVE-2022-24439.
+- [#3082](https://github.com/nautobot/nautobot/issues/3082) - Updated `gitpython` to `~3.1.30` to address `CVE-2022-24439`.
 - [#3112](https://github.com/nautobot/nautobot/issues/3112) - Converted eligible `prefetch_related()` to `select_related()` queries. Users should note a performance gain from this change, but note that cacheops is no longer recommended in v1.5 and this change will likely result in invalid data responses if cacheops remains enabled in your environment. Cacheops will be removed entirely in a future release.
-- [#3119](https://github.com/nautobot/nautobot/issues/3119) - Update `future` to `0.18.3` due to `CVE-2022-40899`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3119](https://github.com/nautobot/nautobot/issues/3119) - Updated `future` to `0.18.3` due to `CVE-2022-40899`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#3121](https://github.com/nautobot/nautobot/issues/3121) - Updated Config Contexts documentation to denote support for associating by Device Redundancy Group membership.
 
 ### Fixed
 
-- [#2244](https://github.com/nautobot/nautobot/issues/2244) - Avoid an unnecessary and sometimes problematic database access from the Celery worker before it forks off to execute an individual job.
+- [#2244](https://github.com/nautobot/nautobot/issues/2244) - Fixed an unnecessary and sometimes problematic database access from the Celery worker before it forks off to execute an individual job.
 - [#3097](https://github.com/nautobot/nautobot/issues/3097) - Fixed scrolling past select dropdown in modals.
 - [#3104](https://github.com/nautobot/nautobot/issues/3104) - Fixed bug preventing filters from being removed from list views.
 
