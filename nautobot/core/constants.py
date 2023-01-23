@@ -242,7 +242,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "vlan",
             {
-                "queryset": VLAN.objects.select_related("site", "group", "tenant", "role"),
+                "queryset": VLAN.objects.select_related("site", "vlan_group", "tenant", "role"),
                 "filterset": VLANFilterSet,
                 "table": VLANTable,
                 "url": "ipam:vlan_list",
@@ -252,7 +252,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "tenant",
             {
-                "queryset": Tenant.objects.select_related("group"),
+                "queryset": Tenant.objects.select_related("tenant_group"),
                 "filterset": TenantFilterSet,
                 "table": TenantTable,
                 "url": "tenancy:tenant_list",
