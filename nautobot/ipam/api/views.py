@@ -373,6 +373,6 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
-    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ipaddresses")
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ip_addresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet
