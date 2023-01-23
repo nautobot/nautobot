@@ -74,11 +74,11 @@ In addition, the `role` field of the `IPAddress` model has also been changed fro
 
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
-As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed in the DCIM app:
+As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed throughout Nautobot.
 
-Currently for some of the foreign-key related fields:
-    - The field is shadowed for the purpose of replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
-    - A PK-based filter is available as well, generally with a name suffixed by `_id`
+In Nautobot 1.x, for some of the foreign-key related fields:
+    - The field was shadowed for the purpose of replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
+    - A PK-based filter was available as well, generally with a name suffixed by `_id`
 
 Now these two filter fields will be replaced by a single filter field that can support both slugs and UUID primary keys as inputs; As a result, PK-based filters suffixed by `_id` will no longer be supported in v2.0.
 
