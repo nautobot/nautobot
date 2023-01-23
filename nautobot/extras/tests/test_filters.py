@@ -194,9 +194,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type),
-            Cluster.objects.create(name="Cluster 3", type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]
@@ -1260,6 +1260,26 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
                 {
                     f"cr_{self.relationships[2].slug}__peer": [self.devices[2].pk],
                     f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                },
+                self.queryset,
+            ).qs.count(),
+            2,
+        )
+
+    def test_regression_distinct_2963(self):
+        """
+        Regression tests for issue #2963 to  address `AssertionError` error when combining filtering on
+        relationships with concrete fields.
+
+        Ref: https://github.com/nautobot/nautobot/issues/2963
+        """
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset(
+                {
+                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                    "manufacturer": ["manufacturer-1"],
                 },
                 self.queryset,
             ).qs.count(),

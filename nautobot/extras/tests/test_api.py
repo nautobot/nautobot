@@ -1979,7 +1979,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2013,7 +2013,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2037,7 +2037,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2577,7 +2577,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[0].slug: {
                     "id": str(self.relationships[0].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
                     ),
                     "name": self.relationships[0].name,
@@ -2591,7 +2591,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[1].slug: {
                     "id": str(self.relationships[1].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
                     ),
                     "name": self.relationships[1].name,
@@ -2610,7 +2610,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[2].slug: {
                     "id": str(self.relationships[2].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
                     ),
                     "name": self.relationships[2].name,
@@ -3003,7 +3003,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 self.relationship.slug: {
                     "id": str(self.relationship.pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
                     ),
                     "name": self.relationship.name,
@@ -3015,7 +3015,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[0].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[0].pk})
                                 ),
                                 "display": self.devices[0].display,
@@ -3024,7 +3024,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[1].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[1].pk})
                                 ),
                                 "display": self.devices[1].display,
@@ -3033,7 +3033,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[2].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[2].pk})
                                 ),
                                 "display": self.devices[2].display,

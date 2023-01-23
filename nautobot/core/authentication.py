@@ -32,7 +32,6 @@ class ObjectPermissionBackend(ModelBackend):
         Return all permissions granted to the user by an ObjectPermission.
         """
         # Retrieve all assigned and enabled ObjectPermissions
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         object_permissions = ObjectPermission.objects.filter(
             Q(users=user_obj) | Q(groups__user=user_obj), enabled=True
         ).prefetch_related("object_types")

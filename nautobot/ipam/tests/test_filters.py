@@ -452,7 +452,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(type=clustertype, name="Cluster 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster),
@@ -980,7 +980,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(type=clustertype, name="Cluster 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster),

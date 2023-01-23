@@ -91,22 +91,24 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         field_name="virtual_machines",
         label="Has virtual machines",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
-        field_name="group__slug",
+    cluster_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Parent group (slug)",
     )
-    type_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_type_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
-    type = django_filters.ModelMultipleChoiceFilter(
-        field_name="type__slug",
+    cluster_type = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
         label="Cluster type (slug)",
@@ -132,23 +134,23 @@ class VirtualMachineFilterSet(
         },
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group",
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID)",
     )
     cluster_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group__slug",
+        field_name="cluster__cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Cluster group (slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type",
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
     cluster_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type__slug",
+        field_name="cluster__cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
         label="Cluster type (slug)",

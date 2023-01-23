@@ -107,16 +107,16 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 
 
 class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
-    type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
-    group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
+    cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
+    cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
         model = Cluster
         fields = (
             "name",
-            "type",
-            "group",
+            "cluster_type",
+            "cluster_group",
             "tenant",
             "region",
             "site",
@@ -127,12 +127,12 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
 
 
 class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    type = CSVModelChoiceField(
+    cluster_type = CSVModelChoiceField(
         queryset=ClusterType.objects.all(),
         to_field_name="name",
         help_text="Type of cluster",
     )
-    group = CSVModelChoiceField(
+    cluster_group = CSVModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="name",
         required=False,
@@ -156,15 +156,15 @@ class ClusterBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
-    type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
-    group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
+    cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
+    cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
         model = Cluster
         nullable_fields = [
-            "group",
+            "cluster_group",
             "site",
             "location",
             "comments",
@@ -174,10 +174,12 @@ class ClusterBulkEditForm(
 
 class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm):
     model = Cluster
-    field_order = ["q", "type", "region", "site", "group", "tenant_group", "tenant"]
+    field_order = ["q", "cluster_type", "region", "site", "cluster_group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
-    type = DynamicModelMultipleChoiceField(queryset=ClusterType.objects.all(), to_field_name="slug", required=False)
-    group = DynamicModelMultipleChoiceField(
+    cluster_type = DynamicModelMultipleChoiceField(
+        queryset=ClusterType.objects.all(), to_field_name="slug", required=False
+    )
+    cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         required=False,
@@ -275,7 +277,9 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         null_option="None",
         initial_params={"clusters": "$cluster"},
     )
-    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), query_params={"group_id": "$cluster_group"})
+    cluster = DynamicModelChoiceField(
+        queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
+    )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
 
     class Meta:
@@ -296,11 +300,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "disk",
             "comments",
             "tags",
-            "local_context_data",
-            "local_context_schema",
+            "local_config_context_data",
+            "local_config_context_schema",
         ]
         help_texts = {
-            "local_context_data": "Local config context data overwrites all sources contexts in the final rendered "
+            "local_config_context_data": "Local config context data overwrites all sources contexts in the final rendered "
             "config context",
         }
         widgets = {
@@ -329,9 +333,8 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
-                # v2 TODO(jathan): Replace prefetch_related with select_related
                 nat_ips = (
-                    IPAddress.objects.prefetch_related("nat_inside")
+                    IPAddress.objects.select_related("nat_inside")
                     .ip_family(family)
                     .filter(
                         nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
@@ -746,11 +749,17 @@ class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, Boot
 
 
 class VMInterfaceBulkCreateForm(
-    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode"]),
+    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode", "tags"]),
     VirtualMachineBulkAddComponentForm,
 ):
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={"content_types": VMInterface._meta.label_lower},
+    )
+
     field_order = (
         "name_pattern",
+        "status",
         "enabled",
         "mtu",
         "description",

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import unittest
 
 import pytz
 import yaml
@@ -1419,7 +1420,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "vc_priority": None,
             "comments": "A new device",
             "tags": [t.pk for t in Tag.objects.get_for_model(Device)],
-            "local_context_data": None,
+            "local_config_context_data": None,
             "cf_crash-counter": -1,
             "cr_router-id": None,
         }
@@ -1588,7 +1589,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), form_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a device with local context that conforms to that schema
@@ -1600,8 +1601,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.add_device")
 
         form_data = self.form_data.copy()
-        form_data["local_context_schema"] = schema.pk
-        form_data["local_context_data"] = '{"foo": "bar"}'
+        form_data["local_config_context_schema"] = schema.pk
+        form_data["local_config_context_data"] = '{"foo": "bar"}'
 
         # Try POST with model-level permission
         request = {
@@ -1609,10 +1610,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Device X").local_context_schema.pk, schema.pk)
+        self.assertEqual(self._get_queryset().get(name="Device X").local_config_context_schema.pk, schema.pk)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_local_context_schema_validation_fails(self):
+    def test_local_config_context_schema_validation_fails(self):
         """
         Given a config context schema
         And a device with local context that *does not* conform to that schema
@@ -1624,8 +1625,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.add_device")
 
         form_data = self.form_data.copy()
-        form_data["local_context_schema"] = schema.pk
-        form_data["local_context_data"] = '{"foo": "bar"}'
+        form_data["local_config_context_schema"] = schema.pk
+        form_data["local_config_context_data"] = '{"foo": "bar"}'
 
         # Try POST with model-level permission
         request = {
@@ -1800,6 +1801,15 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
         }
 
+        cls.bulk_add_data = {
+            "device": device.pk,
+            "name_pattern": "Power Outlet [4-6]",
+            "type": PowerOutletTypeChoices.TYPE_IEC_C13,
+            "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
+            "description": "A power outlet",
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
+        }
+
         cls.bulk_edit_data = {
             "type": PowerOutletTypeChoices.TYPE_IEC_C15,
             "power_port": powerports[1].pk,
@@ -1860,6 +1870,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.bulk_create_data = {
             "device": device.pk,
             "name_pattern": "Interface [4-6]",
+            "label_pattern": "Interface Number [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
             "bridge": interfaces[4].pk,
@@ -1867,12 +1878,26 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
             "mgmt_only": True,
-            "description": "A front port",
+            "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+        }
+
+        cls.bulk_add_data = {
+            "device": device.pk,
+            "name_pattern": "Interface [4-6]",
+            "label_pattern": "Interface Number [4-6]",
+            "status": status_active.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "enabled": True,
+            "mtu": 1500,
+            "mgmt_only": False,
+            "description": "An Interface",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tags": [],
         }
 
         cls.bulk_edit_data = {
@@ -1947,6 +1972,10 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "Device 1,Front Port 5,8p8c,Rear Port 5,1",
             "Device 1,Front Port 6,8p8c,Rear Port 6,1",
         )
+
+    @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
+    def test_bulk_add_component(self):
+        pass
 
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -2793,7 +2822,7 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "slug": "region-chi",
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": statuses[3].pk,
-            "local_context_data": None,
+            "local_config_context_data": None,
         }
 
         cls.csv_data = (

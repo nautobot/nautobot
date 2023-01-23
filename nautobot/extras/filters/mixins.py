@@ -145,23 +145,23 @@ class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
 
 
 class LocalContextModelFilterSetMixin(django_filters.FilterSet):
-    local_context_data = django_filters.BooleanFilter(
-        method="_local_context_data",
+    local_config_context_data = django_filters.BooleanFilter(
+        method="_local_config_context_data",
         label="Has local config context data",
     )
-    local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+    local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID)",
     )
-    local_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_context_schema__slug",
+    local_config_context_schema = django_filters.ModelMultipleChoiceFilter(
+        field_name="local_config_context_schema__slug",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug)",
     )
 
-    def _local_context_data(self, queryset, name, value):
-        return queryset.exclude(local_context_data__isnull=value)
+    def _local_config_context_data(self, queryset, name, value):
+        return queryset.exclude(local_config_context_data__isnull=value)
 
 
 class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
@@ -208,8 +208,16 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
                 ).values_list("source_id", flat=True)
 
                 values = list(destinations) + list(sources)
-            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
-            return qs
+
+            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
+            # unioned queryset is also distinct. We also need to conditionally check if the incoming
+            # `qs` is distinct in the case that a caller is manually passing in a queryset that may
+            # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
+            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
+            if qs.query.distinct:
+                union_qs = union_qs.distinct()
+
+            return qs & union_qs
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):

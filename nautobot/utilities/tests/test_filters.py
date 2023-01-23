@@ -772,7 +772,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 position=1,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["active"],
-                local_context_data={"foo": 123},
+                local_config_context_data={"foo": 123},
                 comments="Device 1 comments",
             ),
             dcim_models.Device(
@@ -1284,6 +1284,8 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
 
 class FilterTypeTest(TestCase):
+    client_class = testing.NautobotTestClient
+
     def test_numberfilter(self):
         """
         Simple test to show the bug identified in https://github.com/nautobot/nautobot/issues/2837 no longer exists

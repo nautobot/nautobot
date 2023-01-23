@@ -15,7 +15,7 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -400,6 +400,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "locations",
         "device_types",
         "roles",
         "platforms",
@@ -535,6 +536,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("locations", Location),
         ("device_types", DeviceType),
         ("roles", Role),
         ("platforms", Platform),
@@ -679,9 +681,12 @@ def import_local_config_context(
     except ObjectDoesNotExist:
         raise RuntimeError("record not found!")
 
-    if record.local_context_data_owner is not None and record.local_context_data_owner != repository_record:
+    if (
+        record.local_config_context_data_owner is not None
+        and record.local_config_context_data_owner != repository_record
+    ):
         job_result.log(
-            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_context_data_owner}",
+            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_config_context_data_owner}",
             obj=record,
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="local config contexts",
@@ -689,7 +694,7 @@ def import_local_config_context(
         )
         return
 
-    if record.local_context_data == context_data and record.local_context_data_owner == repository_record:
+    if record.local_config_context_data == context_data and record.local_config_context_data_owner == repository_record:
         job_result.log(
             "No change to local config context",
             obj=record,
@@ -699,8 +704,8 @@ def import_local_config_context(
         )
         return
 
-    record.local_context_data = context_data
-    record.local_context_data_owner = repository_record
+    record.local_config_context_data = context_data
+    record.local_config_context_data_owner = repository_record
     record.clean()
     record.save()
     job_result.log(
@@ -736,12 +741,12 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
         ("virtual_machines", VirtualMachine),
     ):
         for record in model.objects.filter(
-            local_context_data_owner_content_type=git_repository_content_type,
-            local_context_data_owner_object_id=repository_record.pk,
+            local_config_context_data_owner_content_type=git_repository_content_type,
+            local_config_context_data_owner_object_id=repository_record.pk,
         ):
             if record.name not in preserve_local[grouping]:
-                record.local_context_data = None
-                record.local_context_data_owner = None
+                record.local_config_context_data = None
+                record.local_config_context_data_owner = None
                 record.clean()
                 record.save()
                 job_result.log(

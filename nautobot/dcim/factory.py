@@ -4,12 +4,19 @@ import pytz
 import random
 from faker import Faker
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.circuits.models import CircuitTermination
-from nautobot.dcim.choices import DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
+from nautobot.dcim.choices import (
+    DeviceRedundancyGroupFailoverStrategyChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
@@ -21,10 +28,11 @@ from nautobot.dcim.models import (
     Region,
     Rack,
     RackGroup,
+    RackReservation,
     PowerPanel,
     Site,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -33,6 +41,8 @@ from nautobot.virtualization.models import Cluster
 
 
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 # For a randomly deterministic set of vendor names. Must be a tuple.
 MANUFACTURER_NAMES = (
@@ -409,3 +419,90 @@ class LocationFactory(PrimaryModelFactory):
 
     has_comments = factory.Faker("pybool")
     comments = factory.Maybe("has_comments", factory.Faker("sentence", nb_words=5), "")
+
+
+class RackFactory(PrimaryModelFactory):
+    class Meta:
+        model = Rack
+        exclude = (
+            "has_asset_tag",
+            "has_comments",
+            "has_facility_id",
+            "has_group",
+            "has_location",
+            "has_outer_depth",
+            "has_outer_width",
+            "has_role",
+            "has_serial",
+            "has_tenant",
+            "has_type",
+        )
+
+    name = factory.Sequence(lambda n: f"Rack {n}")
+    status = random_instance(lambda: Status.objects.get_for_model(Rack), allow_null=False)
+
+    has_role = factory.Faker("pybool")
+    role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
+
+    has_location = factory.Faker("pybool")
+    location = factory.Maybe(
+        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
+    )
+    site = factory.Maybe(
+        "has_location",
+        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
+        random_instance(Site),
+    )
+
+    has_group = factory.Faker("pybool")
+    group = factory.Maybe("has_group", random_instance(RackGroup), None)  # TODO there's no RackGroupFactory yet...
+
+    has_tenant = factory.Faker("boolean")
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    has_serial = factory.Faker("pybool")
+    serial = factory.Maybe("has_serial", factory.Faker("uuid4"), "")
+
+    has_asset_tag = factory.Faker("pybool")
+    asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
+
+    has_type = factory.Faker("pybool")
+    type = factory.Maybe("has_type", factory.Faker("random_element", elements=RackTypeChoices.values()), "")
+
+    width = factory.Faker("random_element", elements=RackWidthChoices.values())
+    u_height = factory.Faker("pyint", min_value=10, max_value=100)
+    desc_units = factory.Faker("pybool")
+
+    has_outer_width = factory.Faker("pybool")
+    outer_width = factory.Maybe("has_outer_width", factory.Faker("pyint"), None)
+
+    has_outer_depth = factory.Faker("pybool")
+    outer_depth = factory.Maybe("has_outer_depth", factory.Faker("pyint"), None)
+
+    outer_unit = factory.Maybe(
+        "has_outer_width",
+        factory.Faker("random_element", elements=RackDimensionUnitChoices.values()),
+        factory.Maybe(
+            "has_outer_depth", factory.Faker("random_element", elements=RackDimensionUnitChoices.values()), ""
+        ),
+    )
+
+    has_comments = factory.Faker("pybool")
+    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class RackReservationFactory(PrimaryModelFactory):
+    class Meta:
+        model = RackReservation
+        exclude = ("has_tenant",)
+
+    rack = random_instance(Rack, allow_null=False)
+    units = factory.Sequence(lambda n: [n + 1])
+
+    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    user = random_instance(User, allow_null=False)
+
+    # Note no "has_description" here, RackReservation.description is mandatory.
+    description = factory.Faker("sentence")
