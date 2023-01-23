@@ -4,7 +4,7 @@ import time
 from celery.contrib.testing.worker import start_worker
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
-from django.test import tag
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
@@ -60,6 +60,8 @@ FIREFOX_PROFILE_PREFERENCES = {
 }
 
 
+# In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?
+@override_settings(ALLOWED_HOSTS=["nautobot.example.com", SELENIUM_HOST, SELENIUM_HOST.split(".")[0]])
 @tag("integration")
 class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
     """

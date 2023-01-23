@@ -25,7 +25,6 @@ class ObjectPermissionInline(admin.TabularInline):
     verbose_name_plural = "Permissions"
 
     def get_queryset(self, request):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         return super().get_queryset(request).prefetch_related("objectpermission__object_types").nocache()
 
     @staticmethod
@@ -269,7 +268,6 @@ class ObjectPermissionAdmin(NautobotModelAdmin):
     search_fields = ["actions", "constraints", "description", "name"]
 
     def get_queryset(self, request):
-        # v2 TODO(jathan): Replace prefetch_related with select_related (these # might be m2m)
         return super().get_queryset(request).prefetch_related("object_types", "users", "groups")
 
     def list_models(self, obj):

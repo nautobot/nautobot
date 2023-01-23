@@ -38,7 +38,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.utilities.testing import FilterTestCases
+from nautobot.utilities.testing import FilterTestCases, NautobotTestClient
 from nautobot.utilities.testing import mixins
 from nautobot.utilities.utils import get_route_for_model
 
@@ -1257,6 +1257,8 @@ class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
 
 
 class FilterTypeTest(TestCase):
+    client_class = NautobotTestClient
+
     def test_numberfilter(self):
         """
         Simple test to show the bug identified in https://github.com/nautobot/nautobot/issues/2837 no longer exists
