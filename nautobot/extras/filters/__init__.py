@@ -215,13 +215,12 @@ class ConfigContextFilterSet(BaseFilterSet):
     role_id = django_filters.ModelMultipleChoiceFilter(
         field_name="roles",
         queryset=DeviceRole.objects.all(),
-        label="Role",
+        label="Role (ID) - Deprecated (use role filter)",
     )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="roles__slug",
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="roles",
         queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
+        label="Role (ID or slug)",
     )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",

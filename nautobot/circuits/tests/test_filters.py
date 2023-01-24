@@ -62,7 +62,7 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        params = [{"site_id": [self.sites[0].pk, self.sites[1].pk]}, {"site": [self.sites[0].id, self.sites[1].slug]}]
+        params = [{"site_id": [self.sites[0].pk, self.sites[1].pk]}, {"site": [self.sites[0].pk, self.sites[1].slug]}]
         for params in params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,

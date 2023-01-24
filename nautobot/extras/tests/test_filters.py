@@ -809,7 +809,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
-class JobResultFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobResult.objects.all()
     filterset = JobResultFilterSet
 

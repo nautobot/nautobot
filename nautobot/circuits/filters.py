@@ -52,7 +52,6 @@ class ProviderFilterSet(NautobotFilterSet):
     site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuits__terminations__site",
         queryset=Site.objects.all(),
-        # to_field_name="slug",
         label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(

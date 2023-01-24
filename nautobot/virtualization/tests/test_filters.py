@@ -478,7 +478,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         for params in params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(cluster__cluster_group__in=groups).distinct(),
+                self.queryset.filter(cluster__group__in=groups).distinct(),
             )
 
     def test_cluster_type(self):
@@ -487,7 +487,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         for params in params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(cluster__cluster_type__in=types).distinct(),
+                self.queryset.filter(cluster__type__in=types).distinct(),
             )
 
     def test_cluster(self):
@@ -525,7 +525,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         params = [{"role_id": [roles[0].pk, roles[1].pk]}, {"role": [roles[0].pk, roles[1].slug]}]
         for params in params:
             self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(roles__in=roles).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles).distinct()
             )
 
     def test_platform(self):

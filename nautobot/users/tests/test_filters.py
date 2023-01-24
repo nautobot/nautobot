@@ -102,7 +102,7 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         for params in params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs.order_by("id"),
-                self.queryset.filter(groups__in=groups).order_by("id").distinct()
+                self.queryset.filter(groups__in=groups).order_by("id").distinct(),
             )
 
     def test_search(self):
@@ -184,8 +184,7 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].pk, groups[1].name]}]
         for params in params:
             self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(groups__in=groups).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(groups__in=groups).distinct()
             )
 
     def test_user(self):
