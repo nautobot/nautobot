@@ -77,6 +77,17 @@ class FilterTestCases:
             self.assertFalse(self.filterset(params, self.queryset).is_valid())
 
         def test_filters_generic(self):
+            """
+            Tests multiple choice filters declared in `self.generic_filter_tests`. This uses `get_filterset_test_values()` to retrieve
+            a valid set of test data and asserts that the queryset filter matches the filterset's returned queryset. The majority of
+            Nautobot filters use conjoined=False, so the extra logic to support conjoined=True has not been implemented here. TagFilter
+            and similar AND filters are not supported. Multiple tests can be performed for the same filter by adding multiple entries
+            into `generic_filter_tests` with custom field names. For example, to test NaturalKeyOrPKMultipleChoiceFilter, use:
+            generic_filter_tests = (
+                ["filter_name", "field_name__slug"],
+                ["filter_name", "field_name__id"],
+            )
+            """
             for test in self.generic_filter_tests:
                 filter_name = test[0]
                 field_name = test[-1]
@@ -88,6 +99,10 @@ class FilterTestCases:
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_boolean_filters_generic(self):
+            """
+            Tests all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`. Tests that `filter=True` matches
+            `self.queryset.filter(field__isnull=False)` and that `filter=False` matches `self.queryset.filter(field__isnull=False)`.
+            """
             object_name = self.queryset.model._meta.object_name
             for filter_name, filter in self.filterset.get_filters().items():
                 if not isinstance(filter, RelatedMembershipBooleanFilter):
