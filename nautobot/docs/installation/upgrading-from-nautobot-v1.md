@@ -291,7 +291,7 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `region_id`           | instead of `/dcim/power-panels/?region_id=<uuid>`, use `region=<uuid>`                             |
 |                    | `site_id`             | instead of `/dcim/power-panels/?site_id=<uuid>`, use `site=<uuid>`                                 |
 | PowerPort          | `device_id`           | instead of `/dcim/power-ports/?device_id=<uuid>`, use `device=<uuid>`                              |
-| PowerPort          | `region_id`           | instead of `/dcim/power-ports/?region_id=<uuid>`, use `region=<uuid>`                              |
+|                    | `region_id`           | instead of `/dcim/power-ports/?region_id=<uuid>`, use `region=<uuid>`                              |
 | Prefix             | `region_id`           | instead of `/ipam/prefixes/?region_id=<uuid>`, use `region=<uuid>`                                 |
 |                    | `site_id`             | instead of `/ipam/prefixes/?site_id=<uuid>`, use `site=<uuid>`                                     |
 |                    | `tenant_group_id`     | instead of `/ipam/prefixes/?tenant_group_id=<uuid>`, use `tenant_group=<uuid>`                     |

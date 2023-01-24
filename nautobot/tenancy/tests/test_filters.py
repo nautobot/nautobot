@@ -245,14 +245,14 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         for group in groups:
             groups_including_children += group.descendants(include_self=True)
         params = {"tenant_group": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant_group__in=groups_including_children).count(),
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(tenant_group__in=groups_including_children),
         )
         params = {"tenant_group": [groups[0].slug, groups[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant_group__in=groups_including_children).count(),
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(tenant_group__in=groups_including_children),
         )
 
     def test_ip_addresses(self):
