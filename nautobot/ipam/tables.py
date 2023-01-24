@@ -131,7 +131,6 @@ vminterface={{ request.GET.vminterface }}{% endif %}\
 """
 
 IPADDRESS_ASSIGN_COPY_LINK = """
-{% load helpers %}
 <span class="hover_copy">
 <a href="\
 {% url 'ipam:ipaddress_edit' pk=record.pk %}\
