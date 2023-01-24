@@ -36,6 +36,7 @@ class NautobotConfig(AppConfig):
 
     homepage_layout = "homepage.layout"
     menu_tabs = "navigation.menu_items"
+    searchable_models = []  # models included in global search; list of ["modelname", "modelname", "modelname"...]
 
     def ready(self):
         """
@@ -48,21 +49,6 @@ class NautobotConfig(AppConfig):
         menu_items = import_object(f"{self.name}.{self.menu_tabs}")
         if menu_items is not None:
             register_menu_items(menu_items)
-
-    def get_search_types(self):
-        """Return a dictionary in the form:
-
-        {
-            "modelname": {
-                "queryset": <annotated queryset>,
-                "filterset": <filterset class>,
-                "table": <table class>,
-                "url": <url pattern name for list view, e.g. "circuits:provider_list">
-            },
-            ...
-        }
-        """
-        return {}
 
 
 def create_or_check_entry(grouping, record, key, path):

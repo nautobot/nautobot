@@ -1,6 +1,7 @@
 from django.db.models import Prefetch, Q, Count, F
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.functional import classproperty
 from django_tables2 import RequestConfig
 
 from nautobot.core.utils.config import get_settings_or_config
@@ -211,7 +212,7 @@ class AggregateListView(generic.ObjectListView):
             "AND ipam_prefix.broadcast <= ipam_aggregate.broadcast",
             (),
         )
-    )
+    ).select_related("rir")
     filterset = filters.AggregateFilterSet
     filterset_form = forms.AggregateFilterForm
     table = tables.AggregateDetailTable
@@ -314,16 +315,13 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-
-    def __init__(self, *args, **kwargs):
-        # Set the internal queryset value
-        self._queryset = None
-        super().__init__(*args, **kwargs)
+    _queryset = None
+    _disable_prefix_list_hierarchy = None
 
     # 2.0 TODO: Remove this after IPAM models are trees in 2.0. When the data model changes to 1.)
     # be tree-based, 2.) use NautobotViewSet this can be removed
-    @property
-    def queryset(self):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def queryset(cls):  # pylint: disable=no-self-argument,method-hidden
         """
         Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
 
@@ -332,26 +330,26 @@ class PrefixListView(generic.ObjectListView):
         table is rendered as a flat list.
 
         """
-        if self._queryset is not None:
-            return self._queryset
+        if cls._queryset is not None and cls._disable_prefix_list_hierarchy == get_settings_or_config(
+            "DISABLE_PREFIX_LIST_HIERARCHY"
+        ):
+            return cls._queryset
 
+        cls._queryset = Prefix.objects.select_related(
+            "site", "location", "vrf__tenant", "tenant", "vlan", "role", "status"
+        )
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
-            self._queryset = Prefix.objects.annotate(parents=Count(None)).order_by(
+            cls._queryset = cls._queryset.annotate(parents=Count(None)).order_by(
                 F("vrf__name").asc(nulls_first=True),
                 "network",
                 "prefix_length",
             )
+            cls._disable_prefix_list_hierarchy = True
         else:
-            self._queryset = Prefix.objects.annotate_tree()
+            cls._queryset = cls._queryset.annotate_tree()
+            cls._disable_prefix_list_hierarchy = False
 
-        return self._queryset
-
-    @queryset.setter
-    def queryset(self, value):
-        """
-        Property setter for 'queryset'
-        """
-        self._queryset = value
+        return cls._queryset
 
 
 class PrefixView(generic.ObjectView):
@@ -527,7 +525,7 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.all()
+    queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
@@ -765,7 +763,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.all()
+    queryset = VLAN.objects.select_related("site", "location", "group", "tenant", "role", "status")
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable

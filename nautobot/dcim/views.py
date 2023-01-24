@@ -200,7 +200,7 @@ class RegionBulkDeleteView(generic.BulkDeleteView):
 
 
 class SiteListView(generic.ObjectListView):
-    queryset = Site.objects.all()
+    queryset = Site.objects.select_related("region", "tenant")
     filterset = filters.SiteFilterSet
     filterset_form = forms.SiteFilterForm
     table = tables.SiteTable
@@ -429,7 +429,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site", "location")
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -489,7 +489,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 class RackListView(generic.ObjectListView):
     queryset = (
-        Rack.objects.select_related("site", "group", "tenant", "role")
+        Rack.objects.select_related("site", "location", "group", "tenant", "role", "status")
         .prefetch_related("devices__device_type")
         .annotate(device_count=count_related(Device, "rack"))
     )
@@ -1220,7 +1220,17 @@ class PlatformBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceListView(generic.ObjectListView):
-    queryset = Device.objects.all()
+    queryset = Device.objects.select_related(
+        "status",
+        "device_type",
+        "role",
+        "tenant",
+        "site",
+        "location",
+        "rack",
+        "primary_ip4",
+        "primary_ip6",
+    )
     filterset = filters.DeviceFilterSet
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable

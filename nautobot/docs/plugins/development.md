@@ -161,6 +161,10 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
+| `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
+
++++ 2.0.0
+    Support for the `searchable_models` attribute was added.
 
 !!! note
     All `required_settings` must be configured in `PLUGINS_CONFIG` in `nautobot_config.py` before the app can be used.
@@ -862,6 +866,18 @@ class AnimalAdmin(NautobotModelAdmin):
 This will display the app and its model in the admin UI. Staff users can create, change, and delete model instances via the admin UI without needing to create a custom view.
 
 ![Nautobot app in the admin UI](../media/plugins/plugin_admin_ui.png)
+
+### Including Models in the Global Search
+
++++ 2.0.0
+
+Simply define a `searchable_models` array on the NautobotAppConfig for your app, listing the lowercase names of the model(s) from your app that you wish to include in the Nautobot global search.
+
+```python
+class AnimalSoundsConfig(NautobotAppConfig):
+    ...
+    searchable_models = ["animal"]
+```
 
 ### Integrating with GraphQL
 

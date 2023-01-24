@@ -72,7 +72,7 @@ class TenantGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class TenantListView(generic.ObjectListView):
-    queryset = Tenant.objects.all()
+    queryset = Tenant.objects.select_related("group")
     filterset = filters.TenantFilterSet
     filterset_form = forms.TenantFilterForm
     table = tables.TenantTable
