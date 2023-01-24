@@ -28,8 +28,8 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import copy_safe_request, normalize_querydict
 from nautobot.core.views import generic, viewsets
+from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utility_mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.utils import csv_format, prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable

@@ -4,50 +4,10 @@ from django import forms
 from nautobot.core.forms import BootstrapMixin
 
 
-OBJ_TYPE_CHOICES = (
-    ("", "All Objects"),
-    (
-        "Circuits",
-        (
-            ("provider", "Providers"),
-            ("circuit", "Circuits"),
-        ),
-    ),
-    (
-        "DCIM",
-        (
-            ("site", "Sites"),
-            ("rack", "Racks"),
-            ("rackgroup", "Rack Groups"),
-            ("devicetype", "Device types"),
-            ("device", "Devices"),
-            ("virtualchassis", "Virtual Chassis"),
-            ("cable", "Cables"),
-            ("powerfeed", "Power Feeds"),
-        ),
-    ),
-    (
-        "IPAM",
-        (
-            ("vrf", "VRFs"),
-            ("aggregate", "Aggregates"),
-            ("prefix", "Prefixes"),
-            ("ipaddress", "IP addresses"),
-            ("vlan", "VLANs"),
-        ),
-    ),
-    ("Tenancy", (("tenant", "Tenants"),)),
-    (
-        "Virtualization",
-        (
-            ("cluster", "Clusters"),
-            ("virtualmachine", "Virtual machines"),
-        ),
-    ),
-)
-
-
 def search_model_choices():
+    """
+    Get tuples suitable for use as the `choices` of a `ChoiceField`, listing all searchable models, grouped by app.
+    """
     choices = [("", "All Objects")]
     for app_config in apps.get_app_configs():
         searchable_models = getattr(app_config, "searchable_models", None)

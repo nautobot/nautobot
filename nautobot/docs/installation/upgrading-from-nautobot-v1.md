@@ -371,4 +371,4 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 | `nautobot.utilities.utils.UtilizationData` | `nautobot.core.utils.data.UtilizationData` |
 | `nautobot.utilities.utils.versioned_serializer_selector` | `nautobot.core.api.utils.versioned_serializer_selector` |
 | `nautobot.utilities.validators`      | `nautobot.core.models.validators`      |
-| `nautobot.utilities.views`           | `nautobot.core.views.utility_mixins`   |
+| `nautobot.utilities.views`           | `nautobot.core.views.mixins`   |

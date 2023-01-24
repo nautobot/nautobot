@@ -122,6 +122,8 @@ class SearchView(View):
 
         if form.is_valid():
 
+            # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
+            # based on the `app_config.searchable_models` list (if any) defined by each app
             searchable_models = []
             for app_config in apps.get_app_configs():
                 if hasattr(app_config, "searchable_models"):
@@ -137,6 +139,9 @@ class SearchView(View):
             for label, modelname in searchable_models:
                 if modelname not in obj_types:
                     continue
+                # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
+                # corresponding to that URL, and finally the queryset, filterset, and table classes needed
+                # to find and display the model search results.
                 url = get_route_for_model(f"{label}.{modelname}", "list")
                 view_func = resolve(reverse(url)).func
                 # For a UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.

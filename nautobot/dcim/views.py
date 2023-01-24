@@ -23,8 +23,8 @@ from nautobot.core.forms import ConfirmationForm
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.utils import csv_format
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
