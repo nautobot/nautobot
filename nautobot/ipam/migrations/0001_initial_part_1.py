@@ -8,7 +8,7 @@ import django.db.models.deletion
 import django.db.models.expressions
 import taggit.managers
 
-import nautobot.core.fields
+import nautobot.core.models.fields
 import nautobot.extras.models.statuses
 import nautobot.ipam.fields
 
@@ -375,7 +375,7 @@ class Migration(migrations.Migration):
                 ("protocol", models.CharField(max_length=50)),
                 (
                     "ports",
-                    nautobot.core.fields.JSONArrayField(
+                    nautobot.core.models.fields.JSONArrayField(
                         base_field=models.PositiveIntegerField(
                             validators=[
                                 django.core.validators.MinValueValidator(1),

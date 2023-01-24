@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
 
-from nautobot.core.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config

@@ -1,7 +1,7 @@
 from django.db import models
 from django.urls import reverse
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.extras.utils import extras_features

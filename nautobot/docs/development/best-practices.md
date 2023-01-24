@@ -73,7 +73,7 @@ Moving forward in Nautobot, all models should have a `slug` field. This field ca
 ```python
 from django.db import models
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 
 class ExampleModel(PrimaryModel):

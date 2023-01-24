@@ -6,9 +6,9 @@ from django_tables2 import RequestConfig
 
 
 from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils.utils import count_related
 
 

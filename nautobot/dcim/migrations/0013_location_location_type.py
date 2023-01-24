@@ -3,8 +3,8 @@
 import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.core.fields
-import nautobot.core.utils.ordering
+import nautobot.core.models.fields
+import nautobot.core.models.ordering
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
@@ -40,7 +40,9 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
+                    nautobot.core.models.fields.AutoSlugField(
+                        blank=True, max_length=100, populate_from="name", unique=True
+                    ),
                 ),
                 ("description", models.CharField(blank=True, max_length=200)),
                 (
@@ -85,17 +87,17 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(db_index=True, max_length=100)),
                 (
                     "_name",
-                    nautobot.core.fields.NaturalOrderingField(
+                    nautobot.core.models.fields.NaturalOrderingField(
                         "name",
                         blank=True,
                         db_index=True,
                         max_length=100,
-                        naturalize_function=nautobot.core.utils.ordering.naturalize,
+                        naturalize_function=nautobot.core.models.ordering.naturalize,
                     ),
                 ),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(
+                    nautobot.core.models.fields.AutoSlugField(
                         blank=True, max_length=100, populate_from=["parent__slug", "name"], unique=True
                     ),
                 ),

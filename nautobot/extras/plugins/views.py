@@ -17,7 +17,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.api.views import NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utility_mixins import AdminRequiredMixin
 from nautobot.extras.plugins.tables import InstalledPluginsTable
 

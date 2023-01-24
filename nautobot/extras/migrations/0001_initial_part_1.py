@@ -6,7 +6,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django_cryptography.fields
 
-import nautobot.core.fields
+import nautobot.core.models.fields
 import nautobot.core.models.validators
 import nautobot.extras.models.customfields
 import nautobot.extras.models.relationships
@@ -312,7 +312,7 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("color", nautobot.core.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
             ],
             options={
@@ -400,7 +400,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("name", models.CharField(max_length=50, unique=True)),
-                ("color", nautobot.core.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("slug", models.SlugField(unique=True)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 (

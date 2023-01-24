@@ -11,7 +11,7 @@ from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.core.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.utils import array_to_string, UtilizationData
 from nautobot.dcim.models import Device, Interface

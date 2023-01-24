@@ -12,8 +12,8 @@ from netaddr import IPNetwork
 from rest_framework.test import APIClient
 from taggit.managers import TaggableManager
 
-from nautobot.core import fields as core_fields
 from nautobot.core import testing
+from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import permissions
 from nautobot.extras import management
 from nautobot.extras import models as extras_models

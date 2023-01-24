@@ -21,8 +21,8 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.utils import deepmerge, render_jinja2
 from nautobot.extras.choices import (

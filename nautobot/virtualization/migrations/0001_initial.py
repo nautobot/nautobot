@@ -7,9 +7,9 @@ from django.db import migrations, models
 import django.db.models.deletion
 import taggit.managers
 
-import nautobot.core.fields
-import nautobot.core.utils.ordering
-import nautobot.core.utils.query_functions
+import nautobot.core.models.fields
+import nautobot.core.models.ordering
+import nautobot.core.models.query_functions
 import nautobot.dcim.fields
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
@@ -282,11 +282,11 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.core.fields.NaturalOrderingField(
+                    nautobot.core.models.fields.NaturalOrderingField(
                         "name",
                         blank=True,
                         max_length=100,
-                        naturalize_function=nautobot.core.utils.ordering.naturalize_interface,
+                        naturalize_function=nautobot.core.models.ordering.naturalize_interface,
                     ),
                 ),
                 ("description", models.CharField(blank=True, max_length=200)),
@@ -321,7 +321,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "interface",
-                "ordering": ("virtual_machine", nautobot.core.utils.query_functions.CollateAsChar("_name")),
+                "ordering": ("virtual_machine", nautobot.core.models.query_functions.CollateAsChar("_name")),
                 "unique_together": {("virtual_machine", "name")},
             },
         ),

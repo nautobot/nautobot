@@ -4,7 +4,7 @@ import uuid
 import django.core.serializers.json
 from django.db import migrations, models
 
-import nautobot.core.fields
+import nautobot.core.models.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.utils
 
@@ -40,9 +40,11 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
+                    nautobot.core.models.fields.AutoSlugField(
+                        blank=True, max_length=100, populate_from="name", unique=True
+                    ),
                 ),
-                ("color", nautobot.core.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("weight", models.PositiveSmallIntegerField(blank=True, null=True)),
                 (

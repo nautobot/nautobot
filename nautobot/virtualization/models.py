@@ -6,10 +6,10 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
-from nautobot.core.utils.ordering import naturalize_interface
-from nautobot.core.utils.query_functions import CollateAsChar
+from nautobot.core.models.ordering import naturalize_interface
+from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.utils.utils import serialize_object, serialize_object_v2
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (

@@ -11,13 +11,13 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.safestring import mark_safe
 
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     widgets,
 )
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices

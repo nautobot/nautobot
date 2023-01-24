@@ -23,7 +23,6 @@ from jsonschema.validators import Draft7Validator
 
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.tables import ButtonsColumn
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils.utils import (
     copy_safe_request,
     count_related,
@@ -34,6 +33,7 @@ from nautobot.core.utils.utils import (
     pretty_print_query,
 )
 from nautobot.core.views import generic, viewsets
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utility_mixins import ObjectPermissionRequiredMixin
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable

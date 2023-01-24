@@ -6,9 +6,9 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 from django_tables2 import RequestConfig
 
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils.utils import count_related, normalize_querydict
 from nautobot.core.views import generic
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView

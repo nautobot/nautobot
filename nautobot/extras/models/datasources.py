@@ -8,7 +8,7 @@ from django.db import models, transaction
 from django.urls import reverse
 from django_cryptography.fields import encrypt
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
 

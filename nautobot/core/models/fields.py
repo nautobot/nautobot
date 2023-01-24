@@ -7,7 +7,7 @@ from django.db import models
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 
 from nautobot.core import forms
-from nautobot.core.utils import ordering
+from nautobot.core.models import ordering
 from nautobot.core.utils.utils import slugify_dots_to_dashes  # noqa: F401
 
 
@@ -167,7 +167,7 @@ class NaturalOrderingField(models.CharField):
         kwargs["naturalize_function"] = self.naturalize_function
         return (
             self.name,
-            "nautobot.core.fields.NaturalOrderingField",
+            "nautobot.core.models.fields.NaturalOrderingField",
             [self.target_field],
             kwargs,
         )

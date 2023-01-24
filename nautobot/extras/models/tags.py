@@ -4,8 +4,8 @@ from django.urls import reverse
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.fields import ColorField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.mixins import NotesMixin

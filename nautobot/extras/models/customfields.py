@@ -14,7 +14,6 @@ from django.forms.widgets import TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
@@ -27,6 +26,7 @@ from nautobot.core.forms import (
     add_blank_choice,
 )
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.templatetags.helpers import render_markdown

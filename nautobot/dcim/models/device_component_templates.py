@@ -3,9 +3,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.fields import NaturalOrderingField
 from nautobot.core.models import BaseModel
-from nautobot.core.utils.ordering import naturalize_interface
+from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
     ConsolePortTypeChoices,

@@ -20,10 +20,10 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.utils.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.utils import csv_format, count_related
 from nautobot.core.views import generic
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView

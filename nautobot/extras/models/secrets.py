@@ -7,8 +7,8 @@ from django.urls import reverse
 
 from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.utils import render_jinja2
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices

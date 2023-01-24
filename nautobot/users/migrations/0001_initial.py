@@ -10,7 +10,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 
-import nautobot.core.fields
+import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
@@ -127,7 +127,7 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("enabled", models.BooleanField(default=True)),
-                ("actions", nautobot.core.fields.JSONArrayField(base_field=models.CharField(max_length=30))),
+                ("actions", nautobot.core.models.fields.JSONArrayField(base_field=models.CharField(max_length=30))),
                 (
                     "constraints",
                     models.JSONField(blank=True, encoder=django.core.serializers.json.DjangoJSONEncoder, null=True),

@@ -4,8 +4,8 @@ from django.db.models import Q
 from django.urls import reverse
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.fields import AutoSlugField, ColorField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField, ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
