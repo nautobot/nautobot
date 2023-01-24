@@ -24,6 +24,7 @@ class TreeManager(Manager.from_queryset(TreeQuerySet), TreeManager_):
     """
 
     _with_tree_fields = True
+    use_in_migrations = True
 
 
 class TreeModel(TreeNode):
