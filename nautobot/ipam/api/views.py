@@ -8,7 +8,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from nautobot.core.config import get_settings_or_config
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.utils import (
     count_related,
     SerializerForAPIVersions,

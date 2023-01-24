@@ -2,7 +2,7 @@ import logging
 
 from cacheops import CacheMiss, cache
 
-from nautobot.core.config import get_settings_or_config
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.tasks import get_releases
 
 logger = logging.getLogger("nautobot.releases")

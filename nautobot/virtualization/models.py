@@ -5,7 +5,7 @@ from django.db import models
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
-from nautobot.core.config import get_settings_or_config
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils.ordering import naturalize_interface

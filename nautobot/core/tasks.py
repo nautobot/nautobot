@@ -5,7 +5,8 @@ from django.conf import settings
 from packaging import version
 import requests
 
-from nautobot.core import celery, config
+from nautobot.core import celery
+from nautobot.core.utils import config
 
 # Get an instance of a logger
 logger = logging.getLogger("nautobot.releases")

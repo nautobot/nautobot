@@ -27,7 +27,6 @@ from rest_framework.viewsets import GenericViewSet
 from drf_spectacular.utils import extend_schema
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.core.error_handlers import handle_protectederror
 from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
@@ -41,6 +40,7 @@ from nautobot.core.utils.utils import (
 )
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utility_mixins import GetReturnURLMixin
+from nautobot.core.views.utils import handle_protectederror
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable

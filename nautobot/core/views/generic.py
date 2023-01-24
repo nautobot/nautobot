@@ -23,7 +23,6 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
-from nautobot.core.error_handlers import handle_protectederror
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -48,7 +47,7 @@ from nautobot.core.utils.utils import (
     prepare_cloned_fields,
 )
 from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.core.views.utils import check_filter_for_display
+from nautobot.core.views.utils import check_filter_for_display, handle_protectederror
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 

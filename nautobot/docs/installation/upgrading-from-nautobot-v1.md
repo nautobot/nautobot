@@ -302,10 +302,10 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 | `nautobot.utilities.apps`            | `nautobot.core.apps`                  |
 | `nautobot.utilities.checks`          | `nautobot.core.checks`                |
 | `nautobot.utilities.choices`         | `nautobot.core.choices`               |
-| `nautobot.utilities.config`          | `nautobot.core.config`                |
+| `nautobot.utilities.config`          | `nautobot.core.utils.config`          |
 | `nautobot.utilities.constants`       | `nautobot.core.constants`             |
 | `nautobot.utilities.deprecation`     | `nautobot.core.utils.deprecation`     |
-| `nautobot.utilities.error_handlers`  | `nautobot.core.error_handlers`        |
+| `nautobot.utilities.error_handlers`  | `nautobot.core.views.utils`           |
 | `nautobot.utilities.exceptions`      | `nautobot.core.exceptions`            |
 | `nautobot.utilities.factory`         | `nautobot.core.factory`               |
 | `nautobot.utilities.fields`          | `nautobot.core.fields`                |
