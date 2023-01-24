@@ -97,9 +97,7 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         label="Parent group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
         label="Parent group (ID or slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
@@ -108,7 +106,6 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster_type__slug",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID or slug)",
     )
@@ -138,9 +135,8 @@ class VirtualMachineFilterSet(
         label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster__cluster_group__slug",
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
         label="Cluster group (ID or slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
@@ -149,9 +145,8 @@ class VirtualMachineFilterSet(
         label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster__cluster_type__slug",
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
-        to_field_name="slug",
         label="Cluster type (ID or slug)",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
@@ -175,9 +170,8 @@ class VirtualMachineFilterSet(
         label="Site (ID) - Deprecated (use site filter)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster__site__slug",
+        field_name="cluster__site",
         queryset=Site.objects.all(),
-        to_field_name="slug",
         label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
@@ -191,9 +185,7 @@ class VirtualMachineFilterSet(
         label="Platform (ID) - Deprecated (use platform filter)",
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="platform__slug",
         queryset=Platform.objects.all(),
-        to_field_name="slug",
         label="Platform (ID or slug)",
     )
     mac_address = MultiValueMACAddressFilter(
@@ -267,7 +259,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="Cluster (ID) - Deprecated (use cluster filter)",
     )
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="virtual_machine__cluster__name",
+        field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
         to_field_name="name",
         label="Cluster (ID or name)",
@@ -278,7 +270,6 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="virtual_machine__name",
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
         label="Virtual machine (ID or name)",

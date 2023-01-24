@@ -18,6 +18,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    JobResultStatusChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -36,6 +37,7 @@ from nautobot.extras.filters import (
     JobFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
+    JobResultFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
@@ -499,6 +501,11 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         # Create Three GitRepository records
+        secrets_groups = [
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        ]
+        cls.secrets_groups = secrets_groups
         repos = (
             GitRepository(
                 name="Repo 1",
@@ -508,6 +515,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
                     "extras.configcontext",
                 ],
                 remote_url="https://example.com/repo1.git",
+                secrets_group=secrets_groups[0],
             ),
             GitRepository(
                 name="Repo 2",
@@ -518,6 +526,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
                     "extras.job",
                 ],
                 remote_url="https://example.com/repo2.git",
+                secrets_group=secrets_groups[1],
             ),
             GitRepository(
                 name="Repo 3",
@@ -555,6 +564,17 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"provided_contents": ["extras.job"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secrets_group(self):
+        params = [
+            {"secrets_group_id": [self.secrets_groups[0].pk, self.secrets_groups[1].pk]},
+            {"secrets_group": [self.secrets_groups[0].slug, self.secrets_groups[1].pk]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(secrets_group__in=self.secrets_groups).distinct(),
+            )
 
 
 class GraphQLTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -788,6 +808,36 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
+class JobResultFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = JobResult.objects.all()
+    filterset = JobResultFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        jobs = Job.objects.all()[:3]
+        cls.jobs = jobs
+        for job in jobs:
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                user=User.objects.first(),
+                obj_type=ContentType.objects.get_for_model(Job),
+                status=JobResultStatusChoices.STATUS_RUNNING,
+                job_id=job.pk,
+            )
+
+    def test_job_model(self):
+        jobs = self.jobs[:2]
+        params = [
+            {"job_model_id": [jobs[0].pk, jobs[1].pk]},
+            {"job_model": [jobs[0].pk, jobs[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(job_model__in=jobs).distinct()
+            )
+
+
 class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = JobHook.objects.all()
     filterset = JobHookFilterSet
@@ -973,10 +1023,15 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_user(self):
-        params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        params = {"user": ["user1", "user2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        users = User.objects.filter(username__in=["user1", "user2"])
+        params = [
+            {"user_id": [users[0].pk, users[1].pk]},
+            {"user": [users[0].pk, users[1].username]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(user__in=users).distinct()
+            )
 
     def test_user_name(self):
         params = {"user_name": ["user1", "user2"]}
@@ -1453,16 +1508,24 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_group(self):
-        params = {"group_id": [self.groups[0].pk, self.groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [self.groups[0].slug, self.groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"group_id": [self.groups[0].pk, self.groups[1].pk]},
+            {"group": [self.groups[0].pk, self.groups[1].slug]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=self.groups[:2]).distinct()
+            )
 
     def test_secret(self):
-        params = {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"secret": [self.secrets[0].slug, self.secrets[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = [
+            {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]},
+            {"secret": [self.secrets[0].slug, self.secrets[1].pk]},
+        ]
+        for params in params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(secret__in=self.secrets[:2]).distinct()
+            )
 
     def test_access_type(self):
         params = {"access_type": [SecretsGroupAccessTypeChoices.TYPE_GENERIC]}

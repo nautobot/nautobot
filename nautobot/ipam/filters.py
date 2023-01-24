@@ -58,7 +58,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Import target (ID) - Deprecated (use import_target filter)",
     )
     import_target = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="import_targets__name",
+        field_name="import_targets",
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Import target (ID or name)",
@@ -69,7 +69,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Export target (ID) - Deprecated (use export_target filter)",
     )
     export_target = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="export_targets__name",
+        field_name="export_targets",
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Export target (ID or name)",
@@ -94,7 +94,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Importing VRF (ID) - Deprecated (use import_vrf filter)",
     )
     importing_vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="importing_vrfs__rd",
+        field_name="importing_vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Import VRF (ID or RD)",
@@ -105,7 +105,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Exporting VRF (ID) - Deprecated (use export_vrf filter)",
     )
     exporting_vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="exporting_vrfs__rd",
+        field_name="exporting_vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Export VRF (ID or RD)",
@@ -207,7 +207,6 @@ class PrefixFilterSet(
         label="VRF (ID) - Deprecated (use vrf filter)",
     )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="vrf__rd",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRF (ID or RD)",
@@ -336,7 +335,6 @@ class IPAddressFilterSet(
         label="VRF (ID) - Deprecated (use vrf filter)",
     )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="vrf__rd",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRF (ID or RD)",
@@ -375,7 +373,6 @@ class IPAddressFilterSet(
         label="Virtual machine (ID)",
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="interface__name",
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interface (ID or name)",
@@ -386,7 +383,6 @@ class IPAddressFilterSet(
         label="Interface (ID) - Deprecated (use interface filter)",
     )
     vminterface = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="vminterface__name",
         queryset=VMInterface.objects.all(),
         to_field_name="name",
         label="VM interface (ID or name)",
@@ -517,7 +513,6 @@ class ServiceFilterSet(NautobotFilterSet):
         label="Device (ID) - Deprecated (use device filter)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device__name",
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (ID or name)",
@@ -527,7 +522,6 @@ class ServiceFilterSet(NautobotFilterSet):
         label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="virtual_machine__name",
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
         label="Virtual machine (ID or name)",

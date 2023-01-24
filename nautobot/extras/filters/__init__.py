@@ -635,7 +635,6 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="job_model__slug",
         queryset=Job.objects.all(),
         label="Job (ID or slug)",
     )
@@ -744,7 +743,6 @@ class ObjectChangeFilterSet(BaseFilterSet):
         label="User (ID) - Deprecated (use user filter)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="user__username",
         queryset=get_user_model().objects.all(),
         to_field_name="username",
         label="User name (ID or username)",
