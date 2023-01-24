@@ -289,3 +289,41 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `site_id`             | instead of `/ipam/vlans/?site_id=<uuid>`, use `site=<uuid>`                                        |
 | VMInterface        | `bridge_id`           | instead of `/virtualization/interfaces/?bridge_id=<uuid>`, use `bridge=<uuid>`                     |
 |                    | `parent_interface_id` | instead of `/virtualization/interfaces/?parent_interface_id=<uuid>`, use `parent_interface=<uuid>` |
+
+## Python Code Location Changes
+
+The below is mostly relevant only to authors of Jobs and Nautobot Apps. End users should not be impacted by the changes in this section.
+
+| Old Module                           | New Module                            |
+|--------------------------------------|---------------------------------------|
+| `nautobot.core.forms`                | `nautobot.core.forms.search`          |
+| `nautobot.core.utilities`            | `nautobot.core.views.utils`           |
+| `nautobot.utilities.api`             | `nautobot.core.api.utils`             |
+| `nautobot.utilities.apps`            | `nautobot.core.apps`                  |
+| `nautobot.utilities.checks`          | `nautobot.core.checks`                |
+| `nautobot.utilities.choices`         | `nautobot.core.choices`               |
+| `nautobot.utilities.config`          | `nautobot.core.config`                |
+| `nautobot.utilities.constants`       | `nautobot.core.constants`             |
+| `nautobot.utilities.deprecation`     | `nautobot.core.utils.deprecation`     |
+| `nautobot.utilities.error_handlers`  | `nautobot.core.error_handlers`        |
+| `nautobot.utilities.exceptions`      | `nautobot.core.exceptions`            |
+| `nautobot.utilities.factory`         | `nautobot.core.factory`               |
+| `nautobot.utilities.fields`          | `nautobot.core.fields`                |
+| `nautobot.utilities.filters`         | `nautobot.core.filters`               |
+| `nautobot.utilities.forms`           | `nautobot.core.forms`                 |
+| `nautobot.utilities.git`             | `nautobot.core.utils.git`             |
+| `nautobot.utilities.logging`         | `nautobot.core.utils.logging`         |
+| `nautobot.utilities.management`      | `nautobot.core.management`            |
+| `nautobot.utilities.ordering`        | `nautobot.core.utils.ordering`        |
+| `nautobot.utilities.paginator`       | `nautobot.core.utils.paginator`       |
+| `nautobot.utilities.permissions`     | `nautobot.core.utils.permissions`     |
+| `nautobot.utilities.query_functions` | `nautobot.core.utils.query_functions` |
+| `nautobot.utilities.querysets`       | `nautobot.core.models.querysets`      |
+| `nautobot.utilities.tables`          | `nautobot.core.tables`                |
+| `nautobot.utilities.tasks`           | `nautobot.core.tasks`                 |
+| `nautobot.utilities.templatetags`    | `nautobot.core.templatetags`          |
+| `nautobot.utilities.testing`         | `nautobot.core.testing`               |
+| `nautobot.utilities.tree_queries`    | `nautobot.core.models.tree_queries`   |
+| `nautobot.utilities.utils`           | `nautobot.core.utils.utils`           |
+| `nautobot.utilities.validators`      | `nautobot.core.models.validators`     |
+| `nautobot.utilities.views`           | `nautobot.core.views.utility_mixins`  |
