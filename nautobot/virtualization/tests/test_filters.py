@@ -543,6 +543,12 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_has_primary_ip(self):
+        params = {"has_primary_ip": "true"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"has_primary_ip": "false"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
     def test_local_config_context_data(self):
         params = {"local_config_context_data": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
