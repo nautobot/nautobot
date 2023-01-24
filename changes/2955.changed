@@ -1,0 +1,1 @@
+Changed CircuitTermination, Device, PowerPanel, RackGroup, Rack, Prefix, VLANGroup, VLAN, Cluster instances associated with existing Site model instances to use the newly created corresponding locations of LocationType Site.

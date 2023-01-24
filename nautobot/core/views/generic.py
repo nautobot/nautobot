@@ -23,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
+from nautobot.core.utilities import check_filter_for_display
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -244,6 +245,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
+            filterset_filters = filterset.get_filters()
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -253,7 +255,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 self.queryset = self.queryset.none()
 
             display_filter_params = [
-                [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                check_filter_for_display(filterset_filters, field_name, values)
                 for field_name, values in filter_params.items()
             ]
 

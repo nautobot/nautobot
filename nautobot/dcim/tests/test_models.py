@@ -589,11 +589,7 @@ class LocationTypeTestCase(TestCase):
     def test_reserved_names(self):
         """Confirm that certain names are reserved for now."""
         for candidate_name in (
-            "Region",
-            "Site",
             "RackGroup",
-            "regions",
-            "sites",
             "rack groups",
         ):
             with self.assertRaises(ValidationError) as cm:
@@ -740,13 +736,6 @@ class LocationTestCase(TestCase):
             f"only have a Location of the same type or of type {self.root_nestable_type} as its parent",
             str(cm.exception),
         )
-
-    def test_site_required_for_root(self):
-        """A Location of a root type must have a Site."""
-        location = Location(name="Campus 1", location_type=self.root_type, status=self.status)
-        with self.assertRaises(ValidationError) as cm:
-            location.validated_save()
-        self.assertIn("must have an associated Site", str(cm.exception))
 
     def test_site_forbidden_for_non_root(self):
         """A Location of a non-root type must have a parent, not a Site."""

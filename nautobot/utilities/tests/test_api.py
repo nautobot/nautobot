@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client, TestCase
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
@@ -123,9 +123,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
 
 class APIDocsTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
+    client_class = testing.NautobotTestClient
 
+    def setUp(self):
         # Populate a CustomField to activate CustomFieldSerializer
         content_type = ContentType.objects.get_for_model(dcim_models.Site)
         self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")

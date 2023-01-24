@@ -4,18 +4,16 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client
 from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
-from rest_framework.test import APIClient
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import TestCase
+from nautobot.utilities.testing import NautobotTestClient, TestCase
 
 
 # Use the proper swappable User model
@@ -30,12 +28,16 @@ TEST_AUTHENTICATION_BACKENDS = [
 
 
 class ExternalAuthenticationTestCase(TestCase):
+    client_class = NautobotTestClient
+
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create(username="remoteuser1")
 
     def setUp(self):
-        self.client = Client()
+        """
+        Override nautobot.utilities.testing.TestCase.setUp() so that it doesn't automatically log in the test client.
+        """
 
     def test_remote_auth_disabled(self):
         """
@@ -234,7 +236,7 @@ class ExternalAuthenticationTestCase(TestCase):
 
 
 class ObjectPermissionAPIViewTestCase(TestCase):
-    client_class = APIClient
+    client_class = NautobotTestClient
 
     @classmethod
     def setUpTestData(cls):

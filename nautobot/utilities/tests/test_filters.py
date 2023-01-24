@@ -1284,6 +1284,8 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
 
 class FilterTypeTest(TestCase):
+    client_class = testing.NautobotTestClient
+
     def test_numberfilter(self):
         """
         Simple test to show the bug identified in https://github.com/nautobot/nautobot/issues/2837 no longer exists

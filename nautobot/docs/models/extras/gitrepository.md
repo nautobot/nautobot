@@ -57,6 +57,9 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 * **Implicit**: They're defined using a specific folder and file structure to apply the config context to a specific scope.
 * **Local**: Defined at the device/virtual machine level and only being applied to the specific device/virtual machine.
 
++++ 1.5.6
+    Config contexts provided in a Git repository can now be filtered by `locations` in addition to all previously supported filters.
+
 #### Metadata
 
 The metadata used to create the config context has the following options and is specified by the `_metadata` key.
