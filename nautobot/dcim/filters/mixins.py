@@ -47,7 +47,7 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device__site",

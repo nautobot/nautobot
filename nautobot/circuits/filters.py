@@ -34,32 +34,19 @@ class ProviderFilterSet(NautobotFilterSet):
         method="search",
         label="Search",
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuits__terminations__site__region",
-        label="Region (ID)",
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__terminations__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuits__terminations__site",
         queryset=Site.objects.all(),
-        label="Site",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="circuits__terminations__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="circuits__terminations__location__slug",
+        field_name="circuits__terminations__location",
         queryset=Location.objects.all(),
-        to_field_name="slug",
         label="Location (slug or ID)",
     )
     tags = TagFilter()

@@ -10,7 +10,6 @@ from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
-from nautobot.circuits.factory import CircuitFactory, CircuitTypeFactory, ProviderFactory
 from nautobot.dcim.factory import RackFactory, RackReservationFactory
 from nautobot.users.factory import UserFactory
 from nautobot.virtualization.factory import (
@@ -109,9 +108,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
         factory.random.reseed_random("Nautobot")
-        CircuitTypeFactory.create_batch(10)
-        ProviderFactory.create_batch(10)
-        CircuitFactory.create_batch(10)
         UserFactory.create_batch(10)
         RackFactory.create_batch(10)
         RackReservationFactory.create_batch(10)
