@@ -34,6 +34,23 @@ class ProviderFilterSet(NautobotFilterSet):
         method="search",
         label="Search",
     )
+    circuits = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="cid",
+        queryset=Circuit.objects.all(),
+        label="Circuit (ID or circuit ID)",
+    )
+    has_circuits = RelatedMembershipBooleanFilter(
+        field_name="circuits",
+        label="Has circuits",
+    )
+    provider_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ProviderNetwork.objects.all(),
+        label="Provider networks (slug or ID)",
+    )
+    has_provider_networks = RelatedMembershipBooleanFilter(
+        field_name="provider_networks",
+        label="Has provider networks",
+    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__terminations__site__region",
@@ -53,7 +70,7 @@ class ProviderFilterSet(NautobotFilterSet):
 
     class Meta:
         model = Provider
-        fields = ["account", "asn", "id", "name", "slug"]
+        fields = ["account", "admin_contact", "asn", "comments", "id", "name", "noc_contact", "portal_url", "slug"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -75,21 +92,24 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         method="search",
         label="Search",
     )
-    provider_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Provider.objects.all(),
-        label="Provider (ID)",
+    circuit_terminations = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Circuit Terminations (ID)",
     )
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
+    has_circuit_terminations = RelatedMembershipBooleanFilter(
+        field_name="circuit_terminations",
+        label="Has circuit terminations",
+    )
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="provider",
         queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
+        label="Provider (slug or ID)",
     )
     tags = TagFilter()
 
     class Meta:
         model = ProviderNetwork
-        fields = ["id", "name", "slug"]
+        fields = ["comments", "description", "id", "name", "slug"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -105,7 +125,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = CircuitType
-        fields = ["id", "name", "slug"]
+        fields = ["id", "description", "name", "slug"]
 
 
 class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
@@ -119,63 +139,33 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
             "comments": "icontains",
         },
     )
-    provider_id = django_filters.ModelMultipleChoiceFilter(
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (ID)",
-    )
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
-        queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
+        label="Provider (slug or ID)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
-        label="Provider Network (ID or slug)",
+        label="Provider Network (slug or ID)",
     )
-    provider_network_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="terminations__provider_network",
-        queryset=ProviderNetwork.objects.all(),
-        label="Provider Network (ID)",
-    )
-    type_id = django_filters.ModelMultipleChoiceFilter(
+    type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
-        label="Circuit type (ID)",
+        label="Circuit type (slug or ID)",
     )
-    type = django_filters.ModelMultipleChoiceFilter(
-        field_name="type__slug",
-        queryset=CircuitType.objects.all(),
-        to_field_name="slug",
-        label="Circuit type (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="terminations__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="terminations__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="terminations__location__slug",
+        field_name="terminations__location",
         queryset=Location.objects.all(),
-        to_field_name="slug",
         label="Location (slug or ID)",
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="terminations__site__region",
-        label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
     has_terminations = RelatedMembershipBooleanFilter(
         field_name="terminations",
@@ -223,17 +213,9 @@ class CircuitTerminationFilterSet(
         queryset=Circuit.objects.all(),
         label="Circuit (ID or circuit ID)",
     )
-    circuit_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Circuit.objects.all(),
-        label="Circuit",
-    )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID or slug)",
-    )
-    provider_network_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=ProviderNetwork.objects.all(),
-        label="Provider Network (ID)",
     )
 
     class Meta:
