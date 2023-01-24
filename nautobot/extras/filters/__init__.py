@@ -661,7 +661,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "status", "user", "obj_type", "task_name"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user", "obj_type"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

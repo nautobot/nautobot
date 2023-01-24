@@ -79,7 +79,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         )
     job_result = JobResult.objects.create(
         name=job.class_path,
-        job_kwargs={"data": data, "commit": commit},
+        task_kwargs={"data": data, "commit": commit},
         obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,

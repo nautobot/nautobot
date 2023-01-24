@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0053_relationship_required_on'),
+        ('extras', '0061_rename_configcontext_role'),
     ]
 
     operations = [

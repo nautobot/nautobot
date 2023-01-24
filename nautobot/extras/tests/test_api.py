@@ -1395,11 +1395,11 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         job_result = JobResult.objects.last()
-        self.assertIn("data", job_result.job_kwargs)
+        self.assertIn("data", job_result.task_kwargs)
 
-        # Ensure the stored job_kwargs deserialize to the same as originally inputted
+        # Ensure the stored task_kwargs deserialize to the same as originally inputted
         self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.job_kwargs["data"]), deserialized_data
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
         return (response, job_result)  # so subclasses can do additional testing
@@ -1595,7 +1595,7 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         job_result = JobResult.objects.last()
-        self.assertEqual(job_result.job_kwargs, None)
+        self.assertEqual(job_result.task_kwargs, None)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -2133,7 +2133,7 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["date_done", "date_created", "display", "id", "name", "status", "url", "user"]
+    brief_fields = ["date_created", "date_done", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2149,7 +2149,7 @@ class JobResultTest(
             user=None,
             status=JobResultStatusChoices.STATUS_COMPLETED,
             data={"output": "\nRan for 3 seconds"},
-            job_kwargs=None,
+            task_kwargs=None,
             schedule=None,
             task_id=uuid.uuid4(),
         )
@@ -2161,7 +2161,7 @@ class JobResultTest(
             user=None,
             status=JobResultStatusChoices.STATUS_COMPLETED,
             data=None,
-            job_kwargs={"repository_pk": uuid.uuid4()},
+            task_kwargs={"repository_pk": uuid.uuid4()},
             schedule=None,
             task_id=uuid.uuid4(),
         )
@@ -2173,7 +2173,7 @@ class JobResultTest(
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
-            job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
+            task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             schedule=None,
             task_id=uuid.uuid4(),
         )

@@ -1049,6 +1049,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     and rollback conditions, plus post execution cleanup and saving the JobResult record.
     """
     from nautobot.extras.models import JobResult  # avoid circular import
+    from nautobot.extras.models import TaskStateChoices, celery_states
 
     # Getting the correct job result can fail if the stored data cannot be serialized.
     # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
@@ -1085,7 +1086,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             grouping="initialization",
             logger=logger,
         )
-        job_result.status = JobResultStatusChoices.STATUS_ERRORED
+        job_result.status = TaskStateChoices.FAILURE
         job_result.date_done = timezone.now()
         job_result.save()
         return False
@@ -1099,7 +1100,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         logger.error(error)
         stacktrace = traceback.format_exc()
         job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(TaskStateChoices.FAILURE)
         job_result.date_done = timezone.now()
         job_result.save()
         return False
@@ -1129,7 +1130,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         data = job_class.deserialize_data(data)
     except Exception:
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(TaskStateChoices.FAILURE)
         stacktrace = traceback.format_exc()
         job_result.log(
             f"Error initializing job:\n```\n{stacktrace}\n```",
@@ -1152,7 +1153,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     job.logger.info(f"Running job (commit={commit})")
 
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(TaskStateChoices.STARTED)
     job_result.save()
 
     # Add the current request as a property of the job
@@ -1187,10 +1188,10 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
                 if job.failed:
                     job.logger.warning("job failed")
-                    job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
+                    job_result.set_status(TaskStateChoices.FAILURE)
                 else:
                     job.logger.info("job completed successfully")
-                    job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+                    job_result.set_status(TaskStateChoices.SUCCESS)
 
                 if not commit:
                     raise AbortTransaction()
@@ -1204,7 +1205,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.set_status(TaskStateChoices.FAILURE)
 
         finally:
             try:
@@ -1234,7 +1235,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             )
             output = message
             job.log_failure(message=message)
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.set_status(TaskStateChoices.FAILURE)
         finally:
             if output:
                 job.results["output"] += "\n" + str(output)

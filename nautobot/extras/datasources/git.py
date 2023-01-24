@@ -125,6 +125,8 @@ def log_job_result_final_status(job_result, job_type):
     job_result.save()
 
 
+from nautobot.extras.models.jobs import TaskStateChoices, celery_states
+
 @nautobot_task
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
@@ -140,7 +142,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         return
 
     job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(TaskStateChoices.STARTED)
     job_result.save()
 
     try:
@@ -186,7 +188,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         return
 
     job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(TaskStateCHoices.STARTED)
     job_result.save()
     try:
         if not os.path.exists(settings.GIT_ROOT):

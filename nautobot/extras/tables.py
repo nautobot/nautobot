@@ -677,7 +677,7 @@ class JobResultTable(BaseTable):
         template_code="""
             {% load helpers %}
             {% if perms.extras.run_job %}
-                {% if record.job_model and record.job_kwargs %}
+                {% if record.job_model and record.task_kwargs %}
                     <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
                        class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                         <i class="mdi mdi-repeat"></i>
@@ -733,17 +733,17 @@ class JobResultTable(BaseTable):
         model = JobResult
         fields = (
             "pk",
-            "created",
+            "date_created",
             "name",
             "linked_record",
             "duration",
-            "completed",
+            "date_done",
             "user",
             "status",
             "summary",
             "actions",
         )
-        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary", "actions")
+        default_columns = ("pk", "date_created", "name", "linked_record", "user", "status", "summary", "actions")
 
 
 #

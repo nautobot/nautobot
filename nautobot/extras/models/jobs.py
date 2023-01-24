@@ -5,7 +5,8 @@ import logging
 import os
 import uuid
 
-from celery import schedules, states
+from celery import schedules
+from celery import states as celery_states
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -36,6 +37,7 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.managers import JobResultManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -502,6 +504,11 @@ class JobLogEntry(BaseModel):
 #
 # Job results
 #
+
+_task_states = list(dict(TASK_STATE_CHOICES))
+TaskStateChoices = models.TextChoices("TaskStateChoices", _task_states)
+
+
 @extras_features(
     "custom_fields",
     "custom_links",
@@ -519,15 +526,8 @@ class JobResult(BaseModel, CustomFieldModel):
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
     )
 
-    task_name = models.CharField(max_length=255, db_index=True)
-
-    @property
-    def name(self):
-        return self.task_name
-
-    @name.setter
-    def set_name(self, name):
-        self.task_name = name
+    name = models.CharField(max_length=255, db_index=True)
+    task_name = models.CharField(max_length=255, null=True, db_index=True)
 
     obj_type = models.ForeignKey(
         to=ContentType,
@@ -563,13 +563,33 @@ class JobResult(BaseModel, CustomFieldModel):
     )
     status = models.CharField(
         max_length=30,
-        choices=TASK_STATE_CHOICES,
-        default=states.PENDING,
+        choices=TaskStateChoices.choices,
+        default=TaskStateChoices.PENDING,
         help_text="Current state of the Job being run",
         db_index=True,
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
-    job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    periodic_task_name = models.CharField(null=True, max_length=255)
+    worker = models.CharField(max_length=100, default=None, null=True)
+    task_args = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    task_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    content_type = models.CharField(
+        default="application/x-nautobot-json",
+        max_length=128,
+        verbose_name=('Result Content Type'),
+        help_text='Content type of the result data')
+    content_encoding = models.CharField(
+        default="utf-8",
+        max_length=64,
+        verbose_name=('Result Encoding'),
+        help_text='The encoding used to save the task result data')
+    result = models.TextField(
+        null=True, default=None, editable=False,
+        verbose_name='Result Data',
+        help_text=('The data returned by the task.  '
+                    'Use content_encoding and content_type fields to read.'))
+    traceback = models.TextField(blank=True, null=True)
+    meta = models.JSONField(null=True, default=None, editable=False)
     schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
@@ -584,6 +604,8 @@ class JobResult(BaseModel, CustomFieldModel):
     """
 
     task_id = models.UUIDField(unique=True)
+
+    objects = JobResultManager()
 
     @property
     def job_id(self):
@@ -703,7 +725,8 @@ class JobResult(BaseModel, CustomFieldModel):
         time is also set.
         """
         self.status = status
-        if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+        # if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+        if status in celery_states.READY_STATES:
             self.date_done = timezone.now()
 
     @classmethod
@@ -756,7 +779,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 if job_model.time_limit > 0:
                     celery_kwargs["time_limit"] = job_model.time_limit
                 if not job_model.has_sensitive_variables:
-                    job_result.job_kwargs = job_result_kwargs
+                    job_result.task_kwargs = job_result_kwargs
                 job_result.job_model = job_model
                 job_result.save()
             except Job.DoesNotExist:
@@ -771,7 +794,7 @@ class JobResult(BaseModel, CustomFieldModel):
                     if hasattr(job_class.Meta, "time_limit"):
                         celery_kwargs["time_limit"] = job_class.Meta.time_limit
                     if not job_class.has_sensitive_variables:
-                        job_result.job_kwargs = job_result_kwargs
+                        job_result.task_kwargs = job_result_kwargs
                         job_result.save()
                 else:
                     logger.error("Neither a Job database record nor a Job source class were found for %s", name)

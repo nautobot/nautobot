@@ -8,7 +8,7 @@ def get_job_results(request):
     return (
         JobResult.objects.filter(status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES)
         .defer("data")
-        .order_by("-completed")[:10]
+        .order_by("-date_done")[:10]
     )
 
 

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0054_jobresult__rename_job_id_task_id'),
+        ('extras', '0062_jobresult__rename_job_id_task_id'),
     ]
 
     operations = [
@@ -23,11 +23,6 @@ class Migration(migrations.Migration):
             model_name='jobresult',
             old_name='completed',
             new_name='date_done',
-        ),
-        migrations.RenameField(
-            model_name='jobresult',
-            old_name='name',
-            new_name='task_name',
         ),
         migrations.AlterField(
             model_name='jobresult',

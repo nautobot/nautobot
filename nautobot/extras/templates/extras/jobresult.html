@@ -34,7 +34,7 @@
 
 {% block buttons %}
     {% if perms.extras.run_job %}
-        {% if result.job_model and result.job_kwargs %}
+        {% if result.job_model and result.task_kwargs %}
             <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
                class="btn btn-success">
                 <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
@@ -87,7 +87,7 @@
                         <strong>Job Inputs</strong>
                     </div>
                     <div class="panel-body">
-                        {% include 'extras/inc/json_data.html' with data=result.job_kwargs format="json" %}
+                        {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
                     </div>
                 </div>
             </div>
