@@ -150,9 +150,11 @@ class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 class ProviderNetworkFilterForm(NautobotFilterForm):
     model = ProviderNetwork
-    field_order = ["q", "provider_id"]
+    field_order = ["q", "provider"]
     q = forms.CharField(required=False, label="Search")
-    provider_id = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), required=False, label="Provider")
+    provider = DynamicModelMultipleChoiceField(
+        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="slug"
+    )
     tags = TagFilterField(model)
 
 
@@ -293,7 +295,8 @@ class CircuitFilterForm(
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
-        query_params={"provider_id": "$provider"},
+        query_params={"provider": "$provider"},
+        to_field_name="slug",
         label="Provider Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
