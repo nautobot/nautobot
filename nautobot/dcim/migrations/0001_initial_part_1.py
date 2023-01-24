@@ -439,7 +439,7 @@ class Migration(migrations.Migration):
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("_cable_peer_id", models.UUIDField(blank=True, null=True)),
                 ("enabled", models.BooleanField(default=True)),
-                ("mac_address", nautobot.dcim.fields.MACAddressCharField(blank=True, null=True)),
+                ("mac_address", nautobot.core.models.fields.MACAddressCharField(blank=True, null=True)),
                 (
                     "mtu",
                     models.PositiveIntegerField(

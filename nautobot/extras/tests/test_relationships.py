@@ -13,7 +13,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
-from nautobot.core.utils.utils import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
 from nautobot.dcim.tests.test_views import create_test_device

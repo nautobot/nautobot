@@ -34,13 +34,9 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.core.utils.utils import (
-    csv_format,
-    prepare_cloned_fields,
-)
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utility_mixins import GetReturnURLMixin
-from nautobot.core.views.utils import handle_protectederror
+from nautobot.core.views.utils import csv_format, handle_protectederror, prepare_cloned_fields
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable

@@ -6,12 +6,12 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.utils.utils import UtilizationData
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
@@ -31,7 +31,6 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 
-from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
     RelationshipModel,
     Status,

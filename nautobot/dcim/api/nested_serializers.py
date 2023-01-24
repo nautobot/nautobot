@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
-from nautobot.core.api.utils import TreeModelSerializerMixin
+from nautobot.core.api import BaseModelSerializer, TreeModelSerializerMixin, WritableNestedSerializer
 from nautobot.dcim import models
 
 __all__ = [

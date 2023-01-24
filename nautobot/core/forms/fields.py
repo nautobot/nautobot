@@ -14,13 +14,14 @@ from django.forms.fields import BoundField, InvalidJSONInput
 from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
 import django_filters
+from netaddr import EUI
+from netaddr.core import AddrFormatError
 
 from nautobot.core import choices as core_choices
 from nautobot.core import forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
-from nautobot.core.utils import utils
-from nautobot.extras import utils as extras_utils
+from nautobot.core.utils import data as data_utils, lookup
 
 __all__ = (
     "CommentField",
@@ -38,6 +39,7 @@ __all__ = (
     "JSONField",
     "JSONArrayFormField",
     "LaxURLField",
+    "MACAddressField",
     "MultipleContentTypeField",
     "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
@@ -255,6 +257,8 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
             feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
             choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
         """
+        from nautobot.extras import utils as extras_utils
+
         if "queryset" not in kwargs:
             if feature is not None:
                 kwargs["queryset"] = ContentType.objects.filter(
@@ -409,6 +413,24 @@ class CommentField(django_forms.CharField):
         super().__init__(required=required, label=label, help_text=help_text, *args, **kwargs)
 
 
+class MACAddressField(django_forms.Field):
+    widget = django_forms.CharField
+    default_error_messages = {
+        "invalid": "MAC address must be in EUI-48 format",
+    }
+
+    def to_python(self, value):
+        value = super().to_python(value)
+
+        # Validate MAC address format
+        try:
+            value = EUI(value.strip())
+        except AddrFormatError:
+            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
+
+        return value
+
+
 class NullableDateField(django_forms.DateField):
     def to_python(self, value):
         if not value:
@@ -552,7 +574,7 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            route = utils.get_route_for_model(self.queryset.model, "list", api=True)
+            route = lookup.get_route_for_model(self.queryset.model, "list", api=True)
             data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
@@ -773,7 +795,7 @@ class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters
         natural_key_values = set()
         for item in values:
             query = Q()
-            if utils.is_uuid(item):
+            if data_utils.is_uuid(item):
                 pk_values.add(item)
                 query |= Q(pk=item)
             else:

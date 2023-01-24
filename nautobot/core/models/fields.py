@@ -2,13 +2,68 @@ import json
 
 from django.contrib.contenttypes.models import ContentType
 from django.core import exceptions
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MaxLengthValidator
 from django.db import models
+from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
+from netaddr import AddrFormatError, EUI, mac_unix_expanded
 
-from nautobot.core import forms
+from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
-from nautobot.core.utils.utils import slugify_dots_to_dashes  # noqa: F401
+
+
+class mac_unix_expanded_uppercase(mac_unix_expanded):
+    word_fmt = "%.2X"
+
+
+class MACAddressCharField(models.CharField):
+    description = "MAC Address Varchar field"
+
+    def __init__(self, *args, **kwargs):
+        kwargs["max_length"] = 18
+        super().__init__(*args, **kwargs)
+        for validator in list(self.validators):
+            # CharField will automatically add a MaxLengthValidator, but that doesn't work with EUI objects
+            if isinstance(validator, MaxLengthValidator):
+                self.validators.remove(validator)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs["max_length"]
+        return name, path, args, kwargs
+
+    def python_type(self):
+        return EUI
+
+    def from_db_value(self, value, expression, connection):
+        return self.to_python(value)
+
+    def to_python(self, value):
+        if value is None:
+            return value
+        if isinstance(value, str):
+            value = value.strip()
+        if value == "":
+            return None
+        try:
+            return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
+        except AddrFormatError:
+            raise exceptions.ValidationError(f"Invalid MAC address format: {value}")
+
+    def get_prep_value(self, value):
+        if not value:
+            return ""
+        return str(self.to_python(value))
+
+
+def slugify_dots_to_dashes(content):
+    """Custom slugify_function - convert '.' to '-' instead of removing dots outright."""
+    return slugify(content.replace(".", "-"))
+
+
+def slugify_dashes_to_underscores(content):
+    """Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name."""
+    return slugify(content).replace("-", "_")
 
 
 class AutoSlugField(_AutoSlugField):
@@ -103,7 +158,7 @@ class ForeignKeyLimitedByContentTypes(models.ForeignKey):
     def formfield(self, **kwargs):
         """Return a prepped formfield for use in model forms."""
         defaults = {
-            "form_class": forms.DynamicModelChoiceField,
+            "form_class": fields.DynamicModelChoiceField,
             "queryset": self.related_model.objects.all(),
             # label_lower e.g. "dcim.device"
             "query_params": {"content_types": self.model._meta.label_lower},
@@ -133,7 +188,7 @@ class ColorField(models.CharField):
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
-        kwargs["widget"] = forms.ColorSelect
+        kwargs["widget"] = widgets.ColorSelect
         return super().formfield(**kwargs)
 
 
@@ -274,7 +329,7 @@ class JSONArrayField(models.JSONField):
         """Return a django.forms.Field instance for this field."""
         return super().formfield(
             **{
-                "form_class": forms.JSONArrayFormField,
+                "form_class": fields.JSONArrayFormField,
                 "base_field": self.base_field.formfield(),
                 **kwargs,
             }

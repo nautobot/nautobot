@@ -8,7 +8,7 @@ from nautobot.core.graphql import execute_query
 from nautobot.core.testing import APITestCase, TestCase
 from nautobot.core.testing.utils import post_data
 from nautobot.core.testing.views import ModelViewTestCase
-from nautobot.core.utils.utils import get_changes_for_model
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
 from nautobot.extras import context_managers

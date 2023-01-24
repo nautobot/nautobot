@@ -14,7 +14,8 @@ from rest_framework import status
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
-from nautobot.core.utils.utils import get_route_for_model, slugify_dashes_to_underscores
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.dcim.models import (
     Device,
     DeviceType,

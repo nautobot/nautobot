@@ -4,7 +4,7 @@ from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
-from nautobot.core.utils.utils import render_jinja2
+from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.models import CustomLink
 
 

@@ -15,10 +15,10 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.utils.utils import (
+from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    normalize_querydict,
     get_filterable_params_from_filter_params,
+    normalize_querydict,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display

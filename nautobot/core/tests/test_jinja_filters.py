@@ -2,7 +2,7 @@ from django.test import TestCase
 from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
 
-from nautobot.core.utils import utils
+from nautobot.core.utils import data
 from nautobot.dcim import models as dcim_models
 
 
@@ -13,7 +13,7 @@ class NautobotJinjaFilterTest(TestCase):
 
         for helper in helpers_not_valid:
             with self.assertRaises(TemplateAssertionError):
-                utils.render_jinja2("{{ data | " + helper + " }}", {"data": None})
+                data.render_jinja2("{{ data | " + helper + " }}", {"data": None})
 
     def test_templatetags_helpers_in_jinja(self):
         """
@@ -47,7 +47,7 @@ class NautobotJinjaFilterTest(TestCase):
         # For each helper, try to render a jinja template with render_jinja2 and fail if TemplateAssertionError is raised
         for helper in helpers_to_validate:
             try:
-                utils.render_jinja2("{{ data | " + helper + " }}", {"data": None})
+                data.render_jinja2("{{ data | " + helper + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
             except Exception:
@@ -59,7 +59,7 @@ class NautobotJinjaFilterTest(TestCase):
 
         for filter_ in filters.keys():
             try:
-                utils.render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
+                data.render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
             except Exception:
@@ -69,14 +69,14 @@ class NautobotJinjaFilterTest(TestCase):
         """Assert that Jinja template rendering is sandboxed."""
         template_code = "{{ ''.__class__.__name__ }}"
         with self.assertRaises(SecurityError):
-            utils.render_jinja2(template_code=template_code, context={})
+            data.render_jinja2(template_code=template_code, context={})
 
     def test_safe_render(self):
         """Assert that safe Jinja rendering still works."""
         site = dcim_models.Site.objects.filter(region__isnull=False).first()
         template_code = "{{ obj.region.name }}"
         try:
-            value = utils.render_jinja2(template_code=template_code, context={"obj": site})
+            value = data.render_jinja2(template_code=template_code, context={"obj": site})
         except SecurityError:
             self.fail("SecurityError raised on safe Jinja template render")
         else:

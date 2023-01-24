@@ -1,7 +1,8 @@
 from django import template
 from django.urls import NoReverseMatch, reverse
 
-from nautobot.core.utils import utils
+from nautobot.core.views import utils as views_utils
+from nautobot.core.utils import lookup
 from nautobot.extras import models
 
 register = template.Library()
@@ -15,12 +16,12 @@ register = template.Library()
 @register.inclusion_tag("buttons/clone.html")
 def clone_button(instance):
     try:
-        url = reverse(utils.get_route_for_model(instance, "add"))
+        url = reverse(lookup.get_route_for_model(instance, "add"))
     except NoReverseMatch:
         return {"url": None}
 
     # Populate cloned field values
-    param_string = utils.prepare_cloned_fields(instance)
+    param_string = views_utils.prepare_cloned_fields(instance)
     if param_string:
         url = f"{url}?{param_string}"
 
@@ -39,7 +40,7 @@ def edit_button(instance, use_pk=False, key="slug"):
         use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
         key: The attribute on the model to use for reverse URL lookup.
     """
-    viewname = utils.get_route_for_model(instance, "edit")
+    viewname = lookup.get_route_for_model(instance, "edit")
 
     # Assign kwargs
     if hasattr(instance, key) and not use_pk:
@@ -67,7 +68,7 @@ def delete_button(instance, use_pk=False, key="slug"):
         use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
         key: The attribute on the model to use for reverse URL lookup.
     """
-    viewname = utils.get_route_for_model(instance, "delete")
+    viewname = lookup.get_route_for_model(instance, "delete")
 
     # Assign kwargs
     if hasattr(instance, key) and not use_pk:

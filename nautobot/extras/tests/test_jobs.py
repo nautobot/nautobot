@@ -22,7 +22,7 @@ from nautobot.core.testing import (
     TransactionTestCase,
     run_job_for_testing,
 )
-from nautobot.core.utils.utils import get_changes_for_model
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Site
 from nautobot.extras.choices import (
     JobExecutionType,

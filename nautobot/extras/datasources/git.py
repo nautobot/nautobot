@@ -16,7 +16,7 @@ import yaml
 
 from nautobot.core.celery import nautobot_task
 from nautobot.core.utils.git import GitRepo
-from nautobot.core.utils.utils import copy_safe_request
+from nautobot.core.utils.requests import copy_safe_request
 from nautobot.dcim.models import Device, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,

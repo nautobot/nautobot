@@ -14,7 +14,7 @@ from markdown import markdown
 import yaml
 
 from nautobot.core import forms
-from nautobot.core.utils import config, utils
+from nautobot.core.utils import color, config, data, lookup
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
@@ -221,7 +221,7 @@ def viewname(model, action):
         >>> viewname(Device, "list")
         "dcim:device_list"
     """
-    return utils.get_route_for_model(model, action)
+    return lookup.get_route_for_model(model, action)
 
 
 @library.filter()
@@ -237,7 +237,7 @@ def validated_viewname(model, action):
     Returns:
         str or None: return the name of the view for the model/action provided if valid, or None if invalid.
     """
-    viewname_str = utils.get_route_for_model(model, action)
+    viewname_str = lookup.get_route_for_model(model, action)
 
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
@@ -319,7 +319,7 @@ def fgcolor(value):
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
         return ""
-    return f"#{utils.foreground_color(value)}"
+    return f"#{color.foreground_color(value)}"
 
 
 @library.filter()
@@ -552,7 +552,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
     # See https://github.com/nautobot/nautobot/issues/1169
     # If `get_utilization()` threw an exception, utilization_data will be an empty string
     # rather than a UtilizationData instance. Avoid a potentially confusing exception in that case.
-    if not isinstance(utilization_data, utils.UtilizationData):
+    if not isinstance(utilization_data, data.UtilizationData):
         return {}
     return utilization_graph_raw_data(
         numerator=utilization_data.numerator,

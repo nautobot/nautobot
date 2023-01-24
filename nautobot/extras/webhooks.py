@@ -3,7 +3,7 @@ from django.utils import timezone
 
 
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.utils.utils import get_changes_for_model
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook

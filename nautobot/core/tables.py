@@ -12,7 +12,7 @@ from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
 from nautobot.core.templatetags import helpers
-from nautobot.core.utils import utils
+from nautobot.core.utils import lookup
 from nautobot.extras import choices, models
 
 
@@ -215,9 +215,9 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
-        changelog_route = utils.get_route_for_model(model, "changelog")
-        edit_route = utils.get_route_for_model(model, "edit")
-        delete_route = utils.get_route_for_model(model, "delete")
+        changelog_route = lookup.get_route_for_model(model, "changelog")
+        edit_route = lookup.get_route_for_model(model, "edit")
+        delete_route = lookup.get_route_for_model(model, "delete")
 
         template_code = self.template_code.format(
             app_label=app_label,

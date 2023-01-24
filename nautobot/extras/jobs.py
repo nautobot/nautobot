@@ -32,7 +32,7 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.core.utils.utils import copy_safe_request
+from nautobot.core.utils.requests import copy_safe_request
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.core.api.utils import TreeModelSerializerMixin
+from nautobot.core.api import TreeModelSerializerMixin
 from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 

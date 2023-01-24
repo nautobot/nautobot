@@ -443,7 +443,7 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of FilterExtension classes
     """
-    from nautobot.core.utils.utils import get_filterset_for_model, get_form_for_model
+    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
     from nautobot.core.forms.utils import add_field_to_filter_form_class
 
     for filter_extension in filter_extensions:

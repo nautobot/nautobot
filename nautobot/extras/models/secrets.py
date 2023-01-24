@@ -10,7 +10,7 @@ from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils.utils import render_jinja2
+from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError

@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.test.client import RequestFactory
 
-from nautobot.core.utils.utils import curry
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
 
@@ -74,6 +73,14 @@ class WebChangeContext(ChangeContext):
     """ChangeContext for changes made through the web interface"""
 
     context = ObjectChangeEventContextChoices.CONTEXT_WEB
+
+
+# Taken from django.utils.functional (<3.0)
+def curry(_curried_func, *args, **kwargs):
+    def _curried(*moreargs, **morekwargs):
+        return _curried_func(*args, *moreargs, **{**kwargs, **morekwargs})
+
+    return _curried
 
 
 @contextmanager

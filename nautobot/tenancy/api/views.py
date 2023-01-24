@@ -1,7 +1,7 @@
 from rest_framework.routers import APIRootView
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.utils.utils import count_related
+from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device, Rack, Site
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF

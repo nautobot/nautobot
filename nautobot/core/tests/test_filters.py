@@ -8,7 +8,7 @@ from taggit.managers import TaggableManager
 from tree_queries.models import TreeNodeForeignKey
 
 from nautobot.core import filters, testing
-from nautobot.core.utils import utils
+from nautobot.core.utils import lookup
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import filters as dcim_filters
@@ -1294,6 +1294,6 @@ class FilterTypeTest(TestCase):
         user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
         self.client.force_login(user)
         ipam_factory.PrefixFactory()
-        prefix_list_url = reverse(utils.get_route_for_model(ipam_models.Prefix, "list"))
+        prefix_list_url = reverse(lookup.get_route_for_model(ipam_models.Prefix, "list"))
         response = self.client.get(f"{prefix_list_url}?mask_length__lte=20")
         self.assertNotContains(response, "Invalid filters were specified")

@@ -83,13 +83,13 @@ class ExampleModel(PrimaryModel):
 
 ## Getting URL Routes
 
-When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
+When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.lookup.get_route_for_model`. You **must not** write your own logic to construct route names.
 
 +/- 2.0.0
-    `get_route_for_model` was moved from the `nautobot.utilities.utils` module to `nautobot.core.utils.utils`.
+    `get_route_for_model` was moved from the `nautobot.utilities.utils` module to `nautobot.core.utils.lookup`.
 
 ```python
-from nautobot.core.utils.utils import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model
 ```
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.

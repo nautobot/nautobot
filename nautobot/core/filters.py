@@ -16,10 +16,8 @@ from drf_spectacular.utils import extend_schema_field
 from taggit.managers import TaggableManager
 
 from nautobot.core import constants, forms
-from nautobot.core.utils import utils
-from nautobot.dcim import fields as dcim_fields
-from nautobot.dcim import forms as dcim_forms
-from nautobot.extras import models as extras_models
+from nautobot.core.models import fields as core_fields
+from nautobot.core.utils import data as data_utils
 
 logger = logging.getLogger(__name__)
 
@@ -96,11 +94,11 @@ class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleCho
 
 
 class MACAddressFilter(django_filters.CharFilter):
-    field_class = dcim_forms.MACAddressField
+    field_class = forms.MACAddressField
 
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(dcim_forms.MACAddressField)
+    field_class = multivalue_field_factory(forms.MACAddressField)
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
@@ -149,6 +147,7 @@ class TagFilter(django_filters.ModelMultipleChoiceFilter):
     """
 
     def __init__(self, *args, **kwargs):
+        from nautobot.extras import models as extras_models  # avoid circular import
 
         kwargs.setdefault("field_name", "tags__slug")
         kwargs.setdefault("to_field_name", "slug")
@@ -479,7 +478,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
             value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
 
         # This new_value is going to be a list of querysets that needs to be flattened.
-        value = list(utils.flatten_iterable(value))
+        value = list(data_utils.flatten_iterable(value))
 
         # Construct a list of filter predicates that will be used to generate the Q object.
         predicates = []
@@ -539,7 +538,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
-            dcim_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
+            core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             TaggableManager: {"filter_class": TagFilter},
         }
     )

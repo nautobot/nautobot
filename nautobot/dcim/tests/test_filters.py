@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.core.testing import FilterTestCases
-from nautobot.core.utils.utils import flatten_iterable
+from nautobot.core.utils.data import flatten_iterable
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,

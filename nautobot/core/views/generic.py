@@ -36,18 +36,16 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.utils.utils import (
+from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    csv_format,
-    get_route_for_model,
     get_filterable_params_from_filter_params,
     normalize_querydict,
-    prepare_cloned_fields,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utility_mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.core.views.utils import check_filter_for_display, handle_protectederror
+from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 

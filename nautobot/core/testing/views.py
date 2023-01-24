@@ -16,7 +16,7 @@ from tree_queries.models import TreeNode
 from nautobot.core import testing
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
-from nautobot.core.utils import utils
+from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
@@ -324,7 +324,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = utils.get_changes_for_model(instance)
+                objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
 
@@ -448,7 +448,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = utils.get_changes_for_model(instance)
+                objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -543,7 +543,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = utils.get_changes_for_model(instance)
+                objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
@@ -572,7 +572,7 @@ class ViewTestCases:
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
-                objectchanges = utils.get_changes_for_model(instance)
+                objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
@@ -625,7 +625,7 @@ class ViewTestCases:
         filterset = None
 
         def get_filterset(self):
-            return self.filterset or utils.get_filterset_for_model(self.model)
+            return self.filterset or lookup.get_filterset_for_model(self.model)
 
         # Helper methods to be overriden by special cases.
         # See ConsoleConnectionsTestCase, InterfaceConnectionsTestCase and PowerConnectionsTestCase

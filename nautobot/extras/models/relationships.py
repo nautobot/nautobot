@@ -17,9 +17,9 @@ from nautobot.core.forms import (
     widgets,
 )
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.utils.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel

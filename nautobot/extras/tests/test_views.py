@@ -11,9 +11,9 @@ from django.utils import timezone
 from unittest import mock
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.core.utils.utils import slugify_dashes_to_underscores
 from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Site
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (

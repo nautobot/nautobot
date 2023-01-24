@@ -2,7 +2,7 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.utils.utils import hex_to_rgb, lighten_color, rgb_to_hex
+from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
 
 
 def compile_path_node(ct_id, object_id):

@@ -10,7 +10,7 @@ from rest_framework.test import APITransactionTestCase as _APITransactionTestCas
 
 from nautobot.core import testing
 from nautobot.core.testing import mixins, views
-from nautobot.core.utils import utils
+from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.extras import registry
@@ -56,11 +56,11 @@ class APITestCase(views.ModelTestCase):
             self.header["HTTP_ACCEPT"] = f"application/json; version={api_version}"
 
     def _get_detail_url(self, instance):
-        viewname = utils.get_route_for_model(instance, "detail", api=True)
+        viewname = lookup.get_route_for_model(instance, "detail", api=True)
         return reverse(viewname, kwargs={"pk": instance.pk})
 
     def _get_list_url(self):
-        viewname = utils.get_route_for_model(self.model, "list", api=True)
+        viewname = lookup.get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
 
@@ -189,7 +189,7 @@ class APIViewTestCases:
         filterset = None
 
         def get_filterset(self):
-            return self.filterset or utils.get_filterset_for_model(self.model)
+            return self.filterset or lookup.get_filterset_for_model(self.model)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -431,7 +431,7 @@ class APIViewTestCases:
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
-                    objectchanges = utils.get_changes_for_model(instance)
+                    objectchanges = lookup.get_changes_for_model(instance)
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
 
@@ -507,7 +507,7 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = utils.get_changes_for_model(instance)
+                objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -665,7 +665,7 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = utils.get_changes_for_model(instance)
+                objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 

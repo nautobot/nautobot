@@ -10,7 +10,6 @@ import taggit.managers
 import nautobot.core.models.fields
 import nautobot.core.models.ordering
 import nautobot.core.models.query_functions
-import nautobot.dcim.fields
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
 
@@ -266,7 +265,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("enabled", models.BooleanField(default=True)),
-                ("mac_address", nautobot.dcim.fields.MACAddressCharField(blank=True, null=True)),
+                ("mac_address", nautobot.core.models.fields.MACAddressCharField(blank=True, null=True)),
                 (
                     "mtu",
                     models.PositiveIntegerField(

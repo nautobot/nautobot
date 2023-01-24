@@ -10,7 +10,7 @@ from requests import Session
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.testing import APITestCase
-from nautobot.core.utils.utils import get_changes_for_model
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.dcim.models.sites import Region

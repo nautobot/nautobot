@@ -7,7 +7,7 @@ from django.test import RequestFactory, override_settings
 from django.urls import reverse
 
 from nautobot.core import testing
-from nautobot.core.utils import paginator
+from nautobot.core.views import paginator
 from nautobot.dcim import models
 
 

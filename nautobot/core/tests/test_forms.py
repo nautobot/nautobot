@@ -8,7 +8,7 @@ from django.urls import reverse
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
-from nautobot.core.utils import utils
+from nautobot.core.utils import requests
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.tests import test_views
@@ -809,7 +809,7 @@ class DynamicFilterFormTest(TestCase):
         with self.subTest("Test for lookup_value with a CharField"):
             # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
             # `lookup_value` field should be a CharField
-            data = utils.convert_querydict_to_factory_formset_acceptable_querydict(
+            data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
                 request_querydict, dcim_filters.SiteFilterSet
             )
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-0")

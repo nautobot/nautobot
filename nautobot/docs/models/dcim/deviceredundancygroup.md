@@ -172,7 +172,7 @@ failover
 Following snippet represents an example Cisco ASA Failover rendered configuration:
 
 ```python
-from nautobot.core.utils.utils import render_jinja2
+from nautobot.core.utils.data import render_jinja2
 
 
 context = dict(

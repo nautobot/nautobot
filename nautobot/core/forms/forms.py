@@ -7,7 +7,7 @@ from django.forms import formset_factory
 from django.urls import reverse
 import yaml
 
-from nautobot.core.utils import utils
+from nautobot.core.utils.filtering import build_lookup_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
 __all__ = (
@@ -294,9 +294,9 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
                 if lookup_type and lookup_value and lookup_type in self.filterset_filters:
                     verbose_name = self.filterset_filters[lookup_type].lookup_expr
-                    label = utils.build_lookup_label(lookup_type, verbose_name)
+                    label = build_lookup_label(lookup_type, verbose_name)
                     self.fields["lookup_type"].choices = [(lookup_type, label)]
-                    self.fields["lookup_value"] = utils.get_filterset_parameter_form_field(model, lookup_type)
+                    self.fields["lookup_value"] = get_filterset_parameter_form_field(model, lookup_type)
                 elif lookup_type and lookup_type not in self.filterset_filters:
                     logger.warning(f"{lookup_type} is not a valid {filterset_class.__class__.__name__} field")
 

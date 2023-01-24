@@ -8,7 +8,7 @@ from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 
 from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
-from nautobot.core.utils.utils import get_filterset_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 

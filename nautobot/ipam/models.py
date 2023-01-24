@@ -13,7 +13,8 @@ from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils.utils import array_to_string, UtilizationData
+from nautobot.core.models.utils import array_to_string
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features

@@ -18,8 +18,9 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.core.utils.utils import get_route_for_model, slugify_dashes_to_underscores
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,

@@ -24,7 +24,7 @@ from rest_framework.utils.encoders import JSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.core.utils.utils import deepmerge, render_jinja2
+from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     CustomLinkButtonClassChoices,
     WebhookHttpMethodChoices,

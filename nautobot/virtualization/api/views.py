@@ -1,7 +1,8 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
-from nautobot.core.utils.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,

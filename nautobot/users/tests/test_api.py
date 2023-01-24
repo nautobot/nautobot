@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from nautobot.core.testing import APIViewTestCases, APITestCase
-from nautobot.core.utils.utils import deepmerge
+from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
 from nautobot.users.models import ObjectPermission, Token
 

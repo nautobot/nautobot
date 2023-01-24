@@ -8,10 +8,11 @@ from nautobot.core.api import (
     ContentTypeField,
     SerializedPKRelatedField,
     TimeZoneSerializerField,
+    TreeModelSerializerMixin,
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-from nautobot.core.api.utils import get_serializer_for_model, TreeModelSerializerMixin
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (

@@ -35,12 +35,9 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.utils.utils import (
-    get_all_lookup_expr_for_field,
-    get_filterset_parameter_form_field,
-    get_form_for_model,
-    ensure_content_type_and_field_name_inquery_params,
-)
+from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
+from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -721,7 +718,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPIView(NautobotAPIVersionMixin, A
     @extend_schema(exclude=True)
     def get(self, request):
         try:
-            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
             data = get_all_lookup_expr_for_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", status=404)
@@ -748,7 +745,7 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request):
         try:
-            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
         except ValidationError as err:
             return Response(err.args[0], status=err.code)
         model_form = get_form_for_model(model)

@@ -4,7 +4,7 @@ from django.utils.translation import gettext
 import json
 import uuid
 
-from nautobot.core.utils.utils import serialize_object
+from nautobot.core.models.utils import serialize_object
 from nautobot.extras.choices import ObjectChangeActionChoices
 
 ADDITION = 1

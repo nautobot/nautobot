@@ -12,7 +12,7 @@ from nautobot.core.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.core.utils.utils import is_uuid
+from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Location, Platform, Region, Site
 from nautobot.extras.filters import (

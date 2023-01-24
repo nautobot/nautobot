@@ -26,11 +26,11 @@ from nautobot.core.forms import (
     add_blank_choice,
 )
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.templatetags.helpers import render_markdown
-from nautobot.core.utils.utils import render_jinja2, slugify_dashes_to_underscores
+from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin

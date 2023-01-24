@@ -1,16 +1,93 @@
+from collections import namedtuple
 import platform
 import sys
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
-from drf_spectacular.utils import extend_schema_field
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.utils import formatting
 
 from nautobot.core.api import exceptions
-from nautobot.core.api.serializers import BaseModelSerializer
-from nautobot.core.utils import utils
+
+
+def dict_to_filter_params(d, prefix=""):
+    """
+    Translate a dictionary of attributes to a nested set of parameters suitable for QuerySet filtering. For example:
+
+        {
+            "name": "Foo",
+            "rack": {
+                "facility_id": "R101"
+            }
+        }
+
+    Becomes:
+
+        {
+            "name": "Foo",
+            "rack__facility_id": "R101"
+        }
+
+    And can be employed as filter parameters:
+
+        Device.objects.filter(**dict_to_filter(attrs_dict))
+    """
+    params = {}
+    for key, val in d.items():
+        k = prefix + key
+        if isinstance(val, dict):
+            params.update(dict_to_filter_params(val, k + "__"))
+        else:
+            params[k] = val
+    return params
+
+
+def dynamic_import(name):
+    """
+    Dynamically import a class from an absolute path string
+    """
+    components = name.split(".")
+    mod = __import__(components[0])
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    return mod
+
+
+# namedtuple accepts versions(list of API versions) and serializer(Related Serializer for versions).
+SerializerForAPIVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
+
+
+def get_api_version_serializer(serializer_choices, api_version):
+    """Returns the serializer of an api_version
+
+    Args:
+        serializer_choices (tuple): list of SerializerVersions
+        api_version (str): Request API version
+
+    Returns:
+        returns the serializer for the api_version if found in serializer_choices else None
+    """
+    for versions, serializer in serializer_choices:
+        if api_version in versions:
+            return serializer
+    return None
+
+
+def versioned_serializer_selector(obj, serializer_choices, default_serializer):
+    """Returns appropriate serializer class depending on request api_version, brief and swagger_fake_view
+
+    Args:
+        obj (ViewSet instance):
+        serializer_choices (tuple): Tuple of SerializerVersions
+        default_serializer (Serializer): Default Serializer class
+    """
+    if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
+        api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
+        serializer = get_api_version_serializer(serializer_choices, api_version)
+        if serializer is not None:
+            return serializer
+    return default_serializer
 
 
 def get_serializer_for_model(model, prefix=""):
@@ -25,7 +102,7 @@ def get_serializer_for_model(model, prefix=""):
     if app_name not in settings.PLUGINS:
         serializer_name = f"nautobot.{serializer_name}"
     try:
-        return utils.dynamic_import(serializer_name)
+        return dynamic_import(serializer_name)
     except AttributeError:
         raise exceptions.SerializerNotFound(
             f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
@@ -74,14 +151,3 @@ def rest_api_server_error(request, *args, **kwargs):
         "python_version": platform.python_version(),
     }
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class TreeModelSerializerMixin(BaseModelSerializer):
-    """Add a `tree_depth` field to model serializers based on django-tree-queries."""
-
-    tree_depth = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_tree_depth(self, obj):
-        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
-        return getattr(obj, "tree_depth", None)

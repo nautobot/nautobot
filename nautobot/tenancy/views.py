@@ -1,7 +1,7 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.utils.utils import count_related
+from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Site, Rack, Device, RackReservation
