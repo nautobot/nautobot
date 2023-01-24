@@ -86,10 +86,10 @@ class ProviderNetworkFactory(PrimaryModelFactory):
     provider = random_instance(Provider, allow_null=False)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
     has_comments = factory.Faker("pybool")
-    comments = factory.Maybe("has_comments", factory.Faker("sentence"), "")
+    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
 class CircuitTerminationFactory(PrimaryModelFactory):
@@ -156,4 +156,4 @@ class CircuitTerminationFactory(PrimaryModelFactory):
     pp_info = factory.Maybe("has_pp_info", factory.Faker("word"), "")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
