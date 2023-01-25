@@ -11,7 +11,8 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from nautobot.utilities.utils import dict_to_filter_params, normalize_querydict
+from nautobot.core.api.utils import dict_to_filter_params
+from nautobot.core.utils.requests import normalize_querydict
 
 
 logger = logging.getLogger(__name__)
@@ -137,6 +138,17 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             if hasattr(self.Meta.model, "last_updated"):
                 self.extend_field_names(fields, "last_updated")
         return fields
+
+
+class TreeModelSerializerMixin(BaseModelSerializer):
+    """Add a `tree_depth` field to model serializers based on django-tree-queries."""
+
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
 
 
 class ValidatedModelSerializer(BaseModelSerializer):

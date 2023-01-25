@@ -14,14 +14,7 @@ from django.forms.widgets import TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import FeatureQuery, extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
@@ -32,10 +25,17 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     add_blank_choice,
 )
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.templatetags.helpers import render_markdown
-from nautobot.utilities.utils import render_jinja2, slugify_dashes_to_underscores
-from nautobot.utilities.validators import validate_regex
+from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.validators import validate_regex
+from nautobot.core.templatetags.helpers import render_markdown
+from nautobot.core.utils.data import render_jinja2
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
+from nautobot.extras.utils import FeatureQuery, extras_features
 
 logger = logging.getLogger(__name__)
 

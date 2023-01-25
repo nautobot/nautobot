@@ -6,18 +6,18 @@ from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils.deprecation import MiddlewareMixin
 
-from nautobot.core.views import server_error
-from nautobot.extras.context_managers import change_logging, WebChangeContext
-from nautobot.utilities.api import is_api_request, rest_api_server_error
+from nautobot.core.api.utils import is_api_request, rest_api_server_error
+from nautobot.core.authentication import (
+    assign_groups_to_user,
+    assign_permissions_to_user,
+)
 from nautobot.core.settings_funcs import (
     sso_auth_enabled,
     remote_auth_enabled,
     ldap_auth_enabled,
 )
-from nautobot.core.authentication import (
-    assign_groups_to_user,
-    assign_permissions_to_user,
-)
+from nautobot.core.views import server_error
+from nautobot.extras.context_managers import change_logging, WebChangeContext
 
 
 class RemoteUserMiddleware(RemoteUserMiddleware_):

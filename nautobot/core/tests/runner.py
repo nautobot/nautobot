@@ -13,7 +13,7 @@ class NautobotTestRunner(DiscoverRunner):
     explicitly passed in with `nautobot-server test --tag integration`.
 
     By Nautobot convention, integration tests must be tagged with "integration". The base
-    `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
+    `nautobot.core.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
     inheriting from that class do not need to be explicitly tagged.
 
     Only integration tests that DO NOT inherit from `SeleniumTestCase` will need to be explicitly tagged.

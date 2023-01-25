@@ -3,9 +3,9 @@ import logging
 from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
 import graphene
 
+from nautobot.core.filters import MultiValueBigNumberFilter, MultiValueNumberFilter
 from nautobot.core.graphql import BigInteger
-from nautobot.utilities.filters import MultiValueBigNumberFilter, MultiValueNumberFilter
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 
 
 logger = logging.getLogger(__name__)

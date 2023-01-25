@@ -5,11 +5,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 
+from nautobot.core.forms import ConfirmationForm
+from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.utilities.forms import ConfirmationForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
 
 
 from . import filters, forms, tables

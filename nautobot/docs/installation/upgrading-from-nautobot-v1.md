@@ -289,3 +289,85 @@ Below is a table documenting [removed redundant filter field changes](../release
 |                    | `site_id`             | instead of `/ipam/vlans/?site_id=<uuid>`, use `site=<uuid>`                                        |
 | VMInterface        | `bridge_id`           | instead of `/virtualization/interfaces/?bridge_id=<uuid>`, use `bridge=<uuid>`                     |
 |                    | `parent_interface_id` | instead of `/virtualization/interfaces/?parent_interface_id=<uuid>`, use `parent_interface=<uuid>` |
+
+## Python Code Location Changes
+
+The below is mostly relevant only to authors of Jobs and Nautobot Apps. End users should not be impacted by the changes in this section.
+
+| Old Module                           | Class/Function(s)                                           | New Module                             |
+|--------------------------------------|-------------------------------------------------------------|----------------------------------------|
+| `nautobot.core.api.utils`            | `TreeModelSerializerMixin`                                  | `nautobot.core.api.serializers`        |
+| `nautobot.core.fields`               | `*`                                                         | `nautobot.core.models.fields`          |
+| `nautobot.core.forms`                | `SearchForm`                                                | `nautobot.core.forms.search`           |
+| `nautobot.core.utilities`            | `*`                                                         | `nautobot.core.views.utils`            |
+| `nautobot.dcim.fields`               | `MACAddressCharField`                                       | `nautobot.core.models.fields`          |
+| `nautobot.dcim.forms`                | `MACAddressField`                                           | `nautobot.core.forms`                  |
+| `nautobot.utilities.api`             | `*`                                                         | `nautobot.core.api.utils`              |
+| `nautobot.utilities.apps`            | `*`                                                         | `nautobot.core.apps`                   |
+| `nautobot.utilities.checks`          | `*`                                                         | `nautobot.core.checks`                 |
+| `nautobot.utilities.choices`         | `*`                                                         | `nautobot.core.choices`                |
+| `nautobot.utilities.config`          | `*`                                                         | `nautobot.core.utils.config`           |
+| `nautobot.utilities.constants`       | `*`                                                         | `nautobot.core.constants`              |
+| `nautobot.utilities.deprecation`     | `*`                                                         | `nautobot.core.utils.deprecation`      |
+| `nautobot.utilities.error_handlers`  | `*`                                                         | `nautobot.core.views.utils`            |
+| `nautobot.utilities.exceptions`      | `*`                                                         | `nautobot.core.exceptions`             |
+| `nautobot.utilities.factory`         | `*`                                                         | `nautobot.core.factory`                |
+| `nautobot.utilities.fields`          | `*`                                                         | `nautobot.core.models.fields`          |
+| `nautobot.utilities.filters`         | `*`                                                         | `nautobot.core.filters`                |
+| `nautobot.utilities.forms`           | `*`                                                         | `nautobot.core.forms`                  |
+| `nautobot.utilities.git`             | `*`                                                         | `nautobot.core.utils.git`              |
+| `nautobot.utilities.logging`         | `*`                                                         | `nautobot.core.utils.logging`          |
+| `nautobot.utilities.management`      | `*`                                                         | `nautobot.core.management`             |
+| `nautobot.utilities.ordering`        | `*`                                                         | `nautobot.core.utils.ordering`         |
+| `nautobot.utilities.paginator`       | `*`                                                         | `nautobot.core.views.paginator`        |
+| `nautobot.utilities.permissions`     | `*`                                                         | `nautobot.core.utils.permissions`      |
+| `nautobot.utilities.query_functions` | `*`                                                         | `nautobot.core.models.query_functions` |
+| `nautobot.utilities.querysets`       | `*`                                                         | `nautobot.core.models.querysets`       |
+| `nautobot.utilities.tables`          | `*`                                                         | `nautobot.core.tables`                 |
+| `nautobot.utilities.tasks`           | `*`                                                         | `nautobot.core.tasks`                  |
+| `nautobot.utilities.templatetags`    | `*`                                                         | `nautobot.core.templatetags`           |
+| `nautobot.utilities.testing`         | `*`                                                         | `nautobot.core.testing`                |
+| `nautobot.utilities.tree_queries`    | `*`                                                         | `nautobot.core.models.tree_queries`    |
+| `nautobot.utilities.utils`           | `array_to_string`                                           | `nautobot.core.models.utils`           |
+|                                      | `convert_querydict_to_factory_formset_acceptable_querydict` | `nautobot.core.utils.requests`         |
+|                                      | `copy_safe_request`                                         | `nautobot.core.utils.requests`         |
+|                                      | `count_related`                                             | `nautobot.core.models.querysets`       |
+|                                      | `csv_format`                                                | `nautobot.core.views.utils`            |
+|                                      | `deepmerge`                                                 | `nautobot.core.utils.data`             |
+|                                      | `dict_to_filter_params`                                     | `nautobot.core.api.utils`              |
+|                                      | `dynamic_import`                                            | `nautobot.core.api.utils`              |
+|                                      | `ensure_content_type_and_field_name_inquery_params`         | `nautobot.core.utils.requests`         |
+|                                      | `flatten_dict`                                              | `nautobot.core.utils.data`             |
+|                                      | `flatten_iterable`                                          | `nautobot.core.utils.data`             |
+|                                      | `foreground_color`                                          | `nautobot.core.utils.color`            |
+|                                      | `get_all_lookup_expr_for_field`                             | `nautobot.core.utils.filtering`        |
+|                                      | `get_api_version_serializer`                                | `nautobot.core.api.utils`              |
+|                                      | `get_changes_for_model`                                     | `nautobot.core.utils.lookup`           |
+|                                      | `get_filterset_field`                                       | `nautobot.core.utils.filtering`        |
+|                                      | `get_filterset_for_model`                                   | `nautobot.core.utils.lookup`           |
+|                                      | `get_filterable_params_from_filter_params`                  | `nautobot.core.utils.requests`         |
+|                                      | `get_form_for_model`                                        | `nautobot.core.utils.lookup`           |
+|                                      | `get_model_from_name`                                       | `nautobot.core.utils.lookup`           |
+|                                      | `get_related_class_for_model`                               | `nautobot.core.utils.lookup`           |
+|                                      | `get_route_for_model`                                       | `nautobot.core.utils.lookup`           |
+|                                      | `get_table_for_model`                                       | `nautobot.core.utils.lookup`           |
+|                                      | `hex_to_rgb`                                                | `nautobot.core.utils.color`            |
+|                                      | `is_taggable`                                               | `nautobot.core.models.utils`           |
+|                                      | `is_uuid`                                                   | `nautobot.core.utils.data`             |
+|                                      | `lighten_color`                                             | `nautobot.core.utils.color`            |
+|                                      | `normalize_querydict`                                       | `nautobot.core.utils.requests`         |
+|                                      | `prepare_cloned_fields`                                     | `nautobot.core.views.utils`            |
+|                                      | `pretty_print_query`                                        | `nautobot.core.models.utils`           |
+|                                      | `render_jinja2`                                             | `nautobot.core.utils.data`             |
+|                                      | `rgb_to_hex`                                                | `nautobot.core.utils.color`            |
+|                                      | `SerializerForAPIVersions`                                  | `nautobot.core.api.utils`              |
+|                                      | `serialize_object`                                          | `nautobot.core.models.utils`           |
+|                                      | `serialize_object_v2`                                       | `nautobot.core.models.utils`           |
+|                                      | `shallow_compare_dict`                                      | `nautobot.core.utils.data`             |
+|                                      | `slugify_dots_to_dashes`                                    | `nautobot.core.models.fields`          |
+|                                      | `slugify_dashes_to_underscores`                             | `nautobot.core.models.fields`          |
+|                                      | `to_meters`                                                 | `nautobot.core.utils.data`             |
+|                                      | `UtilizationData`                                           | `nautobot.core.utils.data`             |
+|                                      | `versioned_serializer_selector`                             | `nautobot.core.api.utils`              |
+| `nautobot.utilities.validators`      | `*`                                                         | `nautobot.core.models.validators`      |
+| `nautobot.utilities.views`           | `*`                                                         | `nautobot.core.views.mixins`           |

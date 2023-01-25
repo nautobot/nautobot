@@ -3,6 +3,11 @@ from django.db.models import Q
 import django_filters
 from django_filters.utils import verbose_lookup_expr
 
+from nautobot.core.constants import (
+    FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NUMERIC_BASED_LOOKUP_MAP,
+)
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -28,11 +33,6 @@ from nautobot.extras.models import (
     Role,
     Status,
 )
-from nautobot.utilities.constants import (
-    FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NUMERIC_BASED_LOOKUP_MAP,
-)
-from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -93,13 +93,13 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
         return lookup_map
 
-    # TODO 2.0: Transition CustomField filters to nautobot.utilities.filters.MultiValue* filters and
+    # TODO 2.0: Transition CustomField filters to nautobot.core.filters.MultiValue* filters and
     # leverage BaseFilterSet to add dynamic lookup expression filters. Remove CustomField.filter_logic field
     @classmethod
     def _generate_custom_field_lookup_expression_filters(cls, filter_name, custom_field):
         """
         For specific filter types, new filters are created based on defined lookup expressions in
-        the form `<field_name>__<lookup_expr>`. Copied from nautobot.utilities.filters.BaseFilterSet
+        the form `<field_name>__<lookup_expr>`. Copied from nautobot.core.filters.BaseFilterSet
         and updated to work with custom fields.
         """
         magic_filters = {}

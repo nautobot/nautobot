@@ -3,8 +3,8 @@ from unittest import skipIf
 import netaddr
 from django.db import connection
 
+from nautobot.core.testing import TestCase
 from nautobot.ipam.models import Prefix, Aggregate, IPAddress
-from nautobot.utilities.testing import TestCase
 
 
 class AggregateQuerysetTestCase(TestCase):

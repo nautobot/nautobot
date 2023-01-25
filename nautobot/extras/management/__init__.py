@@ -4,10 +4,10 @@ from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
 from nautobot.circuits import choices as circuit_choices
+from nautobot.core.choices import ColorChoices
 from nautobot.dcim import choices as dcim_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
-from nautobot.utilities.choices import ColorChoices
 
 
 # List of 2-tuples of (model_path, choiceset)

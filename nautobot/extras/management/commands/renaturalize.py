@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.core.management.base import BaseCommand, CommandError
 
-from nautobot.utilities.fields import NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField
 
 
 class Command(BaseCommand):

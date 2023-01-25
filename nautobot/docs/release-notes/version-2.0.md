@@ -78,6 +78,10 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - During the data migration, **ams01-edge-01**'s `location` attribute will point to the new `Location` of `LocationType` **Site** with name **AMS01** while devices **ams01-edge-02** and **ams01-edge-03** will remain unchanged.
 
+#### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
+
+`nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../installation/upgrading-from-nautobot-v1.md#python-code-location-changes).
+
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 Some filter fields have been renamed to reflect their functionalities better.

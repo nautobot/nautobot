@@ -19,16 +19,17 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.forms import ConfirmationForm
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import csv_format
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.forms import ConfirmationForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.utils import csv_format, count_related
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
 from .api import serializers
@@ -200,7 +201,7 @@ class RegionBulkDeleteView(generic.BulkDeleteView):
 
 
 class SiteListView(generic.ObjectListView):
-    queryset = Site.objects.all()
+    queryset = Site.objects.select_related("region", "tenant")
     filterset = filters.SiteFilterSet
     filterset_form = forms.SiteFilterForm
     table = tables.SiteTable
@@ -429,7 +430,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site", "location")
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -489,7 +490,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 class RackListView(generic.ObjectListView):
     queryset = (
-        Rack.objects.select_related("site", "group", "tenant", "role")
+        Rack.objects.select_related("site", "location", "group", "tenant", "role", "status")
         .prefetch_related("devices__device_type")
         .annotate(device_count=count_related(Device, "rack"))
     )
@@ -1220,7 +1221,17 @@ class PlatformBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceListView(generic.ObjectListView):
-    queryset = Device.objects.all()
+    queryset = Device.objects.select_related(
+        "status",
+        "device_type",
+        "role",
+        "tenant",
+        "site",
+        "location",
+        "rack",
+        "primary_ip4",
+        "primary_ip6",
+    )
     filterset = filters.DeviceFilterSet
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
