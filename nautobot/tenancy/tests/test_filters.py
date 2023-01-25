@@ -17,11 +17,11 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_parent(self):
         parent_groups = TenantGroup.objects.filter(children__isnull=False)[:2]
-        params = [
+        filter_params = [
             {"parent_id": [parent_groups[0].pk, parent_groups[1].pk]},
             {"parent": [parent_groups[0].pk, parent_groups[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 TenantGroup.objects.filter(parent__in=parent_groups),

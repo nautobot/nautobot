@@ -62,8 +62,8 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        params = [{"site_id": [self.sites[0].pk, self.sites[1].pk]}, {"site": [self.sites[0].pk, self.sites[1].slug]}]
-        for params in params:
+        filter_params = [{"site_id": [self.sites[0].pk, self.sites[1].pk]}, {"site": [self.sites[0].pk, self.sites[1].slug]}]
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(circuits__terminations__site__in=[self.sites[0], self.sites[1]]).distinct(),
@@ -204,11 +204,11 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_provider(self):
         providers = Provider.objects.all()[:2]
-        params = [
+        filter_params = [
             {"provider_id": [providers[0].id, providers[1].id]},
             {"provider": [providers[0].id, providers[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(provider__in=providers).distinct()
             )
@@ -220,11 +220,11 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_type(self):
         circuit_types = CircuitType.objects.all()[:2]
-        params = [
+        filter_params = [
             {"type_id": [circuit_types[0].pk, circuit_types[1].pk]},
             {"type": [circuit_types[0].slug, circuit_types[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(type__in=circuit_types).distinct()
             )
@@ -248,11 +248,11 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
 
     def test_site(self):
-        params = [
+        filter_params = [
             {"site_id": [self.sites[0].pk, self.sites[1].pk]},
             {"site": [self.sites[0].slug, self.sites[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(terminations__site__in=[self.sites[0], self.sites[1]]).distinct(),
@@ -463,11 +463,11 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_provider(self):
         providers = Provider.objects.all()[:2]
-        params = [
+        filter_params = [
             {"provider_id": [providers[0].pk, providers[1].pk]},
             {"provider": [providers[0].slug, providers[1].id]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(provider__in=providers).distinct()
             )

@@ -97,9 +97,9 @@ class UserTestCase(FilterTestCases.FilterTestCase):
 
     def test_group(self):
         groups = Group.objects.all()[:2]
-        params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].pk, groups[1].name]}]
+        filter_params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].pk, groups[1].name]}]
 
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs.order_by("id"),
                 self.queryset.filter(groups__in=groups).order_by("id").distinct(),
@@ -181,16 +181,16 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
 
     def test_group(self):
         groups = Group.objects.filter(name__in=["Group 1", "Group 2"])[:2]
-        params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].pk, groups[1].name]}]
-        for params in params:
+        filter_params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].pk, groups[1].name]}]
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(groups__in=groups).distinct()
             )
 
     def test_user(self):
         users = User.objects.filter(username__in=["User1", "User2"])[:2]
-        params = [{"user_id": [users[0].pk, users[1].pk]}, {"user": [users[0].pk, users[1].username]}]
-        for params in params:
+        filter_params = [{"user_id": [users[0].pk, users[1].pk]}, {"user": [users[0].pk, users[1].username]}]
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(users__in=users)
             )

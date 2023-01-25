@@ -246,22 +246,22 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_region(self):
         regions = Region.objects.all()[:2]
-        params = [
+        filter_params = [
             {"region_id": [regions[0].pk, regions[1].pk]},
             {"region": [regions[0].slug, regions[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(regions__in=regions).distinct()
             )
 
     def test_site(self):
         sites = Site.objects.all()[:2]
-        params = [
+        filter_params = [
             {"site_id": [sites[0].pk, sites[1].pk]},
             {"site": [sites[0].pk, sites[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(sites__in=sites).distinct()
             )
@@ -275,44 +275,44 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_location(self):
         locations = self.locations[:2]
-        params = [
+        filter_params = [
             {"location_id": [locations[0].pk, locations[1].pk]},
             {"location": [locations[0].pk, locations[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=locations).distinct()
             )
 
     def test_type(self):
         device_types = self.device_types[:2]
-        params = [
+        filter_params = [
             {"device_type_id": [device_types[0].pk, device_types[1].pk]},
             {"device_type": [device_types[0].pk, device_types[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(device_types__in=device_types).distinct()
             )
 
     def test_platform(self):
         platforms = self.platforms[:2]
-        params = [
+        filter_params = [
             {"platform_id": [platforms[0].pk, platforms[1].pk]},
             {"platform": [platforms[0].pk, platforms[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(platforms__in=platforms).distinct()
             )
 
     def test_cluster_group(self):
         cluster_groups = ClusterGroup.objects.all()[:2]
-        params = [
+        filter_params = [
             {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
             {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(cluster_groups__in=cluster_groups).distinct(),
@@ -325,11 +325,11 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_tenant_group(self):
         tenant_groups = self.tenant_groups[:2]
-        params = [
+        filter_params = [
             {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]},
             {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant_groups__in=tenant_groups).distinct(),
@@ -337,11 +337,11 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_tenant(self):
         tenants = self.tenants[:2]
-        params = [
+        filter_params = [
             {"tenant_id": [tenants[0].pk, tenants[1].pk]},
             {"tenant": [tenants[0].slug, tenants[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenants__in=tenants).distinct()
             )
@@ -447,11 +447,11 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
 
     def test_field(self):
         fields = self.fields[:2]
-        params = [
+        filter_params = [
             {"field_id": [fields[0].pk, fields[1].pk]},
             {"field": [fields[0].name, fields[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(field__in=fields).distinct()
             )
@@ -567,11 +567,11 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_secrets_group(self):
-        params = [
+        filter_params = [
             {"secrets_group_id": [self.secrets_groups[0].pk, self.secrets_groups[1].pk]},
             {"secrets_group": [self.secrets_groups[0].slug, self.secrets_groups[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(secrets_group__in=self.secrets_groups).distinct(),
@@ -829,11 +829,11 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_job_model(self):
         jobs = self.jobs[:2]
-        params = [
+        filter_params = [
             {"job_model_id": [jobs[0].pk, jobs[1].pk]},
             {"job_model": [jobs[0].pk, jobs[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(job_model__in=jobs).distinct()
             )
@@ -1025,11 +1025,11 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_user(self):
         users = User.objects.filter(username__in=["user1", "user2"])
-        params = [
+        filter_params = [
             {"user_id": [users[0].pk, users[1].pk]},
             {"user": [users[0].pk, users[1].username]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(user__in=users).distinct()
             )
@@ -1529,21 +1529,21 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_group(self):
-        params = [
+        filter_params = [
             {"group_id": [self.groups[0].pk, self.groups[1].pk]},
             {"group": [self.groups[0].pk, self.groups[1].slug]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=self.groups[:2]).distinct()
             )
 
     def test_secret(self):
-        params = [
+        filter_params = [
             {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]},
             {"secret": [self.secrets[0].slug, self.secrets[1].pk]},
         ]
-        for params in params:
+        for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(secret__in=self.secrets[:2]).distinct()
             )
