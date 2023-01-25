@@ -81,7 +81,7 @@ footer p {
 @media (max-width: 1179px) {
     #navbar {
         max-height: calc(80vh - 50px);
-        overflow-y: auto !important;;
+        overflow-y: auto !important;
     }
     .navbar-header {
         float: none;
@@ -399,7 +399,6 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
-
 
 /* Filters */
 .filter-container {
