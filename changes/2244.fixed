@@ -1,1 +1,0 @@
-Avoid an unnecessary and sometimes problematic database access from the Celery worker before it forks off to execute an individual job.

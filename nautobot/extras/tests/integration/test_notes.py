@@ -1,7 +1,7 @@
 from django.urls import reverse
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Site
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 class NoteTestCase(SeleniumTestCase):

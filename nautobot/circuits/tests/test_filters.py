@@ -10,9 +10,9 @@ from nautobot.circuits.filters import (
     ProviderNetworkFilterSet,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location, Region, Site
 from nautobot.extras.models import Role, Status
-from nautobot.utilities.testing import FilterTestCases
 
 
 class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):

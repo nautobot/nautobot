@@ -1,5 +1,15 @@
 from django import forms
 
+from nautobot.core.forms import (
+    CommentField,
+    CSVModelChoiceField,
+    DatePicker,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    SmallTextarea,
+    SlugField,
+    TagFilterField,
+)
 from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
@@ -16,16 +26,6 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
-    CommentField,
-    CSVModelChoiceField,
-    DatePicker,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    SmallTextarea,
-    SlugField,
-    TagFilterField,
-)
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 

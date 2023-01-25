@@ -1,14 +1,14 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     TagColumn,
     ToggleColumn,
 )
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 from .models import Circuit, CircuitType, Provider, ProviderNetwork
 
 CIRCUIT_TERMINATION_PARENT = """

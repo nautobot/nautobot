@@ -14,8 +14,10 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
+from nautobot.core.models.fields import slugify_dots_to_dashes
+
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.utilities.utils import is_taggable, slugify_dots_to_dashes  # noqa: F401
+from nautobot.core.models.utils import is_taggable  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -157,7 +159,11 @@ class TaggableClassesQuery(FeaturedQueryMixin):
         return [
             _class
             for _class in apps.get_models()
-            if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
+            if (
+                hasattr(_class, "tags")
+                and isinstance(_class.tags, _TaggableManager)
+                and ".tests." not in _class.__module__  # avoid leakage from nautobot.core.tests.test_filters
+            )
         ]
 
 

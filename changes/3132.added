@@ -1,0 +1,1 @@
+Added the ability for apps to register their models for inclusion in the global Nautobot search.

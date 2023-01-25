@@ -2,7 +2,7 @@ import uuid
 
 from django.db import models
 
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class BaseModel(models.Model):

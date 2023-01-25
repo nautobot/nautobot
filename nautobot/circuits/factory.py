@@ -2,12 +2,11 @@ import factory
 import faker
 
 from nautobot.circuits import choices
-from nautobot.circuits.models import CircuitTermination, CircuitType, Circuit, Provider, ProviderNetwork
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
 from nautobot.dcim import models as dcim_models
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import random_instance, UniqueFaker
 
 
 class CircuitTypeFactory(OrganizationalModelFactory):

@@ -11,14 +11,14 @@ from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
+from nautobot.core.models.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.utils import array_to_string
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.utilities.fields import JSONArrayField
 from .choices import ServiceProtocolChoices
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,

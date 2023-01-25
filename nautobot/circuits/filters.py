@@ -1,15 +1,7 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.dcim.filters import (
-    CableTerminationModelFilterSetMixin,
-    LocatableModelFilterSetMixin,
-    PathEndpointModelFilterSetMixin,
-)
-from nautobot.dcim.models import Location, Region, Site
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -18,6 +10,14 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.dcim.filters import (
+    CableTerminationModelFilterSetMixin,
+    LocatableModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
+)
+from nautobot.dcim.models import Location, Region, Site
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 __all__ = (

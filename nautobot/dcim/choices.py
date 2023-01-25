@@ -1,4 +1,4 @@
-from nautobot.utilities.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 
 #
@@ -21,15 +21,6 @@ class SiteStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
         (STATUS_RETIRED, "Retired"),
     )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_PLANNED: "info",
-        STATUS_STAGING: "primary",
-        STATUS_ACTIVE: "success",
-        STATUS_DECOMMISSIONING: "warning",
-        STATUS_RETIRED: "danger",
-    }
 
 
 #
@@ -107,15 +98,6 @@ class RackStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_RESERVED: "warning",
-        STATUS_AVAILABLE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_ACTIVE: "primary",
-        STATUS_DEPRECATED: "danger",
-    }
-
 
 class RackDimensionUnitChoices(ChoiceSet):
 
@@ -187,17 +169,6 @@ class DeviceStatusChoices(ChoiceSet):
         (STATUS_INVENTORY, "Inventory"),
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_OFFLINE: "warning",
-        STATUS_ACTIVE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_STAGED: "primary",
-        STATUS_FAILED: "danger",
-        STATUS_INVENTORY: "default",
-        STATUS_DECOMMISSIONING: "warning",
-    }
 
 
 #
@@ -1107,13 +1078,6 @@ class CableStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_CONNECTED: "success",
-        STATUS_PLANNED: "info",
-        STATUS_DECOMMISSIONING: "warning",
-    }
-
 
 class CableLengthUnitChoices(ChoiceSet):
 
@@ -1148,14 +1112,6 @@ class PowerFeedStatusChoices(ChoiceSet):
         (STATUS_PLANNED, "Planned"),
         (STATUS_FAILED, "Failed"),
     )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_OFFLINE: "warning",
-        STATUS_ACTIVE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_FAILED: "danger",
-    }
 
 
 class PowerFeedTypeChoices(ChoiceSet):

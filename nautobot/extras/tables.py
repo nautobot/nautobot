@@ -5,7 +5,8 @@ from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.utilities.tables import (
+from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -16,7 +17,6 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
 from .choices import LogLevelChoices
 from .models import (
     ComputedField,

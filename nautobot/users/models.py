@@ -11,9 +11,9 @@ from django.db.models import Q
 from django.utils import timezone
 
 from nautobot.core.models import BaseModel
-from nautobot.utilities.fields import JSONArrayField
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.utils import flatten_dict
+from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.data import flatten_dict
 
 
 __all__ = (

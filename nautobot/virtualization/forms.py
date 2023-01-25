@@ -2,6 +2,25 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
+from nautobot.core.forms import (
+    add_blank_choice,
+    BootstrapMixin,
+    BulkEditNullBooleanSelect,
+    BulkRenameForm,
+    CommentField,
+    ConfirmationForm,
+    CSVChoiceField,
+    CSVModelChoiceField,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    ExpandableNameField,
+    form_from_model,
+    SlugField,
+    SmallTextarea,
+    StaticSelect2,
+    TagFilterField,
+)
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
@@ -33,25 +52,6 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
-    add_blank_choice,
-    BootstrapMixin,
-    BulkEditNullBooleanSelect,
-    BulkRenameForm,
-    CommentField,
-    ConfirmationForm,
-    CSVChoiceField,
-    CSVModelChoiceField,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    ExpandableNameField,
-    form_from_model,
-    SlugField,
-    SmallTextarea,
-    StaticSelect2,
-    TagFilterField,
-)
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 
