@@ -8,14 +8,13 @@ from taggit.managers import TaggableManager
 from tree_queries.models import TreeNodeForeignKey
 
 from nautobot.core import filters, testing
+from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import lookup
 from nautobot.dcim import choices as dcim_choices
-from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.models import Device
 from nautobot.extras import models as extras_models
-from nautobot.extras.models import Role
 from nautobot.ipam import factory as ipam_factory
 from nautobot.ipam import models as ipam_models
 
@@ -331,7 +330,7 @@ class TestModel(django_models.Model):
     datefield = django_models.DateField()
     datetimefield = django_models.DateTimeField()
     integerfield = django_models.IntegerField()
-    macaddressfield = dcim_fields.MACAddressCharField()
+    macaddressfield = core_fields.MACAddressCharField()
     textfield = django_models.TextField()
     timefield = django_models.TimeField()
     treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
@@ -730,7 +729,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         dcim_models.DeviceType.objects.bulk_create(device_types)
 
-        device_roles = Role.objects.get_for_model(Device)
+        device_roles = extras_models.Role.objects.get_for_model(Device)
 
         device_statuses = extras_models.Status.objects.get_for_model(dcim_models.Device)
         device_status_map = {ds.slug: ds for ds in device_statuses.all()}
