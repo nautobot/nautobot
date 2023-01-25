@@ -763,7 +763,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.select_related("site", "location", "group", "tenant", "role", "status")
+    queryset = VLAN.objects.select_related("site", "location", "vlan_group", "tenant", "role", "status")
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
