@@ -7,7 +7,6 @@ from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
-from nautobot.utilities.utils import curry
 
 
 class ChangeContext:
@@ -74,6 +73,14 @@ class WebChangeContext(ChangeContext):
     """ChangeContext for changes made through the web interface"""
 
     context = ObjectChangeEventContextChoices.CONTEXT_WEB
+
+
+# Taken from django.utils.functional (<3.0)
+def curry(_curried_func, *args, **kwargs):
+    def _curried(*moreargs, **morekwargs):
+        return _curried_func(*args, *moreargs, **{**kwargs, **morekwargs})
+
+    return _curried
 
 
 @contextmanager

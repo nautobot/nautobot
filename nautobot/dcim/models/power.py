@@ -4,6 +4,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.validators import ExclusionValidator
 from nautobot.dcim.choices import PowerFeedPhaseChoices, PowerFeedSupplyChoices, PowerFeedTypeChoices
 from nautobot.dcim.constants import (
     POWERFEED_AMPERAGE_DEFAULT,
@@ -13,8 +15,6 @@ from nautobot.dcim.constants import (
 
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import PrimaryModel
-from nautobot.utilities.validators import ExclusionValidator
 from .device_components import CableTermination, PathEndpoint
 
 __all__ = (

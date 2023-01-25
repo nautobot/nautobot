@@ -21,25 +21,21 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.forms import restrict_form_fields
+from nautobot.core.models.querysets import count_related
+from nautobot.core.models.utils import pretty_print_query
+from nautobot.core.tables import ButtonsColumn
+from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.core.utils.requests import copy_safe_request, normalize_querydict
 from nautobot.core.views import generic, viewsets
+from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import csv_format, prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
-from nautobot.utilities.forms import restrict_form_fields
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.utils import (
-    copy_safe_request,
-    count_related,
-    csv_format,
-    get_table_for_model,
-    normalize_querydict,
-    prepare_cloned_fields,
-    pretty_print_query,
-)
-from nautobot.utilities.views import ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 

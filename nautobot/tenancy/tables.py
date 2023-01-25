@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     LinkedCountColumn,

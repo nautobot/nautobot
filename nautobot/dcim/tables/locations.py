@@ -1,10 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.dcim.models import Location, LocationType
-from nautobot.dcim.tables.template_code import TREE_LINK
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -12,6 +8,10 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.models import Location, LocationType
+from nautobot.dcim.tables.template_code import TREE_LINK
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 
 __all__ = (
     "LocationTable",

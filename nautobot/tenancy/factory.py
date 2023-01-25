@@ -1,8 +1,7 @@
 import factory
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
 from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.utilities.factory import random_instance, UniqueFaker
 
 
 class TenantGroupFactory(OrganizationalModelFactory):

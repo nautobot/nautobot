@@ -1,10 +1,9 @@
 import factory
 
 from nautobot.circuits.models import CircuitType, Circuit, Provider
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import random_instance, UniqueFaker
 
 
 class CircuitTypeFactory(OrganizationalModelFactory):

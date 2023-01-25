@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -35,7 +36,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import (
     Cluster,
     ClusterType,

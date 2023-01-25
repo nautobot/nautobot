@@ -8,10 +8,13 @@ from nautobot.core.api import (
     ContentTypeField,
     SerializedPKRelatedField,
     TimeZoneSerializerField,
+    TreeModelSerializerMixin,
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     ConsolePortTypeChoices,
@@ -87,9 +90,6 @@ from nautobot.ipam.api.nested_serializers import (
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model, TreeModelSerializerMixin
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the

@@ -8,10 +8,8 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
     APISelectMultiple,
@@ -35,8 +33,8 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -76,6 +74,8 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -1392,7 +1392,7 @@ class TagForm(NautobotModelForm):
 
         if self.instance.present_in_database:
             # check if tag is assigned to any of the removed content_types
-            content_types_id = [content_type.id for content_type in self.cleaned_data["content_types"]]
+            content_types_id = [content_type.id for content_type in self.cleaned_data.get("content_types", [])]
             errors = self.instance.validate_content_types_removal(content_types_id)
 
             if errors:

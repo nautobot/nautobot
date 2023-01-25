@@ -10,6 +10,7 @@ from nautobot.core.api import (
     ContentTypeField,
     SerializedPKRelatedField,
 )
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
@@ -35,7 +36,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )

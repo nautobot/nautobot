@@ -1,21 +1,20 @@
 """Navigation Items to add to Nautobot for {{ app_name }}."""
 
-from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.apps.ui import ButtonActionColorChoices, NavMenuItem, NavMenuButton
 
 """
 menu_items = (
-    PluginMenuItem(
-        link='plugins:{{ app_name }}:model',  # A reverse compatible link to follow.
-        link_text = 'Sample Text',  # Text to display to user.
-        permissions = [],  # Optional: List of permissions required to display this link.
-        buttons = (  # Optional: Iterable of PluginMenuButton instances to display.
-            PluginMenuButton(
-                'plugins:{{ app_name }}:model',  # A reverse compatible link to follow.
-                'Sample Text',  # Text to display to user.
-                'mdi mdi-help-circle',  # Button icon CSS Classes (Currently supports Material Design Icons.)
-                ButtonColorChoices.BLUE,  # Optional: Color for the button.,
-                permissions = []  # Optional: List of permissions required to display this button.
+    NavMenuItem(
+        link='plugins:{{ app_name }}:model_list',  # A reverse compatible link to follow.
+        link_text='Sample Text',  # Text to display to user.
+        permissions=[],  # Optional: List of permissions required to display this link.
+        buttons=(  # Optional: Iterable of NavMenuButton instances to display.
+            NavMenuButton(
+                link='plugins:{{ app_name }}:model_add',  # A reverse compatible link to follow.
+                title='Sample Text',  # Text to display to user.
+                icon_class='mdi mdi-help-circle',  # Button icon CSS Classes (Currently supports Material Design Icons.)
+                button_class=ButtonActionColorChoices.INFO,  # Optional: Color for the button.,
+                permissions=[],  # Optional: List of permissions required to display this button.
             )
         )
     )

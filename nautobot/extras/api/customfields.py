@@ -5,8 +5,8 @@ from rest_framework.serializers import SerializerMethodField
 from rest_framework.fields import CreateOnlyDefault, Field
 
 from nautobot.core.api import ValidatedModelSerializer
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import CustomField
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 
 #
