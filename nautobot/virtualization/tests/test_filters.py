@@ -452,11 +452,17 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_services(self):
         params = {"services": [self.services[0].pk, self.services[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(services__in=[self.services[0].pk, self.services[1].pk]),
+        )
 
     def test_interfaces(self):
         params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(interfaces__in=[self.interfaces[0].pk, self.interfaces[1].pk]),
+        )
 
     def test_tags(self):
         params = {"tag": [self.tag.slug]}
@@ -545,15 +551,27 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_has_primary_ip(self):
         params = {"has_primary_ip": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.exclude(primary_ip4__isnull=True, primary_ip6__isnull=True),
+        )
         params = {"has_primary_ip": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
+        )
 
     def test_local_config_context_data(self):
         params = {"local_config_context_data": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(local_config_context_data__isnull=False),
+        )
         params = {"local_config_context_data": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(local_config_context_data__isnull=True),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -691,7 +709,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_mode(self):
         params = {"mode": InterfaceModeChoices.MODE_ACCESS}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(mode=InterfaceModeChoices.MODE_ACCESS),
+        )
 
     def test_ip_addresses(self):
         vminterface_ct = ContentType.objects.get_for_model(VMInterface)

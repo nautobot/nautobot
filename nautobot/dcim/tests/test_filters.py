@@ -818,7 +818,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_circuit_terminations(self):
-        circuit_terminations = CircuitTermination.objects.filter(site__isnull=False)[:2]
+        circuit_terminations = list(CircuitTermination.objects.filter(site__isnull=False)[:2])
         params = {"circuit_terminations": [circuit_terminations[0].pk, circuit_terminations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,

@@ -91,7 +91,7 @@ class FilterTestCases:
             for test in self.generic_filter_tests:
                 filter_name = test[0]
                 field_name = test[-1]
-                with self.subTest(f"{self.queryset.model._meta.object_name} filter {filter_name} ({field_name})"):
+                with self.subTest(f"{self.filterset.__name__} filter {filter_name} ({field_name})"):
                     test_data = self.get_filterset_test_values(field_name)
                     params = {filter_name: test_data}
                     filterset_result = self.filterset(params, self.queryset).qs
@@ -103,16 +103,15 @@ class FilterTestCases:
             Tests all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`. Tests that `filter=True` matches
             `self.queryset.filter(field__isnull=False)` and that `filter=False` matches `self.queryset.filter(field__isnull=False)`.
             """
-            object_name = self.queryset.model._meta.object_name
-            for filter_name, filter in self.filterset.get_filters().items():
-                if not isinstance(filter, RelatedMembershipBooleanFilter):
+            for filter_name, filter_object in self.filterset.get_filters().items():
+                if not isinstance(filter_object, RelatedMembershipBooleanFilter):
                     continue
-                field_name = filter.field_name
-                with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (True)"):
+                field_name = filter_object.field_name
+                with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):
                     filterset_result = self.filterset({filter_name: True}, self.queryset).qs
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": False}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
-                with self.subTest(f"{object_name} RelatedMembershipBooleanFilter {filter_name} (False)"):
+                with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (False)"):
                     filterset_result = self.filterset({filter_name: False}, self.queryset).qs
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": True}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
