@@ -476,7 +476,7 @@ class GitRepositoryTable(BaseTable):
 
     def render_last_sync_time(self, record):
         if record.name in self.context["job_results"]:
-            return self.context["job_results"][record.name].completed
+            return self.context["job_results"][record.name].date_done
         return self.default
 
     def render_last_sync_user(self, record):

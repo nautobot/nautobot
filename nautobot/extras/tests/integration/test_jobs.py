@@ -48,7 +48,7 @@ class JobResultTest(SeleniumTestCase):
             )
 
         # Complete the job
-        job_result.completed = datetime.now()
+        job_result.date_done = datetime.now()
         job_result.status = JobResultStatusChoices.STATUS_COMPLETED
         job_result.save()
 

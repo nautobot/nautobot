@@ -1049,7 +1049,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     and rollback conditions, plus post execution cleanup and saving the JobResult record.
     """
     from nautobot.extras.models import JobResult  # avoid circular import
-    from nautobot.extras.models import TaskStateChoices, celery_states
+    from nautobot.extras.models.jobs import TaskStateChoices, celery_states
 
     # Getting the correct job result can fail if the stored data cannot be serialized.
     # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
