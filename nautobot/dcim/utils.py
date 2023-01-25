@@ -67,7 +67,7 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
 
     # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
     # a site that is not the parent's site or None
-    tagged_vlans = model.objects.filter(pk__in=pk_set).exclude(site__in=[None, instance.parent.site])
+    tagged_vlans = model.objects.filter(pk__in=pk_set).exclude(site__isnull=True).exclude(site=instance.parent.site)
 
     if tagged_vlans.count():
         raise ValidationError(
