@@ -208,7 +208,7 @@ class SiteListView(generic.ObjectListView):
 
 
 class SiteView(generic.ObjectView):
-    queryset = Site.objects.select_related("region", "tenant__group")
+    queryset = Site.objects.select_related("region", "tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         stats = {
@@ -552,7 +552,7 @@ class RackElevationListView(generic.ObjectListView):
 
 
 class RackView(generic.ObjectView):
-    queryset = Rack.objects.select_related("site__region", "tenant__group", "group", "role")
+    queryset = Rack.objects.select_related("site__region", "tenant__tenant_group", "group", "role")
 
     def get_extra_context(self, request, instance):
         # Get 0U and child devices located within the rack
@@ -1242,7 +1242,7 @@ class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
         "site__region",
         "rack__group",
-        "tenant__group",
+        "tenant__tenant_group",
         "role",
         "platform",
         "primary_ip4",
@@ -1860,7 +1860,7 @@ class InterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "group", "tenant", "role"):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)

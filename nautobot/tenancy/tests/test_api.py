@@ -61,12 +61,12 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Tenant 4",
                 "slug": "tenant-4",
-                "group": TenantGroup.objects.first().pk,
+                "tenant_group": TenantGroup.objects.first().pk,
             },
             {
                 "name": "Tenant 5",
                 "slug": "tenant-5",
-                "group": TenantGroup.objects.last().pk,
+                "tenant_group": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant 6",

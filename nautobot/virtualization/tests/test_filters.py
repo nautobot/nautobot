@@ -128,7 +128,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Site.objects.filter(region=cls.regions[2]).first(),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         clusters = (
             Cluster.objects.create(
@@ -307,7 +307,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         roles = Role.objects.get_for_model(VirtualMachine)
         cls.roles = roles
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_map = {s.slug: s for s in statuses.all()}

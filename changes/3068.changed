@@ -1,0 +1,2 @@
+Renamed `group` field to `vlan_group` on VLAN model, renamed `ipaddresses` to `ip_addresses` on Service model.
+Renamed `group` field to `tenant_group` on Tenant model.

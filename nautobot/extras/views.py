@@ -1846,7 +1846,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "tenant",
             )
             vlans = instance.ipam_vlan_related.select_related(
-                "group",
+                "vlan_group",
                 "site",
                 "status",
                 "tenant",

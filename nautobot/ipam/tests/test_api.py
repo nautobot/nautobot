@@ -520,7 +520,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 4,
                 "name": "VLAN 4",
-                "group": vlan_groups[0].pk,
+                "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
@@ -528,7 +528,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 5,
                 "name": "VLAN 5",
-                "group": vlan_groups[0].pk,
+                "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
@@ -536,7 +536,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 6,
                 "name": "VLAN 6",
-                "group": vlan_groups[0].pk,
+                "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,

@@ -8,6 +8,7 @@ from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
     SearchFilter,
     TagFilter,
@@ -483,16 +484,11 @@ class VLANFilterSet(
         label="Device (ID)",
         field_name="pk",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Group (ID)",
+        label="VLAN Group (slug or ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
-        field_name="group__slug",
-        queryset=VLANGroup.objects.all(),
-        to_field_name="slug",
-        label="Group",
-    )
+
     tag = TagFilter()
 
     class Meta:
