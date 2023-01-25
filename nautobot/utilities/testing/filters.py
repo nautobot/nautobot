@@ -61,7 +61,13 @@ class FilterTestCases:
         queryset = None
         filterset = None
 
-        # list of filters to test: (filter_name, optional field_name if different from filter name)
+        # list of filters to be tested by `test_filters_generic`
+        # list of iterables with filter name and optional field name
+        # example:
+        #   generic_filter_tests = [
+        #       ["filter1"],
+        #       ["filter2", "field2__name"],
+        #   ]
         generic_filter_tests = []
 
         def test_id(self):
@@ -77,20 +83,30 @@ class FilterTestCases:
             self.assertFalse(self.filterset(params, self.queryset).is_valid())
 
         def test_filters_generic(self):
-            """
-            Tests multiple choice filters declared in `self.generic_filter_tests`. This uses `get_filterset_test_values()` to retrieve
-            a valid set of test data and asserts that the queryset filter matches the filterset's returned queryset. The majority of
-            Nautobot filters use conjoined=False, so the extra logic to support conjoined=True has not been implemented here. TagFilter
-            and similar AND filters are not supported. Multiple tests can be performed for the same filter by adding multiple entries
-            into `generic_filter_tests` with custom field names. For example, to test NaturalKeyOrPKMultipleChoiceFilter, use:
-            generic_filter_tests = (
-                ["filter_name", "field_name__slug"],
-                ["filter_name", "field_name__id"],
-            )
+            """Test all multiple choice filters declared in `self.generic_filter_tests`.
+
+            This test uses `get_filterset_test_values()` to retrieve a valid set of test data and asserts that the filterset
+            filter output matches the corresponding queryset filter. The majority of Nautobot filters use conjoined=False,
+            so the extra logic to support conjoined=True has not been implemented here. TagFilter and similar "AND" filters
+            are not supported.
+
+            Examples:
+                Multiple tests can be performed for the same filter by adding multiple entries in `generic_filter_tests` with
+                explicit field names. For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
+                    generic_filter_tests = (
+                        ["filter_name", "field_name__slug"],
+                        ["filter_name", "field_name__id"],
+                    )
+
+                If a field name is not declared, the filter name will be used for the field name:
+                    generic_filter_tests = (
+                        ["devices"],
+                    )
+                This expects a field named `devices` on the model and a filter named `devices` on the filterset.
             """
             for test in self.generic_filter_tests:
                 filter_name = test[0]
-                field_name = test[-1]
+                field_name = test[-1]  # default to filter_name if a second list item was not supplied
                 with self.subTest(f"{self.filterset.__name__} filter {filter_name} ({field_name})"):
                     test_data = self.get_filterset_test_values(field_name)
                     params = {filter_name: test_data}
@@ -99,9 +115,10 @@ class FilterTestCases:
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_boolean_filters_generic(self):
-            """
-            Tests all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`. Tests that `filter=True` matches
-            `self.queryset.filter(field__isnull=False)` and that `filter=False` matches `self.queryset.filter(field__isnull=False)`.
+            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`.
+
+            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
+            that `filter=False` matches `self.queryset.filter(field__isnull=False)`.
             """
             for filter_name, filter_object in self.filterset.get_filters().items():
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
