@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django_tables2 import RequestConfig
 
 from nautobot.core.views import generic
@@ -24,7 +25,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 
 class ClusterTypeListView(generic.ObjectListView):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     filterset = filters.ClusterTypeFilterSet
     table = tables.ClusterTypeTable
 
@@ -37,15 +38,15 @@ class ClusterTypeView(generic.ObjectView):
         # Clusters
         clusters = (
             Cluster.objects.restrict(request.user, "view")
-            .filter(type=instance)
-            .select_related("group", "site", "tenant")
+            .filter(cluster_type=instance)
+            .select_related("cluster_group", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
         )
 
         cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("type")
+        cluster_table.columns.hide("cluster_type")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -74,7 +75,7 @@ class ClusterTypeBulkImportView(generic.BulkImportView):
 
 
 class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     table = tables.ClusterTypeTable
 
 
@@ -84,7 +85,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class ClusterGroupListView(generic.ObjectListView):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     filterset = filters.ClusterGroupFilterSet
     table = tables.ClusterGroupTable
 
@@ -97,15 +98,15 @@ class ClusterGroupView(generic.ObjectView):
         # Clusters
         clusters = (
             Cluster.objects.restrict(request.user, "view")
-            .filter(group=instance)
-            .select_related("type", "site", "tenant")
+            .filter(cluster_group=instance)
+            .select_related("cluster_type", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
         )
 
         cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("group")
+        cluster_table.columns.hide("cluster_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -134,7 +135,7 @@ class ClusterGroupBulkImportView(generic.BulkImportView):
 
 
 class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     table = tables.ClusterGroupTable
 
 
@@ -189,14 +190,14 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.select_related("type", "group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.select_related("type", "group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 
@@ -340,8 +341,14 @@ class VirtualMachineView(generic.ObjectView):
 
 
 class VirtualMachineConfigContextView(ObjectConfigContextView):
-    queryset = VirtualMachine.objects.annotate_config_context_data()
     base_template = "virtualization/virtualmachine.html"
+
+    @cached_property
+    def queryset(self):  # pylint: disable=method-hidden
+        """
+        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
+        """
+        return VirtualMachine.objects.annotate_config_context_data()
 
 
 class VirtualMachineEditView(generic.ObjectEditView):

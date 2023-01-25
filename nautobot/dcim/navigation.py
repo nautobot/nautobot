@@ -155,28 +155,6 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:rackrole_list",
-                        name="Rack Roles",
-                        weight=300,
-                        permissions=[
-                            "dcim.view_rackrole",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:rackrole_add",
-                                permissions=[
-                                    "dcim.add_rackrole",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:rackrole_import",
-                                permissions=[
-                                    "dcim.add_rackrole",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:rackreservation_list",
                         name="Reservations",
                         weight=400,
@@ -237,28 +215,6 @@ menu_items = (
                                 link="dcim:device_import",
                                 permissions=[
                                     "dcim.add_device",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="dcim:devicerole_list",
-                        name="Device Roles",
-                        weight=200,
-                        permissions=[
-                            "dcim.view_devicerole",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:devicerole_add",
-                                permissions=[
-                                    "dcim.add_devicerole",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:devicerole_import",
-                                permissions=[
-                                    "dcim.add_devicerole",
                                 ],
                             ),
                         ),

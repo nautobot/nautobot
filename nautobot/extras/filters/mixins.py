@@ -3,6 +3,7 @@ from django.db.models import Q
 import django_filters
 from django_filters.utils import verbose_lookup_expr
 
+from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -24,12 +25,26 @@ from nautobot.extras.models import (
     CustomField,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
 )
 from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
+from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.virtualization.models import VirtualMachine
+
+
+class ConfigContextRoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for Device and VM"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("field_name", "roles")
+        kwargs.setdefault("queryset", Role.objects.get_for_models([Device, VirtualMachine]))
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
@@ -130,23 +145,23 @@ class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
 
 
 class LocalContextModelFilterSetMixin(django_filters.FilterSet):
-    local_context_data = django_filters.BooleanFilter(
-        method="_local_context_data",
+    local_config_context_data = django_filters.BooleanFilter(
+        method="_local_config_context_data",
         label="Has local config context data",
     )
-    local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+    local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID)",
     )
-    local_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_context_schema__slug",
+    local_config_context_schema = django_filters.ModelMultipleChoiceFilter(
+        field_name="local_config_context_schema__slug",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug)",
     )
 
-    def _local_context_data(self, queryset, name, value):
-        return queryset.exclude(local_context_data__isnull=value)
+    def _local_config_context_data(self, queryset, name, value):
+        return queryset.exclude(local_config_context_data__isnull=value)
 
 
 class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
@@ -263,6 +278,34 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
                     qs=model.objects.all(),
                 )
             self.relationships.append(field_name)
+
+
+#
+# Role
+#
+
+
+class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for self.model"""
+
+    def __init__(self, *args, **kwargs):
+
+        kwargs.setdefault("field_name", "role")
+        kwargs.setdefault("queryset", Role.objects.all())
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return self.queryset.get_for_model(self.model)
+
+
+class RoleModelFilterSetMixin(django_filters.FilterSet):
+    """
+    Mixin to add a `role` filter field to a FilterSet.
+    """
+
+    role = RoleFilter()
 
 
 class StatusFilter(django_filters.ModelMultipleChoiceFilter):

@@ -5,6 +5,7 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Site, Rack, Device, RackReservation
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, Cluster
 from . import filters, forms, tables
 from .models import Tenant, TenantGroup
@@ -16,9 +17,7 @@ from .models import Tenant, TenantGroup
 
 
 class TenantGroupListView(generic.ObjectListView):
-    queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
-    )
+    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "group"))
     filterset = filters.TenantGroupFilterSet
     table = tables.TenantGroupTable
 
@@ -30,7 +29,7 @@ class TenantGroupView(generic.ObjectView):
 
         # Tenants
         tenants = Tenant.objects.restrict(request.user, "view").filter(
-            group__in=instance.get_descendants(include_self=True)
+            group__in=instance.descendants(include_self=True)
         )
 
         tenant_table = tables.TenantTable(tenants)
@@ -63,9 +62,7 @@ class TenantGroupBulkImportView(generic.BulkImportView):
 
 
 class TenantGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
-    )
+    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "group"))
     table = tables.TenantGroupTable
 
 

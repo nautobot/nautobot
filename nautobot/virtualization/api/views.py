@@ -36,20 +36,20 @@ class VirtualizationRootView(APIRootView):
 
 
 class ClusterTypeViewSet(NautobotModelViewSet):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     serializer_class = serializers.ClusterTypeSerializer
     filterset_class = filters.ClusterTypeFilterSet
 
 
 class ClusterGroupViewSet(NautobotModelViewSet):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     serializer_class = serializers.ClusterGroupSerializer
     filterset_class = filters.ClusterGroupFilterSet
 
 
 class ClusterViewSet(NautobotModelViewSet):
     queryset = (
-        Cluster.objects.select_related("type", "group", "tenant", "site")
+        Cluster.objects.select_related("cluster_type", "cluster_group", "tenant", "site")
         .prefetch_related("tags")
         .annotate(
             device_count=count_related(Device, "cluster"),

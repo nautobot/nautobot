@@ -45,7 +45,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -65,7 +64,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -74,6 +72,8 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleRequiredRoleModelSerializerMixin,
+    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
@@ -87,7 +87,7 @@ from nautobot.ipam.api.nested_serializers import (
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.api import get_serializer_for_model, TreeModelSerializerMixin
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
@@ -103,7 +103,6 @@ from .nested_serializers import (  # noqa: F401
     NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
     NestedDeviceRedundancyGroupSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
     NestedFrontPortSerializer,
@@ -123,7 +122,6 @@ from .nested_serializers import (  # noqa: F401
     NestedPowerPortTemplateSerializer,
     NestedRackGroupSerializer,
     NestedRackReservationSerializer,
-    NestedRackRoleSerializer,
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
@@ -201,11 +199,10 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
 #
 
 
-class RegionSerializer(NautobotModelSerializer):
+class RegionSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
     parent = NestedRegionSerializer(required=False, allow_null=True)
     site_count = serializers.IntegerField(read_only=True)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = Region
@@ -216,7 +213,7 @@ class RegionSerializer(NautobotModelSerializer):
             "parent",
             "description",
             "site_count",
-            "_depth",
+            "tree_depth",
         ]
 
 
@@ -267,7 +264,7 @@ class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
 #
 
 
-class LocationTypeSerializer(NautobotModelSerializer):
+class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
     parent = NestedLocationTypeSerializer(required=False, allow_null=True, default=None)
     content_types = ContentTypeField(
@@ -275,12 +272,6 @@ class LocationTypeSerializer(NautobotModelSerializer):
         required=False,
         many=True,
     )
-    tree_depth = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_tree_depth(self, obj):
-        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
-        return getattr(obj, "tree_depth", None)
 
     class Meta:
         model = LocationType
@@ -296,18 +287,21 @@ class LocationTypeSerializer(NautobotModelSerializer):
         ]
 
 
-class LocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class LocationSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, TreeModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     location_type = NestedLocationTypeSerializer()
     parent = NestedLocationSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
-    tree_depth = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_tree_depth(self, obj):
-        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
-        return getattr(obj, "tree_depth", None)
+    time_zone = TimeZoneSerializerField(required=False, allow_null=True)
+    circuit_count = serializers.IntegerField(read_only=True)
+    device_count = serializers.IntegerField(read_only=True)
+    prefix_count = serializers.IntegerField(read_only=True)
+    rack_count = serializers.IntegerField(read_only=True)
+    virtualmachine_count = serializers.IntegerField(read_only=True)
+    vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Location
@@ -322,6 +316,24 @@ class LocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, St
             "tenant",
             "description",
             "tree_depth",
+            "facility",
+            "asn",
+            "time_zone",
+            "description",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "comments",
+            "circuit_count",
+            "device_count",
+            "prefix_count",
+            "rack_count",
+            "virtualmachine_count",
+            "vlan_count",
         ]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
@@ -342,13 +354,12 @@ class LocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, St
 #
 
 
-class RackGroupSerializer(NautobotModelSerializer):
+class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = RackGroup
@@ -361,7 +372,7 @@ class RackGroupSerializer(NautobotModelSerializer):
             "parent",
             "description",
             "rack_count",
-            "_depth",
+            "tree_depth",
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
         # prevents slug from being interpreted as a required field.
@@ -381,29 +392,14 @@ class RackGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class RackRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
-    rack_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "rack_count",
-        ]
-
-
-class RackSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class RackSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
     group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = NestedRackRoleSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -716,25 +712,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 #
 
 
-class DeviceRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-            "device_count",
-            "virtualmachine_count",
-        ]
-
-
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
@@ -756,10 +733,14 @@ class PlatformSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class DeviceSerializer(
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+    StatusModelSerializerMixin,
+    RoleRequiredRoleModelSerializerMixin,
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
-    device_role = NestedDeviceRoleSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer()
@@ -774,7 +755,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
     device_redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
-    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Device
@@ -782,7 +763,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
             "url",
             "name",
             "device_type",
-            "device_role",
+            "role",
             "tenant",
             "platform",
             "serial",
@@ -805,8 +786,8 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
             "device_redundancy_group",
             "device_redundancy_group_priority",
             "comments",
-            "local_context_schema",
-            "local_context_data",
+            "local_config_context_schema",
+            "local_config_context_data",
         ]
         validators = []
 
@@ -1181,13 +1162,12 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerial
 #
 
 
-class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
     device = NestedDeviceSerializer()
     # Provide a default value to satisfy UniqueTogetherValidator
     parent = serializers.PrimaryKeyRelatedField(queryset=InventoryItem.objects.all(), allow_null=True, default=None)
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True, default=None)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = InventoryItem
@@ -1203,7 +1183,7 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
             "asset_tag",
             "discovered",
             "description",
-            "_depth",
+            "tree_depth",
         ]
 
 

@@ -376,7 +376,7 @@ tenant_group = ObjectVar(
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region',
+        'region': '$region',
         'tenant_group_id': '$tenant_group'
     }
 )
@@ -751,10 +751,11 @@ This job prompts the user for three variables:
 These variables are presented as a web form to be completed by the user. Once submitted, the job's `run()` method is called to create the appropriate objects, and it returns simple CSV output to the user summarizing the created objects.
 
 ```python
+from django.contrib.contenttypes.models import ContentType
 from django.utils.text import slugify
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import Status
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Role, Status
 from nautobot.extras.jobs import *
 
 
@@ -796,14 +797,16 @@ class NewBranch(Job):
         self.log_success(obj=site, message="Created new site")
 
         # Create access switches
-        switch_role = DeviceRole.objects.get(name='Access Switch')
+        device_ct = ContentType.objects.get_for_model(Device)
+        switch_role = Role.objects.get(name='Access Switch')
+        switch_role.content_types.add(device_ct)
         for i in range(1, data['switch_count'] + 1):
             switch = Device(
                 device_type=data['switch_model'],
                 name=f'{site.slug}-switch{i}',
                 site=site,
                 status=STATUS_PLANNED,
-                device_role=switch_role
+                role=switch_role
             )
             switch.validated_save()
             self.log_success(obj=switch, message="Created new switch")

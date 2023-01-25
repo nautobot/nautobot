@@ -28,7 +28,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -48,14 +47,13 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
+from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -89,7 +87,7 @@ class Mixins:
             peer_device = Device.objects.create(
                 site=Site.objects.first(),
                 device_type=DeviceType.objects.first(),
-                device_role=DeviceRole.objects.first(),
+                role=Role.objects.get_for_model(Device).first(),
                 name="Peer Device",
             )
             if self.peer_termination_type is None:
@@ -125,9 +123,9 @@ class Mixins:
             cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
             cls.manufacturer = cls.device_type.manufacturer
             cls.site = Site.objects.first()
-            cls.device_role = DeviceRole.objects.first()
+            cls.device_role = Role.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+                device_type=cls.device_type, role=cls.device_role, name="Device 1", site=cls.site
             )
 
     class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
@@ -144,7 +142,7 @@ class Mixins:
 
 class RegionTest(APIViewTestCases.APIViewTestCase):
     model = Region
-    brief_fields = ["_depth", "display", "id", "name", "site_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "site_count", "slug", "tree_depth", "url"]
     create_data = [
         {
             "name": "Region 4",
@@ -359,20 +357,20 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Campus")
-        lt2 = LocationType.objects.get(name="Building")
-        lt3 = LocationType.objects.get(name="Floor")
-        lt4 = LocationType.objects.get(name="Room")
+        cls.lt1 = LocationType.objects.get(name="Campus")
+        cls.lt2 = LocationType.objects.get(name="Building")
+        cls.lt3 = LocationType.objects.get(name="Floor")
+        cls.lt4 = LocationType.objects.get(name="Room")
 
         status_active = Status.objects.get(slug="active")
-        site = Site.objects.first()
+        cls.site = Site.objects.first()
         tenant = Tenant.objects.create(name="Test Tenant")
 
-        loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
-        loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
-        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
+        loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=status_active, site=cls.site)
+        loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=status_active, parent=loc1)
+        loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=status_active, parent=loc2)
         loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=status_active, parent=loc3, tenant=tenant
         )
         for loc in [loc1, loc2, loc3, loc4]:
             loc.validated_save()
@@ -388,20 +386,20 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Downtown Durham",
-                "location_type": lt1.pk,
-                "site": site.pk,
+                "location_type": cls.lt1.pk,
+                "site": cls.site.pk,
                 "status": "active",
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
-                "location_type": lt2.pk,
+                "location_type": cls.lt2.pk,
                 "parent": loc1.pk,
                 "status": "active",
             },
             {
                 "name": "RTP4E-2",
-                "location_type": lt3.pk,
+                "location_type": cls.lt3.pk,
                 "parent": loc2.pk,
                 "status": "active",
                 "description": "Second floor of RTP4E",
@@ -416,10 +414,112 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": "planned",
         }
 
+    def test_time_zone_field_post_null(self):
+        """
+        Test allow_null to time_zone field on locaton.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": None,
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with null time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        print(response.json())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], None)
+
+    def test_time_zone_field_post_blank(self):
+        """
+        Test disallowed blank time_zone field on location.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": "",
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with blank time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+
+    def test_time_zone_field_post_valid(self):
+        """
+        Test valid time_zone field on location.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        time_zone = "UTC"
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": time_zone,
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with valid time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], time_zone)
+
+    def test_time_zone_field_post_invalid(self):
+        """
+        Test invalid time_zone field on location.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        time_zone = "IDONOTEXIST"
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": time_zone,
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with invalid time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["time_zone"],
+            ["A valid timezone is required."],
+        )
+
+    def test_time_zone_field_get_blank(self):
+        """
+        Test that a location's time_zone field defaults to null.
+        """
+
+        self.add_permissions("dcim.view_location")
+        location = Location.objects.filter(time_zone="").first()
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["time_zone"], None)
+
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
-    brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "rack_count", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -564,43 +664,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RackRoleTest(APIViewTestCases.APIViewTestCase):
-    model = RackRole
-    brief_fields = ["display", "id", "name", "rack_count", "slug", "url"]
-    create_data = [
-        {
-            "name": "Rack Role 4",
-            "slug": "rack-role-4",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 5",
-            "slug": "rack-role-5",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 6",
-            "slug": "rack-role-6",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 7",
-            "color": "ffff00",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00")
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff")
-
-
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
     brief_fields = ["device_count", "display", "id", "name", "url"]
@@ -619,11 +682,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             RackGroup.objects.create(site=sites[1], name="Rack Group 2", slug="rack-group-2"),
         )
 
-        rack_roles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
-        )
-
+        rack_roles = Role.objects.get_for_model(Rack)
         statuses = Status.objects.get_for_model(Rack)
 
         Rack.objects.create(
@@ -1179,36 +1238,6 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
-    model = DeviceRole
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
-    create_data = [
-        {
-            "name": "Device Role 4",
-            "slug": "device-role-4",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 5",
-            "slug": "device-role-5",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 6",
-            "slug": "device-role-6",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 7",
-            "color": "ffff00",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
     brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
@@ -1258,8 +1287,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
         )
 
         secrets_groups = (
@@ -1268,40 +1297,40 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
 
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 1",
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"A": 1},
+            local_config_context_data={"A": 1},
         )
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 2",
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"B": 2},
+            local_config_context_data={"B": 2},
         )
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 3",
             site=sites[0],
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"C": 3},
+            local_config_context_data={"C": 3},
         )
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
@@ -1315,7 +1344,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 4",
                 "site": sites[1].pk,
@@ -1325,7 +1354,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 5",
                 "site": sites[1].pk,
@@ -1335,7 +1364,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 6",
                 "site": sites[1].pk,
@@ -1374,7 +1403,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         device = Device.objects.first()
         data = {
             "device_type": device.device_type.pk,
-            "device_role": device.device_role.pk,
+            "role": device.role.pk,
             "site": device.site.pk,
             "name": device.name,
         }
@@ -1385,7 +1414,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a device with local context that conforms to that schema
@@ -1396,15 +1425,15 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.add_permissions("dcim.change_device")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
 
-    def test_local_context_schema_schema_validation_fails(self):
+    def test_local_config_context_schema_schema_validation_fails(self):
         """
         Given a config context schema
         And a device with local context that *does not* conform to that schema
@@ -1416,7 +1445,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         # Add object-level permission
         self.add_permissions("dcim.change_device")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
@@ -1609,15 +1638,9 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
         super().setUpTestData()
 
         cls.devices = (
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
-            ),
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 2", site=cls.site
-            ),
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 3", site=cls.site
-            ),
+            Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 1", site=cls.site),
+            Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 2", site=cls.site),
+            Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 3", site=cls.site),
         )
 
         cls.virtual_chassis = VirtualChassis.objects.create(
@@ -2004,25 +2027,25 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         devices = (
             Device.objects.create(
                 device_type=device_types[0],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 1",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 2",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 3",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 4",
                 site=cls.site,
             ),
@@ -2053,7 +2076,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
 
 class InventoryItemTest(Mixins.BaseComponentTestMixin):
     model = InventoryItem
-    brief_fields = ["_depth", "device", "display", "id", "name", "url"]
+    brief_fields = ["device", "display", "id", "name", "tree_depth", "url"]
     choices_fields = []
 
     @classmethod
@@ -2102,13 +2125,13 @@ class CableTest(Mixins.BaseComponentTestMixin):
         devices = (
             Device.objects.create(
                 device_type=cls.device_type,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 2",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=cls.device_type,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 3",
                 site=cls.site,
             ),
@@ -2189,19 +2212,19 @@ class ConnectedDeviceTest(APITestCase):
 
         site = Site.objects.first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
 
         self.device1 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="TestDevice1",
             site=site,
         )
         device2 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="TestDevice2",
             site=site,
         )
@@ -2227,79 +2250,79 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 4",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 5",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 6",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 7",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 8",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 9",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 10",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 11",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 12",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
         )
@@ -2397,7 +2420,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})
         payload = {
             "device_type": str(master_device.device_type.id),
-            "device_role": str(master_device.device_role.id),
+            "role": str(master_device.role.id),
             "site": str(master_device.site.id),
             "status": "active",
             "virtual_chassis": None,
@@ -2461,7 +2484,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         rackgroup = RackGroup.objects.create(site=site, name="Rack Group 1", slug="rack-group-1")
-        rackrole = RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
+        rackrole = Role.objects.get_for_model(Rack).first()
 
         racks = (
             Rack.objects.create(site=site, group=rackgroup, role=rackrole, name="Rack 1"),

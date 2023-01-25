@@ -4,11 +4,13 @@ import sys
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
-from rest_framework import status
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers, status
 from rest_framework.utils import formatting
 
-from nautobot.core.api.exceptions import SerializerNotFound
-from .utils import dynamic_import
+from nautobot.core.api import exceptions
+from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.utilities import utils
 
 
 def get_serializer_for_model(model, prefix=""):
@@ -23,9 +25,11 @@ def get_serializer_for_model(model, prefix=""):
     if app_name not in settings.PLUGINS:
         serializer_name = f"nautobot.{serializer_name}"
     try:
-        return dynamic_import(serializer_name)
+        return utils.dynamic_import(serializer_name)
     except AttributeError:
-        raise SerializerNotFound(f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'")
+        raise exceptions.SerializerNotFound(
+            f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
+        )
 
 
 def is_api_request(request):
@@ -70,3 +74,14 @@ def rest_api_server_error(request, *args, **kwargs):
         "python_version": platform.python_version(),
     }
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TreeModelSerializerMixin(BaseModelSerializer):
+    """Add a `tree_depth` field to model serializers based on django-tree-queries."""
+
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)

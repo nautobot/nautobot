@@ -1,7 +1,5 @@
-from django.db.models import Aggregate, JSONField
-
 from django.db import NotSupportedError
-from django.db.models import Func
+from django.db.models import Aggregate, Func, JSONField
 
 
 class CollateAsChar(Func):

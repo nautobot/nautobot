@@ -48,12 +48,6 @@ W006 = Warning(
 )
 
 
-class E006(Error):
-    msg = "RQ_QUEUES must define at least the minimum set of required queues"
-    id = "nautobot.core.E006"
-    obj = settings
-
-
 @register(Tags.caches)
 def check_cache_timeout(app_configs, **kwargs):
     if settings.CACHEOPS_DEFAULTS.get("timeout") == 0:
@@ -91,23 +85,6 @@ def check_storage_config_and_backend(app_configs, **kwargs):
     if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
         return [W005]
     return []
-
-
-@register(Tags.compatibility)
-def check_minimum_rq_queues(app_configs, **kwargs):
-    errors = []
-    minimum_queues = ["default", "webhooks", "check_releases", "custom_fields"]
-    for queue in minimum_queues:
-        if settings.RQ_QUEUES and not settings.RQ_QUEUES.get(queue):
-            errors.append(
-                E006(
-                    E006.msg,
-                    hint=f"RQ_QUEUES is missing the required '{queue}' queue definition",
-                    obj=E006.obj,
-                    id=E006.id,
-                )
-            )
-    return errors
 
 
 @register(Tags.compatibility)

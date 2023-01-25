@@ -2,17 +2,16 @@ import os
 import time
 
 from celery.contrib.testing.worker import start_worker
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
 from splinter.browser import Browser
 
-from nautobot.core.celery import app
-from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-
+from nautobot.core import celery
+from nautobot.utilities import testing
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -63,7 +62,7 @@ FIREFOX_PROFILE_PREFERENCES = {
 # In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?
 @override_settings(ALLOWED_HOSTS=["nautobot.example.com", SELENIUM_HOST, SELENIUM_HOST.split(".")[0]])
 @tag("integration")
-class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
+class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     """
     Base test case for Splinter Selenium integration testing with custom helper methods.
 
@@ -90,9 +89,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
         )
 
         if cls.requires_celery:
-            app.loader.import_module("celery.contrib.testing.tasks")
+            celery.app.loader.import_module("celery.contrib.testing.tasks")
             cls.clear_worker()
-            cls.celery_worker = start_worker(app, concurrency=1)
+            cls.celery_worker = start_worker(celery.app, concurrency=1)
             cls.celery_worker.__enter__()
 
     def setUp(self):
@@ -146,7 +145,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
     @staticmethod
     def clear_worker():
         """Purge any running or queued tasks"""
-        app.control.purge()
+        celery.app.control.purge()
 
     @classmethod
     def wait_on_active_tasks(cls):

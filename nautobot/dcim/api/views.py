@@ -30,7 +30,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -50,7 +49,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -137,7 +135,7 @@ class PassThroughPortMixin:
 
 
 class RegionViewSet(NautobotModelViewSet):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     serializer_class = serializers.RegionSerializer
     filterset_class = filters.RegionFilterSet
 
@@ -181,7 +179,18 @@ class LocationTypeViewSet(NautobotModelViewSet):
 
 
 class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    queryset = Location.objects.select_related("location_type", "parent", "site", "status")
+    queryset = (
+        Location.objects.select_related("location_type", "parent", "site", "status", "tenant")
+        .prefetch_related("tags")
+        .annotate(
+            device_count=count_related(Device, "location"),
+            rack_count=count_related(Rack, "location"),
+            prefix_count=count_related(Prefix, "location"),
+            vlan_count=count_related(VLAN, "location"),
+            circuit_count=count_related(Circuit, "terminations__location"),
+            virtualmachine_count=count_related(VirtualMachine, "cluster__location"),
+        )
+    )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
 
@@ -192,22 +201,9 @@ class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class RackGroupViewSet(NautobotModelViewSet):
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    ).select_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleViewSet(NautobotModelViewSet):
-    queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
-    serializer_class = serializers.RackRoleSerializer
-    filterset_class = filters.RackRoleFilterSet
 
 
 #
@@ -379,20 +375,6 @@ class DeviceBayTemplateViewSet(NautobotModelViewSet):
 
 
 #
-# Device roles
-#
-
-
-class DeviceRoleViewSet(NautobotModelViewSet):
-    queryset = DeviceRole.objects.annotate(
-        device_count=count_related(Device, "device_role"),
-        virtualmachine_count=count_related(VirtualMachine, "role"),
-    )
-    serializer_class = serializers.DeviceRoleSerializer
-    filterset_class = filters.DeviceRoleFilterSet
-
-
-#
 # Platforms
 #
 
@@ -414,7 +396,7 @@ class PlatformViewSet(NautobotModelViewSet):
 class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
     queryset = Device.objects.select_related(
         "device_type__manufacturer",
-        "device_role",
+        "role",
         "tenant",
         "platform",
         "site",

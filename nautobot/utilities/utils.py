@@ -1,14 +1,13 @@
+from collections import OrderedDict, namedtuple
 import copy
 import datetime
+from decimal import Decimal
 import inspect
+from itertools import count, groupby
 import json
 import re
 import uuid
-from collections import OrderedDict, namedtuple
-from itertools import count, groupby
-from decimal import Decimal
 
-import django_filters
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -23,20 +22,13 @@ from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 from django.utils.tree import Node
-from django_filters import (
-    BooleanFilter,
-    DateFilter,
-    DateTimeFilter,
-    filters,
-    TimeFilter,
-    NumberFilter,
-)
+import django_filters
+from django_filters import BooleanFilter, DateFilter, DateTimeFilter, NumberFilter, TimeFilter, filters
 from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
-from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
-from nautobot.utilities.exceptions import FilterSetFieldNotFound
+from nautobot.dcim import choices
+from nautobot.utilities import constants, exceptions
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -319,17 +311,17 @@ def to_meters(length, unit):
     if length < 0:
         raise ValueError("Length must be a positive integer")
 
-    valid_units = CableLengthUnitChoices.values()
+    valid_units = choices.CableLengthUnitChoices.values()
     if unit not in valid_units:
         raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
-    if unit == CableLengthUnitChoices.UNIT_METER:
+    if unit == choices.CableLengthUnitChoices.UNIT_METER:
         return length
-    if unit == CableLengthUnitChoices.UNIT_CENTIMETER:
+    if unit == choices.CableLengthUnitChoices.UNIT_CENTIMETER:
         return length / 100
-    if unit == CableLengthUnitChoices.UNIT_FOOT:
+    if unit == choices.CableLengthUnitChoices.UNIT_FOOT:
         return length * Decimal("0.3048")
-    if unit == CableLengthUnitChoices.UNIT_INCH:
+    if unit == choices.CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
     raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
@@ -546,7 +538,7 @@ def copy_safe_request(request):
     """
     meta = {
         k: request.META[k]
-        for k in HTTP_REQUEST_META_SAFE_COPY
+        for k in constants.HTTP_REQUEST_META_SAFE_COPY
         if k in request.META and isinstance(request.META[k], str)
     }
 
@@ -815,7 +807,7 @@ def get_all_lookup_expr_for_field(model, field_name):
     filterset = get_filterset_for_model(model)().filters
 
     if not filterset.get(field_name):
-        raise FilterSetFieldNotFound("field_name not found")
+        raise exceptions.FilterSetFieldNotFound("field_name not found")
 
     if field_name.startswith("has_"):
         return [{"id": field_name, "name": "exact"}]
@@ -838,7 +830,7 @@ def get_all_lookup_expr_for_field(model, field_name):
 def get_filterset_field(filterset_class, field_name):
     field = filterset_class().filters.get(field_name)
     if field is None:
-        raise FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+        raise exceptions.FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
     return field
 
 
@@ -847,22 +839,24 @@ def get_filterset_parameter_form_field(model, parameter):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
+    from nautobot.dcim.models import Device
     from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
-    from nautobot.extras.models import Status, Tag
-    from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
+    from nautobot.extras.models import ConfigContext, Role, Status, Tag
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.utilities.forms import (
         BOOLEAN_CHOICES,
         DatePicker,
         DateTimePicker,
         DynamicModelMultipleChoiceField,
+        MultipleContentTypeField,
         StaticSelect2,
         StaticSelect2Multiple,
         TimePicker,
-        MultipleContentTypeField,
     )
     from nautobot.utilities.forms.widgets import (
         MultiValueCharInput,
     )
+    from nautobot.virtualization.models import VirtualMachine
 
     filterset_class = get_filterset_for_model(model)
     field = get_filterset_field(filterset_class, parameter)
@@ -877,8 +871,11 @@ def get_filterset_parameter_form_field(model, parameter):
             "queryset": related_model.objects.all(),
             "to_field_name": field.extra.get("to_field_name", "id"),
         }
+        # ConfigContext requires content_type set to Device and VirtualMachine
+        if model == ConfigContext:
+            form_attr["query_params"] = {"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]}
         # Status and Tag api requires content_type, to limit result to only related content_types
-        if related_model in [Status, Tag]:
+        elif related_model in [Role, Status, Tag]:
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
@@ -890,7 +887,11 @@ def get_filterset_parameter_form_field(model, parameter):
             # `MultipleContentTypeField` employs `registry["model features"][feature]`, which may
             # result in an error if `feature` is not found in the `registry["model features"]` dict.
             # In this case use queryset
-            queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
+            queryset_map = {
+                "tags": TaggableClassesQuery,
+                "job hooks": ChangeLoggedModelsQuery,
+                "roles": RoleModelsQuery,
+            }
             form_field = MultipleContentTypeField(
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
@@ -1007,7 +1008,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             # because the fields that were not discovered are still necessary.
             try:
                 _is_single_choice_field = is_single_choice_field(filterset_class, field)
-            except FilterSetFieldNotFound:
+            except exceptions.FilterSetFieldNotFound:
                 _is_single_choice_field = False
 
             final_filter_params[field] = (

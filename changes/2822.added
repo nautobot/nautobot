@@ -1,0 +1,1 @@
+Collapsed DeviceRole, RackRole, IPAM Role model and IPAddressRoleChoices into a single generic Role model.

@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
+from nautobot.utilities.api import TreeModelSerializerMixin
 
 __all__ = [
     "NestedCableSerializer",
@@ -12,7 +12,6 @@ __all__ = [
     "NestedConsoleServerPortTemplateSerializer",
     "NestedDeviceBaySerializer",
     "NestedDeviceBayTemplateSerializer",
-    "NestedDeviceRoleSerializer",
     "NestedDeviceSerializer",
     "NestedDeviceTypeSerializer",
     "NestedFrontPortSerializer",
@@ -32,7 +31,6 @@ __all__ = [
     "NestedPowerPortTemplateSerializer",
     "NestedRackGroupSerializer",
     "NestedRackReservationSerializer",
-    "NestedRackRoleSerializer",
     "NestedRackSerializer",
     "NestedRearPortSerializer",
     "NestedRearPortTemplateSerializer",
@@ -47,14 +45,13 @@ __all__ = [
 #
 
 
-class NestedRegionSerializer(WritableNestedSerializer):
+class NestedRegionSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
     site_count = serializers.IntegerField(read_only=True)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = models.Region
-        fields = ["id", "url", "name", "slug", "site_count", "_depth"]
+        fields = ["id", "url", "name", "slug", "site_count", "tree_depth"]
 
 
 class NestedSiteSerializer(WritableNestedSerializer):
@@ -70,28 +67,16 @@ class NestedSiteSerializer(WritableNestedSerializer):
 #
 
 
-class NestedLocationTypeSerializer(WritableNestedSerializer):
+class NestedLocationTypeSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
-    tree_depth = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_tree_depth(self, obj):
-        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
-        return getattr(obj, "tree_depth", None)
 
     class Meta:
         model = models.LocationType
         fields = ["id", "url", "name", "slug", "tree_depth"]
 
 
-class NestedLocationSerializer(WritableNestedSerializer):
+class NestedLocationSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
-    tree_depth = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_tree_depth(self, obj):
-        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
-        return getattr(obj, "tree_depth", None)
 
     class Meta:
         model = models.Location
@@ -103,23 +88,13 @@ class NestedLocationSerializer(WritableNestedSerializer):
 #
 
 
-class NestedRackGroupSerializer(WritableNestedSerializer):
+class NestedRackGroupSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
     rack_count = serializers.IntegerField(read_only=True)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = models.RackGroup
-        fields = ["id", "url", "name", "slug", "rack_count", "_depth"]
-
-
-class NestedRackRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
-    rack_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.RackRole
-        fields = ["id", "url", "name", "slug", "rack_count"]
+        fields = ["id", "url", "name", "slug", "rack_count", "tree_depth"]
 
 
 class NestedRackSerializer(WritableNestedSerializer):
@@ -243,16 +218,6 @@ class NestedDeviceBayTemplateSerializer(WritableNestedSerializer):
 #
 
 
-class NestedDeviceRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.DeviceRole
-        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count"]
-
-
 class NestedPlatformSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     device_count = serializers.IntegerField(read_only=True)
@@ -343,14 +308,13 @@ class NestedDeviceBaySerializer(WritableNestedSerializer):
         fields = ["id", "url", "device", "name"]
 
 
-class NestedInventoryItemSerializer(WritableNestedSerializer):
+class NestedInventoryItemSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
     device = NestedDeviceSerializer(read_only=True)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = models.InventoryItem
-        fields = ["id", "url", "device", "name", "_depth"]
+        fields = ["id", "url", "device", "name", "tree_depth"]
 
 
 #

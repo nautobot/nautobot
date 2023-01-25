@@ -1,0 +1,1 @@
+Changed REST framework allowed versions logic to support 1.2-1.5 and 2.0+.

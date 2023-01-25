@@ -1,26 +1,23 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.dcim.models import Rack, RackGroup, RackReservation, RackRole
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.dcim.models import Rack, RackGroup, RackReservation
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     ButtonsColumn,
-    ColorColumn,
-    ColoredLabelColumn,
     LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
-from .template_code import MPTT_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
+from .template_code import TREE_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
 
 __all__ = (
     "RackTable",
     "RackDetailTable",
     "RackGroupTable",
     "RackReservationTable",
-    "RackRoleTable",
 )
 
 
@@ -31,7 +28,7 @@ __all__ = (
 
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")
@@ -44,43 +41,17 @@ class RackGroupTable(BaseTable):
 
 
 #
-# Rack roles
-#
-
-
-class RackRoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    rack_count = tables.Column(verbose_name="Racks")
-    color = ColorColumn()
-    actions = ButtonsColumn(RackRole)
-
-    class Meta(BaseTable.Meta):
-        model = RackRole
-        fields = ("pk", "name", "rack_count", "color", "description", "slug", "actions")
-        default_columns = (
-            "pk",
-            "name",
-            "rack_count",
-            "color",
-            "description",
-            "actions",
-        )
-
-
-#
 # Racks
 #
 
 
-class RackTable(StatusTableMixin, BaseTable):
+class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(order_by=("_name",), linkify=True)
     group = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
-    role = ColoredLabelColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
 
     class Meta(BaseTable.Meta):
@@ -118,7 +89,7 @@ class RackTable(StatusTableMixin, BaseTable):
 class RackDetailTable(RackTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"rack_id": "pk"},
+        url_params={"rack": "pk"},
         verbose_name="Devices",
     )
     get_utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Space")

@@ -16,7 +16,7 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 
-from nautobot.dcim.models import DeviceRole, Site
+from nautobot.dcim.models import Device, Site
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -25,7 +25,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, ScheduledJob, Status
+from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, Role, ScheduledJob, Status
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import (
     CeleryTestCase,
@@ -292,10 +292,12 @@ class JobTest(TransactionTestCase):
         name = "TestObjectVars"
 
         # Prepare the job data
-        d = DeviceRole.objects.create(name="role", slug="role")
+        device_ct = ContentType.objects.get_for_model(Device)
+        role = Role.objects.create(name="Device Role")
+        role.content_types.add(device_ct)
         data = {
-            "role": {"name": "role"},
-            "roles": [d.pk],
+            "role": {"name": role.name},
+            "roles": [role.pk],
         }
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False, request=self.request)
 
@@ -308,9 +310,9 @@ class JobTest(TransactionTestCase):
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-        self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
-        self.assertEqual(info_log.log_object, None)
-        self.assertEqual(info_log.message, "Role: role")
+        self.assertEqual({"role": str(role.pk), "roles": [str(role.pk)]}, job_result_data)
+        self.assertEqual(info_log.log_object, "")
+        self.assertEqual(info_log.message, f"Role: {role.name}")
         self.assertEqual(job_result.data["output"], "\nNice Roles!")
 
     def test_optional_object_var(self):
@@ -328,7 +330,7 @@ class JobTest(TransactionTestCase):
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-        self.assertEqual(info_log.log_object, None)
+        self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, "The Region if any that the user provided.")
         self.assertEqual(job_result.data["output"], "\nNice Region (or not)!")
 

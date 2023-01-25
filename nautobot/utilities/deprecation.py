@@ -7,7 +7,6 @@ import warnings
 
 from nautobot.core.settings import LOG_DEPRECATION_WARNINGS
 
-
 logger = logging.getLogger(__name__)
 
 

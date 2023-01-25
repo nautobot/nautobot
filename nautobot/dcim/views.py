@@ -12,6 +12,7 @@ from django.forms import (
     modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.functional import cached_property
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
@@ -44,7 +45,6 @@ from .models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -65,7 +65,6 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -142,7 +141,7 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
 
 class RegionListView(generic.ObjectListView):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     filterset = filters.RegionFilterSet
     filterset_form = forms.RegionFilterForm
     table = tables.RegionTable
@@ -156,7 +155,7 @@ class RegionView(generic.ObjectView):
         # Sites
         sites = (
             Site.objects.restrict(request.user, "view")
-            .filter(region__in=instance.get_descendants(include_self=True))
+            .filter(region__in=instance.descendants(include_self=True))
             .select_related("region", "tenant")
             .prefetch_related("parent")
         )
@@ -190,7 +189,7 @@ class RegionBulkImportView(generic.BulkImportView):
 
 
 class RegionBulkDeleteView(generic.BulkDeleteView):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     filterset = filters.RegionFilterSet
     table = tables.RegionTable
 
@@ -220,9 +219,8 @@ class SiteView(generic.ObjectView):
             "vm_count": VirtualMachine.objects.restrict(request.user, "view").filter(cluster__site=instance).count(),
         }
         rack_groups = (
-            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
-            .restrict(request.user, "view")
-            .filter(site=instance)
+            RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).restrict(request.user, "view")
+            # .filter(site=instance)
         )
         locations = (
             Location.objects.restrict(request.user, "view")
@@ -371,7 +369,7 @@ class LocationView(generic.ObjectView):
             .count(),
         }
         rack_groups = (
-            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
+            RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
             .restrict(request.user, "view")
             .filter(location__in=related_locations)
         )
@@ -431,9 +429,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    )
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -447,7 +443,7 @@ class RackGroupView(generic.ObjectView):
         # Racks
         racks = (
             Rack.objects.restrict(request.user, "view")
-            .filter(group__in=instance.get_descendants(include_self=True))
+            .filter(group__in=instance.descendants(include_self=True))
             .select_related("role", "site", "tenant")
         )
 
@@ -481,66 +477,9 @@ class RackGroupBulkImportView(generic.BulkImportView):
 
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    ).select_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site")
     filterset = filters.RackGroupFilterSet
     table = tables.RackGroupTable
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleListView(generic.ObjectListView):
-    queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
-    filterset = filters.RackRoleFilterSet
-    table = tables.RackRoleTable
-
-
-class RackRoleView(generic.ObjectView):
-    queryset = RackRole.objects.all()
-
-    def get_extra_context(self, request, instance):
-
-        # Racks
-        racks = (
-            Rack.objects.restrict(request.user, "view").filter(role=instance).select_related("group", "site", "tenant")
-        )
-
-        rack_table = tables.RackTable(racks)
-        rack_table.columns.hide("role")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(rack_table)
-
-        return {
-            "rack_table": rack_table,
-        }
-
-
-class RackRoleEditView(generic.ObjectEditView):
-    queryset = RackRole.objects.all()
-    model_form = forms.RackRoleForm
-
-
-class RackRoleDeleteView(generic.ObjectDeleteView):
-    queryset = RackRole.objects.all()
-
-
-class RackRoleBulkImportView(generic.BulkImportView):
-    queryset = RackRole.objects.all()
-    model_form = forms.RackRoleCSVForm
-    table = tables.RackRoleTable
-
-
-class RackRoleBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
-    table = tables.RackRoleTable
 
 
 #
@@ -761,7 +700,7 @@ class ManufacturerView(generic.ObjectView):
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(device_type__manufacturer=instance)
-            .select_related("status", "site", "tenant", "device_role", "rack", "device_type")
+            .select_related("status", "site", "tenant", "role", "rack", "device_type")
         )
 
         device_table = tables.DeviceTable(devices)
@@ -1217,66 +1156,6 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 #
-# Device roles
-#
-
-
-class DeviceRoleListView(generic.ObjectListView):
-    queryset = DeviceRole.objects.annotate(
-        device_count=count_related(Device, "device_role"),
-        vm_count=count_related(VirtualMachine, "role"),
-    )
-    filterset = filters.DeviceRoleFilterSet
-    table = tables.DeviceRoleTable
-
-
-class DeviceRoleView(generic.ObjectView):
-    queryset = DeviceRole.objects.all()
-
-    def get_extra_context(self, request, instance):
-
-        # Devices
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .filter(device_role=instance)
-            .select_related("status", "site", "tenant", "rack", "device_type")
-        )
-
-        device_table = tables.DeviceTable(devices)
-        device_table.columns.hide("device_role")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        return {
-            "device_table": device_table,
-        }
-
-
-class DeviceRoleEditView(generic.ObjectEditView):
-    queryset = DeviceRole.objects.all()
-    model_form = forms.DeviceRoleForm
-
-
-class DeviceRoleDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceRole.objects.all()
-
-
-class DeviceRoleBulkImportView(generic.BulkImportView):
-    queryset = DeviceRole.objects.all()
-    model_form = forms.DeviceRoleCSVForm
-    table = tables.DeviceRoleTable
-
-
-class DeviceRoleBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceRole.objects.all()
-    table = tables.DeviceRoleTable
-
-
-#
 # Platforms
 #
 
@@ -1299,7 +1178,7 @@ class PlatformView(generic.ObjectView):
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(platform=instance)
-            .select_related("status", "site", "tenant", "rack", "device_type", "device_role")
+            .select_related("status", "site", "tenant", "rack", "device_type", "role")
         )
 
         device_table = tables.DeviceTable(devices)
@@ -1353,7 +1232,7 @@ class DeviceView(generic.ObjectView):
         "site__region",
         "rack__group",
         "tenant__group",
-        "device_role",
+        "role",
         "platform",
         "primary_ip4",
         "primary_ip6",
@@ -1613,8 +1492,14 @@ class DeviceConfigView(generic.ObjectView):
 
 
 class DeviceConfigContextView(ObjectConfigContextView):
-    queryset = Device.objects.annotate_config_context_data()
     base_template = "dcim/device/base.html"
+
+    @cached_property
+    def queryset(self):  # pylint: disable=method-hidden
+        """
+        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
+        """
+        return Device.objects.annotate_config_context_data()
 
 
 class DeviceChangeLogView(ObjectChangeLogView):
@@ -1662,7 +1547,7 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
 
 class DeviceBulkEditView(generic.BulkEditView):
     queryset = Device.objects.select_related(
-        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
+        "tenant", "site", "rack", "role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -1670,7 +1555,7 @@ class DeviceBulkEditView(generic.BulkEditView):
 
 
 class DeviceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Device.objects.select_related("tenant", "site", "rack", "device_role", "device_type__manufacturer")
+    queryset = Device.objects.select_related("tenant", "site", "rack", "role", "device_type__manufacturer")
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
 

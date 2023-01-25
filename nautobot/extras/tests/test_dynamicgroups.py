@@ -10,7 +10,6 @@ from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Location,
@@ -22,10 +21,10 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
+from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.forms.fields import MultiValueCharField
-from nautobot.utilities.forms.widgets import MultiValueCharInput
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.utilities.forms.widgets import APISelectMultiple, MultiValueCharInput
 from nautobot.utilities.testing import TestCase
 
 
@@ -49,7 +48,7 @@ class DynamicGroupTestBase(TestCase):
             model="device Type 1",
             slug="device-type-1",
         )
-        cls.device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        cls.device_role = Role.objects.get_for_model(Device).first()
         cls.status_active = Status.objects.get_for_model(Device).get(slug="active")
         cls.status_planned = Status.objects.get_for_model(Device).get(slug="planned")
         cls.status_staged = Status.objects.get_for_model(Device).get(slug="staged")
@@ -58,14 +57,14 @@ class DynamicGroupTestBase(TestCase):
             Device.objects.create(
                 name="device-site-1",
                 status=cls.status_active,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[0],
             ),
             Device.objects.create(
                 name="device-site-2",
                 status=cls.status_active,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 serial="abc123",
                 site=cls.sites[1],
@@ -73,14 +72,14 @@ class DynamicGroupTestBase(TestCase):
             Device.objects.create(
                 name="device-site-3",
                 status=cls.status_planned,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[2],
             ),
             Device.objects.create(
                 name="device-site-4",
                 status=cls.status_staged,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 site=cls.sites[3],
             ),
@@ -225,7 +224,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         old_filter = group.filter
 
         # Overload the filter and validate that it is the same afterward.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         group.validated_save()
         self.assertEqual(group.filter, new_filter)
@@ -415,6 +414,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
         self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
+        # See if a DynamicModelChoiceField is properly converted to a MultiMatchModelMultipleChoiceField
+        self.assertIsInstance(fields["cluster"], MultiMatchModelMultipleChoiceField)
+        self.assertIsInstance(fields["cluster"].widget, APISelectMultiple)
 
     def test_map_filter_fields_skip_missing(self):
         """
@@ -455,8 +457,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertTrue(hasattr(filterset, filter_field.method))
         self.assertTrue(hasattr(filterset, "generate_query_" + filter_field.method))
 
-    # 2.0 TODO(jathan): This is done using `DeviceFilterSet.pass_through_ports` at this time and
-    # should be revised as filter fields are vetted.
     def test_filter_method_generate_query(self):
         """
         Test that a filter with a filter method's corresponding `generate_query_{filter_method}` works as intended.
@@ -472,7 +472,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Test that the filter returns the one device to which we added front/rear ports.
         expected = ["device-site-1"]
-        filterset = group.filterset_class({"pass_through_ports": True}, Device.objects.all())
+        filterset = group.filterset_class({"has_front_ports": True, "has_rear_ports": True}, Device.objects.all())
         devices = list(filterset.qs.values_list("name", flat=True))
         self.assertEqual(expected, devices)
 
@@ -514,6 +514,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotEqual(filter_fields, {})
         self.assertNotIn("q", filter_fields)
         self.assertIn("name", filter_fields)
+        self.assertIn("rack", filter_fields)
 
     def test_generate_filter_form(self):
         """Test `DynamicGroup.generate_filter_form()`."""
@@ -553,7 +554,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filter, old_filter)
 
         # Now we'll do it using a manually crafted dict.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         self.assertEqual(group.filter, new_filter)
 
@@ -622,13 +623,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertQuerySetEqual(group_qs, device_qs)
 
         # Now do a non-multi-value filter.
-        # 2.0 TODO(jathan): When "serial" becomes a multi-value filter, this will need to be revised or removed.
-        solo_field = fs.filters["serial"]
-        solo_value = "abc123"
+        solo_field = fs.filters["has_interfaces"]
+        solo_value = False
         solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
         solo_qs = queryset.filter(solo_query)
-        serial_qs = Device.objects.filter(serial__iexact=solo_value)
-        self.assertQuerySetEqual(solo_qs, serial_qs)
+        interface_qs = Device.objects.filter(interfaces__isnull=True)
+        self.assertQuerySetEqual(solo_qs, interface_qs)
 
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
         # test a regression w/ nested slug-related values such as `DeviceFilterSet.region` which

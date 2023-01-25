@@ -10,7 +10,6 @@ from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
-from django_rq.queues import get_connection as get_rq_connection
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -23,7 +22,6 @@ from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
-from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
@@ -36,11 +34,11 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.exceptions import FilterSetFieldNotFound
 from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
     get_form_for_model,
-    FilterSetFieldNotFound,
     ensure_content_type_and_field_name_inquery_params,
 )
 from . import serializers
@@ -422,8 +420,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
-                    # 2.0 TODO: remove rq-workers-running property
-                    "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
             }
@@ -460,8 +456,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
-                # 2.0 TODO: remove rq-workers-running
-                "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }
         )

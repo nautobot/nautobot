@@ -8,20 +8,18 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import RoleModelMixin, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
-from nautobot.utilities.mptt import TreeManager
+from nautobot.utilities.fields import NaturalOrderingField, JSONArrayField
+from nautobot.utilities.tree_queries import TreeModel
 from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
@@ -31,7 +29,6 @@ __all__ = (
     "Rack",
     "RackGroup",
     "RackReservation",
-    "RackRole",
 )
 
 
@@ -48,7 +45,7 @@ __all__ = (
     "locations",
     "relationships",
 )
-class RackGroup(MPTTModel, OrganizationalModel):
+class RackGroup(TreeModel, OrganizationalModel):
     """
     Racks can be grouped as subsets within a Site or Location.
     """
@@ -64,30 +61,17 @@ class RackGroup(MPTTModel, OrganizationalModel):
         blank=True,
         null=True,
     )
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="children",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
     description = models.CharField(max_length=200, blank=True)
-
-    objects = TreeManager()
 
     csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
     class Meta:
-        ordering = ["site", "name"]
+        ordering = ("name",)
         unique_together = [
             ["site", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
-
-    class MPTTMeta:
-        order_insertion_by = ["name"]
 
     def __str__(self):
         return self.name
@@ -104,13 +88,6 @@ class RackGroup(MPTTModel, OrganizationalModel):
             self.slug,
             self.description,
         )
-
-    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
-        if object_data_exclude is None:
-            object_data_exclude = []
-        # Remove MPTT-internal fields
-        object_data_exclude += ["level", "lft", "rght", "tree_id"]
-        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
     def clean(self):
         super().clean()
@@ -147,45 +124,6 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
 @extras_features(
     "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class RackRole(OrganizationalModel):
-    """
-    Racks can be organized by functional role, similar to Devices.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "color", "description"]
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackrole", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            self.description,
-        )
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
@@ -196,7 +134,7 @@ class RackRole(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Rack(PrimaryModel, StatusModel):
+class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -233,14 +171,6 @@ class Rack(PrimaryModel, StatusModel):
         related_name="racks",
         blank=True,
         null=True,
-    )
-    role = models.ForeignKey(
-        to="dcim.RackRole",
-        on_delete=models.PROTECT,
-        related_name="racks",
-        blank=True,
-        null=True,
-        help_text="Functional role",
     )
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
@@ -314,9 +244,7 @@ class Rack(PrimaryModel, StatusModel):
         "outer_depth",
         "outer_unit",
     ]
-    dynamic_group_filter_fields = {
-        "group": "group_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
+    dynamic_group_filter_fields = {}
     dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:
@@ -455,7 +383,7 @@ class Rack(PrimaryModel, StatusModel):
 
             # Retrieve all devices installed within the rack
             queryset = (
-                Device.objects.select_related("device_type", "device_type__manufacturer", "device_role")
+                Device.objects.select_related("device_type", "device_type__manufacturer", "role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)

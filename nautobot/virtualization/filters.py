@@ -2,11 +2,12 @@ import django_filters
 from django.db.models import Q
 
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, Location, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
+    RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
 from nautobot.ipam.models import IPAddress, Service, VLAN
@@ -90,22 +91,24 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         field_name="virtual_machines",
         label="Has virtual machines",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
-        field_name="group__slug",
+    cluster_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Parent group (slug)",
     )
-    type_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_type_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
-    type = django_filters.ModelMultipleChoiceFilter(
-        field_name="type__slug",
+    cluster_type = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
         label="Cluster type (slug)",
@@ -122,6 +125,7 @@ class VirtualMachineFilterSet(
     LocalContextModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -130,23 +134,23 @@ class VirtualMachineFilterSet(
         },
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group",
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID)",
     )
     cluster_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group__slug",
+        field_name="cluster__cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Cluster group (slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type",
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
     cluster_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type__slug",
+        field_name="cluster__cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
         label="Cluster type (slug)",
@@ -182,16 +186,6 @@ class VirtualMachineFilterSet(
         field_name="cluster__location",
         to_field_name="slug",
         label="Location (slug or ID)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

@@ -14,15 +14,14 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
         """
 
-        # `device_role` for Device; `role` for VirtualMachine
-        role = getattr(obj, "device_role", None) or obj.role
+        role = obj.role
 
         # `device_type` for Device; `type` for VirtualMachine
         device_type = getattr(obj, "device_type", None)
 
         # Virtualization cluster for VirtualMachine
         cluster = getattr(obj, "cluster", None)
-        cluster_group = getattr(cluster, "group", None)
+        cluster_group = getattr(cluster, "cluster_group", None)
 
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
@@ -32,7 +31,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # Match against the directly assigned region as well as any parent regions.
         region = getattr(obj.site, "region", None)
         if region:
-            regions = region.get_ancestors(include_self=True)
+            regions = region.ancestors(include_self=True)
         else:
             regions = []
 
@@ -113,7 +112,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         }
         base_query = Q(
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
-            Q(cluster_groups=OuterRef("cluster__group")) | Q(cluster_groups=None),
+            Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
             Q(clusters=OuterRef("cluster")) | Q(clusters=None),
             Q(tenant_groups=OuterRef("tenant__group")) | Q(tenant_groups=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
@@ -121,9 +120,8 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             | Q(tags=None),
             is_active=True,
         )
-
+        base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
         if self.model._meta.model_name == "device":
-            base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add(
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
@@ -133,22 +131,18 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             region_field = "site__region"
 
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
             region_field = "cluster__site__region"
 
-        base_query.add(
-            (
-                Q(
-                    regions__tree_id=OuterRef(f"{region_field}__tree_id"),
-                    regions__level__lte=OuterRef(f"{region_field}__level"),
-                    regions__lft__lte=OuterRef(f"{region_field}__lft"),
-                    regions__rght__gte=OuterRef(f"{region_field}__rght"),
-                )
-                | Q(regions=None)
-            ),
-            Q.AND,
-        )
+        # Avoid circular import error
+        from nautobot.dcim.models import Region
+
+        # Query for regions=(None OR site__region OR site__region__parent OR site__region__parent__parent OR ...)
+        region_query = Q(regions=None) | Q(regions=OuterRef(region_field))
+        for _i in range(Region.objects.all().max_tree_depth()):
+            region_field = f"{region_field}__parent"
+            region_query |= Q(regions=OuterRef(region_field))
+        base_query.add(region_query, Q.AND)
 
         return base_query
 

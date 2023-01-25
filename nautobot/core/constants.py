@@ -111,13 +111,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "rackgroup",
             {
-                "queryset": RackGroup.objects.add_related_count(
-                    RackGroup.objects.all(),
-                    Rack,
-                    "group",
-                    "rack_count",
-                    cumulative=True,
-                ).select_related("site"),
+                "queryset": RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site"),
                 "filterset": RackGroupFilterSet,
                 "table": RackGroupTable,
                 "url": "dcim:rackgroup_list",
@@ -139,7 +133,7 @@ SEARCH_TYPES = OrderedDict(
             {
                 "queryset": Device.objects.select_related(
                     "device_type__manufacturer",
-                    "device_role",
+                    "role",
                     "tenant",
                     "site",
                     "rack",
@@ -184,7 +178,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "cluster",
             {
-                "queryset": Cluster.objects.select_related("type", "group").annotate(
+                "queryset": Cluster.objects.select_related("cluster_type", "cluster_group").annotate(
                     device_count=count_related(Device, "cluster"),
                     vm_count=count_related(VirtualMachine, "cluster"),
                 ),

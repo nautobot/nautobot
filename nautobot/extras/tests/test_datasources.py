@@ -10,7 +10,7 @@ import yaml
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, LocationType, Location, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer, Site
 from nautobot.ipam.models import VLAN
 
 from nautobot.extras.choices import (
@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     GitRepository,
     JobLogEntry,
     JobResult,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -64,11 +65,11 @@ class GitTest(TransactionTestCase):
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
-        self.role = DeviceRole.objects.create(name="router", slug="router")
+        self.role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).get(slug="active")
         self.device = Device.objects.create(
             name="test-device",
-            device_role=self.role,
+            role=self.role,
             device_type=self.device_type,
             site=self.site,
             location=self.location,
@@ -194,9 +195,9 @@ class GitTest(TransactionTestCase):
     def assert_device_exists(self, name):
         """Helper function to assert device exists"""
         device = Device.objects.get(name=name)
-        self.assertIsNotNone(device.local_context_data)
-        self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
-        self.assertEqual(device.local_context_data_owner, self.repo)
+        self.assertIsNotNone(device.local_config_context_data)
+        self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_config_context_data)
+        self.assertEqual(device.local_config_context_data_owner, self.repo)
 
     def assert_export_template_device(self, name):
         export_template_device = ExportTemplate.objects.get(
@@ -522,8 +523,8 @@ class GitTest(TransactionTestCase):
                     ),
                 )
                 device = Device.objects.get(name=self.device.name)
-                self.assertIsNone(device.local_context_data)
-                self.assertIsNone(device.local_context_data_owner)
+                self.assertIsNone(device.local_config_context_data)
+                self.assertIsNone(device.local_config_context_data_owner)
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self, MockGitRepo):
         """
@@ -731,9 +732,9 @@ class GitTest(TransactionTestCase):
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
-                self.assertIsNotNone(device.local_context_data)
-                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
-                self.assertEqual(device.local_context_data_owner, self.repo)
+                self.assertIsNotNone(device.local_config_context_data)
+                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_config_context_data)
+                self.assertEqual(device.local_config_context_data_owner, self.repo)
 
                 # Make sure ExportTemplate was successfully loaded from file
                 export_template = ExportTemplate.objects.get(
@@ -766,8 +767,8 @@ class GitTest(TransactionTestCase):
                     )
 
                 device = Device.objects.get(name=self.device.name)
-                self.assertIsNone(device.local_context_data)
-                self.assertIsNone(device.local_context_data_owner)
+                self.assertIsNone(device.local_config_context_data)
+                self.assertIsNone(device.local_config_context_data_owner)
 
     def test_git_dry_run(self, MockGitRepo):
         with tempfile.TemporaryDirectory() as tempdir:

@@ -3,8 +3,8 @@ from django.contrib.contenttypes.models import ContentType
 from netaddr import EUI
 
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import DeviceRole, Platform, Site
-from nautobot.extras.models import ConfigContextSchema, CustomField, Status, Tag
+from nautobot.dcim.models import Device, Platform, Site
+from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, post_data
 from nautobot.virtualization.models import (
@@ -95,27 +95,27 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         Cluster.objects.create(
             name="Cluster 1",
-            group=clustergroups[0],
-            type=clustertypes[0],
+            cluster_group=clustergroups[0],
+            cluster_type=clustertypes[0],
             site=sites[0],
         )
         Cluster.objects.create(
             name="Cluster 2",
-            group=clustergroups[0],
-            type=clustertypes[0],
+            cluster_group=clustergroups[0],
+            cluster_type=clustertypes[0],
             site=sites[0],
         )
         Cluster.objects.create(
             name="Cluster 3",
-            group=clustergroups[0],
-            type=clustertypes[0],
+            cluster_group=clustergroups[0],
+            cluster_type=clustertypes[0],
             site=sites[0],
         )
 
         cls.form_data = {
             "name": "Cluster X",
-            "group": clustergroups[1].pk,
-            "type": clustertypes[1].pk,
+            "cluster_group": clustergroups[1].pk,
+            "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "site": sites[1].pk,
             "comments": "Some comments",
@@ -123,15 +123,15 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,type",
+            "name,cluster_type",
             "Cluster 4,Cluster Type 1",
             "Cluster 5,Cluster Type 1",
             "Cluster 6,Cluster Type 1",
         )
 
         cls.bulk_edit_data = {
-            "group": clustergroups[1].pk,
-            "type": clustertypes[1].pk,
+            "cluster_group": clustergroups[1].pk,
+            "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "site": sites[1].pk,
             "comments": "New comments",
@@ -144,10 +144,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        deviceroles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-        )
+        deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
@@ -157,8 +154,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=clustertype),
-            Cluster.objects.create(name="Cluster 2", type=clustertype),
+            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype),
+            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype),
         )
 
         statuses = Status.objects.get_for_model(VirtualMachine)
@@ -200,7 +197,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "disk": 4000,
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(VirtualMachine)],
-            "local_context_data": None,
+            "local_config_context_data": None,
         }
 
         cls.csv_data = (
@@ -223,7 +220,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a vm with local context that conforms to that schema
@@ -235,8 +232,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("virtualization.add_virtualmachine")
 
         form_data = self.form_data.copy()
-        form_data["local_context_schema"] = schema.pk
-        form_data["local_context_data"] = '{"foo": "bar"}'
+        form_data["local_config_context_schema"] = schema.pk
+        form_data["local_config_context_data"] = '{"foo": "bar"}'
 
         # Try POST with model-level permission
         request = {
@@ -244,10 +241,10 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Virtual Machine X").local_context_schema.pk, schema.pk)
+        self.assertEqual(self._get_queryset().get(name="Virtual Machine X").local_config_context_schema.pk, schema.pk)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_local_context_schema_validation_fails(self):
+    def test_local_config_context_schema_validation_fails(self):
         """
         Given a config context schema
         And a vm with local context that *does not* conform to that schema
@@ -259,8 +256,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("virtualization.add_virtualmachine")
 
         form_data = self.form_data.copy()
-        form_data["local_context_schema"] = schema.pk
-        form_data["local_context_data"] = '{"foo": "bar"}'
+        form_data["local_config_context_schema"] = schema.pk
+        form_data["local_config_context_data"] = '{"foo": "bar"}'
 
         # Try POST with model-level permission
         request = {
@@ -278,9 +275,9 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
 
         site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(name="Cluster 1", type=clustertype, site=site)
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, site=site)
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole),

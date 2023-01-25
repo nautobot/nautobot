@@ -79,13 +79,6 @@ INTERFACE_TAGGED_VLANS = """
 {% endif %}
 """
 
-MPTT_LINK = """
-{% for i in record.get_ancestors %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
-<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
-"""
-
 
 TREE_LINK = """
 {% load helpers %}

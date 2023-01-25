@@ -1,6 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
     ComputedField,
@@ -25,6 +26,10 @@ from nautobot.extras.models import (
 
 
 app_name = "extras"
+
+router = NautobotUIViewSetRouter()
+router.register("roles", views.RoleUIViewSet)
+
 urlpatterns = [
     # Change logging
     path("changelog/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
@@ -668,3 +673,5 @@ urlpatterns = [
         kwargs={"model": Webhook},
     ),
 ]
+
+urlpatterns += router.urls

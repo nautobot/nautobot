@@ -6,8 +6,8 @@ from nautobot.circuits.filters import (
     ProviderNetworkFilterSet,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
-from nautobot.extras.models import Status
+from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Manufacturer, Region, Site
+from nautobot.extras.models import Role, Status
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
 
@@ -267,18 +267,18 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         device1 = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="TestDevice1",
             site=sites[0],
             status=device_status,
         )
         device2 = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="TestDevice2",
             site=sites[1],
             status=device_status,
@@ -413,13 +413,13 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
 
     def test_site(self):
         sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        params = {"site": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
-    def test_cabled(self):
-        params = {"cabled": True}
+    def test_has_cable(self):
+        params = {"has_cable": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_connected(self):

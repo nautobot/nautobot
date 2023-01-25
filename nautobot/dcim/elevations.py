@@ -37,7 +37,7 @@ class RackElevationSVG:
     def _get_device_description(device):
         return "{} ({}) — {} ({}U) {} {}".format(  # pylint: disable=consider-using-f-string
             device.name,
-            device.device_role,
+            device.role,
             device.device_type.display,
             device.device_type.u_height,
             device.asset_tag or "",
@@ -95,7 +95,7 @@ class RackElevationSVG:
         device_fullname = str(device) + devicebay_details
         device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
 
-        color = device.device_role.color
+        color = device.role.color
         reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})
         link = drawing.add(
             drawing.a(
