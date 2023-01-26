@@ -9,16 +9,11 @@ class TenancyModelFilterSetMixin(django_filters.FilterSet):
     An inheritable FilterSet for models which support Tenant assignment.
     """
 
-    tenant_group_id = TreeNodeMultipleChoiceFilter(
-        queryset=TenantGroup.objects.all(),
-        field_name="tenant__group",
-        label="Tenant Group (ID)",
-    )
     tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        field_name="tenant__group",
+        field_name="tenant__tenant_group",
         to_field_name="slug",
-        label="Tenant Group (slug)",
+        label="Tenant Group (slug or ID)",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Tenant.objects.all(),

@@ -357,8 +357,8 @@ class PrefixView(generic.ObjectView):
         "role",
         "site__region",
         "status",
-        "tenant__group",
-        "vlan__group",
+        "tenant__tenant_group",
+        "vlan__vlan_group",
         "vrf",
     )
 
@@ -690,7 +690,7 @@ class IPAddressBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANGroupListView(generic.ObjectListView):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     filterset_form = forms.VLANGroupFilterForm
     table = tables.VLANGroupTable
@@ -702,7 +702,7 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
-            .filter(group=instance)
+            .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
         vlans_count = vlans.count()
@@ -712,7 +712,7 @@ class VLANGroupView(generic.ObjectView):
         if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
             vlan_table.columns.show("pk")
         vlan_table.columns.hide("site")
-        vlan_table.columns.hide("group")
+        vlan_table.columns.hide("vlan_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -729,7 +729,7 @@ class VLANGroupView(generic.ObjectView):
 
         return {
             "first_available_vlan": instance.get_next_available_vid(),
-            "bulk_querystring": f"group_id={instance.pk}",
+            "bulk_querystring": f"vlan_group_id={instance.pk}",
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
@@ -752,7 +752,7 @@ class VLANGroupBulkImportView(generic.BulkImportView):
 
 
 class VLANGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     table = tables.VLANGroupTable
 
@@ -763,7 +763,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.select_related("site", "location", "group", "tenant", "role", "status")
+    queryset = VLAN.objects.select_related("site", "location", "vlan_group", "tenant", "role", "status")
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
@@ -774,7 +774,7 @@ class VLANView(generic.ObjectView):
         "role",
         "site__region",
         "status",
-        "tenant__group",
+        "tenant__tenant_group",
     )
 
     def get_extra_context(self, request, instance):
@@ -854,7 +854,7 @@ class VLANBulkImportView(generic.BulkImportView):
 
 class VLANBulkEditView(generic.BulkEditView):
     queryset = VLAN.objects.select_related(
-        "group",
+        "vlan_group",
         "site",
         "status",
         "tenant",
@@ -867,7 +867,7 @@ class VLANBulkEditView(generic.BulkEditView):
 
 class VLANBulkDeleteView(generic.BulkDeleteView):
     queryset = VLAN.objects.select_related(
-        "group",
+        "vlan_group",
         "site",
         "status",
         "tenant",
@@ -891,11 +891,11 @@ class ServiceListView(generic.ObjectListView):
 
 
 class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ipaddresses")
+    queryset = Service.objects.prefetch_related("ip_addresses")
 
 
 class ServiceEditView(generic.ObjectEditView):
-    queryset = Service.objects.prefetch_related("ipaddresses")
+    queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
 

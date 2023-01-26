@@ -65,7 +65,7 @@ class Tenant(PrimaryModel):
 
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
-    group = models.ForeignKey(
+    tenant_group = models.ForeignKey(
         to="tenancy.TenantGroup",
         on_delete=models.SET_NULL,
         related_name="tenants",
@@ -75,14 +75,14 @@ class Tenant(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "slug", "group", "description", "comments"]
+    csv_headers = ["name", "slug", "tenant_group", "description", "comments"]
     clone_fields = [
-        "group",
+        "tenant_group",
         "description",
     ]
 
     class Meta:
-        ordering = ["group", "name"]
+        ordering = ["tenant_group", "name"]
 
     def __str__(self):
         return self.name
@@ -94,7 +94,7 @@ class Tenant(PrimaryModel):
         return (
             self.name,
             self.slug,
-            self.group.name if self.group else None,
+            self.tenant_group.name if self.tenant_group else None,
             self.description,
             self.comments,
         )

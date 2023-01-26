@@ -27,7 +27,7 @@ class TenantFactory(PrimaryModelFactory):
         exclude = (
             "has_comments",
             "has_description",
-            "has_group",
+            "has_tenant_group",
         )
 
     name = UniqueFaker("company")
@@ -38,5 +38,5 @@ class TenantFactory(PrimaryModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(TenantGroup), None)
+    has_tenant_group = factory.Faker("pybool")
+    tenant_group = factory.Maybe("has_tenant_group", random_instance(TenantGroup), None)

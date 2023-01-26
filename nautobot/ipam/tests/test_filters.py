@@ -466,7 +466,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             VMInterface.objects.create(virtual_machine=virtual_machines[2], name="Interface 3"),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(IPAddress)
         status_map = {s.slug: s for s in statuses.all()}
@@ -822,7 +822,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=None),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VLAN)
         status_map = {s.slug: s for s in statuses.all()}
@@ -831,7 +831,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=101,
             name="VLAN 101",
             site=cls.sites[0],
-            group=groups[0],
+            vlan_group=groups[0],
             role=roles[0],
             tenant=tenants[0],
             status=status_map["active"],
@@ -840,7 +840,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=102,
             name="VLAN 102",
             site=cls.sites[0],
-            group=groups[0],
+            vlan_group=groups[0],
             role=roles[0],
             tenant=tenants[0],
             status=status_map["active"],
@@ -849,7 +849,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=201,
             name="VLAN 201",
             site=cls.sites[1],
-            group=groups[1],
+            vlan_group=groups[1],
             role=roles[1],
             tenant=tenants[1],
             status=status_map["deprecated"],
@@ -858,7 +858,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=202,
             name="VLAN 202",
             site=cls.sites[1],
-            group=groups[1],
+            vlan_group=groups[1],
             role=roles[1],
             tenant=tenants[1],
             status=status_map["deprecated"],
@@ -867,7 +867,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=301,
             name="VLAN 301",
             site=cls.sites[2],
-            group=groups[2],
+            vlan_group=groups[2],
             role=roles[2],
             tenant=tenants[2],
             status=status_map["reserved"],
@@ -876,7 +876,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=302,
             name="VLAN 302",
             site=cls.sites[2],
-            group=groups[2],
+            vlan_group=groups[2],
             role=roles[2],
             tenant=tenants[2],
             status=status_map["reserved"],
@@ -910,12 +910,12 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
-    def test_group(self):
+    def test_vlan_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
-        params = {"group": [groups[0].slug, groups[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
+        params = {"vlan_group": [groups[0].pk, groups[1].pk]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups))
+        params = {"vlan_group": [groups[0].slug, groups[1].slug]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups))
 
     def test_role(self):
         roles = Role.objects.get_for_model(VLAN)[:2]

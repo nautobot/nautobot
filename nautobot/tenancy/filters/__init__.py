@@ -61,9 +61,9 @@ class TenantFilterSet(NautobotFilterSet):
             "comments": "icontains",
         },
     )
-    group = TreeNodeMultipleChoiceFilter(
+    tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        field_name="group",
+        field_name="tenant_group",
         label="Tenant group (slug or ID)",
     )
     aggregates = django_filters.ModelMultipleChoiceFilter(

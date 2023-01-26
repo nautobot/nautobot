@@ -57,7 +57,7 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
 
 class TenantForm(NautobotModelForm):
     slug = SlugField()
-    group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
+    tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
@@ -65,7 +65,7 @@ class TenantForm(NautobotModelForm):
         fields = (
             "name",
             "slug",
-            "group",
+            "tenant_group",
             "description",
             "comments",
             "tags",
@@ -73,7 +73,7 @@ class TenantForm(NautobotModelForm):
 
 
 class TenantCSVForm(CustomFieldModelCSVForm):
-    group = CSVModelChoiceField(
+    tenant_group = CSVModelChoiceField(
         queryset=TenantGroup.objects.all(),
         required=False,
         to_field_name="name",
@@ -87,18 +87,18 @@ class TenantCSVForm(CustomFieldModelCSVForm):
 
 class TenantBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tenant.objects.all(), widget=forms.MultipleHiddenInput())
-    group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
+    tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
-            "group",
+            "tenant_group",
         ]
 
 
 class TenantFilterForm(NautobotFilterForm):
     model = Tenant
     q = forms.CharField(required=False, label="Search")
-    group = DynamicModelMultipleChoiceField(
+    tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
         to_field_name="slug",
         required=False,
@@ -122,7 +122,7 @@ class TenancyForm(forms.Form):
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
-        query_params={"group_id": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )
 
 
@@ -138,5 +138,5 @@ class TenancyFilterForm(forms.Form):
         to_field_name="slug",
         required=False,
         null_option="None",
-        query_params={"group": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )

@@ -33,11 +33,14 @@
 |                     | `level`                                 | `tree_depth`                                   |
 | RackGroup           | `level`                                 | `tree_depth`                                   |
 | Region              | `level`                                 | `tree_depth`                                   |
+| Service             | `ipaddresses`                           | `ip_addresses`                                 |
+| Tenant              | `group`                                 | `tenant_group`                                 |
 | TenantGroup         | `level`                                 | `tree_depth`                                   |
 | VirtualMachine      | `local_context_data`                    | `local_config_context_data`                    |
 |                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
 |                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
 |                     | `local_context_schema`                  | `local_config_context_schema`                  |
+| VLAN                | `group`                                 | `vlan_group`                                   |
 
 ### Removed Database Fields
 
@@ -89,9 +92,12 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 | InventoryItem         | `_depth`               | `tree_depth`                  |
 | RackGroup             | `_depth`               | `tree_depth`                  |
 | Region                | `_depth`               | `tree_depth`                  |
+| Service               | `ipaddresses`          | `ip_addresses`                |
+| Tenant                | `group`                | `tenant_group`                |
 | TenantGroup           | `_depth`               | `tree_depth`                  |
 | VirtualMachine        | `local_context_data`   | `local_config_context_data`   |
 |                       | `local_context_schema` | `local_config_context_schema` |
+| VLAN                  | `group`                | `vlan_group`                  |
 
 ### Removed Serializer Fields
 
@@ -166,27 +172,27 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 |                       | `type`                | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?type=<uuid/slug>`|
 | ConsolePort           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
 | ConsoleServerPort     | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
-| Device                | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
+| Device                | `cluster_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
 |                       | `device_type_id`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`|
-|                       | `role`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`|
-|                       | `platform`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`|
-|                       | `rack_group_id`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`|
-|                       | `rack_id`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`|
-|                       | `cluster_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
+|                       | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
 |                       | `model`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`|
+|                       | `platform`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`|
+|                       | `role`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`|
+|                       | `rack_id`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`|
+|                       | `rack_group_id`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`|
 |                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`|
 |                       | `secrets_group`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?secrets_group=<uuid/slug>`|
-|                       | `virtual_chassis_id`  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`|
 |                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`|
-| DeviceBay             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`|
-|                       | `cable`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+|                       | `virtual_chassis_id`  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`|
+| DeviceBay             | `cable`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+|                       | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`|
 | DeviceType            | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/device-types/?manufacturer=<uuid/slug>`|
 | FrontPort             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/front-ports/?device=<uuid/name>`
 | Interface             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/interfaces/?device=<uuid/name>`|
-| InventoryItem         | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`|
-|                       | `device`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`|
+| InventoryItem         | `device`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`|
 |                       | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`|
 |                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...`|
+|                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`|
 | Platform              | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/platforms/?manufacturer=<uuid/slug>`|
 | PowerFeed             | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`|
 | PowerOutlet           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`|
@@ -199,9 +205,11 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | RackReservation       | `user`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-reservations/?user=<uuid/slug>`|
 | RearPort              | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`|
 | Region                | `parent`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
-| VirtualChassis        | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
-|                       | `master`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
+| Tenant                | `tenant_group`        | Enhanced to support primary key UUIDs in addition to slugs | `/tenancy/tenants/?tenant_group=<uuid/slug>`|
+| VirtualChassis        | `master`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
+|                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
 |                       | `tenant`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`|
+| VLAN                  | `vlan_group`          | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`|
 
 ### Corrected Filter Fields
 
@@ -214,9 +222,9 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 |        | `device_bays`          | `/dcim/devices/?device_bays=True`          | `/dcim/devices/?device_bays=<uuid>` or `?has_device_bays=<True/False>`                  |
 |        | `front_ports`          | `/dcim/devices/?front_ports=True`          | `/dcim/devices/?front_ports=<uuid>` or `?has_front_ports=<True/False>`                  |
 |        | `interfaces`           | `/dcim/devices/?interfaces=True`           | `/dcim/devices/?interfaces=<uuid>` or `?has_interfaces=<True/False>`                    |
-|        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 |        | `power_ports`          | `/dcim/devices/?power_ports=True`          | `/dcim/devices/?power_ports=<uuid>` or `?has_power_ports=<True/False>`                  |
 |        | `power_outlets`        | `/dcim/devices/?power_outlets=True`        | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`              |
+|        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 
 ### Removed Redundant Filter Fields
 
@@ -226,10 +234,12 @@ For example `/circuits/circuits/?provider_id=<uuid>` has been replaced by `/circ
 
 | Model              | Removed Filter Field  | UI and API endpoints that are no longer supported in v2.X                                     |
 |--------------------|-----------------------|-----------------------------------------------------------------------------------------------|
+| Aggregate          | `tenant_group_id`     |                                                                                               |
 | Circuit            | `provider_id`         |                                                                                               |
 |                    | `provider_network_id` |                                                                                               |
 |                    | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
 |                    | `type_id`             |                                                                                               |
 | CircuitTermination | `circuit_id`          |                                                                                               |
 |                    | `provider_network_id` |                                                                                               |
@@ -237,78 +247,93 @@ For example `/circuits/circuits/?provider_id=<uuid>` has been replaced by `/circ
 |                    | `site_id`             |                                                                                               |
 | Cluster            | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
 | ConfigContext      | `role_id`             |                                                                                               |
-| ConsolePort        | `region_id`           |                                                                                               |
-|                    | `device_id`           |                                                                                               |
-| ConsoleServerPort  | `region_id`           |                                                                                               |
-|                    | `device_id`           |                                                                                               |
-| Device             | `region_id`           |                                                                                               |
-|                    | `site_id`             |                                                                                               |
-|                    | `manufacturer_id`     |                                                                                               |
+| ConsolePort        | `device_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+| ConsoleServerPort  | `device_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+| Device             | `manufacturer_id`     |                                                                                               |
 |                    | `model`               | instead of `/dcim/devices/?model=<uuid>`, use `device_type=<uuid>`                            |
-|                    | `role_id`             |                                                                                               |
-|                    | `platform_id`         |                                                                                               |
-|                    | `secrets_group_id`    |                                                                                               |
 |                    | `pass_through_ports`  | instead of `/dcim/devices/?pass_through_ports=<bool>`, use `has_front_ports`/`has_rear_ports` |
-| DeviceBay          | `region_id`           |                                                                                               |
-|                    | `device_id`           |                                                                                               |
+|                    | `platform_id`         |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+|                    | `role_id`             |                                                                                               |
+|                    | `secrets_group_id`    |                                                                                               |
+|                    | `site_id`             |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
+| DeviceBay          | `device_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
 | DeviceType         | `manufacturer_id`     |                                                                                               |
-| FrontPort          | `region_id`           |                                                                                               |
-|                    | `device_id`           |                                                                                               |
+| FrontPort          | `device_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
 | Interface          | `bridge_id`           |                                                                                               |
 |                    | `device_id`           |                                                                                               |
+|                    | `lag_id`              |                                                                                               |
 |                    | `parent_interface_id` |                                                                                               |
 |                    | `region_id`           |                                                                                               |
 |                    | `lag_id`              |                                                                                               |
-| InventoryItem      | `region_id`           |                                                                                               |
-|                    | `site_id`             |                                                                                               |
-|                    | `device_id`           |                                                                                               |
-|                    | `parent_id`           |                                                                                               |
+| InventoryItem      | `device_id`           |                                                                                               |
 |                    | `manufacturer_id`     |                                                                                               |
+|                    | `parent_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+|                    | `site_id`             |                                                                                               |
+| IPAddress          | `tenant_group_id`     |                                                                                               |
+| Location           | `tenant_group_id`     |                                                                                               |
 | Provider           | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
 | ProviderNetwork    | `provider_id`         |                                                                                               |
-| Rack               | `region_id`           |                                                                                               |
-|                    | `site_id`             |                                                                                               |
-|                    | `group_id`            |                                                                                               |
+| Rack               | `group_id`            |                                                                                               |
+|                    | `region_id`           |                                                                                               |
 |                    | `role_id`             |                                                                                               |
-| RackGroup          | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
-|                    | `parent_id`           |                                                                                               |
-| RackReservation    | `rack_id`             |                                                                                               |
-|                    | `group_id`            |                                                                                               |
-|                    | `user_id`             |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
+| RackGroup          | `parent_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
-| RearPort           | `region_id`           |                                                                                               |
-|                    | `device_id`           |                                                                                               |
-| Region             | `parent_id`           |                                                                                               |
-| Platform           | `manufacturer_id`     |                                                                                               |
-| PowerOutlet        | `region_id`           |                                                                                               |
-|                    | `device_id`           |                                                                                               |
-| PowerFeed          | `region_id`           |                                                                                               |
-|                    | `site_id`             |                                                                                               |
-|                    | `power_panel_id`      |                                                                                               |
+| RackReservation    | `group_id`            |                                                                                               |
 |                    | `rack_id`             |                                                                                               |
-| PowerPanel         | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
-|                    | `rack_group_id`       |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
+|                    | `user_id`             |                                                                                               |
+| RearPort           | `device_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+| Region             | `parent_id`           |                                                                                               |
+| RouteTarget        | `tenant_group_id`     |                                                                                               |
+| Platform           | `manufacturer_id`     |                                                                                               |
+| PowerOutlet        | `device_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+| PowerFeed          | `power_panel_id`      |                                                                                               |
+|                    | `rack_id`             |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+|                    | `site_id`             |                                                                                               |
+| PowerPanel         | `rack_group_id`       |                                                                                               |
+|                    | `region_id`           |                                                                                               |
+|                    | `site_id`             |                                                                                               |
 | PowerPort          | `region_id`           |                                                                                               |
 |                    | `device_id`           |                                                                                               |
 | Prefix             | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
 | Site               | `region_id`           |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
 | Tenant             | `group_id`            |                                                                                               |
 | TenantGroup        | `parent_id`           |                                                                                               |
-| VirtualChassis     | `region_id`           |                                                                                               |
+| VirtualChassis     | `master_id`           |                                                                                               |
+|                    | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
-|                    | `master_id`           |                                                                                               |
 |                    | `tenant_id`           |                                                                                               |
+| VirtualMachine     | `tenant_group_id`     |                                                                                               |
 | VLANGroup          | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
-| VLAN               | `region_id`           |                                                                                               |
+| VLAN               | `group_id`            |                                                                                               |
+|                    | `group`               | instead of `/ipam/vlans/?group=<slug>`, use `vlan_group=<slug>`                               |
+|                    | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
+|                    | `tenant_group_id`     |                                                                                               |
 | VMInterface        | `bridge_id`           |                                                                                               |
 |                    | `parent_interface_id` |                                                                                               |
+| VRF                | `tenant_group_id`     |                                                                                               |
 
 ## Python Code Location Changes
 

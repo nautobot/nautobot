@@ -312,7 +312,7 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
-    queryset = VirtualMachine.objects.select_related("tenant__group")
+    queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
@@ -331,7 +331,7 @@ class VirtualMachineView(generic.ObjectView):
         services = (
             Service.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ipaddresses", queryset=IPAddress.objects.restrict(request.user)))
+            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
         )
 
         return {
@@ -415,7 +415,7 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "group", "tenant", "role"):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)

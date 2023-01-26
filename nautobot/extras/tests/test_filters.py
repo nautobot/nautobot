@@ -201,7 +201,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]
 
-        cls.tenants = Tenant.objects.filter(group__isnull=True)[:3]
+        cls.tenants = Tenant.objects.filter(tenant_group__isnull=True)[:3]
 
         for i in range(0, 3):
             is_active = bool(i % 2)
