@@ -2010,6 +2010,11 @@ class InterfaceBulkEditView(generic.BulkEditView):
 
 class InterfaceBulkRenameView(generic.BulkRenameView):
     queryset = Interface.objects.all()
+    template_name = "dcim/interface_bulk_rename.html"
+
+    def get_extra_context(self, request, selected_objects):
+        device_name = selected_objects.first().device.name
+        return {"device_name": device_name}
 
 
 class InterfaceBulkDisconnectView(BulkDisconnectView):

@@ -1149,6 +1149,10 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request):
         logger = logging.getLogger("nautobot.views.BulkRenameView")
 
+        if not request.POST.getlist("pk"):
+            messages.warning(request, f"No {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
         if "_preview" in request.POST or "_apply" in request.POST:
             form = self.form(request.POST, initial={"pk": request.POST.getlist("pk")})
             selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
@@ -1202,8 +1206,23 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
                 "return_url": self.get_return_url(request),
+                **self.get_extra_context(request, selected_objects),
             },
         )
+
+    def get_extra_context(self, request, selected_objects):
+        """
+        Return any additional context data for the template.
+
+        Args:
+            request: The current request
+            selected_objects: The objects being renamed
+
+        Returns:
+            dict
+        """
+
+        return {}
 
 
 class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):

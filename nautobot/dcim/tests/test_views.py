@@ -1881,6 +1881,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         device = create_test_device("Device 1")
+        cls.device = device
 
         statuses = Status.objects.get_for_model(Interface)
         status_active = statuses.get(slug="active")
@@ -1970,6 +1971,31 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "Device 1,Interface 5,1000base-t,active",
             "Device 1,Interface 6,1000base-t,active",
         )
+
+    def bulk_rename_interfaces(self):
+        self.add_permissions("dcim.change_interface")
+
+        objects = self.device.interfaces.all()
+        pk_list = [obj.pk for obj in objects]
+        # Apply button not yet clicked
+        data = {"pk": pk_list}
+        data.update(self.rename_data)
+        with self.subTest("Assert device name in HTML"):
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            message = f"Renaming {objects.count()} {self.device.name} Interfaces"
+            self.assertInHTML(message, response.content.decode(response.charset))
+
+        with self.subTest("Assert interface update successfully"):
+            data["_apply"] = True  # Form Apply button
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 302)
+            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+                self.assertEqual(instance.name, f"{objects[i].name}X")
+
+        with self.subTest("Assert if no objects selected return with error"):
+            data["pk"] = []
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+            self.assertInHTML("No interfaces were selected.", response.content.decode(response.charset))
 
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
