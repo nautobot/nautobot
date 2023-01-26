@@ -339,23 +339,11 @@ class VLANFactory(PrimaryModelFactory):
     # As with VLANGroup, with fully random names and vids, non-uniqueness is unlikely but possible,
     # and we might want to consider intentionally reusing non-unique values for test purposes?
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
-    name = factory.LazyAttribute(
-        lambda o: "__".join(
-            [
-                str(x)
-                for x in filter(
-                    None,
-                    (
-                        "vlan",
-                        f"{o.vid:04d}",
-                        faker.Faker().word(part_of_speech="adjective"),
-                        o.group,
-                        o.location,
-                        str(o.site).replace(" ", "_"),
-                    ),
-                )
-            ]
-        )[:255]
+    name = factory.LazyFunction(
+        lambda: (
+            faker.Faker().word(part_of_speech="adjective").capitalize()
+            + faker.Faker().word(part_of_speech="noun").capitalize()
+        )
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
