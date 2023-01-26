@@ -1995,7 +1995,15 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         with self.subTest("Assert if no objects selected return with error"):
             data["pk"] = []
             response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
-            self.assertInHTML("No interfaces were selected.", response.content.decode(response.charset))
+            expected_message = """
+            <div class="alert alert-warning alert-dismissable" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span>&times;</span>
+                </button>
+                No interfaces were selected.
+            </div>
+            """
+            self.assertInHTML(expected_message, response.content.decode(response.charset))
 
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
