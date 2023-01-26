@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-from nautobot.core.fields import ForeignKeyLimitedByContentTypes
+from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 

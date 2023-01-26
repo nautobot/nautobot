@@ -3,6 +3,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.testing import FilterTestCases
+from nautobot.core.utils.data import flatten_iterable
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -90,12 +93,9 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
-from nautobot.utilities.utils import flatten_iterable
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
@@ -105,7 +105,7 @@ User = get_user_model()
 
 def common_test_data(cls):
 
-    tenants = Tenant.objects.filter(group__isnull=False)
+    tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
 
     regions = (
@@ -196,7 +196,7 @@ def common_test_data(cls):
 
     provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
     circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
-    circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Test Circuit 1")
+    circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Test Circuit 1")
     CircuitTermination.objects.create(circuit=circuit, site=sites[0], location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, site=sites[1], term_side="Z")
 
@@ -818,9 +818,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_circuit_terminations(self):
-        circuit_terminations = CircuitTermination.objects.all()[:2]
+        circuit_terminations = list(CircuitTermination.objects.filter(site__isnull=False)[:2])
         params = {"circuit_terminations": [circuit_terminations[0].pk, circuit_terminations[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(circuit_terminations__in=circuit_terminations).distinct(),
+        )
 
     def test_has_circuit_terminations(self):
         with self.subTest():
@@ -1606,7 +1609,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
         site = Site.objects.get(slug="site-3")
         rack_group = RackGroup.objects.get(slug="rack-group-3")
-        tenant = Tenant.objects.filter(group__isnull=False).first()
+        tenant = Tenant.objects.filter(tenant_group__isnull=False).first()
         rack_role = Role.objects.get_for_model(Rack).first()
 
         Rack.objects.create(

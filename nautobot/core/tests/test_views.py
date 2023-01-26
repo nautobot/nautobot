@@ -5,7 +5,7 @@ from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
 
 
 class HomeViewTestCase(TestCase):

@@ -57,7 +57,7 @@ class CablePathTestCase(TestCase):
 
         provider = Provider.objects.create(name="Provider", slug="provider")
         circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
-        cls.circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Circuit 1")
+        cls.circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Circuit 1")
 
         cls.statuses = Status.objects.get_for_model(Cable)
         cls.status = cls.statuses.get(slug="connected")

@@ -2,13 +2,14 @@ import os
 import platform
 import sys
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.csrf import csrf_failure as _csrf_failure
@@ -16,13 +17,14 @@ from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
 
-from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
+from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.utilities.config import get_settings_or_config
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -120,19 +122,35 @@ class SearchView(View):
 
         if form.is_valid():
 
+            # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
+            # based on the `app_config.searchable_models` list (if any) defined by each app
+            searchable_models = []
+            for app_config in apps.get_app_configs():
+                if hasattr(app_config, "searchable_models"):
+                    searchable_models += [(app_config.label, modelname) for modelname in app_config.searchable_models]
+
             if form.cleaned_data["obj_type"]:
                 # Searching for a single type of object
                 obj_types = [form.cleaned_data["obj_type"]]
             else:
                 # Searching all object types
-                obj_types = SEARCH_TYPES.keys()
+                obj_types = [model_info[1] for model_info in searchable_models]
 
-            for obj_type in obj_types:
-
-                queryset = SEARCH_TYPES[obj_type]["queryset"].restrict(request.user, "view")
-                filterset = SEARCH_TYPES[obj_type]["filterset"]
-                table = SEARCH_TYPES[obj_type]["table"]
-                url = SEARCH_TYPES[obj_type]["url"]
+            for label, modelname in searchable_models:
+                if modelname not in obj_types:
+                    continue
+                # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
+                # corresponding to that URL, and finally the queryset, filterset, and table classes needed
+                # to find and display the model search results.
+                url = get_route_for_model(f"{label}.{modelname}", "list")
+                view_func = resolve(reverse(url)).func
+                # For a UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+                queryset = view_or_viewset.queryset.restrict(request.user, "view")
+                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+                # For a UIViewSet, .table_class, for an ObjectListView, .table.
+                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
                 # Construct the results table for this object type
                 filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs

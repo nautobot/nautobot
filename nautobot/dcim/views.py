@@ -19,16 +19,17 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.forms import ConfirmationForm
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import csv_format
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.forms import ConfirmationForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.utils import csv_format, count_related
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
 from .api import serializers
@@ -200,14 +201,14 @@ class RegionBulkDeleteView(generic.BulkDeleteView):
 
 
 class SiteListView(generic.ObjectListView):
-    queryset = Site.objects.all()
+    queryset = Site.objects.select_related("region", "tenant")
     filterset = filters.SiteFilterSet
     filterset_form = forms.SiteFilterForm
     table = tables.SiteTable
 
 
 class SiteView(generic.ObjectView):
-    queryset = Site.objects.select_related("region", "tenant__group")
+    queryset = Site.objects.select_related("region", "tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         stats = {
@@ -215,7 +216,9 @@ class SiteView(generic.ObjectView):
             "device_count": Device.objects.restrict(request.user, "view").filter(site=instance).count(),
             "prefix_count": Prefix.objects.restrict(request.user, "view").filter(site=instance).count(),
             "vlan_count": VLAN.objects.restrict(request.user, "view").filter(site=instance).count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(terminations__site=instance).count(),
+            "circuit_count": Circuit.objects.restrict(request.user, "view")
+            .filter(circuit_terminations__site=instance)
+            .count(),
             "vm_count": VirtualMachine.objects.restrict(request.user, "view").filter(cluster__site=instance).count(),
         }
         rack_groups = (
@@ -362,7 +365,7 @@ class LocationView(generic.ObjectView):
             .count(),
             "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
             "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(terminations__location__in=related_locations)
+            .filter(circuit_terminations__location__in=related_locations)
             .count(),
             "vm_count": VirtualMachine.objects.restrict(request.user, "view")
             .filter(cluster__location__in=related_locations)
@@ -429,7 +432,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site", "location")
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -489,7 +492,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 class RackListView(generic.ObjectListView):
     queryset = (
-        Rack.objects.select_related("site", "group", "tenant", "role")
+        Rack.objects.select_related("site", "location", "group", "tenant", "role", "status")
         .prefetch_related("devices__device_type")
         .annotate(device_count=count_related(Device, "rack"))
     )
@@ -551,7 +554,7 @@ class RackElevationListView(generic.ObjectListView):
 
 
 class RackView(generic.ObjectView):
-    queryset = Rack.objects.select_related("site__region", "tenant__group", "group", "role")
+    queryset = Rack.objects.select_related("site__region", "tenant__tenant_group", "group", "role")
 
     def get_extra_context(self, request, instance):
         # Get 0U and child devices located within the rack
@@ -1220,7 +1223,17 @@ class PlatformBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceListView(generic.ObjectListView):
-    queryset = Device.objects.all()
+    queryset = Device.objects.select_related(
+        "status",
+        "device_type",
+        "role",
+        "tenant",
+        "site",
+        "location",
+        "rack",
+        "primary_ip4",
+        "primary_ip6",
+    )
     filterset = filters.DeviceFilterSet
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
@@ -1231,7 +1244,7 @@ class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
         "site__region",
         "rack__group",
-        "tenant__group",
+        "tenant__tenant_group",
         "role",
         "platform",
         "primary_ip4",
@@ -1849,7 +1862,7 @@ class InterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "group", "tenant", "role"):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)

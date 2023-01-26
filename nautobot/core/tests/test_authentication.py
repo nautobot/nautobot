@@ -9,11 +9,11 @@ from django.urls import reverse
 from netaddr import IPNetwork
 
 from nautobot.core.settings_funcs import sso_auth_enabled
+from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import NautobotTestClient, TestCase
 
 
 # Use the proper swappable User model
@@ -36,7 +36,7 @@ class ExternalAuthenticationTestCase(TestCase):
 
     def setUp(self):
         """
-        Override nautobot.utilities.testing.TestCase.setUp() so that it doesn't automatically log in the test client.
+        Override nautobot.core.testing.TestCase.setUp() so that it doesn't automatically log in the test client.
         """
 
     def test_remote_auth_disabled(self):

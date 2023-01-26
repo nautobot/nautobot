@@ -1,13 +1,14 @@
 from django.db.models import Prefetch, Q, Count, F
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.functional import classproperty
 from django_tables2 import RequestConfig
 
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import generic
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Interface
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from .choices import IPAddressRoleChoices
@@ -211,7 +212,7 @@ class AggregateListView(generic.ObjectListView):
             "AND ipam_prefix.broadcast <= ipam_aggregate.broadcast",
             (),
         )
-    )
+    ).select_related("rir")
     filterset = filters.AggregateFilterSet
     filterset_form = forms.AggregateFilterForm
     table = tables.AggregateDetailTable
@@ -314,16 +315,13 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-
-    def __init__(self, *args, **kwargs):
-        # Set the internal queryset value
-        self._queryset = None
-        super().__init__(*args, **kwargs)
+    _queryset = None
+    _disable_prefix_list_hierarchy = None
 
     # 2.0 TODO: Remove this after IPAM models are trees in 2.0. When the data model changes to 1.)
     # be tree-based, 2.) use NautobotViewSet this can be removed
-    @property
-    def queryset(self):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def queryset(cls):  # pylint: disable=no-self-argument,method-hidden
         """
         Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
 
@@ -332,26 +330,26 @@ class PrefixListView(generic.ObjectListView):
         table is rendered as a flat list.
 
         """
-        if self._queryset is not None:
-            return self._queryset
+        if cls._queryset is not None and cls._disable_prefix_list_hierarchy == get_settings_or_config(
+            "DISABLE_PREFIX_LIST_HIERARCHY"
+        ):
+            return cls._queryset
 
+        cls._queryset = Prefix.objects.select_related(
+            "site", "location", "vrf__tenant", "tenant", "vlan", "role", "status"
+        )
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
-            self._queryset = Prefix.objects.annotate(parents=Count(None)).order_by(
+            cls._queryset = cls._queryset.annotate(parents=Count(None)).order_by(
                 F("vrf__name").asc(nulls_first=True),
                 "network",
                 "prefix_length",
             )
+            cls._disable_prefix_list_hierarchy = True
         else:
-            self._queryset = Prefix.objects.annotate_tree()
+            cls._queryset = cls._queryset.annotate_tree()
+            cls._disable_prefix_list_hierarchy = False
 
-        return self._queryset
-
-    @queryset.setter
-    def queryset(self, value):
-        """
-        Property setter for 'queryset'
-        """
-        self._queryset = value
+        return cls._queryset
 
 
 class PrefixView(generic.ObjectView):
@@ -359,8 +357,8 @@ class PrefixView(generic.ObjectView):
         "role",
         "site__region",
         "status",
-        "tenant__group",
-        "vlan__group",
+        "tenant__tenant_group",
+        "vlan__vlan_group",
         "vrf",
     )
 
@@ -527,7 +525,7 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.all()
+    queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
@@ -692,7 +690,7 @@ class IPAddressBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANGroupListView(generic.ObjectListView):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     filterset_form = forms.VLANGroupFilterForm
     table = tables.VLANGroupTable
@@ -704,7 +702,7 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
-            .filter(group=instance)
+            .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
         vlans_count = vlans.count()
@@ -714,7 +712,7 @@ class VLANGroupView(generic.ObjectView):
         if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
             vlan_table.columns.show("pk")
         vlan_table.columns.hide("site")
-        vlan_table.columns.hide("group")
+        vlan_table.columns.hide("vlan_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -731,7 +729,7 @@ class VLANGroupView(generic.ObjectView):
 
         return {
             "first_available_vlan": instance.get_next_available_vid(),
-            "bulk_querystring": f"group_id={instance.pk}",
+            "bulk_querystring": f"vlan_group_id={instance.pk}",
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
@@ -754,7 +752,7 @@ class VLANGroupBulkImportView(generic.BulkImportView):
 
 
 class VLANGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     table = tables.VLANGroupTable
 
@@ -765,7 +763,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.all()
+    queryset = VLAN.objects.select_related("site", "location", "vlan_group", "tenant", "role", "status")
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
@@ -776,7 +774,7 @@ class VLANView(generic.ObjectView):
         "role",
         "site__region",
         "status",
-        "tenant__group",
+        "tenant__tenant_group",
     )
 
     def get_extra_context(self, request, instance):
@@ -856,7 +854,7 @@ class VLANBulkImportView(generic.BulkImportView):
 
 class VLANBulkEditView(generic.BulkEditView):
     queryset = VLAN.objects.select_related(
-        "group",
+        "vlan_group",
         "site",
         "status",
         "tenant",
@@ -869,7 +867,7 @@ class VLANBulkEditView(generic.BulkEditView):
 
 class VLANBulkDeleteView(generic.BulkDeleteView):
     queryset = VLAN.objects.select_related(
-        "group",
+        "vlan_group",
         "site",
         "status",
         "tenant",
@@ -893,11 +891,11 @@ class ServiceListView(generic.ObjectListView):
 
 
 class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ipaddresses")
+    queryset = Service.objects.prefetch_related("ip_addresses")
 
 
 class ServiceEditView(generic.ObjectEditView):
-    queryset = Service.objects.prefetch_related("ipaddresses")
+    queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
 

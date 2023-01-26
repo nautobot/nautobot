@@ -4,18 +4,19 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
     SearchFilter,
     TagFilter,
 )
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Interface
+from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
     Aggregate,
@@ -483,16 +484,11 @@ class VLANFilterSet(
         label="Device (ID)",
         field_name="pk",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Group (ID)",
+        label="VLAN Group (slug or ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
-        field_name="group__slug",
-        queryset=VLANGroup.objects.all(),
-        to_field_name="slug",
-        label="Group",
-    )
+
     tag = TagFilter()
 
     class Meta:

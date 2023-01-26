@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
@@ -70,8 +72,6 @@ from nautobot.extras.models import (
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
@@ -201,7 +201,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]
 
-        cls.tenants = Tenant.objects.filter(group__isnull=True)[:3]
+        cls.tenants = Tenant.objects.filter(tenant_group__isnull=True)[:3]
 
         for i in range(0, 3):
             is_active = bool(i % 2)

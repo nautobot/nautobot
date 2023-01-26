@@ -1,20 +1,24 @@
 from django.db.models import Q
 import django_filters
 
-from nautobot.dcim.models import Cable, Device, DeviceType, Region, Site, Location
-from nautobot.extras.filters import CustomFieldModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     NameSlugSearchFilterSet,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.dcim.models import Cable, Device, DeviceType, Region, Site, Location
+from nautobot.extras.filters import CustomFieldModelFilterSetMixin
 
 
 class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
-    has_cable = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
+    has_cable = RelatedMembershipBooleanFilter(
+        field_name="cable",
+        label="Has cable",
+    )
     cable = django_filters.ModelMultipleChoiceFilter(
         queryset=Cable.objects.all(),
         label="Cable",
@@ -43,7 +47,7 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device__site",

@@ -28,6 +28,13 @@ class Command(BaseCommand):
         try:
             import factory.random
 
+            from nautobot.circuits.factory import (
+                CircuitFactory,
+                CircuitTerminationFactory,
+                CircuitTypeFactory,
+                ProviderFactory,
+                ProviderNetworkFactory,
+            )
             from nautobot.dcim.factory import (
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
@@ -91,8 +98,8 @@ Type 'yes' to continue, or 'no' to cancel: """
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)
         self.stdout.write("Creating Tenants...")
-        TenantFactory.create_batch(10, has_group=False)
-        TenantFactory.create_batch(10, has_group=True)
+        TenantFactory.create_batch(10, has_tenant_group=False)
+        TenantFactory.create_batch(10, has_tenant_group=True)
         self.stdout.write("Creating Regions...")
         RegionFactory.create_batch(15, has_parent=False)
         RegionFactory.create_batch(5, has_parent=True)
@@ -126,10 +133,31 @@ Type 'yes' to continue, or 'no' to cancel: """
         DeviceTypeFactory.create_batch(20)
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(10)
+        self.stdout.write("Creating CircuitTypes...")
+        CircuitTypeFactory.create_batch(10)
+        self.stdout.write("Creating Providers...")
+        ProviderFactory.create_batch(10)
+        self.stdout.write("Creating ProviderNetworks...")
+        ProviderNetworkFactory.create_batch(10)
+        self.stdout.write("Creating Circuits...")
+        CircuitFactory.create_batch(20)
+        self.stdout.write("Creating CircuitTerminations...")
+        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
+        CircuitTerminationFactory.create_batch(
+            size=2,
+            has_site=True,
+            has_location=True,
+            has_port_speed=True,
+            has_upstream_speed=True,
+            has_xconnect_id=True,
+            has_pp_info=True,
+            has_description=True,
+        )
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
-        # CircuitTypeFactory.create_batch(10)
-        # ProviderFactory.create_batch(10)
-        # CircuitFactory.create_batch(10)
         # UserFactory.create_batch(10)
         # RackFactory.create_batch(10)
         # RackReservationFactory.create_batch(10)

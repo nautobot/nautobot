@@ -13,6 +13,7 @@ from netaddr import EUI
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -85,7 +86,6 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2287,7 +2287,7 @@ class CableTestCase(
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
-        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
 
         circuit_terminations = [
             CircuitTermination.objects.create(
@@ -2501,7 +2501,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
-        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
         circuittermination = CircuitTermination.objects.create(
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
         )

@@ -4,6 +4,14 @@ While there are many different development interfaces in Nautobot that each expo
 
 The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
 
+## Abstract Base Classes
+
+Abstract base classes are classes that do not inherit from a specific class. They are a great way to define an interface with useful abstract methods and attributes while providing great flexibility when it comes to implementations. For an example of abstract base classes, see `PathEndPoint` in `dcim` app.
+
+### Naming convention for related_name
+
+When it comes to writing an abstract base class and naming the reverse relation in a many-to-many or a many-to-one relationship, to ensure data consistency throughout the app, we recommend you to set your `related_name` attribute to **"%(app_label)s_%(class)s_related"** on your model's relationship field (models.ForeignKey, etc).
+
 ## Base Classes
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
@@ -73,7 +81,7 @@ Moving forward in Nautobot, all models should have a `slug` field. This field ca
 ```python
 from django.db import models
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 
 class ExampleModel(PrimaryModel):
@@ -83,10 +91,13 @@ class ExampleModel(PrimaryModel):
 
 ## Getting URL Routes
 
-When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
+When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.lookup.get_route_for_model`. You **must not** write your own logic to construct route names.
+
++/- 2.0.0
+    `get_route_for_model` was moved from the `nautobot.utilities.utils` module to `nautobot.core.utils.lookup`.
 
 ```python
-from nautobot.utilities.utils import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model
 ```
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.
@@ -170,7 +181,7 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
 - FilterSets **must** publish all model fields from a model, including related fields.
@@ -217,7 +228,7 @@ class UserFilter(NautobotFilterSet):
     - Using the previous field (`provider`) as an example, it would look something like this:
 
 ```python
-    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+    from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
         label="Provider (slug or ID)",

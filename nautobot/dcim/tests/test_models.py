@@ -1078,8 +1078,8 @@ class CableTestCase(TestCase):
         self.provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
         self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        self.circuit1 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="1")
-        self.circuit2 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="2")
+        self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
+        self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
         self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="A")
         self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="Z")
         self.circuittermination3 = CircuitTermination.objects.create(

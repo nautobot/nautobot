@@ -1,4 +1,4 @@
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class ThemeTestCase(SeleniumTestCase):

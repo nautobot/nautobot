@@ -78,6 +78,64 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - During the data migration, **ams01-edge-01**'s `location` attribute will point to the new `Location` of `LocationType` **Site** with name **AMS01** while devices **ams01-edge-02** and **ams01-edge-03** will remain unchanged.
 
+#### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
+
+`nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../installation/upgrading-from-nautobot-v1.md#python-code-location-changes).
+
+#### Renamed Database Foreign Keys and Related Names ([#2520](https://github.com/nautobot/nautobot/issues/2520))
+
+Some Foreign Key fields have been renamed to follow a more self-consistent pattern across the Nautobot app. This change is aimed to offer more clarity and predictability when it comes to related object database operations:
+
+For example in v1.x to create a circuit object with `type` "circuit-type-1", you would do:
+
+```python
+Circuit.objects.create(
+    cid="Circuit 1",
+    provider="provider-1",
+    type="circuit-type-1",
+    status="active",
+)
+```
+
+and to filter `Circuit` objects of `type` "circuit-type-2", you would do:
+
+```python
+Circuit.objects.filter(type="circuit-type-2")
+```
+
+Now in v2.x, we have renamed the Foreign Key field `type` on Circuit Model to `circuit_type`, because this naming convention made it clearer that this Foregin Key field is pointing to the model `CircuitType`. The same operations would look like:
+
+```python
+Circuit.objects.create(
+    cid="Circuit 1",
+    provider="provider-1",
+    circuit_type="circuit-type-1",
+    status="active",
+)
+```
+
+```python
+Circuit.objects.filter(circuit_type="circuit-type-2")
+```
+
+Check out more Foreign Key related changes documented in the table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
+
+In addition to the changes made to Foreign Key fields' own names, some of their `related_names` are also renamed:
+
+For example in v1.x, to query `Circuit` objects with `CircuitTermination` instances located in sites ["ams01", "ams02", "atl03"], you would do:
+
+```python
+Circuit.objects.filter(terminations__site__in=["ams01", "ams02", "atl03"])
+```
+
+Now in v2.x, we have renamed the Foreign Key field `circuit`'s `related_name` attribute `terminations` on `CircuitTermination` Model to `circuit_terminations`, the same operations would look like:
+
+```python
+Circuit.objects.filter(circuit_terminations__site__in=["ams01", "ams02", "atl03"])
+```
+
+Check out more `related-name` changes documented in the table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
+
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 Some filter fields have been renamed to reflect their functionalities better.

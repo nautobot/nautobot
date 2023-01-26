@@ -7,11 +7,35 @@ from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
-from netaddr import EUI
-from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
+from nautobot.core.forms import (
+    APISelect,
+    APISelectMultiple,
+    add_blank_choice,
+    BootstrapMixin,
+    BulkEditNullBooleanSelect,
+    ColorSelect,
+    CommentField,
+    CSVChoiceField,
+    CSVContentTypeField,
+    CSVModelChoiceField,
+    CSVMultipleContentTypeField,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    ExpandableNameField,
+    form_from_model,
+    MultipleContentTypeField,
+    NumericArrayField,
+    SelectWithPK,
+    SmallTextarea,
+    SlugField,
+    StaticSelect2,
+    StaticSelect2Multiple,
+    TagFilterField,
+)
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelCSVFormMixin,
@@ -41,32 +65,6 @@ from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.forms import (
-    APISelect,
-    APISelectMultiple,
-    add_blank_choice,
-    BootstrapMixin,
-    BulkEditNullBooleanSelect,
-    ColorSelect,
-    CommentField,
-    CSVChoiceField,
-    CSVContentTypeField,
-    CSVModelChoiceField,
-    CSVMultipleContentTypeField,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    ExpandableNameField,
-    form_from_model,
-    MultipleContentTypeField,
-    NumericArrayField,
-    SelectWithPK,
-    SmallTextarea,
-    SlugField,
-    StaticSelect2,
-    StaticSelect2Multiple,
-    TagFilterField,
-)
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CableLengthUnitChoices,
@@ -245,24 +243,6 @@ class ComponentForm(BootstrapMixin, forms.Form):
 #
 # Fields
 #
-
-
-class MACAddressField(forms.Field):
-    widget = forms.CharField
-    default_error_messages = {
-        "invalid": "MAC address must be in EUI-48 format",
-    }
-
-    def to_python(self, value):
-        value = super().to_python(value)
-
-        # Validate MAC address format
-        try:
-            value = EUI(value.strip())
-        except AddrFormatError:
-            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
-
-        return value
 
 
 #

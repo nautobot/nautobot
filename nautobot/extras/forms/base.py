@@ -1,4 +1,4 @@
-from nautobot.utilities.forms import BootstrapMixin
+from nautobot.core.forms import BootstrapMixin
 from .mixins import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,

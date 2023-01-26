@@ -1,16 +1,15 @@
 import factory
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation, Site
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
-from nautobot.circuits.factory import CircuitFactory, CircuitTypeFactory, ProviderFactory
 from nautobot.dcim.factory import RackFactory, RackReservationFactory
 from nautobot.users.factory import UserFactory
 from nautobot.virtualization.factory import (
@@ -68,7 +67,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_tenants(self):
         """Test the `tenants` filter."""
-        tenants = Tenant.objects.filter(group__isnull=False)
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)
         params = {"tenants": [tenants[0].pk, tenants[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
@@ -109,9 +108,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
         factory.random.reseed_random("Nautobot")
-        CircuitTypeFactory.create_batch(10)
-        ProviderFactory.create_batch(10)
-        CircuitFactory.create_batch(10)
         UserFactory.create_batch(10)
         RackFactory.create_batch(10)
         RackReservationFactory.create_batch(10)
@@ -239,20 +235,20 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.queryset.filter(devices__isnull=True).distinct(),
         )
 
-    def test_group(self):
+    def test_tenant_group(self):
         groups = list(TenantGroup.objects.filter(tenants__isnull=False))[:2]
         groups_including_children = []
         for group in groups:
             groups_including_children += group.descendants(include_self=True)
-        params = {"group": [groups[0].pk, groups[1].pk]}
+        params = {"tenant_group": [groups[0].pk, groups[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(group__in=groups_including_children),
+            self.queryset.filter(tenant_group__in=groups_including_children),
         )
-        params = {"group": [groups[0].slug, groups[1].slug]}
+        params = {"tenant_group": [groups[0].slug, groups[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(group__in=groups_including_children),
+            self.queryset.filter(tenant_group__in=groups_including_children),
         )
 
     def test_ip_addresses(self):

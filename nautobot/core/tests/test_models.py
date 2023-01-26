@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 
 from nautobot.core.models import BaseModel
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
 
 
 class BaseModelTest(TestCase):

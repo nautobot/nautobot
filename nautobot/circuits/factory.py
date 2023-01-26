@@ -1,10 +1,12 @@
 import factory
+import faker
 
-from nautobot.circuits.models import CircuitType, Circuit, Provider
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.circuits import choices
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
+from nautobot.dcim import models as dcim_models
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import random_instance, UniqueFaker
 
 
 class CircuitTypeFactory(OrganizationalModelFactory):
@@ -52,8 +54,8 @@ class CircuitFactory(PrimaryModelFactory):
         exclude = ("has_tenant", "has_install_date", "has_commit_rate", "has_description", "has_comments")
 
     provider = random_instance(Provider, allow_null=False)
-    type = random_instance(CircuitType, allow_null=False)
-    cid = factory.LazyAttributeSequence(lambda o, n: f"{o.provider} {o.type} - {n:04}")
+    circuit_type = random_instance(CircuitType, allow_null=False)
+    cid = factory.LazyAttributeSequence(lambda o, n: f"{o.provider} {o.circuit_type} - {n:04}")
     status = random_instance(lambda: Status.objects.get_for_model(Circuit), allow_null=False)
 
     has_tenant = factory.Faker("pybool")
@@ -71,7 +73,86 @@ class CircuitFactory(PrimaryModelFactory):
     has_comments = factory.Faker("pybool")
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    # TODO: populate termination_a and termination_z
+
+class ProviderNetworkFactory(PrimaryModelFactory):
+    class Meta:
+        model = ProviderNetwork
+        exclude = ("has_description", "has_comments")
+
+    name = factory.LazyAttribute(
+        lambda o: f"{o.provider.name} Network {faker.Faker().word(part_of_speech='noun')}"[:100]
+    )
+    provider = random_instance(Provider, allow_null=False)
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    has_comments = factory.Faker("pybool")
+    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
-# TODO: CircuitTermination, ProviderNetwork
+class CircuitTerminationFactory(PrimaryModelFactory):
+    class Meta:
+        model = CircuitTermination
+        exclude = (
+            "has_region",
+            "has_site",
+            "has_location",
+            "has_port_speed",
+            "has_upstream_speed",
+            "has_xconnect_id",
+            "has_pp_info",
+            "has_description",
+        )
+
+    circuit = factory.LazyAttribute(
+        lambda o: faker.Faker().random_element(
+            elements=Circuit.objects.filter(**{f"circuit_termination_{o.term_side.lower()}__isnull": True})
+        )
+    )
+
+    term_side = factory.Faker("random_element", elements=choices.CircuitTerminationSideChoices.values())
+
+    has_region = None  # overridable attribute to force site that has a region
+    has_site = factory.Maybe("has_region", True, factory.Faker("pybool"))
+
+    @factory.lazy_attribute
+    def site(self):
+        if self.has_region:
+            return faker.Faker().random_element(elements=dcim_models.Site.objects.filter(region__isnull=False))
+        if self.has_site:
+            return faker.Faker().random_element(elements=dcim_models.Site.objects.all())
+        return None
+
+    has_location = factory.Maybe("has_site", factory.Faker("pybool"), False)
+    location = factory.Maybe(
+        "has_location",
+        factory.LazyAttribute(
+            lambda o: dcim_models.Location.objects.get_for_model(CircuitTermination).filter(site=o.site).first()
+        ),
+        None,
+    )
+
+    @factory.lazy_attribute
+    def provider_network(self):
+        # site and provider_network are mutually exclusive but cannot both be null
+        if self.has_site:
+            return None
+        if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
+            return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))
+        return ProviderNetworkFactory(provider=self.circuit.provider)
+
+    has_port_speed = factory.Faker("pybool")
+    port_speed = factory.Maybe("has_port_speed", factory.Faker("pyint", max_value=100000000), None)
+
+    has_upstream_speed = factory.Faker("pybool")
+    upstream_speed = factory.Maybe("has_upstream_speed", factory.Faker("pyint", max_value=100000000), None)
+
+    has_xconnect_id = factory.Faker("pybool")
+    xconnect_id = factory.Maybe("has_xconnect_id", factory.Faker("word"), "")
+
+    has_pp_info = factory.Faker("pybool")
+    pp_info = factory.Maybe("has_pp_info", factory.Faker("word"), "")
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")

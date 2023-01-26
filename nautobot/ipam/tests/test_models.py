@@ -539,15 +539,15 @@ class TestVLANGroup(TestCase):
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
         VLAN.objects.bulk_create(
             (
-                VLAN(name="VLAN 1", vid=1, group=vlangroup),
-                VLAN(name="VLAN 2", vid=2, group=vlangroup),
-                VLAN(name="VLAN 3", vid=3, group=vlangroup),
-                VLAN(name="VLAN 5", vid=5, group=vlangroup),
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup),
+                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup),
+                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup),
             )
         )
         self.assertEqual(vlangroup.get_next_available_vid(), 4)
 
-        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, group=vlangroup),))
+        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
@@ -572,7 +572,7 @@ class VLANTestCase(TestCase):
 
         vlan.site = location.site
         group = VLANGroup.objects.create(name="Group 1", site=site_2)
-        vlan.group = group
+        vlan.vlan_group = group
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(f"VLAN group must belong to the assigned site ({location.site.name})", str(cm.exception))

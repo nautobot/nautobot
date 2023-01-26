@@ -12,8 +12,11 @@ The most likely first issue you will encounter will be a module import problem, 
 - `ipam.* -> nautobot.ipam.*`
 - `netbox.* -> nautobot.core.*`
 - `tenancy.* -> nautobot.tenancy.*`
-- `utilities.* -> nautobot.utilities.*`
+- `utilities.* -> nautobot.core.*`
 - `virtualization.* -> nautobot.virtualization.*`
+
++/- 2.0.0
+    The equivalent of NetBox's `utilities` module moved from `nautobot.utilities` to `nautobot.core`.
 
 ## Regenerating database migrations
 

@@ -2,9 +2,9 @@ from rest_framework.routers import APIRootView
 
 from nautobot.circuits import filters
 from nautobot.circuits.models import Provider, CircuitTermination, CircuitType, Circuit, ProviderNetwork
+from nautobot.core.models.querysets import count_related
 from nautobot.dcim.api.views import PathEndpointMixin
 from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
-from nautobot.utilities.utils import count_related
 from . import serializers
 
 
@@ -34,7 +34,7 @@ class ProviderViewSet(NautobotModelViewSet):
 
 
 class CircuitTypeViewSet(NautobotModelViewSet):
-    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
+    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
     serializer_class = serializers.CircuitTypeSerializer
     filterset_class = filters.CircuitTypeFilterSet
 
@@ -46,7 +46,7 @@ class CircuitTypeViewSet(NautobotModelViewSet):
 
 class CircuitViewSet(StatusViewSetMixin, NautobotModelViewSet):
     queryset = Circuit.objects.select_related(
-        "status", "type", "tenant", "provider", "termination_a", "termination_z"
+        "status", "circuit_type", "tenant", "provider", "circuit_termination_a", "circuit_termination_z"
     ).prefetch_related("tags")
     serializer_class = serializers.CircuitSerializer
     filterset_class = filters.CircuitFilterSet

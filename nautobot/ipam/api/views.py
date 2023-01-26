@@ -8,6 +8,9 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
+from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
@@ -20,12 +23,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-)
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
-    count_related,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
 )
 from . import serializers
 
@@ -341,7 +338,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -354,7 +351,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
 class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
-            "group",
+            "vlan_group",
             "site",
             "status",
             "role",
@@ -373,6 +370,6 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
-    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ipaddresses")
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ip_addresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

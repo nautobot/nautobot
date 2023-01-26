@@ -2,9 +2,9 @@ from django.urls import reverse
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 
 
 class AppTest(APITestCase):
@@ -146,19 +146,19 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
         Circuit.objects.create(
             cid="Circuit 1",
             provider=providers[0],
-            type=circuit_types[0],
+            circuit_type=circuit_types[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 2",
             provider=providers[0],
-            type=circuit_types[0],
+            circuit_type=circuit_types[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 3",
             provider=providers[0],
-            type=circuit_types[0],
+            circuit_type=circuit_types[0],
             status=statuses[0],
         )
 
@@ -166,7 +166,7 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -174,19 +174,19 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
             {
                 "cid": "Circuit 4",
                 "provider": providers[1].pk,
-                "type": circuit_types[1].pk,
+                "circuit_type": circuit_types[1].pk,
                 "status": "offline",
             },
             {
                 "cid": "Circuit 5",
                 "provider": providers[1].pk,
-                "type": circuit_types[1].pk,
+                "circuit_type": circuit_types[1].pk,
                 "status": "offline",
             },
             {
                 "cid": "Circuit 6",
                 "provider": providers[1].pk,
-                "type": circuit_types[1].pk,
+                "circuit_type": circuit_types[1].pk,
                 "status": "offline",
             },
         ]
@@ -211,9 +211,9 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
 
         circuits = (
-            Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type),
-            Circuit.objects.create(cid="Circuit 2", provider=provider, type=circuit_type),
-            Circuit.objects.create(cid="Circuit 3", provider=provider, type=circuit_type),
+            Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),
+            Circuit.objects.create(cid="Circuit 2", provider=provider, circuit_type=circuit_type),
+            Circuit.objects.create(cid="Circuit 3", provider=provider, circuit_type=circuit_type),
         )
 
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side=SIDE_A)

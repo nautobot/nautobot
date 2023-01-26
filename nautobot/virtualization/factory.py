@@ -1,10 +1,9 @@
 import factory
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
 from nautobot.dcim.models import Site, Location, Platform
 from nautobot.extras.models import Role, Status
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import random_instance, UniqueFaker
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 
