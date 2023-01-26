@@ -4,6 +4,7 @@ from django.db.models import Q
 from nautobot.core.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
