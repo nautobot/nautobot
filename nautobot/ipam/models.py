@@ -547,11 +547,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
@@ -1028,11 +1023,6 @@ class VLANGroup(OrganizationalModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
@@ -1166,20 +1156,12 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
                 )
 
         # Validate VLAN group
-        if self.group and self.group.site != self.site:
-            raise ValidationError({"group": f"VLAN group must belong to the assigned site ({self.site})."})
-
         if (
             self.group is not None
             and self.location is not None
