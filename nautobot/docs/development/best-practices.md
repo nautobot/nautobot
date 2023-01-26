@@ -194,7 +194,6 @@ class UserFilter(NautobotFilterSet):
     - For example `DeviceFilterSet.interfaces` is a `BooleanFilter` that is shadowing the `Device.interfaces` related manager. This introduces problems with automatic introspection of the filterset and this pattern **must** be avoided.
 - For foreign-key related fields, **on existing core models in the v1.3 release train**:
     - The field **should** be shadowed, replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
-    - A PK-based filter **should** be made available as well, generally with a name suffixed by `_id`. For example:
 
 ```python
     provider = NaturalKeyorPKMultipleChoiceFilter(

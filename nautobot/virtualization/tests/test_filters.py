@@ -474,7 +474,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_cluster_group(self):
         groups = ClusterGroup.objects.all()[:2]
-        filter_params = [{"cluster_group_id": [groups[0].pk, groups[1].pk]}, {"cluster_group": [groups[0].pk, groups[1].slug]}]
+        filter_params = [
+            {"cluster_group_id": [groups[0].pk, groups[1].pk]},
+            {"cluster_group": [groups[0].pk, groups[1].slug]},
+        ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
@@ -483,7 +486,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_cluster_type(self):
         types = ClusterType.objects.all()[:2]
-        filter_params = [{"cluster_type_id": [types[0].pk, types[1].pk]}, {"cluster_type": [types[0].pk, types[1].slug]}]
+        filter_params = [
+            {"cluster_type_id": [types[0].pk, types[1].pk]},
+            {"cluster_type": [types[0].pk, types[1].slug]},
+        ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
@@ -820,7 +826,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_cluster(self):
         clusters = self.clusters[:2]
-        filter_params = [{"cluster_id": [clusters[0].pk, clusters[1].pk]}, {"cluster": [clusters[0].name, clusters[1].pk]}]
+        filter_params = [
+            {"cluster_id": [clusters[0].pk, clusters[1].pk]},
+            {"cluster": [clusters[0].name, clusters[1].pk]},
+        ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,

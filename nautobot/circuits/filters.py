@@ -162,7 +162,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="terminations__site__region",
-        label="Region (ID)",
+        label="Region (ID) -  Deprecated (use region filter)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
