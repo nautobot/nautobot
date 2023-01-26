@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block content %}
-    <h1>{% block title %}Renaming {{ selected_objects|length }} {{ obj_type_plural|bettertitle }}{% endblock %}</h1>
+    <h1>{% block title %}Renaming {{ selected_objects|length }} {{ parent_name }} {{ obj_type_plural|bettertitle }}{% endblock %}</h1>
     <div class="row">
         <div class="col-md-7">
             <table class="table">

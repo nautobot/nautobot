@@ -1206,23 +1206,19 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
                 "return_url": self.get_return_url(request),
-                **self.get_extra_context(request, selected_objects),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
             },
         )
 
-    def get_extra_context(self, request, selected_objects):
+    def get_selected_objects_parents_name(self, selected_objects):
         """
-        Return any additional context data for the template.
+        Return selected_objects parent name.
 
         Args:
-            request: The current request
             selected_objects: The objects being renamed
-
-        Returns:
-            dict
         """
 
-        return {}
+        return ""
 
 
 class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
