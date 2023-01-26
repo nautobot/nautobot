@@ -32,13 +32,14 @@ class UserFilterSet(BaseFilterSet):
     group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group (ID) - Deprecated (use group filter)",
+        label="Group (ID)",
     )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="groups",
+    # TODO(timizuo): Migrate ModelMultipleChoiceFilter to NaturalKeyOrPKMultipleChoiceFilter
+    group = django_filters.ModelMultipleChoiceFilter(
+        field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
-        label="Group (ID or name)",
+        label="Group (name)",
     )
 
     class Meta:
@@ -77,13 +78,14 @@ class ObjectPermissionFilterSet(BaseFilterSet):
     group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group (ID) - Deprecated (use group filter)",
+        label="Group (ID)",
     )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="groups",
+    # TODO(timizuo): Migrate ModelMultipleChoiceFilter to NaturalKeyOrPKMultipleChoiceFilter
+    group = django_filters.ModelMultipleChoiceFilter(
+        field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
-        label="Group (ID or name)",
+        label="Group (name)",
     )
 
     class Meta:
