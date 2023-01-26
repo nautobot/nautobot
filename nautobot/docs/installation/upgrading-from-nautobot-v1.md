@@ -18,29 +18,40 @@
 
 ### Renamed Database Fields
 
-| Model               | Renamed Field                           | New Name                                       |
-|---------------------|-----------------------------------------|------------------------------------------------|
-| Cluster             | `group`                                 | `cluster_group`                                |
-|                     | `type`                                  | `cluster_type`                                 |
-| ConfigContextSchema | `device_set`                            | `dcim_device_related`                          |
-|                     | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
-| Device              | `device_role`                           | `role`                                         |
-|                     | `local_context_data`                    | `local_config_context_data`                    |
-|                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                     | `local_context_schema`                  | `local_config_context_schema`                  |
-| InventoryItem       | `child_items`                           | `children`                                     |
-|                     | `level`                                 | `tree_depth`                                   |
-| RackGroup           | `level`                                 | `tree_depth`                                   |
-| Region              | `level`                                 | `tree_depth`                                   |
-| Service             | `ipaddresses`                           | `ip_addresses`                                 |
-| Tenant              | `group`                                 | `tenant_group`                                 |
-| TenantGroup         | `level`                                 | `tree_depth`                                   |
-| VirtualMachine      | `local_context_data`                    | `local_config_context_data`                    |
-|                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                     | `local_context_schema`                  | `local_config_context_schema`                  |
-| VLAN                | `group`                                 | `vlan_group`                                   |
+| Model                | Renamed Field                           | New Name                                       |
+|----------------------|-----------------------------------------|------------------------------------------------|
+| CablePath            | `circuittermination`                    | `circuits_circuittermination_related`          |
+|                      | `consoleport`                           | `dcim_consoleport_related`                     |
+|                      | `consoleserverport`                     | `dcim_consoleserverport_related`               |
+|                      | `interface`                             | `dcim_interface_related`                       |
+|                      | `powerfeed`                             | `dcim_powerfeed_related`                       |
+|                      | `poweroutlet`                           | `dcim_poweroutlet_related`                     |
+|                      | `powerport`                             | `dcim_powerport_related`                       |
+| Circuit              | `termination_a`                         | `circuit_termination_a`                        |
+|                      | `termination_z`                         | `circuit_termination_z`                        |
+|                      | `terminations`                          | `circuit_terminations`                         |
+|                      | `type`                                  | `circuit_type`                                 |
+| Cluster              | `group`                                 | `cluster_group`                                |
+|                      | `type`                                  | `cluster_type`                                 |
+| ConfigContextSchema  | `device_set`                            | `dcim_device_related`                          |
+|                      | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
+| Device               | `device_role`                           | `role`                                         |
+|                      | `local_context_data`                    | `local_config_context_data`                    |
+|                      | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                      | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                      | `local_context_schema`                  | `local_config_context_schema`                  |
+| InventoryItem        | `child_items`                           | `children`                                     |
+|                      | `level`                                 | `tree_depth`                                   |
+| RackGroup            | `level`                                 | `tree_depth`                                   |
+| Region               | `level`                                 | `tree_depth`                                   |
+| Service              | `ipaddresses`                           | `ip_addresses`                                 |
+| Tenant               | `group`                                 | `tenant_group`                                 |
+| TenantGroup          | `level`                                 | `tree_depth`                                   |
+| VirtualMachine       | `local_context_data`                    | `local_config_context_data`                    |
+|                      | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                      | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                      | `local_context_schema`                  | `local_config_context_schema`                  |
+| VLAN                 | `group`                                 | `vlan_group`                                   |
 
 ### Removed Database Fields
 
@@ -84,6 +95,9 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 | Model                 | Renamed Field          | New Name                      |
 |-----------------------|------------------------|-------------------------------|
+| Circuit               | `termination_a`        | `circuit_termination_a`       |
+|                       | `termination_z`        | `circuit_termination_z`       |
+|                       | `type`                 | `circuit_type`                |
 | Cluster               | `group`                | `cluster_group`               |
 |                       | `type`                 | `cluster_type`                |
 | Device                | `device_role`          | `role`                        |
@@ -123,6 +137,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
 | Cable                 | `tag`                     | `tags`                           | `/dcim/cables/?tags=<slug>`                                               |
 | Circuit               | `tag`                     | `tags`                           | `/circuits/circuits/?tags=<slug>`                                         |
+|                       | `type`                    | `circuit_type`                   | `/circuits/circuits/?circuit_type=<uuid/slug>`                            |
 | ConsolePort           | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
 | ConsoleServerPort     | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
 | Device                | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
@@ -165,11 +180,11 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0.md#enhanced-filter-fields-2804) in v2.x.
 
-| Model                 | Enhanced Filter Field | Changes                                                    | UI and Rest API endpoints Available in v2.X|
+| Model                 | Enhanced Filter Field | Changes                                                    | UI and Rest API endpoints Available in v2.X  |
 |-----------------------|-----------------------|------------------------------------------------------------|----------------------------------------------|
-| Circuit               | `provider`            | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`|
+| Circuit               | `circuit_type`        | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`|
+|                       | `provider`            | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`|
 |                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`|
-|                       | `type`                | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?type=<uuid/slug>`|
 | ConsolePort           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
 | ConsoleServerPort     | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
 | Device                | `cluster_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
@@ -240,7 +255,7 @@ For example `/circuits/circuits/?provider_id=<uuid>` has been replaced by `/circ
 |                    | `region_id`           |                                                                                               |
 |                    | `site_id`             |                                                                                               |
 |                    | `tenant_group_id`     |                                                                                               |
-|                    | `type_id`             |                                                                                               |
+|                    | `type_id`             | instead of `/circuits/circuits/?type_id=<uuid>`, use `circuit_type=<uuid>`                    |
 | CircuitTermination | `circuit_id`          |                                                                                               |
 |                    | `provider_network_id` |                                                                                               |
 |                    | `region_id`           |                                                                                               |
@@ -272,7 +287,6 @@ For example `/circuits/circuits/?provider_id=<uuid>` has been replaced by `/circ
 |                    | `lag_id`              |                                                                                               |
 |                    | `parent_interface_id` |                                                                                               |
 |                    | `region_id`           |                                                                                               |
-|                    | `lag_id`              |                                                                                               |
 | InventoryItem      | `device_id`           |                                                                                               |
 |                    | `manufacturer_id`     |                                                                                               |
 |                    | `parent_id`           |                                                                                               |

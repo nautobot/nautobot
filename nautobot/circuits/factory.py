@@ -54,8 +54,8 @@ class CircuitFactory(PrimaryModelFactory):
         exclude = ("has_tenant", "has_install_date", "has_commit_rate", "has_description", "has_comments")
 
     provider = random_instance(Provider, allow_null=False)
-    type = random_instance(CircuitType, allow_null=False)
-    cid = factory.LazyAttributeSequence(lambda o, n: f"{o.provider} {o.type} - {n:04}")
+    circuit_type = random_instance(CircuitType, allow_null=False)
+    cid = factory.LazyAttributeSequence(lambda o, n: f"{o.provider} {o.circuit_type} - {n:04}")
     status = random_instance(lambda: Status.objects.get_for_model(Circuit), allow_null=False)
 
     has_tenant = factory.Faker("pybool")
@@ -107,7 +107,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
 
     circuit = factory.LazyAttribute(
         lambda o: faker.Faker().random_element(
-            elements=Circuit.objects.filter(**{f"termination_{o.term_side.lower()}__isnull": True})
+            elements=Circuit.objects.filter(**{f"circuit_termination_{o.term_side.lower()}__isnull": True})
         )
     )
 

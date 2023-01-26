@@ -53,16 +53,16 @@ class ProviderFilterSet(NautobotFilterSet):
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        field_name="circuits__terminations__site__region",
+        field_name="circuits__circuit_terminations__site__region",
         label="Region (slug or ID)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="circuits__terminations__site",
+        field_name="circuits__circuit_terminations__site",
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="circuits__terminations__location",
+        field_name="circuits__circuit_terminations__location",
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
     )
@@ -132,9 +132,9 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     q = SearchFilter(
         filter_predicates={
             "cid": "icontains",
-            "terminations__xconnect_id": "icontains",
-            "terminations__pp_info": "icontains",
-            "terminations__description": "icontains",
+            "circuit_terminations__xconnect_id": "icontains",
+            "circuit_terminations__pp_info": "icontains",
+            "circuit_terminations__description": "icontains",
             "description": "icontains",
             "comments": "icontains",
         },
@@ -144,38 +144,39 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Provider (slug or ID)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="terminations__provider_network",
+        field_name="circuit_terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (slug or ID)",
     )
-    type = NaturalKeyOrPKMultipleChoiceFilter(
+    circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
+        to_field_name="slug",
         label="Circuit type (slug or ID)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="terminations__site",
+        field_name="circuit_terminations__site",
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="terminations__location",
+        field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        field_name="terminations__site__region",
+        field_name="circuit_terminations__site__region",
         label="Region (slug or ID)",
     )
     has_terminations = RelatedMembershipBooleanFilter(
-        field_name="terminations",
+        field_name="circuit_terminations",
         label="Has terminations",
     )
-    termination_a = django_filters.ModelMultipleChoiceFilter(
+    circuit_termination_a = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitTermination.objects.all(),
         label="Termination A (ID)",
     )
-    termination_z = django_filters.ModelMultipleChoiceFilter(
+    circuit_termination_z = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitTermination.objects.all(),
         label="Termination Z (ID)",
     )
@@ -190,7 +191,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
             "description",
             "id",
             "install_date",
-            "terminations",
+            "circuit_terminations",
         ]
 
 

@@ -154,7 +154,13 @@ class PathEndpoint(models.Model):
     `connected_endpoint()` is a convenience method for returning the destination of the associated CablePath, if any.
     """
 
-    _path = models.ForeignKey(to="dcim.CablePath", on_delete=models.SET_NULL, null=True, blank=True)
+    _path = models.ForeignKey(
+        to="dcim.CablePath",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(app_label)s_%(class)s_related",
+    )
 
     class Meta:
         abstract = True

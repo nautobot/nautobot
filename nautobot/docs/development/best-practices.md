@@ -4,6 +4,14 @@ While there are many different development interfaces in Nautobot that each expo
 
 The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
 
+## Abstract Base Classes
+
+Abstract base classes are classes that do not inherit from a specific class. They are a great way to define an interface with useful abstract methods and attributes while providing great flexibility when it comes to implementations. For an example of abstract base classes, see `PathEndPoint` in `dcim` app.
+
+### Naming convention for related_name
+
+When it comes to writing an abstract base class and naming the reverse relation in a many-to-many or a many-to-one relationship, to ensure data consistency throughout the app, we recommend you to set your `related_name` attribute to **"%(app_label)s_%(class)s_related"** on your model's relationship field (models.ForeignKey, etc).
+
 ## Base Classes
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
