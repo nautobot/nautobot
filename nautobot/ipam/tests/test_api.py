@@ -8,6 +8,8 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import ServiceProtocolChoices
@@ -22,8 +24,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
-from nautobot.utilities.testing.api import APITransactionTestCase
 
 
 class AppTest(APITestCase):
@@ -169,7 +169,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     # status `name` (str) and not the `pk` (int). Do not validate this
     # field right now, since we are asserting that it does create correctly.
     #
-    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+    # The test code for `core.testing.views.TestCase.model_to_dict()`
     # needs to be enhanced to use the actual API serializers when `api=True`
     validation_excluded_fields = ["status"]
 
@@ -414,7 +414,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     # status `name` (str) and not the `pk` (int). Do not validate this
     # field right now, since we are asserting that it does create correctly.
     #
-    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+    # The test code for `core.testing.views.TestCase.model_to_dict()`
     # needs to be enhanced to use the actual API serializers when `api=True`
     validation_excluded_fields = ["status"]
 
@@ -512,7 +512,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 
@@ -520,7 +520,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 4,
                 "name": "VLAN 4",
-                "group": vlan_groups[0].pk,
+                "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
@@ -528,7 +528,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 5,
                 "name": "VLAN 5",
-                "group": vlan_groups[0].pk,
+                "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
@@ -536,7 +536,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 6,
                 "name": "VLAN 6",
-                "group": vlan_groups[0].pk,
+                "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,

@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.utilities.tables import BaseTable, BooleanColumn
+from nautobot.core.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
 from .cables import CableTable
 from .devices import (

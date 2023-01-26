@@ -13,7 +13,7 @@ class NautobotTestRunner(DiscoverRunner):
     explicitly passed in with `nautobot-server test --tag integration`.
 
     By Nautobot convention, integration tests must be tagged with "integration". The base
-    `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
+    `nautobot.core.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
     inheriting from that class do not need to be explicitly tagged.
 
     Only integration tests that DO NOT inherit from `SeleniumTestCase` will need to be explicitly tagged.
@@ -33,6 +33,11 @@ class NautobotTestRunner(DiscoverRunner):
             kwargs["exclude_tags"] = incoming_exclude_tags
 
         super().__init__(**kwargs)
+
+    def setup_test_environment(self, **kwargs):
+        super().setup_test_environment(**kwargs)
+        # Remove 'testserver' that Django "helpfully" adds automatically to ALLOWED_HOSTS, masking issues like #3065
+        settings.ALLOWED_HOSTS.remove("testserver")
 
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)

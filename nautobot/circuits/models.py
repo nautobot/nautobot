@@ -7,7 +7,7 @@ from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 
 from .choices import CircuitTerminationSideChoices
@@ -370,7 +370,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     def get_peer_termination(self):
         peer_side = "Z" if self.term_side == "A" else "A"
         try:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return CircuitTermination.objects.prefetch_related("site").get(circuit=self.circuit, term_side=peer_side)
+            return CircuitTermination.objects.select_related("site").get(circuit=self.circuit, term_side=peer_side)
         except CircuitTermination.DoesNotExist:
             return None

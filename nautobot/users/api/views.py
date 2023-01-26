@@ -10,10 +10,10 @@ from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
 from nautobot.core.api.views import ModelViewSet
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.utils import deepmerge
 from . import serializers
 
 
@@ -53,8 +53,7 @@ class GroupViewSet(ModelViewSet):
 
 
 class TokenViewSet(ModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_relatedn
-    queryset = RestrictedQuerySet(model=Token).prefetch_related("user")
+    queryset = RestrictedQuerySet(model=Token).select_related("user")
     serializer_class = serializers.TokenSerializer
     filterset_class = filters.TokenFilterSet
 

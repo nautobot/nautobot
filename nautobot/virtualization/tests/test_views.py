@@ -2,11 +2,11 @@ from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
 from netaddr import EUI
 
+from nautobot.core.testing import ViewTestCases, post_data
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Platform, Site
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import ViewTestCases, post_data
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -335,6 +335,18 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
+        }
+
+        cls.bulk_add_data = {
+            "virtual_machine": virtualmachines[1].pk,
+            "name_pattern": "Interface [4-6]",
+            "enabled": True,
+            "status": status_active.pk,
+            "mtu": 1500,
+            "description": "New Description",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "custom_field_1": "Custom field data",
+            "tags": [],
         }
 
         cls.csv_data = (

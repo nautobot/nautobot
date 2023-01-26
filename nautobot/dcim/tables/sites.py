@@ -1,14 +1,14 @@
 import django_tables2 as tables
 
-from nautobot.dcim.models import Region, Site
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.models import Region, Site
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 from .template_code import TREE_LINK
 
 __all__ = (

@@ -50,13 +50,14 @@ function colorPickerClassCopy(data, container) {
 */
 
 // Static choice selection
-function initializeStaticChoiceSelection(context){
+function initializeStaticChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-static').select2({
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
-        width: "off"
+        width: "off",
+        dropdownParent: dropdownParent
     });
 }
 
@@ -139,7 +140,7 @@ function initializeBulkEditNullification(context){
 }
 
 // Color Picker
-function initializeColorPicker(context){
+function initializeColorPicker(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-color-picker').select2({
         allowClear: true,
@@ -147,18 +148,20 @@ function initializeColorPicker(context){
         theme: "bootstrap",
         templateResult: colorPickerClassCopy,
         templateSelection: colorPickerClassCopy,
-        width: "off"
+        width: "off",
+        dropdownParent: dropdownParent
     });
 }
 
 // Dynamic Choice Selection
-function initializeDynamicChoiceSelection(context){
+function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-api').select2({
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
         width: "off",
+        dropdownParent: dropdownParent,
         ajax: {
             delay: 500,
 
@@ -323,7 +326,7 @@ function initializeDateTimePicker(context){
     });
 }
 
-function initializeTags(context){
+function initializeTags(context, dropdownParent=null){
     this_context = $(context);
     this_tag_field = this_context.find('#id_tags.tagfield')
     var tags = this_tag_field;
@@ -349,6 +352,7 @@ function initializeTags(context){
         placeholder: "Tags",
         theme: "bootstrap",
         width: "off",
+        dropdownParent: dropdownParent,
         ajax: {
             delay: 250,
             url: nautobot_api_path + "extras/tags/",
@@ -434,7 +438,7 @@ function initializeVLANModeSelection(context){
     }
 }
 
-function initializeMultiValueChar(context){
+function initializeMultiValueChar(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-multi-value-char').select2({
         allowClear: true,
@@ -442,6 +446,7 @@ function initializeMultiValueChar(context){
         theme: "bootstrap",
         placeholder: "---------",
         multiple: true,
+        dropdownParent: dropdownParent,
         width: "off",
         "language": {
             "noResults": function(){
@@ -608,6 +613,15 @@ function initializeInputs(context) {
     initializeDynamicFilterForm(this_context)
     initializeSelectAllForm(this_context)
     initializeMultiValueChar(this_context)
+
+    $(this_context).find(".modal").each(function() {
+        this_modal = $(this)
+        initializeStaticChoiceSelection(this_modal, this_modal)
+        initializeColorPicker(this_modal, this_modal)
+        initializeDynamicChoiceSelection(this_modal, this_modal)
+        initializeTags(this_modal, this_modal)
+        initializeMultiValueChar(this_modal, this_modal)
+    })
 }
 
 function jsify_form(context) {

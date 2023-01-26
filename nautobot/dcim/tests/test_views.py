@@ -1,4 +1,5 @@
 from decimal import Decimal
+import unittest
 
 import pytz
 import yaml
@@ -12,6 +13,7 @@ from netaddr import EUI
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -84,7 +86,6 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1800,6 +1801,15 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
         }
 
+        cls.bulk_add_data = {
+            "device": device.pk,
+            "name_pattern": "Power Outlet [4-6]",
+            "type": PowerOutletTypeChoices.TYPE_IEC_C13,
+            "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
+            "description": "A power outlet",
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
+        }
+
         cls.bulk_edit_data = {
             "type": PowerOutletTypeChoices.TYPE_IEC_C15,
             "power_port": powerports[1].pk,
@@ -1860,6 +1870,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.bulk_create_data = {
             "device": device.pk,
             "name_pattern": "Interface [4-6]",
+            "label_pattern": "Interface Number [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
             "bridge": interfaces[4].pk,
@@ -1867,12 +1878,26 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
             "mgmt_only": True,
-            "description": "A front port",
+            "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+        }
+
+        cls.bulk_add_data = {
+            "device": device.pk,
+            "name_pattern": "Interface [4-6]",
+            "label_pattern": "Interface Number [4-6]",
+            "status": status_active.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "enabled": True,
+            "mtu": 1500,
+            "mgmt_only": False,
+            "description": "An Interface",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tags": [],
         }
 
         cls.bulk_edit_data = {
@@ -1947,6 +1972,10 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "Device 1,Front Port 5,8p8c,Rear Port 5,1",
             "Device 1,Front Port 6,8p8c,Rear Port 6,1",
         )
+
+    @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
+    def test_bulk_add_component(self):
+        pass
 
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):

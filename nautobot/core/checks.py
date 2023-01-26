@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.core.checks import register, Error, Tags, Warning  # pylint: disable=redefined-builtin
 from django.core.exceptions import ValidationError
@@ -37,6 +39,13 @@ E005 = Error(
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
+    obj=settings,
+)
+
+W006 = Warning(
+    "CACHEOPS_ENABLED is set to True but cacheops is no longer recommended in v1.5. It can still be used but may lead to "
+    "inaccurate data responses. Cacheops will be removed in a later release.",
+    id="nautobot.core.W006",
     obj=settings,
 )
 
@@ -85,3 +94,46 @@ def check_maintenance_mode(app_configs, **kwargs):
     if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
         return [E005]
     return []
+
+
+@register(Tags.compatibility)
+def check_cacheops_enabled(app_configs, **kwargs):
+    if settings.CACHEOPS_ENABLED:
+        return [W006]
+    return []
+
+
+@register(Tags.security)
+def check_sanitizer_patterns(app_configs, **kwargs):
+    errors = []
+    for entry in settings.SANITIZER_PATTERNS:
+        if (
+            not isinstance(entry, (tuple, list))
+            or len(entry) != 2
+            or not isinstance(entry[0], re.Pattern)
+            or not isinstance(entry[1], str)
+        ):
+            errors.append(
+                Error(
+                    "Invalid entry in settings.SANITIZER_PATTERNS",
+                    hint="Each entry must be a list or tuple of (compiled regexp, replacement string)",
+                    obj=entry,
+                    id="nautobot.core.E007",
+                )
+            )
+            continue
+
+        sanitizer, repl = entry
+        try:
+            sanitizer.sub(repl.format(replacement="(REDACTED)"), "Hello world!")
+        except re.error as exc:
+            errors.append(
+                Error(
+                    "Entry in settings.SANITIZER_PATTERNS not usable for sanitization",
+                    hint=str(exc),
+                    obj=entry,
+                    id="nautobot.core.E008",
+                )
+            )
+
+    return errors

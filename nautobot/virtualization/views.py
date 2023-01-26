@@ -6,15 +6,15 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 from django_tables2 import RequestConfig
 
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
-from nautobot.utilities.utils import normalize_querydict
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -36,11 +36,10 @@ class ClusterTypeView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(cluster_type=instance)
-            .prefetch_related("cluster_group", "site", "tenant")
+            .select_related("cluster_group", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -97,11 +96,10 @@ class ClusterGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(cluster_group=instance)
-            .prefetch_related("cluster_type", "site", "tenant")
+            .select_related("cluster_type", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -148,7 +146,7 @@ class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
 
 class ClusterListView(generic.ObjectListView):
     permission_required = "virtualization.view_cluster"
-    queryset = Cluster.objects.annotate(
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group").annotate(
         device_count=count_related(Device, "cluster"),
         vm_count=count_related(VirtualMachine, "cluster"),
     )
@@ -161,11 +159,10 @@ class ClusterView(generic.ObjectView):
     queryset = Cluster.objects.all()
 
     def get_extra_context(self, request, instance):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(cluster=instance)
-            .prefetch_related("site", "rack", "tenant", "device_type__manufacturer")
+            .select_related("site", "rack", "tenant", "device_type__manufacturer")
         )
         device_table = DeviceTable(list(devices), orderable=False)
         if request.user.has_perm("virtualization.change_cluster"):
@@ -193,16 +190,14 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Cluster.objects.prefetch_related("cluster_type", "cluster_group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Cluster.objects.prefetch_related("cluster_type", "cluster_group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 
@@ -309,7 +304,7 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 
 
 class VirtualMachineListView(generic.ObjectListView):
-    queryset = VirtualMachine.objects.all()
+    queryset = VirtualMachine.objects.select_related("cluster", "tenant", "platform", "primary_ip4", "primary_ip6")
     filterset = filters.VirtualMachineFilterSet
     filterset_form = forms.VirtualMachineFilterForm
     table = tables.VirtualMachineDetailTable
@@ -317,13 +312,10 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VirtualMachine.objects.prefetch_related("tenant__group")
+    queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
-        # v2 TODO(jathan): Replace prefetch_related with select_related although this one may be
-        # valid since `ip_addresses` is m2m.
         vminterfaces = (
             VMInterface.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
@@ -336,11 +328,10 @@ class VirtualMachineView(generic.ObjectView):
             vminterface_table.columns.show("pk")
 
         # Services
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         services = (
             Service.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ipaddresses", queryset=IPAddress.objects.restrict(request.user)))
+            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
         )
 
         return {
@@ -377,16 +368,14 @@ class VirtualMachineBulkImportView(generic.BulkImportView):
 
 
 class VirtualMachineBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
+    queryset = VirtualMachine.objects.select_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
     form = forms.VirtualMachineBulkEditForm
 
 
 class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
+    queryset = VirtualMachine.objects.select_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
 
@@ -409,9 +398,8 @@ class VMInterfaceView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").prefetch_related("vrf", "tenant"),
+            data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
             orderable=False,
         )
 
@@ -427,8 +415,7 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        for vlan in instance.tagged_vlans.restrict(request.user).prefetch_related("site", "group", "tenant", "role"):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)

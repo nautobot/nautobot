@@ -28,6 +28,7 @@ class ExamplePluginConfig(NautobotAppConfig):
     default_settings = {
         "example_default_key": "example_default_value",
     }
+    searchable_models = ["examplemodel"]
 
     # URL reverse lookup names
     home_view_name = "plugins:example_plugin:home"

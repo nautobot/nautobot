@@ -9,12 +9,12 @@ from django.contrib.auth.backends import (
 from django.contrib.auth.models import Group
 from django.db.models import Q
 
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import (
+from nautobot.core.utils.permissions import (
     permission_is_exempt,
     resolve_permission,
     resolve_permission_ct,
 )
+from nautobot.users.models import ObjectPermission
 
 logger = logging.getLogger("nautobot.authentication")
 
@@ -32,7 +32,6 @@ class ObjectPermissionBackend(ModelBackend):
         Return all permissions granted to the user by an ObjectPermission.
         """
         # Retrieve all assigned and enabled ObjectPermissions
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         object_permissions = ObjectPermission.objects.filter(
             Q(users=user_obj) | Q(groups__user=user_obj), enabled=True
         ).prefetch_related("object_types")

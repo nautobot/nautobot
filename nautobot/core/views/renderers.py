@@ -7,22 +7,23 @@ from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
-from nautobot.core.forms import SearchForm
-from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
-from nautobot.extras.utils import get_base_template
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
+    SearchForm,
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.utilities.forms.forms import DynamicFilterFormSet
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.utilities.utils import (
+from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    normalize_querydict,
     get_filterable_params_from_filter_params,
+    normalize_querydict,
 )
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import check_filter_for_display
+from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.extras.utils import get_base_template
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -165,6 +166,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 filter_params = self.get_filter_params(view, request)
                 if view.filterset_class is not None:
                     filterset = view.filterset_class(filter_params, view.queryset)
+                    filterset_filters = filterset.get_filters()
                     view.queryset = filterset.qs
                     if not filterset.is_valid():
                         messages.error(
@@ -174,7 +176,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         view.queryset = view.queryset.none()
 
                     display_filter_params = [
-                        [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                        check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in filter_params.items()
                     ]
                     if view.filterset_form_class is not None:

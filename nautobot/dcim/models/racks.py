@@ -9,18 +9,17 @@ from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
 
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.models.utils import array_to_string
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
-
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleModelMixin, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import NaturalOrderingField, JSONArrayField
-from nautobot.utilities.tree_queries import TreeModel
-from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -383,8 +382,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
 
             # Retrieve all devices installed within the rack
             queryset = (
-                # v2 TODO(jathan): Replace prefetch_related with select_related
-                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "role")
+                Device.objects.select_related("device_type", "device_type__manufacturer", "role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
@@ -426,8 +424,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         :param exclude: List of devices IDs to exclude (useful when moving a device within a rack)
         """
         # Gather all devices which consume U space within the rack
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        devices = self.devices.prefetch_related("device_type").filter(position__gte=1)
+        devices = self.devices.select_related("device_type").filter(position__gte=1)
         if exclude is not None:
             devices = devices.exclude(pk__in=exclude)
 

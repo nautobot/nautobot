@@ -16,6 +16,13 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 
+from nautobot.core.testing import (
+    CeleryTestCase,
+    TestCase,
+    TransactionTestCase,
+    run_job_for_testing,
+)
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Site
 from nautobot.extras.choices import (
     JobExecutionType,
@@ -27,13 +34,6 @@ from nautobot.extras.context_managers import JobHookChangeContext, change_loggin
 from nautobot.extras.jobs import get_job, run_job
 from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, Role, ScheduledJob, Status
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import (
-    CeleryTestCase,
-    TestCase,
-    TransactionTestCase,
-    run_job_for_testing,
-)
-from nautobot.utilities.utils import get_changes_for_model
 
 
 def get_job_class_and_model(module, name):

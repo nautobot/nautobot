@@ -11,6 +11,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -46,8 +48,6 @@ from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -120,7 +120,7 @@ class ConfigContextTest(TestCase):
         self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
-        self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
+        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
 
         self.device = Device.objects.create(

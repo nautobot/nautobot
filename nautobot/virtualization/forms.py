@@ -2,6 +2,25 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
+from nautobot.core.forms import (
+    add_blank_choice,
+    BootstrapMixin,
+    BulkEditNullBooleanSelect,
+    BulkRenameForm,
+    CommentField,
+    ConfirmationForm,
+    CSVChoiceField,
+    CSVModelChoiceField,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    ExpandableNameField,
+    form_from_model,
+    SlugField,
+    SmallTextarea,
+    StaticSelect2,
+    TagFilterField,
+)
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
@@ -33,25 +52,6 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
-    add_blank_choice,
-    BootstrapMixin,
-    BulkEditNullBooleanSelect,
-    BulkRenameForm,
-    CommentField,
-    ConfirmationForm,
-    CSVChoiceField,
-    CSVModelChoiceField,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    ExpandableNameField,
-    form_from_model,
-    SlugField,
-    SmallTextarea,
-    StaticSelect2,
-    TagFilterField,
-)
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 
@@ -333,9 +333,8 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
-                # v2 TODO(jathan): Replace prefetch_related with select_related
                 nat_ips = (
-                    IPAddress.objects.prefetch_related("nat_inside")
+                    IPAddress.objects.select_related("nat_inside")
                     .ip_family(family)
                     .filter(
                         nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
@@ -750,11 +749,17 @@ class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, Boot
 
 
 class VMInterfaceBulkCreateForm(
-    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode"]),
+    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode", "tags"]),
     VirtualMachineBulkAddComponentForm,
 ):
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={"content_types": VMInterface._meta.label_lower},
+    )
+
     field_order = (
         "name_pattern",
+        "status",
         "enabled",
         "mtu",
         "description",

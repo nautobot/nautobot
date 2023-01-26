@@ -16,10 +16,10 @@ from rest_framework.views import APIView
 from django_tables2 import RequestConfig
 
 from nautobot.core.api.views import NautobotAPIVersionMixin
-from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.forms import TableConfigForm
+from nautobot.core.views.mixins import AdminRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
-from nautobot.utilities.views import AdminRequiredMixin
 
 
 class InstalledPluginsView(AdminRequiredMixin, View):

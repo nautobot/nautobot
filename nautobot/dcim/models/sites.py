@@ -3,13 +3,12 @@ from django.db import models
 from django.urls import reverse
 from timezone_field import TimeZoneField
 
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeModel
 
 __all__ = (
     "Region",

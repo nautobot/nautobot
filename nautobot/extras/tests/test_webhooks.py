@@ -9,6 +9,8 @@ from django.utils import timezone
 from requests import Session
 
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.testing import APITestCase
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.dcim.models.sites import Region
@@ -18,8 +20,6 @@ from nautobot.extras.models import Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.utilities.testing import APITestCase
-from nautobot.utilities.utils import get_changes_for_model
 
 
 User = get_user_model()
@@ -211,7 +211,7 @@ class WebhookTest(APITestCase):
                     snapshots,
                 )
 
-    @patch("nautobot.utilities.api.get_serializer_for_model")
+    @patch("nautobot.core.api.utils.get_serializer_for_model")
     def test_webhooks_snapshot_without_model_api_serializer(self, get_serializer_for_model):
         def get_serializer(model_class):
             raise SerializerNotFound

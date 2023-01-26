@@ -1,14 +1,14 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.testing import FilterTestCases
+from nautobot.core.utils.data import flatten_iterable
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Platform, Region, Site
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, VLAN, Service
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
-from nautobot.utilities.utils import flatten_iterable
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
     ClusterGroupFilterSet,
@@ -128,7 +128,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Site.objects.filter(region=cls.regions[2]).first(),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         clusters = (
             Cluster.objects.create(
@@ -307,7 +307,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         roles = Role.objects.get_for_model(VirtualMachine)
         cls.roles = roles
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_map = {s.slug: s for s in statuses.all()}

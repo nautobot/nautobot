@@ -5,6 +5,12 @@ from django.db import models
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.ordering import naturalize_interface
+from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
@@ -17,13 +23,6 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.roles import RoleModelMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 __all__ = (

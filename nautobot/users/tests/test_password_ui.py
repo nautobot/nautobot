@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
-
-from nautobot.utilities.testing import TestCase
 from social_django.utils import load_strategy, load_backend
+
+from nautobot.core.testing import TestCase
 
 User = get_user_model()
 
@@ -54,7 +54,7 @@ class PasswordUITest(TestCase):
 
         sso_user = User.objects.create_user(username="sso_user", is_superuser=True)
 
-        self.request_factory = RequestFactory()
+        self.request_factory = RequestFactory(SERVER_NAME="nautobot.example.com")
         self.request = self.request_factory.get("/")
         SessionMiddleware(lambda: None).process_request(self.request)
 

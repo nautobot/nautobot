@@ -6,6 +6,12 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 
+from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.ordering import naturalize_interface
+from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
@@ -25,19 +31,12 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 
-from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
     RelationshipModel,
     Status,
     StatusModel,
 )
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.tree_queries import TreeModel
-from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
     "BaseInterface",
@@ -985,6 +984,10 @@ class DeviceBay(ComponentModel):
                         "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
                     }
                 )
+
+    @property
+    def parent(self):
+        return self.device
 
 
 #

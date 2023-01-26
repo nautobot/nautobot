@@ -16,7 +16,6 @@ from graphene_django.settings import graphene_settings
 from graphql.error.located_error import GraphQLLocatedError
 from graphql import get_default_backend
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from nautobot.circuits.models import Provider, CircuitTermination
 from nautobot.core.graphql.generators import (
@@ -33,6 +32,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
+from nautobot.core.testing import NautobotTestClient, create_test_user
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -54,8 +54,6 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.utilities.testing.utils import create_test_user
-
 from nautobot.extras.models import (
     ChangeLoggedModel,
     CustomField,
@@ -389,6 +387,8 @@ class GraphQLSearchParameters(TestCase):
 
 
 class GraphQLAPIPermissionTest(TestCase):
+    client_class = NautobotTestClient
+
     def setUp(self):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
         self.groups = (
@@ -410,7 +410,7 @@ class GraphQLAPIPermissionTest(TestCase):
             Token.objects.create(user=self.users[3], key="ijkl456789abcdef0123456789abcdef01234567"),
         )
 
-        self.clients = [APIClient(), APIClient(), APIClient(), APIClient()]
+        self.clients = [self.client_class(), self.client_class(), self.client_class(), self.client_class()]
         self.clients[0].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[0].key}")
         self.clients[1].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[1].key}")
         self.clients[2].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
@@ -547,8 +547,7 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_api_no_token(self):
         """Validate unauthenticated users are not able to query anything by default."""
-        client = APIClient()
-        response = client.post(self.api_url, {"query": self.get_racks_query}, format="json")
+        response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
@@ -557,8 +556,7 @@ class GraphQLAPIPermissionTest(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_api_no_token_exempt(self):
         """Validate unauthenticated users are able to query based on the exempt permissions."""
-        client = APIClient()
-        response = client.post(self.api_url, {"query": self.get_racks_query}, format="json")
+        response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
@@ -566,9 +564,8 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_api_wrong_token(self):
         """Validate a wrong token return 403."""
-        client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION="Token zzzzzzzzzzabcdef0123456789abcdef01234567")
-        response = client.post(self.api_url, {"query": self.get_racks_query}, format="json")
+        self.client.credentials(HTTP_AUTHORIZATION="Token zzzzzzzzzzabcdef0123456789abcdef01234567")
+        response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_graphql_query_params(self):
@@ -615,9 +612,8 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_query_format(self):
         """Validate application/graphql query is working properly."""
-        client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
-        response = client.post(
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
+        response = self.client.post(
             self.api_url,
             data=self.get_sites_racks_query,
             content_type="application/graphql",

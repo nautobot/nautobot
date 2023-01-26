@@ -9,3 +9,6 @@ Each VLAN must be assigned a [`status`](../../models/extras/status.md). The foll
 * Deprecated
 
 As with prefixes, each VLAN may also be assigned a functional role. Prefixes and VLANs share the same set of customizable roles.
+
++/- 2.0.0
+    - Renamed `group` field to `vlan_group`.

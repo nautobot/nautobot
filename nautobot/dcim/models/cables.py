@@ -9,9 +9,10 @@ from django.db.models import Sum
 from django.urls import reverse
 from django.utils.functional import classproperty
 
+from nautobot.core.models.fields import ColorField
+from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
-
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
     decompile_path_node,
@@ -20,9 +21,13 @@ from nautobot.dcim.utils import (
 )
 from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
+
+# TODO: There's an ugly circular-import pattern where if we move this import "up" to above, we get into an import loop
+# from dcim.models.cables to core.models.generics to extras.models.datasources to core.models.generics.
+# Deferring the update to here works for now; fixing so that core.models.generics doesn't depend on extras.models
+# would be the much more invasive but much more "correct" fix.
 from nautobot.core.models.generics import BaseModel, PrimaryModel
-from nautobot.utilities.fields import ColorField
-from nautobot.utilities.utils import to_meters
+
 from .devices import Device
 from .device_components import FrontPort, RearPort
 

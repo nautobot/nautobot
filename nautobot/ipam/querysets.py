@@ -15,8 +15,8 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce, Length
 
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
-from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class RIRQuerySet(RestrictedQuerySet):

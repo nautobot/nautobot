@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -24,7 +25,6 @@ from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.ipam.models import Prefix, IPAddress
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files
@@ -529,13 +529,13 @@ class FilterExtensionTest(TestCase):
         )
 
         Tenant.objects.create(
-            name="Tenant 1", slug="tenant-1", group=tenant_groups[0], description="tenant-1.nautobot.com"
+            name="Tenant 1", slug="tenant-1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"
         )
         Tenant.objects.create(
-            name="Tenant 2", slug="tenant-2", group=tenant_groups[1], description="tenant-2.nautobot.com"
+            name="Tenant 2", slug="tenant-2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"
         )
         Tenant.objects.create(
-            name="Tenant 3", slug="tenant-3", group=tenant_groups[2], description="tenant-3.nautobot.com"
+            name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
         )
 
         Site.objects.create(name="Site 1", slug="site-1", tenant=Tenant.objects.get(slug="tenant-1"))

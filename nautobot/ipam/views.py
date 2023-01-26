@@ -1,13 +1,14 @@
 from django.db.models import Prefetch, Q, Count, F
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.functional import classproperty
 from django_tables2 import RequestConfig
 
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import generic
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Interface
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from .choices import IPAddressRoleChoices
@@ -47,13 +48,11 @@ class VRFView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         prefix_count = Prefix.objects.restrict(request.user, "view").filter(vrf=instance).count()
 
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         import_targets_table = tables.RouteTargetTable(
-            instance.import_targets.prefetch_related("tenant"), orderable=False
+            instance.import_targets.select_related("tenant"), orderable=False
         )
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         export_targets_table = tables.RouteTargetTable(
-            instance.export_targets.prefetch_related("tenant"), orderable=False
+            instance.export_targets.select_related("tenant"), orderable=False
         )
 
         return {
@@ -80,16 +79,14 @@ class VRFBulkImportView(generic.BulkImportView):
 
 
 class VRFBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VRF.objects.prefetch_related("tenant")
+    queryset = VRF.objects.select_related("tenant")
     filterset = filters.VRFFilterSet
     table = tables.VRFTable
     form = forms.VRFBulkEditForm
 
 
 class VRFBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VRF.objects.prefetch_related("tenant")
+    queryset = VRF.objects.select_related("tenant")
     filterset = filters.VRFFilterSet
     table = tables.VRFTable
 
@@ -110,9 +107,8 @@ class RouteTargetView(generic.ObjectView):
     queryset = RouteTarget.objects.all()
 
     def get_extra_context(self, request, instance):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        importing_vrfs_table = tables.VRFTable(instance.importing_vrfs.prefetch_related("tenant"), orderable=False)
-        exporting_vrfs_table = tables.VRFTable(instance.exporting_vrfs.prefetch_related("tenant"), orderable=False)
+        importing_vrfs_table = tables.VRFTable(instance.importing_vrfs.select_related("tenant"), orderable=False)
+        exporting_vrfs_table = tables.VRFTable(instance.exporting_vrfs.select_related("tenant"), orderable=False)
 
         return {
             "importing_vrfs_table": importing_vrfs_table,
@@ -136,16 +132,14 @@ class RouteTargetBulkImportView(generic.BulkImportView):
 
 
 class RouteTargetBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = RouteTarget.objects.prefetch_related("tenant")
+    queryset = RouteTarget.objects.select_related("tenant")
     filterset = filters.RouteTargetFilterSet
     table = tables.RouteTargetTable
     form = forms.RouteTargetBulkEditForm
 
 
 class RouteTargetBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = RouteTarget.objects.prefetch_related("tenant")
+    queryset = RouteTarget.objects.select_related("tenant")
     filterset = filters.RouteTargetFilterSet
     table = tables.RouteTargetTable
 
@@ -168,8 +162,7 @@ class RIRView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Aggregates
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        aggregates = Aggregate.objects.restrict(request.user, "view").filter(rir=instance).prefetch_related("tenant")
+        aggregates = Aggregate.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
 
         aggregate_table = tables.AggregateTable(aggregates)
 
@@ -219,7 +212,7 @@ class AggregateListView(generic.ObjectListView):
             "AND ipam_prefix.broadcast <= ipam_aggregate.broadcast",
             (),
         )
-    )
+    ).select_related("rir")
     filterset = filters.AggregateFilterSet
     filterset_form = forms.AggregateFilterForm
     table = tables.AggregateDetailTable
@@ -247,11 +240,10 @@ class AggregateView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all child prefixes contained by this aggregate
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         child_prefixes = (
             Prefix.objects.restrict(request.user, "view")
             .net_contained_or_equal(instance.prefix)
-            .prefetch_related("site", "role")
+            .select_related("site", "role")
             .order_by("network")
             .annotate_tree()
         )
@@ -301,16 +293,14 @@ class AggregateBulkImportView(generic.BulkImportView):
 
 
 class AggregateBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Aggregate.objects.prefetch_related("rir")
+    queryset = Aggregate.objects.select_related("rir")
     filterset = filters.AggregateFilterSet
     table = tables.AggregateTable
     form = forms.AggregateBulkEditForm
 
 
 class AggregateBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Aggregate.objects.prefetch_related("rir")
+    queryset = Aggregate.objects.select_related("rir")
     filterset = filters.AggregateFilterSet
     table = tables.AggregateTable
 
@@ -325,16 +315,13 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-
-    def __init__(self, *args, **kwargs):
-        # Set the internal queryset value
-        self._queryset = None
-        super().__init__(*args, **kwargs)
+    _queryset = None
+    _disable_prefix_list_hierarchy = None
 
     # 2.0 TODO: Remove this after IPAM models are trees in 2.0. When the data model changes to 1.)
     # be tree-based, 2.) use NautobotViewSet this can be removed
-    @property
-    def queryset(self):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def queryset(cls):  # pylint: disable=no-self-argument,method-hidden
         """
         Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
 
@@ -343,36 +330,35 @@ class PrefixListView(generic.ObjectListView):
         table is rendered as a flat list.
 
         """
-        if self._queryset is not None:
-            return self._queryset
+        if cls._queryset is not None and cls._disable_prefix_list_hierarchy == get_settings_or_config(
+            "DISABLE_PREFIX_LIST_HIERARCHY"
+        ):
+            return cls._queryset
 
+        cls._queryset = Prefix.objects.select_related(
+            "site", "location", "vrf__tenant", "tenant", "vlan", "role", "status"
+        )
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
-            self._queryset = Prefix.objects.annotate(parents=Count(None)).order_by(
+            cls._queryset = cls._queryset.annotate(parents=Count(None)).order_by(
                 F("vrf__name").asc(nulls_first=True),
                 "network",
                 "prefix_length",
             )
+            cls._disable_prefix_list_hierarchy = True
         else:
-            self._queryset = Prefix.objects.annotate_tree()
+            cls._queryset = cls._queryset.annotate_tree()
+            cls._disable_prefix_list_hierarchy = False
 
-        return self._queryset
-
-    @queryset.setter
-    def queryset(self, value):
-        """
-        Property setter for 'queryset'
-        """
-        self._queryset = value
+        return cls._queryset
 
 
 class PrefixView(generic.ObjectView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Prefix.objects.prefetch_related(
+    queryset = Prefix.objects.select_related(
         "role",
         "site__region",
         "status",
-        "tenant__group",
-        "vlan__group",
+        "tenant__tenant_group",
+        "vlan__vlan_group",
         "vrf",
     )
 
@@ -383,25 +369,23 @@ class PrefixView(generic.ObjectView):
             aggregate = None
 
         # Parent prefixes table
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         parent_prefixes = (
             Prefix.objects.restrict(request.user, "view")
             .net_contains(instance.prefix)
             .filter(Q(vrf=instance.vrf) | Q(vrf__isnull=True))
-            .prefetch_related("role", "site", "status")
+            .select_related("role", "site", "status")
             .annotate_tree()
         )
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
         parent_prefix_table.exclude = ("vrf",)
 
         # Duplicate prefixes table
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         duplicate_prefixes = (
             Prefix.objects.restrict(request.user, "view")
             .net_equals(instance.prefix)
             .filter(vrf=instance.vrf)
             .exclude(pk=instance.pk)
-            .prefetch_related("role", "site", "status")
+            .select_related("role", "site", "status")
         )
         duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes), orderable=False)
         duplicate_prefix_table.exclude = ("vrf",)
@@ -419,11 +403,10 @@ class PrefixPrefixesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Child prefixes table
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         child_prefixes = (
             instance.get_child_prefixes()
             .restrict(request.user, "view")
-            .prefetch_related("site", "status", "role", "vlan")
+            .select_related("site", "status", "role", "vlan")
             .annotate_tree()
         )
 
@@ -466,11 +449,11 @@ class PrefixIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         ipaddresses = (
             instance.get_child_ips()
             .restrict(request.user, "view")
-            .prefetch_related("vrf", "primary_ip4_for", "primary_ip6_for", "status")
+            .select_related("vrf", "status")
+            .prefetch_related("primary_ip4_for", "primary_ip6_for")
         )
 
         # Add available IP addresses to the table if requested
@@ -524,16 +507,14 @@ class PrefixBulkImportView(generic.BulkImportView):
 
 
 class PrefixBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Prefix.objects.prefetch_related("site", "status", "vrf__tenant", "tenant", "vlan", "role")
+    queryset = Prefix.objects.select_related("site", "status", "vrf__tenant", "tenant", "vlan", "role")
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
     form = forms.PrefixBulkEditForm
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Prefix.objects.prefetch_related("site", "status", "vrf__tenant", "tenant", "vlan", "role")
+    queryset = Prefix.objects.select_related("site", "status", "vrf__tenant", "tenant", "vlan", "role")
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
 
@@ -544,35 +525,32 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.all()
+    queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
 
 
 class IPAddressView(generic.ObjectView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("vrf__tenant", "tenant")
+    queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         parent_prefixes = (
             Prefix.objects.restrict(request.user, "view")
             .net_contains_or_equals(instance.address)
             .filter(vrf=instance.vrf)
-            .prefetch_related("site", "status", "role")
+            .select_related("site", "status", "role")
         )
         parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
         parent_prefixes_table.exclude = ("vrf",)
 
         # Duplicate IPs table
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         duplicate_ips = (
             IPAddress.objects.restrict(request.user, "view")
             .filter(vrf=instance.vrf, host=instance.host)
             .exclude(pk=instance.pk)
-            .prefetch_related("nat_inside")
+            .select_related("nat_inside")
         )
         # Exclude anycast IPs if this IP is anycast
         if instance.role == IPAddressRoleChoices.ROLE_ANYCAST:
@@ -659,8 +637,7 @@ class IPAddressAssignView(generic.ObjectView):
 
         if form.is_valid():
 
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            addresses = self.queryset.prefetch_related("vrf", "tenant")
+            addresses = self.queryset.select_related("vrf", "tenant")
             # Limit to 100 results
             addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]
             table = tables.IPAddressAssignTable(addresses)
@@ -695,16 +672,14 @@ class IPAddressBulkImportView(generic.BulkImportView):
 
 
 class IPAddressBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("status", "role", "tenant", "vrf__tenant")
+    queryset = IPAddress.objects.select_related("status", "role", "tenant", "vrf__tenant")
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
     form = forms.IPAddressBulkEditForm
 
 
 class IPAddressBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("status", "role", "tenant", "vrf__tenant")
+    queryset = IPAddress.objects.select_related("status", "role", "tenant", "vrf__tenant")
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
 
@@ -715,8 +690,7 @@ class IPAddressBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANGroupListView(generic.ObjectListView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     filterset_form = forms.VLANGroupFilterForm
     table = tables.VLANGroupTable
@@ -728,7 +702,7 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
-            .filter(group=instance)
+            .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
         vlans_count = vlans.count()
@@ -738,7 +712,7 @@ class VLANGroupView(generic.ObjectView):
         if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
             vlan_table.columns.show("pk")
         vlan_table.columns.hide("site")
-        vlan_table.columns.hide("group")
+        vlan_table.columns.hide("vlan_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -755,7 +729,7 @@ class VLANGroupView(generic.ObjectView):
 
         return {
             "first_available_vlan": instance.get_next_available_vid(),
-            "bulk_querystring": f"group_id={instance.pk}",
+            "bulk_querystring": f"vlan_group_id={instance.pk}",
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
@@ -778,8 +752,7 @@ class VLANGroupBulkImportView(generic.BulkImportView):
 
 
 class VLANGroupBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     table = tables.VLANGroupTable
 
@@ -790,27 +763,25 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.all()
+    queryset = VLAN.objects.select_related("site", "location", "vlan_group", "tenant", "role", "status")
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
 
 
 class VLANView(generic.ObjectView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLAN.objects.prefetch_related(
+    queryset = VLAN.objects.select_related(
         "role",
         "site__region",
         "status",
-        "tenant__group",
+        "tenant__tenant_group",
     )
 
     def get_extra_context(self, request, instance):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         prefixes = (
             Prefix.objects.restrict(request.user, "view")
             .filter(vlan=instance)
-            .prefetch_related(
+            .select_related(
                 "site",
                 "status",
                 "role",
@@ -830,8 +801,7 @@ class VLANInterfacesView(generic.ObjectView):
     template_name = "ipam/vlan_interfaces.html"
 
     def get_extra_context(self, request, instance):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        interfaces = instance.get_interfaces().prefetch_related("device")
+        interfaces = instance.get_interfaces().select_related("device")
         members_table = tables.VLANDevicesTable(interfaces)
 
         paginate = {
@@ -851,8 +821,7 @@ class VLANVMInterfacesView(generic.ObjectView):
     template_name = "ipam/vlan_vminterfaces.html"
 
     def get_extra_context(self, request, instance):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        interfaces = instance.get_vminterfaces().prefetch_related("virtual_machine")
+        interfaces = instance.get_vminterfaces().select_related("virtual_machine")
         members_table = tables.VLANVirtualMachinesTable(interfaces)
 
         paginate = {
@@ -884,9 +853,8 @@ class VLANBulkImportView(generic.BulkImportView):
 
 
 class VLANBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLAN.objects.prefetch_related(
-        "group",
+    queryset = VLAN.objects.select_related(
+        "vlan_group",
         "site",
         "status",
         "tenant",
@@ -898,9 +866,8 @@ class VLANBulkEditView(generic.BulkEditView):
 
 
 class VLANBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLAN.objects.prefetch_related(
-        "group",
+    queryset = VLAN.objects.select_related(
+        "vlan_group",
         "site",
         "status",
         "tenant",
@@ -924,11 +891,11 @@ class ServiceListView(generic.ObjectListView):
 
 
 class ServiceView(generic.ObjectView):
-    queryset = Service.objects.prefetch_related("ipaddresses")
+    queryset = Service.objects.prefetch_related("ip_addresses")
 
 
 class ServiceEditView(generic.ObjectEditView):
-    queryset = Service.objects.prefetch_related("ipaddresses")
+    queryset = Service.objects.prefetch_related("ip_addresses")
     model_form = forms.ServiceForm
     template_name = "ipam/service_edit.html"
 
@@ -954,15 +921,13 @@ class ServiceDeleteView(generic.ObjectDeleteView):
 
 
 class ServiceBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Service.objects.prefetch_related("device", "virtual_machine")
+    queryset = Service.objects.select_related("device", "virtual_machine")
     filterset = filters.ServiceFilterSet
     table = tables.ServiceTable
     form = forms.ServiceBulkEditForm
 
 
 class ServiceBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Service.objects.prefetch_related("device", "virtual_machine")
+    queryset = Service.objects.select_related("device", "virtual_machine")
     filterset = filters.ServiceFilterSet
     table = tables.ServiceTable

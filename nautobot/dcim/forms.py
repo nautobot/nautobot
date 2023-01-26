@@ -7,11 +7,35 @@ from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
-from netaddr import EUI
-from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
+from nautobot.core.forms import (
+    APISelect,
+    APISelectMultiple,
+    add_blank_choice,
+    BootstrapMixin,
+    BulkEditNullBooleanSelect,
+    ColorSelect,
+    CommentField,
+    CSVChoiceField,
+    CSVContentTypeField,
+    CSVModelChoiceField,
+    CSVMultipleContentTypeField,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    ExpandableNameField,
+    form_from_model,
+    MultipleContentTypeField,
+    NumericArrayField,
+    SelectWithPK,
+    SmallTextarea,
+    SlugField,
+    StaticSelect2,
+    StaticSelect2Multiple,
+    TagFilterField,
+)
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelCSVFormMixin,
@@ -41,32 +65,6 @@ from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.forms import (
-    APISelect,
-    APISelectMultiple,
-    add_blank_choice,
-    BootstrapMixin,
-    BulkEditNullBooleanSelect,
-    ColorSelect,
-    CommentField,
-    CSVChoiceField,
-    CSVContentTypeField,
-    CSVModelChoiceField,
-    CSVMultipleContentTypeField,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    ExpandableNameField,
-    form_from_model,
-    MultipleContentTypeField,
-    NumericArrayField,
-    SelectWithPK,
-    SmallTextarea,
-    SlugField,
-    StaticSelect2,
-    StaticSelect2Multiple,
-    TagFilterField,
-)
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CableLengthUnitChoices,
@@ -245,24 +243,6 @@ class ComponentForm(BootstrapMixin, forms.Form):
 #
 # Fields
 #
-
-
-class MACAddressField(forms.Field):
-    widget = forms.CharField
-    default_error_messages = {
-        "invalid": "MAC address must be in EUI-48 format",
-    }
-
-    def to_python(self, value):
-        value = super().to_python(value)
-
-        # Validate MAC address format
-        try:
-            value = EUI(value.strip())
-        except AddrFormatError:
-            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
-
-        return value
 
 
 #
@@ -975,8 +955,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         query_params={"region": "$region"},
     )
     group = DynamicModelMultipleChoiceField(
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        queryset=RackGroup.objects.prefetch_related("site"),
+        queryset=RackGroup.objects.select_related("site"),
         required=False,
         label="Rack group",
         null_option="None",
@@ -1910,7 +1889,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 # Collect NAT IPs
                 # v2 TODO(jathan): Replace prefetch_related with select_related
                 nat_ips = (
-                    IPAddress.objects.prefetch_related("nat_inside")
+                    IPAddress.objects.select_related("nat_inside")
                     .ip_family(family)
                     .filter(
                         nat_inside__assigned_object_type=ContentType.objects.get_for_model(Interface),
@@ -2349,7 +2328,7 @@ class ConsolePortCreateForm(ComponentCreateForm):
     )
 
 
-class ConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type"]), DeviceBulkAddComponentForm):
+class ConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type", "tags"]), DeviceBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
 
 
@@ -2416,7 +2395,7 @@ class ConsoleServerPortCreateForm(ComponentCreateForm):
     )
 
 
-class ConsoleServerPortBulkCreateForm(form_from_model(ConsoleServerPort, ["type"]), DeviceBulkAddComponentForm):
+class ConsoleServerPortBulkCreateForm(form_from_model(ConsoleServerPort, ["type", "tags"]), DeviceBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
 
 
@@ -2490,7 +2469,7 @@ class PowerPortCreateForm(ComponentCreateForm):
 
 
 class PowerPortBulkCreateForm(
-    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw"]),
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     field_order = (
@@ -2589,7 +2568,7 @@ class PowerOutletCreateForm(ComponentCreateForm):
         self.fields["power_port"].queryset = PowerPort.objects.filter(device=device)
 
 
-class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg"]), DeviceBulkAddComponentForm):
+class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg", "tags"]), DeviceBulkAddComponentForm):
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -2868,17 +2847,29 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
 
 
 class InterfaceBulkCreateForm(
-    form_from_model(Interface, ["type", "enabled", "mtu", "mgmt_only"]),
+    form_from_model(Interface, ["enabled", "mtu", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
 ):
+    type = forms.ChoiceField(
+        choices=InterfaceTypeChoices,
+        widget=StaticSelect2(),
+    )
+    status = DynamicModelChoiceField(
+        required=True,
+        queryset=Status.objects.all(),
+        query_params={"content_types": Interface._meta.label_lower},
+    )
+
     field_order = (
         "name_pattern",
         "label_pattern",
+        "status",
         "type",
         "enabled",
         "mtu",
         "mgmt_only",
         "description",
+        "mode",
         "tags",
     )
 
@@ -2968,8 +2959,7 @@ class InterfaceBulkEditForm(
             # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
-                # v2 TODO(jathan): Replace prefetch_related with select_related
-                interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
+                interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).select_related("device__site")
 
                 # Check interface sites.  First interface should set site, further interfaces will either continue the
                 # loop or reset back to no site and break the loop.
@@ -3281,7 +3271,7 @@ class RearPortCreateForm(ComponentCreateForm):
     )
 
 
-class RearPortBulkCreateForm(form_from_model(RearPort, ["type", "positions"]), DeviceBulkAddComponentForm):
+class RearPortBulkCreateForm(form_from_model(RearPort, ["type", "positions", "tags"]), DeviceBulkAddComponentForm):
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -3366,7 +3356,7 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
         ).exclude(pk=device_bay.device.pk)
 
 
-class DeviceBayBulkCreateForm(DeviceBulkAddComponentForm):
+class DeviceBayBulkCreateForm(form_from_model(DeviceBay, ["tags"]), DeviceBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "description", "tags")
 
 
@@ -3494,7 +3484,7 @@ class InventoryItemCSVForm(CustomFieldModelCSVForm):
 
 
 class InventoryItemBulkCreateForm(
-    form_from_model(InventoryItem, ["manufacturer", "part_id", "serial", "asset_tag", "discovered"]),
+    form_from_model(InventoryItem, ["manufacturer", "part_id", "serial", "asset_tag", "discovered", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     field_order = (

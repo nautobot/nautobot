@@ -2,9 +2,9 @@ from django.urls import reverse
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 
 
 class AppTest(APITestCase):
@@ -166,7 +166,7 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 

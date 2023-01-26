@@ -15,7 +15,9 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceType, Platform, Region, Site
+from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.requests import copy_safe_request
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -37,8 +39,6 @@ from nautobot.extras.models import (
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.utilities.git import GitRepo
-from nautobot.utilities.utils import copy_safe_request
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
@@ -400,6 +400,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "locations",
         "device_types",
         "roles",
         "platforms",
@@ -535,6 +536,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("locations", Location),
         ("device_types", DeviceType),
         ("roles", Role),
         ("platforms", Platform),

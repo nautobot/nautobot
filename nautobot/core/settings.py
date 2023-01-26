@@ -208,7 +208,7 @@ REST_FRAMEWORK = {
         # Custom operations
         "bulk_destroy": "bulk_delete",
     },
-    "VIEW_NAME_FUNCTION": "nautobot.utilities.api.get_view_name",
+    "VIEW_NAME_FUNCTION": "nautobot.core.api.utils.get_view_name",
 }
 
 
@@ -399,7 +399,6 @@ INSTALLED_APPS = [
     "nautobot.extras",
     "nautobot.tenancy",
     "nautobot.users",
-    "nautobot.utilities",
     "nautobot.virtualization",
     "drf_spectacular",
     "drf_spectacular_sidecar",
@@ -468,6 +467,7 @@ TEMPLATES = [
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
+            "environment": "jinja2.sandbox.SandboxedEnvironment",
         },
     },
 ]
@@ -522,7 +522,7 @@ CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi
 
 CONSTANCE_ADDITIONAL_FIELDS = {
     "per_page_defaults_field": [
-        "nautobot.utilities.forms.fields.JSONArrayFormField",
+        "nautobot.core.forms.fields.JSONArrayFormField",
         {
             "widget": "django.forms.TextInput",
             "base_field": django.forms.IntegerField(min_value=1),

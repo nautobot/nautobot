@@ -4,10 +4,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.choices import VMInterfaceStatusChoices
 from nautobot.virtualization.models import (
     Cluster,
@@ -179,7 +179,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         # status `name` (str) and not the `pk` (int). Do not validate this
         # field right now, since we are asserting that it does create correctly.
         #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
 

@@ -1,2 +1,4 @@
 Renamed fields on Circuit model: `type` to `circuit_type`, `terminations` to `circuit_terminations`, `termination_a` to `circuit_termination_a`, and `termination_z` to `circuit_termination_z`.
 Renamed reverse-relation `circuittermination` to `circuit_terminations` on the CablePath model.
+Renamed `group` field to `vlan_group` on VLAN model, renamed `ipaddresses` to `ip_addresses` on Service model.
+Renamed `group` field to `tenant_group` on Tenant model.

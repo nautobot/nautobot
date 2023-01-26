@@ -6,10 +6,10 @@ from nautobot.circuits.filters import (
     ProviderNetworkFilterSet,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Role, Status
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
 
 
 class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -102,7 +102,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Site.objects.filter(region=cls.regions[2]).first(),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)
 
         circuit_types = (
             CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1"),

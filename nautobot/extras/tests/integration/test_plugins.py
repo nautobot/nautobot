@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -11,11 +12,11 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
 
@@ -59,6 +60,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.webhook.additional_headers = headers
         self.webhook.validated_save()
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_create(self):
         """
         Test that webhooks are correctly triggered by a plugin model create.
@@ -72,6 +74,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_update(self):
         """
         Test that webhooks are correctly triggered by a plugin model update.
@@ -88,6 +91,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_delete(self):
         """
         Test that webhooks are correctly triggered by a plugin model delete.
@@ -103,6 +107,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_with_body(self):
         """
         Verify that webhook body_template is correctly used.
