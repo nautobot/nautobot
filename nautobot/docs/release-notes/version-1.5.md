@@ -162,7 +162,6 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 - [#3155](https://github.com/nautobot/nautobot/issues/3155) - Aligned buttons on device component create page.
 - [#3169](https://github.com/nautobot/nautobot/issues/3169) - Fixed data mismatch in `ScheduledJob` causing celery workers to fail when running scheduled jobs created in versions prior to `v1.5.8`. ⚠ **NOTE**: If your celery workers are failing on startup after upgrading to `v1.5.8`, you may need to purge the celery queue with `nautobot-server celery purge` or `nautobot-server celery purge -Q <queues>` to purge custom queues.
 
-
 ## v1.5.8 (2023-01-23)
 
 ### Added
