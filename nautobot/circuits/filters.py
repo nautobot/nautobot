@@ -5,6 +5,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -33,39 +34,43 @@ class ProviderFilterSet(NautobotFilterSet):
         method="search",
         label="Search",
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuits__circuit_terminations__site__region",
-        label="Region (ID)",
+    circuits = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="cid",
+        queryset=Circuit.objects.all(),
+        label="Circuit (ID or circuit ID)",
+    )
+    has_circuits = RelatedMembershipBooleanFilter(
+        field_name="circuits",
+        label="Has circuits",
+    )
+    provider_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ProviderNetwork.objects.all(),
+        label="Provider networks (slug or ID)",
+    )
+    has_provider_networks = RelatedMembershipBooleanFilter(
+        field_name="provider_networks",
+        label="Has provider networks",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuits__circuit_terminations__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuits__circuit_terminations__site",
         queryset=Site.objects.all(),
-        label="Site",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="circuits__circuit_terminations__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="circuits__circuit_terminations__location__slug",
+        field_name="circuits__circuit_terminations__location",
         queryset=Location.objects.all(),
-        to_field_name="slug",
         label="Location (slug or ID)",
     )
-    tag = TagFilter()
+    tags = TagFilter()
 
     class Meta:
         model = Provider
-        fields = ["id", "name", "slug", "asn", "account"]
+        fields = ["account", "admin_contact", "asn", "comments", "id", "name", "noc_contact", "portal_url", "slug"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -87,21 +92,24 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         method="search",
         label="Search",
     )
-    provider_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Provider.objects.all(),
-        label="Provider (ID)",
+    circuit_terminations = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Circuit Terminations (ID)",
     )
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
-        queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
+    has_circuit_terminations = RelatedMembershipBooleanFilter(
+        field_name="circuit_terminations",
+        label="Has circuit terminations",
     )
-    tag = TagFilter()
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="provider",
+        queryset=Provider.objects.all(),
+        label="Provider (slug or ID)",
+    )
+    tags = TagFilter()
 
     class Meta:
         model = ProviderNetwork
-        fields = ["id", "name", "slug"]
+        fields = ["comments", "description", "id", "name", "slug"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -117,7 +125,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = CircuitType
-        fields = ["id", "name", "slug"]
+        fields = ["id", "description", "name", "slug"]
 
 
 class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
@@ -131,59 +139,60 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
             "comments": "icontains",
         },
     )
-    provider_id = django_filters.ModelMultipleChoiceFilter(
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (ID)",
+        label="Provider (slug or ID)",
     )
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
-        queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
-    )
-    provider_network_id = django_filters.ModelMultipleChoiceFilter(
+    provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuit_terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
-        label="Provider Network (ID)",
+        label="Provider Network (slug or ID)",
     )
     circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
         to_field_name="slug",
         label="Circuit type (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuit_terminations__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="circuit_terminations__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="circuit_terminations__location__slug",
+        field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
-        to_field_name="slug",
         label="Location (slug or ID)",
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuit_terminations__site__region",
-        label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="circuit_terminations__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    tag = TagFilter()
+    has_terminations = RelatedMembershipBooleanFilter(
+        field_name="circuit_terminations",
+        label="Has terminations",
+    )
+    circuit_termination_a = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Termination A (ID)",
+    )
+    circuit_termination_z = django_filters.ModelMultipleChoiceFilter(
+        queryset=CircuitTermination.objects.all(),
+        label="Termination Z (ID)",
+    )
+    tags = TagFilter()
 
     class Meta:
         model = Circuit
-        fields = ["id", "cid", "install_date", "commit_rate"]
+        fields = [
+            "cid",
+            "comments",
+            "commit_rate",
+            "description",
+            "id",
+            "install_date",
+            "circuit_terminations",
+        ]
 
 
 class CircuitTerminationFilterSet(
@@ -200,15 +209,16 @@ class CircuitTerminationFilterSet(
             "description": "icontains",
         },
     )
-    circuit_id = django_filters.ModelMultipleChoiceFilter(
+    circuit = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="cid",
         queryset=Circuit.objects.all(),
-        label="Circuit",
+        label="Circuit (ID or circuit ID)",
     )
-    provider_network_id = django_filters.ModelMultipleChoiceFilter(
+    provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ProviderNetwork.objects.all(),
-        label="Provider Network (ID)",
+        label="Provider Network (ID or slug)",
     )
 
     class Meta:
         model = CircuitTermination
-        fields = ["term_side", "port_speed", "upstream_speed", "xconnect_id"]
+        fields = ["description", "port_speed", "pp_info", "term_side", "upstream_speed", "xconnect_id"]

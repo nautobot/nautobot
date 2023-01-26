@@ -42,7 +42,7 @@ class CircuitTypeUIViewSet(
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(circuit_type=instance)
-                .select_related("type", "tenant")
+                .select_related("circuit_type", "tenant")
                 .prefetch_related("circuit_terminations__site")
             )
 
