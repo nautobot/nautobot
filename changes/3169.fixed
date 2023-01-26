@@ -1,0 +1,1 @@
+Fixed data mismatch in ScheduledJob causing celery workers to fail.
