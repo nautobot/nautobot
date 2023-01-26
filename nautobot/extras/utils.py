@@ -435,7 +435,7 @@ def migrate_role_data(
         queryset=queryset,
         role_model=role_model,
         role_choiceset=role_choiceset,
-        legacy_role=legacy_role_name,
+        legacy_role=legacy_role,
         new_role=new_role,
         is_m2m_field=is_m2m_field,
     )
@@ -480,6 +480,8 @@ def get_instances_to_pk_and_new_role(queryset, role_model, role_choiceset, legac
         if role_model:
             # Get the value for the legacy role field e.g. Device.role, IPAddress.role
             legacy_role_field = getattr(item, legacy_role)
+            if not isinstance(legacy_role_field, str):
+                legacy_role_field = legacy_role_field.name
             if is_m2m_field:
                 # In the case of a m2m field, `legacy_role_field` we would need to get all role names e.g ConfigContext.roles.values_list("name", flat=True)
                 role_names = legacy_role_field.values_list("name", flat=True)
