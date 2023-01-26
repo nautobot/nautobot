@@ -455,6 +455,9 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceBulkRenameForm
 
+    def get_selected_objects_parents_name(self, selected_objects):
+        return selected_objects.first().virtual_machine.name
+
 
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = VMInterface.objects.all()
