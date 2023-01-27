@@ -46,27 +46,30 @@ __all__ = (
 )
 class RackGroup(TreeModel, OrganizationalModel):
     """
-    Racks can be grouped as subsets within a Location.
+    Racks can be grouped as subsets within a Site or Location.
     """
 
     name = models.CharField(max_length=100, db_index=True)
     # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
         related_name="rack_groups",
+        blank=True,
+        null=True,
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["location", "parent", "name", "slug", "description"]
+    csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
     class Meta:
         ordering = ("name",)
         unique_together = [
-            ["location", "name"],
+            ["site", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["location", "slug"],
+            ["site", "slug"],
         ]
 
     def __str__(self):
@@ -77,7 +80,8 @@ class RackGroup(TreeModel, OrganizationalModel):
 
     def to_csv(self):
         return (
-            self.location.name,
+            self.site,
+            self.location.name if self.location else None,
             self.parent.name if self.parent else "",
             self.name,
             self.slug,
@@ -87,30 +91,34 @@ class RackGroup(TreeModel, OrganizationalModel):
     def clean(self):
         super().clean()
 
-        # Parent RackGroup (if any) must belong to the same Location
-        if self.parent and self.parent.location != self.location:
-            raise ValidationError(
-                f"Parent rack group ({self.parent}) must belong to the same location ({self.location})"
-            )
+        # Parent RackGroup (if any) must belong to the same Site
+        if self.parent and self.parent.site != self.site:
+            raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
 
         # Validate location
-        if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-            raise ValidationError(
-                {"location": f'Rack groups may not associate to locations of type "{self.location.location_type}".'}
-            )
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
 
-        # Parent RackGroup (if any) must belong to the same or ancestor Location
-        if (
-            self.parent is not None
-            and self.parent.location is not None
-            and self.parent.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {
-                    "location": f'Location "{self.location}" is not descended from '
-                    f'parent rack group "{self.parent}" location "{self.parent.location}".'
-                }
-            )
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Rack groups may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+            # Parent RackGroup (if any) must belong to the same or ancestor Location
+            if (
+                self.parent is not None
+                and self.parent.location is not None
+                and self.parent.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "location": f'Location "{self.location}" is not descended from '
+                        f'parent rack group "{self.parent}" location "{self.parent.location}".'
+                    }
+                )
 
 
 @extras_features(
@@ -128,7 +136,7 @@ class RackGroup(TreeModel, OrganizationalModel):
 class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
-    Each Rack is assigned to a Location and (optionally) a RackGroup.
+    Each Rack is assigned to a Site and (optionally) a RackGroup.
     """
 
     name = models.CharField(max_length=100, db_index=True)
@@ -140,10 +148,13 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
+    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="racks")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="racks",
+        blank=True,
+        null=True,
     )
     group = models.ForeignKey(
         to="dcim.RackGroup",
@@ -198,6 +209,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     images = GenericRelation(to="extras.ImageAttachment")
 
     csv_headers = [
+        "site",
         "location",
         "group",
         "name",
@@ -217,6 +229,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         "comments",
     ]
     clone_fields = [
+        "site",
         "location",
         "group",
         "tenant",
@@ -234,7 +247,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:
-        ordering = ("location", "group", "_name")  # (location, group, name) may be non-unique
+        ordering = ("site", "group", "_name")  # (site, group, name) may be non-unique
         unique_together = (
             # Name and facility_id must be unique *only* within a RackGroup
             ("group", "name"),
@@ -250,19 +263,34 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     def clean(self):
         super().clean()
 
-        # Validate group/location assignment
-        if self.group is not None and self.group.location not in self.location.ancestors(include_self=True):
-            raise ValidationError(
-                {
-                    "group": f'The assigned rack group "{self.group}" belongs to a location '
-                    f'("{self.group.location}") that does not include location "{self.location}".'
-                }
-            )
+        # Validate group/site assignment
+        if self.site and self.group and self.group.site != self.site:
+            raise ValidationError(f"Assigned rack group must belong to parent site ({self.site}).")
 
-        if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-            raise ValidationError(
-                {"location": f'Racks may not associate to locations of type "{self.location.location_type}".'}
-            )
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            # Validate group/location assignment
+            if (
+                self.group is not None
+                and self.group.location is not None
+                and self.group.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "group": f'The assigned rack group "{self.group}" belongs to a location '
+                        f'("{self.group.location}") that does not include location "{self.location}".'
+                    }
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Racks may not associate to locations of type "{self.location.location_type}".'}
+                )
 
         # Validate outer dimensions and unit
         if (self.outer_width is not None or self.outer_depth is not None) and not self.outer_unit:
@@ -279,10 +307,15 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
                     raise ValidationError(
                         {"u_height": f"Rack must be at least {min_height}U tall to house currently installed devices."}
                     )
+            # Validate that Rack was assigned a group of its same site, if applicable
+            if self.group:
+                if self.group.site != self.site:
+                    raise ValidationError({"group": f"Rack group must be from the same site, {self.site}."})
 
     def to_csv(self):
         return (
-            self.location.name,
+            self.site.name,
+            self.location.name if self.location else None,
             self.group.name if self.group else None,
             self.name,
             self.facility_id,
@@ -539,7 +572,7 @@ class RackReservation(PrimaryModel):
     description = models.CharField(max_length=200)
 
     csv_headers = [
-        "location",
+        "site",
         "rack_group",
         "rack",
         "units",
@@ -583,7 +616,7 @@ class RackReservation(PrimaryModel):
 
     def to_csv(self):
         return (
-            self.rack.location.name,
+            self.rack.site.name,
             self.rack.group if self.rack.group else None,
             self.rack.name,
             ",".join([str(u) for u in self.units]),

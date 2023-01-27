@@ -43,7 +43,10 @@ class PowerPanel(PrimaryModel):
     A distribution point for electrical power; e.g. a data center RPP.
     """
 
-    location = models.ForeignKey(to="dcim.Location", on_delete=models.PROTECT, related_name="powerpanels")
+    site = models.ForeignKey(to="Site", on_delete=models.PROTECT)
+    location = models.ForeignKey(
+        to="dcim.Location", on_delete=models.PROTECT, related_name="powerpanels", blank=True, null=True
+    )
     rack_group = models.ForeignKey(to="RackGroup", on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=100, db_index=True)
 
@@ -61,7 +64,8 @@ class PowerPanel(PrimaryModel):
 
     def to_csv(self):
         return (
-            self.location.name,
+            self.site.name,
+            self.location.name if self.location else None,
             self.rack_group.name if self.rack_group else None,
             self.name,
         )
@@ -71,6 +75,11 @@ class PowerPanel(PrimaryModel):
 
         # Validate location
         if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {
@@ -79,8 +88,12 @@ class PowerPanel(PrimaryModel):
                     }
                 )
 
-        # RackGroup must belong to assigned Location
+        # RackGroup must belong to assigned Site and Location
         if self.rack_group:
+            if self.rack_group.site != self.site:
+                raise ValidationError(
+                    f"Rack group {self.rack_group} ({self.rack_group.site}) is in a different site than {self.site}"
+                )
             if (
                 self.location is not None
                 and self.rack_group.location is not None
@@ -178,7 +191,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
 
     def to_csv(self):
         return (
-            self.power_panel.location.name,
+            self.power_panel.site.name,
             self.power_panel.name,
             self.rack.group.name if self.rack and self.rack.group else None,
             self.rack.name if self.rack else None,
@@ -196,10 +209,10 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     def clean(self):
         super().clean()
 
-        # Rack must belong to same Location as PowerPanel
-        if self.rack and self.rack.location != self.power_panel.location:
+        # Rack must belong to same Site as PowerPanel
+        if self.rack and self.rack.site != self.power_panel.site:
             raise ValidationError(
-                f"Rack {self.rack} ({self.rack.location}) and power panel {self.power_panel} ({self.power_panel.location}) are in different locations"
+                f"Rack {self.rack} ({self.rack.site}) and power panel {self.power_panel} ({self.power_panel.site}) are in different sites"
             )
 
         # AC voltage cannot be negative
