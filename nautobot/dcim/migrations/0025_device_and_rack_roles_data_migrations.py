@@ -12,22 +12,6 @@ def migrate_data_from_legacy_role_to_new_role(apps, schema):
         model = apps.get_model("dcim", model_name)
         migrate_role_data(model=model, role_model=role_model)
 
-    # TODO: We need to decide how these should properly be done...
-    # - Do we keep them but update ObjectChange to allow changed_object_type to be NULL?
-    #   - What will break in UI/elsewhere that expects to be able to get the changed_object?
-    # - Do we move the ObjectChange records?
-    #   - _technically_ this isn't correct because the records are now associated to more than just Prefix/VLAN roles
-    # - Keep it as-is?
-    #   - Principle of least surprise: These are new Role objects and the previous Role objects no longer exist
-    ObjectChange = apps.get_model("extras", "ObjectChange")
-    ContentType = apps.get_model("contenttypes", "ContentType")
-    ObjectChange.objects.filter(
-        changed_object_type__in=[
-            ContentType.objects.get_by_natural_key("dcim", "devicerole"),
-            ContentType.objects.get_by_natural_key("dcim", "rackrole"),
-        ]
-    ).delete()
-
 
 def reverse_role_data_migrate(apps, schema):
     """Reverse changes made to new_role"""

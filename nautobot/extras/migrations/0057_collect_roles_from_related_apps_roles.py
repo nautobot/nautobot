@@ -53,7 +53,7 @@ def create_equivalent_roles_of_ipaddress_role_choices(apps):
 
     for value, label in IPAddressRoleChoices.CHOICES:
         color = IPAddressRoleChoices.CSS_CLASSES[value]
-        choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="", present_in_database=False)
+        choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="")
         roles_to_create.append(choiceset)
     bulk_create_roles(apps, roles_to_create, ["ipam.ipaddress"])
 
@@ -64,7 +64,13 @@ def bulk_create_roles(apps, roles_to_create, content_types):
     ContentType = apps.get_model("contenttypes", "ContentType")
     ObjectChange = apps.get_model("extras", "ObjectChange")
 
-    new_role_ct = ContentType.objects.get_for_model(Role)
+    old_role_ct = None
+    new_role_ct = None
+
+    if hasattr(roles_to_create, "model"):
+        old_role_ct = ContentType.objects.get_for_model(roles_to_create.model)
+        # No sense fetching this if we don't have an old role content type
+        new_role_ct = ContentType.objects.get_for_model(Role)
 
     # Exclude roles whose names are already exists from bulk create.
     existing_roles = Role.objects.values_list("name", flat=True)
@@ -80,14 +86,17 @@ def bulk_create_roles(apps, roles_to_create, content_types):
         if data.name not in existing_roles
     ]
     if roles_instances:
-        old_role_ct = None
-        if isinstance(roles_instances[0][0], ChangeLoggedModel):
-            old_role_ct = ContentType.objects.get_for_model(roles_instances[0][0])
-        
         for old_role, new_role in roles_instances:
+            # TODO: We need to handle new role collisions
             new_role.save()
-            if isinstance(old_role, ChangeLoggedModel):
+            if old_role_ct:
+                # Move over existing object change records to the new role we created
                 ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(changed_object_type=new_role_ct, changed_object_id=new_role.pk)
+
+    # This is for all of the change records for roles which no longer exist
+    if old_role_ct:
+        # TODO: Should we null out the changed_object_id?
+        ObjectChange.objects.filter(changed_object_type=old_role_ct).update(changed_object_type=new_role_ct)
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
