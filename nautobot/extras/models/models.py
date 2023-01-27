@@ -112,6 +112,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
+    dynamic_groups = models.ManyToManyField(to="extras.DynamicGroup", related_name="+", blank=True)
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
     objects = ConfigContextQuerySet.as_manager()
