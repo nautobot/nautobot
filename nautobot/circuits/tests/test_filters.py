@@ -30,8 +30,6 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["portal_url"],
         ["provider_networks", "provider_networks__id"],
         ["provider_networks", "provider_networks__slug"],
-        ["site", "circuits__circuit_terminations__site__id"],
-        ["site", "circuits__circuit_terminations__site__slug"],
     )
 
     @classmethod
@@ -42,33 +40,15 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:2]
         cls.locations = Location.objects.filter(children__isnull=True)[:2]
 
-        sites = (
-            Site.objects.filter(region=cls.regions[0]).first(),
-            Site.objects.filter(region=cls.regions[1]).first(),
-        )
-
         circuits = (
             Circuit.objects.create(provider=providers[0], circuit_type=circuit_types[0], cid="Test Circuit 1"),
             Circuit.objects.create(provider=providers[1], circuit_type=circuit_types[1], cid="Test Circuit 1"),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(
-            circuit=circuits[0], site=cls.locations[0].base_site, location=cls.locations[0], term_side="Z"
-        )
-        CircuitTermination.objects.create(
-            circuit=circuits[1], site=cls.locations[1].base_site, location=cls.locations[1], term_side="Z"
-        )
-
-    def test_region(self):
-        expected = self.queryset.filter(
-            circuits__circuit_terminations__site__region__in=[self.regions[0].pk, self.regions[1].pk]
-        )
-        params = {"region": [self.regions[0].pk, self.regions[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
+        CircuitTermination.objects.create(circuit=circuits[0], location=cls.locations[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[1], location=cls.locations[1], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[0], location=cls.locations[0], term_side="Z")
+        CircuitTermination.objects.create(circuit=circuits[1], location=cls.locations[1], term_side="Z")
 
     def test_location(self):
         expected = self.queryset.filter(
@@ -109,8 +89,6 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["circuit_type", "circuit_type__id"],
         ["circuit_type", "circuit_type__slug"],
         ["status", "status__slug"],
-        ["site", "circuit_terminations__site__id"],
-        ["site", "circuit_terminations__site__slug"],
         ["circuit_termination_a"],
         ["circuit_termination_z"],
         ["circuit_terminations"],
@@ -119,25 +97,17 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     def test_location(self):
         locations = Location.objects.filter(children__isnull=True, site__isnull=False)[:2]
         factory.CircuitTerminationFactory.create(
-            has_location=True, location=locations[0], has_site=True, site=locations[0].site
+            has_location=True,
+            location=locations[0],
         )
         factory.CircuitTerminationFactory.create(
-            has_location=True, location=locations[1], has_site=True, site=locations[1].site
+            has_location=True,
+            location=locations[1],
         )
         expected = self.queryset.filter(circuit_terminations__location__in=[locations[0].pk, locations[1].pk])
         params = {"location": [locations[0].pk, locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [locations[0].slug, locations[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-
-    def test_region(self):
-        regions = Region.objects.filter(sites__isnull=False, children__isnull=True)[:2]
-        factory.CircuitTerminationFactory.create(has_site=True, site=regions[0].sites.first())
-        factory.CircuitTerminationFactory.create(has_site=True, site=regions[1].sites.first())
-        expected = self.queryset.filter(circuit_terminations__site__region__in=[regions[0].pk, regions[1].pk])
-        params = {"region": [regions[0].pk, regions[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
     def test_search(self):
@@ -158,8 +128,6 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         ["pp_info"],
         ["provider_network", "provider_network__slug"],
         ["provider_network", "provider_network__id"],
-        ["site", "site__id"],
-        ["site", "site__slug"],
         ["upstream_speed"],
         ["xconnect_id"],
     )

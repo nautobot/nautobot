@@ -98,7 +98,6 @@ class CircuitTypeSerializer(NautobotModelSerializer):
 
 class CircuitCircuitTerminationSerializer(WritableNestedSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
-    site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
     provider_network = NestedProviderNetworkSerializer()
     connected_endpoint = NestedInterfaceSerializer()
@@ -108,7 +107,6 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer, NotesSeriali
         fields = [
             "id",
             "url",
-            "site",
             "location",
             "provider_network",
             "connected_endpoint",

@@ -142,14 +142,13 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating Circuits...")
         CircuitFactory.create_batch(20)
         self.stdout.write("Creating CircuitTerminations...")
-        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
-        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
-        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
-        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z")
         CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
         CircuitTerminationFactory.create_batch(
             size=2,
-            has_site=True,
             has_location=True,
             has_port_speed=True,
             has_upstream_speed=True,

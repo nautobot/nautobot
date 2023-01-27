@@ -185,10 +185,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin, StatusModelFi
         field_name="locations",
         label="Has locations",
     )
-    has_circuit_terminations = RelatedMembershipBooleanFilter(
-        field_name="circuit_terminations",
-        label="Has circuit terminations",
-    )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     devices = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -254,7 +250,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin, StatusModelFi
         model = Site
         fields = [
             "asn",
-            "circuit_terminations",
             "clusters",
             "comments",
             "contact_email",

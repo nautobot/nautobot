@@ -23,22 +23,11 @@ class CircuitTerminationModelTestCase(TestCase):
         cls.location_2 = Location.objects.filter(location_type=location_type_2)[0]
         cls.site = cls.location_2.base_site
 
-    def test_site_or_provider_network_are_required(self):
+    def test_location_or_provider_network_are_required(self):
         ct = CircuitTermination(circuit=self.circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
         with self.assertRaises(ValidationError) as cm:
             ct.validated_save()
-        self.assertIn("must attach to either a site or a provider network", str(cm.exception))
-
-    def test_site_and_provider_network_mutually_exclusive(self):
-        ct = CircuitTermination(
-            circuit=self.circuit,
-            term_side=CircuitTerminationSideChoices.SIDE_A,
-            site=self.site,
-            provider_network=self.provider_network,
-        )
-        with self.assertRaises(ValidationError) as cm:
-            ct.validated_save()
-        self.assertIn("cannot attach to both a site and a provider network", str(cm.exception))
+        self.assertIn("must attach to either a location or a provider network", str(cm.exception))
 
     def test_location_and_provider_network_mutually_exclusive(self):
         ct = CircuitTermination(
@@ -51,30 +40,10 @@ class CircuitTerminationModelTestCase(TestCase):
             ct.validated_save()
         self.assertIn("cannot attach to both a location and a provider network", str(cm.exception))
 
-    def test_location_same_site_enforced(self):
-        ct = CircuitTermination(
-            circuit=self.circuit,
-            term_side=CircuitTerminationSideChoices.SIDE_A,
-            site=self.site,
-            location=self.location_2,
-        )
-        ct.validated_save()
-
-        ct2 = CircuitTermination(
-            circuit=self.circuit,
-            term_side=CircuitTerminationSideChoices.SIDE_Z,
-            site=Site.objects.create(name="Different Site"),
-            location=self.location_2,
-        )
-        with self.assertRaises(ValidationError) as cm:
-            ct2.validated_save()
-        self.assertIn('does not belong to site "Different Site"', str(cm.exception))
-
     def test_location_content_type_enforced(self):
         ct = CircuitTermination(
             circuit=self.circuit,
             term_side=CircuitTerminationSideChoices.SIDE_A,
-            site=self.site,
             location=self.location_1,
         )
         with self.assertRaises(ValidationError) as cm:
