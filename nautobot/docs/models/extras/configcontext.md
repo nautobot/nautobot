@@ -13,6 +13,7 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Tenant
 * Device redundancy group
 * Tag
+* Dynamic Group
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 
