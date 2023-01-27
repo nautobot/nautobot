@@ -5,6 +5,7 @@ from django.db import migrations, models
 
 from nautobot.core.choices import ColorChoices
 from nautobot.ipam.choices import IPAddressRoleChoices
+from nautobot.extras.models import ChangeLoggedModel
 
 # Role Models that would be integrated into this Role model are referred to as RelatedRoleModels.
 # For Example: DeviceRole, RackRole e.t.c.
@@ -52,7 +53,7 @@ def create_equivalent_roles_of_ipaddress_role_choices(apps):
 
     for value, label in IPAddressRoleChoices.CHOICES:
         color = IPAddressRoleChoices.CSS_CLASSES[value]
-        choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="")
+        choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="", present_in_database=False)
         roles_to_create.append(choiceset)
     bulk_create_roles(apps, roles_to_create, ["ipam.ipaddress"])
 
@@ -61,22 +62,32 @@ def bulk_create_roles(apps, roles_to_create, content_types):
     """Bulk create role and set its contenttypes"""
     Role = apps.get_model("extras", "Role")
     ContentType = apps.get_model("contenttypes", "ContentType")
+    ObjectChange = apps.get_model("extras", "ObjectChange")
+
+    new_role_ct = ContentType.objects.get_for_model(Role)
 
     # Exclude roles whose names are already exists from bulk create.
     existing_roles = Role.objects.values_list("name", flat=True)
-    roles_instances = [
+    roles_instances = [(data, 
         Role(
             name=data.name,
             slug=data.slug,
             description=data.description,
             color=getattr(data, "color", color_map["default"]),
             weight=getattr(data, "weight", None),
-        )
+        ))
         for data in roles_to_create
         if data.name not in existing_roles
     ]
     if roles_instances:
-        Role.objects.bulk_create(roles_instances, batch_size=1000)
+        old_role_ct = None
+        if isinstance(roles_instances[0][0], ChangeLoggedModel):
+            old_role_ct = ContentType.objects.get_for_model(roles_instances[0][0])
+        
+        for old_role, new_role in roles_instances:
+            new_role.save()
+            if isinstance(old_role, ChangeLoggedModel):
+                ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(changed_object_type=new_role_ct, changed_object_id=new_role.pk)
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
