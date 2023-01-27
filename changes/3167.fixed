@@ -1,0 +1,1 @@
+Fixed ObjectChange records not being migrated and `legacy_role__name` not being a property in Role migrations.
