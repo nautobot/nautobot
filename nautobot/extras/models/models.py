@@ -63,7 +63,7 @@ class ConfigContextSchemaValidationMixin:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
 
-@extras_features("graphql")
+@extras_features("graphql", "dynamic_groups")
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
