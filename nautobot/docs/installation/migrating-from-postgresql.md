@@ -51,24 +51,29 @@ nautobot-server migrate
 
 ## Remove the auto-populated Status records from the MySQL database
 
-A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server nbshell` command in our MySQL instance of Nautobot (`(nautobot-mysql) $` shell prompt):
+A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server shell` command in our MySQL instance of Nautobot (`(nautobot-mysql) $` shell prompt):
 
 ```no-highlight
-nautobot-server nbshell
+nautobot-server shell
 ```
 
 Example output:
 
 ```no-highlight
-### Nautobot interactive shell (32cec46b2b7e)
-### Python 3.9.7 | Django 3.1.13 | Nautobot 1.1.3
-### lsmodels() will show available models. Use help(<model>) for more info.
+...
+# Django version 3.2.16
+# Nautobot version 2.0.0a0
+# Example Nautobot App version 1.0.0
+Python 3.7.13 (default, May 11 2022, 08:57:12)
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
 >>> Status.objects.all().delete()
 (67, {'extras.Status_content_types': 48, 'extras.Status': 19})
 >>>
 ```
 
-Press Control-D to exit the `nbshell` when you are finished.
+Press Control-D to exit the `shell` when you are finished.
 
 ## Import the database dump into MySQL
 

@@ -341,25 +341,8 @@ Running migrations:
 
 `nautobot-server nbshell`
 
-An interactive Python shell with all of the database models and various other utilities already imported for you. This is immensely useful for direct access to manipulating database objects.
-
-!!! danger
-    This is an advanced feature that gives you direct access to the Django database models. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
-
-```no-highlight
-nautobot-server nbshell
-```
-
-Prompt provided:
-
-```no-highlight
-### Nautobot interactive shell (localhost)
-### Python 3.8.7 | Django 3.1.7 | Nautobot 1.0.0
-### lsmodels() will show available models. Use help(<model>) for more info.
->>>
-```
-
-Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for more information.
++/- 2.0.0
+    This command is deprecated and will be removed in a future release. Use [`nautobot-server shell`](#shell) instead.
 
 ### `post_upgrade`
 
@@ -512,6 +495,77 @@ nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVar
 Note that there is presently no option to provide input parameters (`data`) for jobs via the CLI.
 
 Please see the [guide on Jobs](../additional-features/jobs.md) for more information on working with and running jobs.
+
+### `shell`
+
+`nautobot-server shell`
+
+An interactive Python shell with all of the database models and various other utilities already imported for you. This is immensely useful for direct access to manipulating database objects.
+
+!!! danger
+    This is an advanced feature that gives you direct access to the Django database models. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
+
+```no-highlight
+nautobot-server shell
+```
+
+Prompt provided:
+
+```no-highlight
+# Shell Plus Model Imports
+from constance.backends.database.models import Constance
+from django.contrib.admin.models import LogEntry
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sessions.models import Session
+from django_celery_beat.models import ClockedSchedule, CrontabSchedule, IntervalSchedule, PeriodicTask, PeriodicTasks, SolarSchedule
+from django_celery_results.models import ChordCounter, GroupResult, TaskResult
+from example_plugin.models import AnotherExampleModel, ExampleModel
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.dcim.models.cables import Cable, CablePath
+from nautobot.dcim.models.device_component_templates import ConsolePortTemplate, ConsoleServerPortTemplate, DeviceBayTemplate, FrontPortTemplate, InterfaceTemplate, PowerOutletTemplate, PowerPortTemplate, RearPortTemplate
+from nautobot.dcim.models.device_components import ConsolePort, ConsoleServerPort, DeviceBay, FrontPort, Interface, InventoryItem, PowerOutlet, PowerPort, RearPort
+from nautobot.dcim.models.devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
+from nautobot.dcim.models.locations import Location, LocationType
+from nautobot.dcim.models.power import PowerFeed, PowerPanel
+from nautobot.dcim.models.racks import Rack, RackGroup, RackReservation
+from nautobot.dcim.models.sites import Region, Site
+from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.models.customfields import ComputedField, CustomField, CustomFieldChoice
+from nautobot.extras.models.datasources import GitRepository
+from nautobot.extras.models.groups import DynamicGroup, DynamicGroupMembership
+from nautobot.extras.models.jobs import Job, JobHook, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs
+from nautobot.extras.models.models import ConfigContext, ConfigContextSchema, CustomLink, ExportTemplate, FileAttachment, FileProxy, GraphQLQuery, HealthCheckTestModel, ImageAttachment, Note, Webhook
+from nautobot.extras.models.relationships import Relationship, RelationshipAssociation
+from nautobot.extras.models.roles import Role
+from nautobot.extras.models.secrets import Secret, SecretsGroup, SecretsGroupAssociation
+from nautobot.extras.models.statuses import Status
+from nautobot.extras.models.tags import Tag, TaggedItem
+from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VMInterface, VirtualMachine
+from social_django.models import Association, Code, Nonce, Partial, UserSocialAuth
+# Shell Plus Django Imports
+from django.core.cache import cache
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, When
+from django.utils import timezone
+from django.urls import reverse
+from django.db.models import Exists, OuterRef, Subquery
+# Django version 3.2.16
+# Nautobot version 2.0.0a0
+# Example Nautobot App version 1.0.0
+Python 3.7.13 (default, May 11 2022, 08:57:12)
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
+>>>
+```
+
+Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for more information.
 
 ### `start`
 
