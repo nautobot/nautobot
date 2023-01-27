@@ -1178,7 +1178,7 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate VLAN group
         if self.vlan_group and self.vlan_group.site != self.site:
-            raise ValidationError({"group": f"VLAN group must belong to the assigned site ({self.site})."})
+            raise ValidationError({"vlan_group": f"VLAN group must belong to the assigned site ({self.site})."})
 
         if (
             self.vlan_group is not None
