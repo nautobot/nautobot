@@ -148,6 +148,20 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.9 (2023-01-26)
+
+### Changed
+
+- [#3117](https://github.com/nautobot/nautobot/issues/3117) - Update Renovate config to batch lockfile updates to next.
+- [#3144](https://github.com/nautobot/nautobot/issues/3144) - Updated `netutils` to `~1.4.0`
+- [#3171](https://github.com/nautobot/nautobot/issues/3171) - Increased maximum VLAN name length from 64 characters to 255 characters.
+
+### Fixed
+
+- [#3114](https://github.com/nautobot/nautobot/issues/3114) - Fixed Navbar scroll through top-level menu in low resolution desktop screens.
+- [#3155](https://github.com/nautobot/nautobot/issues/3155) - Aligned buttons on device component create page.
+- [#3169](https://github.com/nautobot/nautobot/issues/3169) - Fixed data mismatch in `ScheduledJob` causing celery workers to fail when running scheduled jobs created in versions prior to `v1.5.8`. ⚠ **NOTE**: If your celery workers are failing on startup after upgrading to `v1.5.8`, you may need to purge the celery queue with `nautobot-server celery purge` or `nautobot-server celery purge -Q <queues>` to purge custom queues.
+
 ## v1.5.8 (2023-01-23)
 
 ### Added
