@@ -6,7 +6,6 @@ from nautobot.dcim.api.nested_serializers import (
     NestedCableSerializer,
     NestedInterfaceSerializer,
     NestedLocationSerializer,
-    NestedSiteSerializer,
 )
 from nautobot.dcim.api.serializers import (
     CableTerminationModelSerializerMixin,
@@ -149,7 +148,6 @@ class CircuitTerminationSerializer(
 ):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     circuit = NestedCircuitSerializer()
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     provider_network = NestedProviderNetworkSerializer(required=False, allow_null=True)
     cable = NestedCableSerializer(read_only=True)
@@ -160,7 +158,6 @@ class CircuitTerminationSerializer(
             "url",
             "circuit",
             "term_side",
-            "site",
             "location",
             "provider_network",
             "port_speed",
