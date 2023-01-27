@@ -71,6 +71,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="configcontext",
+            name="dynamic_groups",
+            field=models.ManyToManyField(blank=True, related_name="_configcontext_dynamic_groups_+", to="extras.DynamicGroup"),
+        ),
+        migrations.AddField(
+            model_name="configcontext",
             name="tenant_groups",
             field=models.ManyToManyField(
                 blank=True, related_name="_configcontext_tenant_groups_+", to="tenancy.TenantGroup"

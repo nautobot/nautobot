@@ -297,6 +297,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Tag (slug)",
     )
+    dynamic_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="dynamic_groups__slug",
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="slug",
+        label="Dynamic Group (slug)",
+    )
 
     class Meta:
         model = ConfigContext
