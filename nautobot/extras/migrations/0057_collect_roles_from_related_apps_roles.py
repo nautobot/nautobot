@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 from nautobot.core.choices import ColorChoices
 from nautobot.ipam.choices import IPAddressRoleChoices
-from nautobot.extras.models import ChangeLoggedModel
 
 # Role Models that would be integrated into this Role model are referred to as RelatedRoleModels.
 # For Example: DeviceRole, RackRole e.t.c.
@@ -74,14 +73,17 @@ def bulk_create_roles(apps, roles_to_create, content_types):
 
     # Exclude roles whose names are already exists from bulk create.
     existing_roles = Role.objects.values_list("name", flat=True)
-    roles_instances = [(data, 
-        Role(
-            name=data.name,
-            slug=data.slug,
-            description=data.description,
-            color=getattr(data, "color", color_map["default"]),
-            weight=getattr(data, "weight", None),
-        ))
+    roles_instances = [
+        (
+            data,
+            Role(
+                name=data.name,
+                slug=data.slug,
+                description=data.description,
+                color=getattr(data, "color", color_map["default"]),
+                weight=getattr(data, "weight", None),
+            ),
+        )
         for data in roles_to_create
         if data.name not in existing_roles
     ]
@@ -91,7 +93,9 @@ def bulk_create_roles(apps, roles_to_create, content_types):
             new_role.save()
             if old_role_ct:
                 # Move over existing object change records to the new role we created
-                ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(changed_object_type=new_role_ct, changed_object_id=new_role.pk)
+                ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(
+                    changed_object_type=new_role_ct, changed_object_id=new_role.pk
+                )
 
     # This is for all of the change records for roles which no longer exist
     if old_role_ct:
