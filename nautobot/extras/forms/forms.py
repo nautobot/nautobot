@@ -221,6 +221,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
         queryset=DeviceRedundancyGroup.objects.all(), required=False
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+    dynamic_groups = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False)
 
     data = JSONField(label="")
 
@@ -244,6 +245,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "tenants",
             "device_redundancy_groups",
             "tags",
+            "dynamic_groups",
             "data",
         )
 
@@ -283,6 +285,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
     )
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
+    dynamic_group = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False)
 
 
 #
