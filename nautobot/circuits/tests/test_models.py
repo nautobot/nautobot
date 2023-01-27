@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models import Location, LocationType, Site
+from nautobot.dcim.models import Location, LocationType
 
 
 class CircuitTerminationModelTestCase(TestCase):
