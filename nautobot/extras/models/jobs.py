@@ -576,18 +576,22 @@ class JobResult(BaseModel, CustomFieldModel):
     content_type = models.CharField(
         default="application/x-nautobot-json",
         max_length=128,
-        verbose_name=('Result Content Type'),
-        help_text='Content type of the result data')
+        verbose_name=("Result Content Type"),
+        help_text="Content type of the result data",
+    )
     content_encoding = models.CharField(
         default="utf-8",
         max_length=64,
-        verbose_name=('Result Encoding'),
-        help_text='The encoding used to save the task result data')
+        verbose_name=("Result Encoding"),
+        help_text="The encoding used to save the task result data",
+    )
     result = models.TextField(
-        null=True, default=None, editable=False,
-        verbose_name='Result Data',
-        help_text=('The data returned by the task.  '
-                    'Use content_encoding and content_type fields to read.'))
+        null=True,
+        default=None,
+        editable=False,
+        verbose_name="Result Data",
+        help_text="The data returned by the task. Use content_encoding and content_type fields to read.",
+    )
     traceback = models.TextField(blank=True, null=True)
     meta = models.JSONField(null=True, default=None, editable=False)
     schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
@@ -625,6 +629,21 @@ class JobResult(BaseModel, CustomFieldModel):
 
     def __str__(self):
         return str(self.task_id)
+
+    def as_dict(self):
+        """This is required by the django-celery-results DB backend."""
+        return {
+            "task_id": self.task_id,
+            "task_name": self.task_name,
+            "task_args": self.task_args,
+            "task_kwargs": self.task_kwargs,
+            "status": self.status,
+            "result": self.result,
+            "date_done": self.date_done,
+            "traceback": self.traceback,
+            "meta": self.meta,
+            "worker": self.worker,
+        }
 
     @property
     def duration(self):
@@ -754,16 +773,6 @@ class JobResult(BaseModel, CustomFieldModel):
             task_id=uuid.uuid4(),
             schedule=schedule,
         )
-
-        # Explicitly create a TaskResult before the Celery task is called to
-        # test that we can have it there. This was confirmed to work.
-        """
-        from django_celery_results.models import TaskResult
-        from django.utils import timezone
-        t = TaskResult.objects.create(task_id=job_result.task_id)
-        t.date_created = timezone.datetime(2021, 12, 28, 19, 30, 23, 742973, tzinfo=timezone.now().tzinfo)
-        t.save()
-        """
 
         kwargs["job_result_pk"] = job_result.pk
 

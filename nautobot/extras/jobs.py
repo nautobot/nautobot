@@ -579,7 +579,7 @@ class BaseJob:
             self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
         else:
             self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
-        self.failed = True
+        raise JobRunTaskFailed(message)
 
     # Convenience functions
 
@@ -1040,6 +1040,10 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
+class RunJobTaskFailed(Exception):
+    """Celery task failed for some reason."""
+
+
 @nautobot_task
 def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
@@ -1053,30 +1057,19 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     # Getting the correct job result can fail if the stored data cannot be serialized.
     # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
-    try:
-        job_result = JobResult.objects.get(pk=job_result_pk)
-    except TypeError as e:
-        logger.error(f"Unable to serialize data for job {job_result_pk}")
-        logger.error(e)
-        return False
+    job_result = JobResult.objects.get(pk=job_result_pk)
 
     job_model = job_result.job_model
     initialization_failure = None
-    if not job_model:
-        # 2.0 TODO: remove this fallback logic
-        try:
-            job_model = JobModel.objects.get_for_class_path(job_result.name)
-        except JobModel.DoesNotExist:
-            initialization_failure = f'Unable to locate Job database record for "{job_result.name}" to run it!'
+    job_model = JobModel.objects.get_for_class_path(job_result.name)
 
-    if not initialization_failure:
-        if not job_model.enabled:
-            initialization_failure = f"Job {job_model} is not enabled to be run!"
-        else:
-            job_class = job_model.job_class
+    if not job_model.enabled:
+        initialization_failure = f"Job {job_model} is not enabled to be run!"
+    else:
+        job_class = job_model.job_class
 
-            if not job_model.installed or not job_class:
-                initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
+        if not job_model.installed or not job_class:
+            initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
 
     if initialization_failure:
         job_result.log(
@@ -1086,24 +1079,11 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             grouping="initialization",
             logger=logger,
         )
-        job_result.status = TaskStateChoices.FAILURE
-        job_result.date_done = timezone.now()
-        job_result.save()
-        return False
+        raise RunJobTaskFailed(initialization_failure)
 
-    try:
-        job = job_class()
-        job.active_test = "initialization"
-        job.job_result = job_result
-    except Exception as error:
-        logger.error("Error initializing job object.")
-        logger.error(error)
-        stacktrace = traceback.format_exc()
-        job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
-        job_result.set_status(TaskStateChoices.FAILURE)
-        job_result.date_done = timezone.now()
-        job_result.save()
-        return False
+    job = job_class()
+    job.active_test = "initialization"
+    job.job_result = job_result
 
     soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
     time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
@@ -1130,20 +1110,10 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         data = job_class.deserialize_data(data)
     except Exception:
-        job_result.set_status(TaskStateChoices.FAILURE)
-        stacktrace = traceback.format_exc()
-        job_result.log(
-            f"Error initializing job:\n```\n{stacktrace}\n```",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="initialization",
-            logger=logger,
-        )
-        job_result.date_done = timezone.now()
-        job_result.save()
         if file_ids:
             # Cleanup FileProxy objects
             job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
-        return False
+        raise
 
     if job_model.read_only:
         # Force commit to false for read only jobs.
@@ -1152,9 +1122,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # TODO(Glenn): validate that all args required by this job are set in the data or else log helpful errors?
 
     job.logger.info(f"Running job (commit={commit})")
-
-    job_result.set_status(TaskStateChoices.STARTED)
-    job_result.save()
 
     # Add the current request as a property of the job
     job.request = request
@@ -1186,37 +1153,35 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                     if output:
                         job.results["output"] += "\n" + str(output)
 
-                if job.failed:
-                    job.logger.warning("job failed")
-                    job_result.set_status(TaskStateChoices.FAILURE)
-                else:
-                    job.logger.info("job completed successfully")
-                    job_result.set_status(TaskStateChoices.SUCCESS)
+                job.logger.info("job completed successfully")
 
                 if not commit:
-                    raise AbortTransaction()
+                    raise AbortTransaction("Database changes have been reverted automatically.")
 
         except AbortTransaction:
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
 
         except Exception as exc:
-            stacktrace = traceback.format_exc()
-            job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
-            job_result.set_status(TaskStateChoices.FAILURE)
+            raise
 
+        # Is this legacy?
         finally:
+            """
             try:
                 job_result.save()
             except IntegrityError:
                 # handle job_model deleted while job was running
                 job_result.job_model = None
                 job_result.save()
+            """
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
+        # TODO(jathan): Pretty sure this can also be handled by the backend, but
+        # leaving it for now.
         # record data about this jobrun in the schedule
         if job_result.schedule:
             job_result.schedule.total_run_count += 1
@@ -1226,24 +1191,14 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # Perform any post-run tasks
         # 2.0 TODO Remove post_run() method entirely
         job.active_test = "post_run"
-        try:
-            output = job.post_run()
-        except Exception as exc:
-            stacktrace = traceback.format_exc()
-            message = (
-                f"An exception occurred during job post_run(): `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
-            )
-            output = message
-            job.log_failure(message=message)
-            job_result.set_status(TaskStateChoices.FAILURE)
-        finally:
-            if output:
-                job.results["output"] += "\n" + str(output)
+        output = job.post_run()
+        if output:
+            job.results["output"] += "\n" + str(output)
 
-            job_result.date_done = timezone.now()
-            job_result.save()
+        job_result.refresh_from_db()
+        job.logger.info(f"Job completed in {job_result.duration}")
 
-            job.logger.info(f"Job completed in {job_result.duration}")
+        return output
 
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
@@ -1251,11 +1206,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
         change_context = context_class(user=request.user, context_detail=job_model.slug)
         with change_logging(change_context):
-            _run_job()
+            return _run_job()
     else:
-        _run_job()
-
-    return True
+        return _run_job()
 
 
 @nautobot_task
