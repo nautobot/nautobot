@@ -692,7 +692,6 @@ class DynamicFilterFormTest(TestCase):
                 site_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
-                    ("circuit_terminations", "Circuit terminations"),
                     ("clusters", "Clusters"),
                     ("comments", "Comments"),
                     ("contact_email", "Contact E-mail"),
@@ -703,7 +702,6 @@ class DynamicFilterFormTest(TestCase):
                     ("devices", "Devices (name or ID)"),
                     ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
                     ("facility", "Facility"),
-                    ("has_circuit_terminations", "Has circuit terminations"),
                     ("has_clusters", "Has clusters"),
                     ("has_devices", "Has devices"),
                     ("has_locations", "Has locations"),

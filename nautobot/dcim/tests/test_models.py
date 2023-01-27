@@ -1006,6 +1006,7 @@ class CableTestCase(TestCase):
     def setUp(self):
 
         site = Site.objects.first()
+        location = Location.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -1080,8 +1081,12 @@ class CableTestCase(TestCase):
         self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
         self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
         self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
-        self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="A")
-        self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="Z")
+        self.circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit1, location=location, term_side="A"
+        )
+        self.circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit1, location=location, term_side="Z"
+        )
         self.circuittermination3 = CircuitTermination.objects.create(
             circuit=self.circuit2, provider_network=provider_network, term_side="Z"
         )

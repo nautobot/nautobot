@@ -216,9 +216,6 @@ class SiteView(generic.ObjectView):
             "device_count": Device.objects.restrict(request.user, "view").filter(site=instance).count(),
             "prefix_count": Prefix.objects.restrict(request.user, "view").filter(site=instance).count(),
             "vlan_count": VLAN.objects.restrict(request.user, "view").filter(site=instance).count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(circuit_terminations__site=instance)
-            .count(),
             "vm_count": VirtualMachine.objects.restrict(request.user, "view").filter(cluster__site=instance).count(),
         }
         rack_groups = (

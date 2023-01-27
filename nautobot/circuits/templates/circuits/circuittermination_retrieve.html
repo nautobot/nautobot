@@ -12,15 +12,6 @@
     <div class="panel panel-default">
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    {% if object.site %}
-                        <td>Site</td>
-                        <td>
-                            {% if object.site.region %}
-                                {{ object.site.region|hyperlinked_object }} /
-                            {% endif %}
-                            {{ object.site|hyperlinked_object }}
-                        </td>
-                    {% endif %}
                     {% if object.provider_network %}
                         <td>Provider Network</td>
                         <td>
@@ -34,7 +25,7 @@
                         <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
                 {% endif %}
-                {% if object.site %}
+                {% if object.location %}
                 <tr>
                     <td>Cable</td>
                     <td>
@@ -60,7 +51,7 @@
                                 ({{ peer }})
                             {% endwith %}
                         {% else %}
-                            {% if perms.dcim.add_cable and object.site %}
+                            {% if perms.dcim.add_cable and object.location %}
                                 <div class="pull-right">
                                     <span class="dropdown">
                                         <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

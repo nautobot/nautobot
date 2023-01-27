@@ -197,8 +197,8 @@ def common_test_data(cls):
     provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
     circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
     circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Test Circuit 1")
-    CircuitTermination.objects.create(circuit=circuit, site=sites[0], location=loc0, term_side="A")
-    CircuitTermination.objects.create(circuit=circuit, site=sites[1], term_side="Z")
+    CircuitTermination.objects.create(circuit=circuit, location=loc0, term_side="A")
+    CircuitTermination.objects.create(circuit=circuit, location=loc1, term_side="Z")
 
     manufacturers = list(Manufacturer.objects.all()[:3])
     cls.manufacturers = manufacturers
@@ -816,28 +816,6 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         with self.subTest():
             params = {"comments": "comment2"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_circuit_terminations(self):
-        circuit_terminations = list(CircuitTermination.objects.filter(site__isnull=False)[:2])
-        params = {"circuit_terminations": [circuit_terminations[0].pk, circuit_terminations[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(circuit_terminations__in=circuit_terminations).distinct(),
-        )
-
-    def test_has_circuit_terminations(self):
-        with self.subTest():
-            params = {"has_circuit_terminations": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                Site.objects.filter(circuit_terminations__isnull=False).distinct().count(),
-            )
-        with self.subTest():
-            params = {"has_circuit_terminations": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(circuit_terminations__isnull=True).count(),
-            )
 
     def test_devices(self):
         devices = Device.objects.all()[:2]

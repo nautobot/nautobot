@@ -20,11 +20,11 @@ class LocatableModelFormMixin(forms.Form):
     )
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
+        required=False,
         query_params={"region": "$region"},
     )
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
-        required=False,
         query_params={"base_site": "$site"},
     )
 
@@ -32,8 +32,12 @@ class LocatableModelFormMixin(forms.Form):
         super().__init__(*args, **kwargs)
 
         # Set the `required` flag on the `site` field and widget based on the model attributes
-        self.fields["site"].required = not (self.Meta.model.site.field.null and self.Meta.model.site.field.blank)
-        self.fields["site"].widget.attrs["required"] = self.fields["site"].required
+        # self.fields["site"].required = not (self.Meta.model.site.field.null and self.Meta.model.site.field.blank)
+        # self.fields["site"].widget.attrs["required"] = self.fields["site"].required
+        self.fields["location"].required = not (
+            self.Meta.model.location.field.null and self.Meta.model.location.field.blank
+        )
+        self.fields["location"].widget.attrs["required"] = self.fields["location"].required
 
         # Filter the `location` widget to only select locations that permit this content-type
         self.fields["location"].widget.add_query_param("content_type", self.Meta.model._meta.label_lower)

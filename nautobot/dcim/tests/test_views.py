@@ -2277,7 +2277,7 @@ class CableTestCase(
         """Test for https://github.com/nautobot/nautobot/issues/1694."""
         self.add_permissions("dcim.delete_cable")
 
-        site = Site.objects.first()
+        location = Location.objects.first()
         device = Device.objects.first()
 
         interfaces = [
@@ -2291,10 +2291,10 @@ class CableTestCase(
 
         circuit_terminations = [
             CircuitTermination.objects.create(
-                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
             ),
             CircuitTermination.objects.create(
-                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z, site=site
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z, location=location
             ),
         ]
 
@@ -2483,7 +2483,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.first()
 
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
@@ -2503,7 +2503,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
         circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
         circuittermination = CircuitTermination.objects.create(
-            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
         )
 
         connected = Status.objects.get(slug="connected")

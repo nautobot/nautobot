@@ -71,9 +71,9 @@
                         {% else %}
                             {# Circuit termination #}
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Site</label>
+                                <label class="col-md-3 control-label required">Location</label>
                                 <div class="col-md-9">
-                                    <p class="form-control-static">{{ termination_a.site }}</p>
+                                    <p class="form-control-static">{{ termination_a.location }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -122,6 +122,9 @@
                         {% endif %}
                         {% if 'termination_b_site' in form.fields %}
                             {% render_field form.termination_b_site %}
+                        {% endif %}
+                        {% if 'termination_b_location' in form.fields %}
+                            {% render_field form.termination_b_location %}
                         {% endif %}
                         {% if 'termination_b_rackgroup' in form.fields %}
                             {% render_field form.termination_b_rackgroup %}

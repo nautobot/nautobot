@@ -319,8 +319,6 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
         model = CircuitTermination
         fields = [
             "term_side",
-            "region",
-            "site",
             "location",
             "provider_network",
             "port_speed",

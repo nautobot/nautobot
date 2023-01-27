@@ -3654,34 +3654,31 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
 
 class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
-    termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
-    termination_b_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        label="Site",
+    termination_b_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        label="Location",
         required=False,
-        query_params={"region": "$termination_b_region"},
     )
     termination_b_circuit = DynamicModelChoiceField(
         queryset=Circuit.objects.all(),
         label="Circuit",
         query_params={
-            "provider_id": "$termination_b_provider",
-            "site": "$termination_b_site",
+            "provider": "$termination_b_provider",
+            "location": "$termination_b_location",
         },
     )
     termination_b_id = DynamicModelChoiceField(
         queryset=CircuitTermination.objects.all(),
         label="Side",
         disabled_indicator="cable",
-        query_params={"circuit_id": "$termination_b_circuit"},
+        query_params={"circuit": "$termination_b_circuit"},
     )
 
     class Meta:
         model = Cable
         fields = [
             "termination_b_provider",
-            "termination_b_region",
-            "termination_b_site",
+            "termination_b_location",
             "termination_b_circuit",
             "termination_b_id",
             "type",
