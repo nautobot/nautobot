@@ -1422,7 +1422,7 @@ class ViewTestCases:
             with self.subTest("Assert device name in HTML"):
                 response = self.client.post(self._get_url("bulk_rename"), data)
                 message = (
-                    f"Renaming {len(objects)} {self.selected_objects_parent_name} {bettertitle(verbose_name_plural)}"
+                    f"Renaming {len(objects)} {bettertitle(verbose_name_plural)} on {self.selected_objects_parent_name}"
                 )
                 self.assertInHTML(message, response.content.decode(response.charset))
 
@@ -1434,15 +1434,9 @@ class ViewTestCases:
                 for instance in objects:
                     self.assertEqual(queryset.get(pk=instance.pk).name, f"{instance.name}X")
 
-            with self.subTest("Assert if no objects selected return with error"):
-                data["pk"] = []
-                response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
-                expected_message = f"""
-                <div class="alert alert-warning alert-dismissable" role="alert">
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span>&times;</span>
-                    </button>
-                    No {verbose_name_plural} were selected.
-                </div>
-                """
-                self.assertInHTML(expected_message, response.content.decode(response.charset))
+            with self.subTest("Assert if no valid objects selected return with error"):
+                for values in ([], [str(uuid.uuid4())]):
+                    data["pk"] = values
+                    response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+                    expected_message = f"No valid {verbose_name_plural} were selected."
+                    self.assertIn(expected_message, response.content.decode(response.charset))

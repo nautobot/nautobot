@@ -8,6 +8,7 @@ from django_tables2 import RequestConfig
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.dcim.views import BaseDeviceComponentsBulkRenameView
 from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
@@ -451,12 +452,9 @@ class VMInterfaceBulkEditView(generic.BulkEditView):
     form = forms.VMInterfaceBulkEditForm
 
 
-class VMInterfaceBulkRenameView(generic.BulkRenameView):
+class VMInterfaceBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceBulkRenameForm
-
-    def get_selected_objects_parents_name(self, selected_objects):
-        return selected_objects.first().virtual_machine.name
 
 
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):

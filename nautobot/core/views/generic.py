@@ -1148,15 +1148,16 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def post(self, request):
         logger = logging.getLogger("nautobot.views.BulkRenameView")
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
 
-        if not request.POST.getlist("pk"):
-            messages.warning(request, f"No {self.queryset.model._meta.verbose_name_plural} were selected.")
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
 
         if "_preview" in request.POST or "_apply" in request.POST:
-            form = self.form(request.POST, initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
-
+            form = self.form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
                 try:
                     with transaction.atomic():
@@ -1195,8 +1196,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     form.add_error(None, msg)
 
         else:
-            form = self.form(initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
+            form = self.form(initial={"pk": query_pks})
 
         return render(
             request,
