@@ -10,7 +10,7 @@ class Command(_Command):
         if not options.get("quiet_load"):
             self.stdout.write(
                 self.style.WARNING(
-                    "The 'nautobot nbshell' command is deprecated and will be removed in a future release."
+                    "The 'nautobot-server nbshell' command is deprecated and will be removed in a future release."
                 )
             )
             self.stdout.write(self.style.WARNING("Please use 'nautobot-server shell' instead."))
