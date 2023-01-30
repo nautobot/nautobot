@@ -4,7 +4,7 @@ from celery import states
 from django.utils import timezone
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 # This subclass is a hack. We'll fix it in post.
