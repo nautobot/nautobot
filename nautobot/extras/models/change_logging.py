@@ -8,6 +8,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
 
@@ -37,7 +38,7 @@ class ChangeLoggedModel(models.Model):
 
         return ObjectChange(
             changed_object=self,
-            object_repr=str(self),
+            object_repr=str(self)[:CHANGELOG_MAX_OBJECT_REPR],
             action=action,
             object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
             object_data_v2=serialize_object_v2(self),
@@ -90,7 +91,7 @@ class ObjectChange(BaseModel):
         editable=False,
         db_index=True,
     )
-    change_context_detail = models.CharField(max_length=100, blank=True, editable=False)
+    change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,
@@ -101,7 +102,7 @@ class ObjectChange(BaseModel):
     # todoindex:
     related_object_id = models.UUIDField(blank=True, null=True)
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
-    object_repr = models.CharField(max_length=200, editable=False)
+    object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
@@ -148,7 +149,7 @@ class ObjectChange(BaseModel):
                 self.user_name = "Undefined"
 
         if not self.object_repr:
-            self.object_repr = str(self.changed_object)
+            self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
 
@@ -213,19 +214,22 @@ class ObjectChange(BaseModel):
         prechange = None
         postchange = None
 
-        prior_change = ObjectChange.objects.filter(
-            changed_object_type=self.changed_object_type,
-            changed_object_id=self.changed_object_id,
-            time__lt=self.time,
-        )
+        prior_change = self.get_prev_change()
 
-        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change.exists():
-            prechange = prior_change.first().object_data_v2
+        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change is not None:
+            prechange = prior_change.object_data_v2
+            if prechange is None:
+                prechange = prior_change.object_data
 
         if self.action != ObjectChangeActionChoices.ACTION_DELETE:
             postchange = self.object_data_v2
+            if postchange is None:
+                postchange = self.object_data
 
         if prechange and postchange:
+            if self.object_data_v2 is None or prior_change.object_data_v2 is None:
+                prechange = prior_change.object_data
+                postchange = self.object_data
             diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
             diff_removed = {x: prechange.get(x) for x in diff_added}
         elif prechange and not postchange:

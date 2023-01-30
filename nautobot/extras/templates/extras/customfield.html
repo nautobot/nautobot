@@ -4,7 +4,7 @@
 
 
 {% block buttons %}
-        {% if perms.extras.add_customfield %}
+        {% if object.clone_fields and perms.extras.add_customfield %}
             {% clone_button object %}
         {% endif %}
         {% if perms.extras.change_customfield %}
@@ -37,6 +37,10 @@
                     <tr>
                         <td>Label</td>
                         <td><span>{{ object.label | placeholder }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Grouping</td>
+                        <td><span>{{ object.grouping | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Description</td>

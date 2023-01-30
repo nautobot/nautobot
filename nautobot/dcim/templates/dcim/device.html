@@ -146,7 +146,7 @@
                                         <td>
                                             {% if object.primary_ip4 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip4|hyperlinked_object }}
+                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }}
                                                     {% if object.primary_ip4.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
                                                     {% elif object.primary_ip4.nat_outside %}
@@ -167,7 +167,7 @@
                                         <td>
                                             {% if object.primary_ip6 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip6|hyperlinked_object }}
+                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }}
                                                     {% if object.primary_ip6.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
                                                     {% elif object.primary_ip6.nat_outside %}
@@ -188,6 +188,16 @@
                                             {{ object.secrets_group|hyperlinked_object }}
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <td>Device Redundancy Group</td>
+                                        <td>
+                                            {% if object.device_redundancy_group %}
+                                                {{ object.device_redundancy_group|hyperlinked_object }} <span class="badge badge-default">Priority: {{ object.device_redundancy_group_priority }}</span>
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
                                     {% if object.cluster %}
                                         <tr>
                                             <td>Cluster</td>
@@ -201,7 +211,7 @@
                                     {% endif %}
                                 </table>
                             </div>
-                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_fields_basic computed_fields_advanced_ui=False %}
+                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
                             {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
                             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
                             <div class="panel panel-default">

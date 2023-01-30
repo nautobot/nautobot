@@ -8,62 +8,28 @@ import os
 from nautobot.core.settings import *  # noqa: F401,F403
 from nautobot.core.settings_funcs import parse_redis_connection
 
+ALLOWED_HOSTS = ["nautobot.example.com"]
 
-ALLOWED_HOSTS = ["*"]
-
-DATABASES = {
-    "default": {
-        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
-        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
-        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
-        "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
-        "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
-        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
-    }
-}
-
-# Explicity set MySQL client encoding to use 4-byte unicode glyphs.
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
-    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
-
+# Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "tests", "example_jobs"
 )
 
+# Enable both example plugins
 PLUGINS = [
     "example_plugin",
     "example_plugin_with_view_override",
 ]
 
-
+# Hard-code the SECRET_KEY for simplicity
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
 
 # Redis variables
 
-# The django-redis cache is used to establish concurrent locks using Redis. The
-# django-rq settings will use the same instance/database by default.
-#
-# This "default" server is now used by RQ_QUEUES.
-# >> See: nautobot.core.settings.RQ_QUEUES
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": parse_redis_connection(redis_database=2),
-        "TIMEOUT": 300,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    }
-}
-
-# RQ_QUEUES is not set here because it just uses the default that gets imported
-# up top via `from nautobot.core.settings import *`.
-
-# REDIS CACHEOPS
+# Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
+CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
-CACHEOPS_ENABLED = False  # TODO(john): we should revisit this, but caching has caused issues with testing
+CACHEOPS_ENABLED = False  # 2.0 TODO(jathan): Remove me.
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {
@@ -72,3 +38,11 @@ STORAGE_CONFIG = {
     "AWS_STORAGE_BUCKET_NAME": "nautobot",
     "AWS_S3_REGION_NAME": "us-west-1",
 }
+
+
+# Enable test data factories, as they're a pre-requisite for Nautobot core tests.
+TEST_USE_FACTORIES = True
+# For now, use a constant PRNG seed for consistent results. In the future we can remove this for fuzzier testing.
+TEST_FACTORY_SEED = "Nautobot"
+# File in which all performance-specifc test baselines are stored
+TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"

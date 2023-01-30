@@ -6,8 +6,8 @@ import logging
 import pkgutil
 import sys
 
-from cacheops import file_cache
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
@@ -39,7 +39,7 @@ def get_base_template(base_template, model):
     """
     if base_template is None:
         base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-        # TODO: This can be removed once an object view has been established for every model.
+        # 2.0 TODO(Hanlin): This can be removed once an object view has been established for every model.
         try:
             get_template(base_template)
         except TemplateDoesNotExist:
@@ -51,7 +51,6 @@ def get_base_template(base_template, model):
     return base_template
 
 
-@file_cache.cached(timeout=60)
 def get_job_content_type():
     """Return a cached instance of the `ContentType` for `extras.Job`."""
     return ContentType.objects.get(app_label="extras", model="job")
@@ -166,12 +165,11 @@ class TaggableClassesQuery:
 
         return query
 
-    @property
     def as_queryset(self):
         return ContentType.objects.filter(self()).order_by("app_label", "model")
 
     def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 def extras_features(*features):
@@ -202,19 +200,56 @@ def generate_signature(request_body, secret):
     return hmac_prep.hexdigest()
 
 
-def get_worker_count(request=None):
+def get_celery_queues():
     """
-    Return a count of the active Celery workers.
+    Return a dictionary of celery queues and the number of workers active on the queue in
+    the form {queue_name: num_workers}
     """
-    # Inner imports so we don't risk circular imports
-    from nautobot.core.celery import app  # noqa
+    from nautobot.core.celery import app  # prevent circular import
 
-    # Count the number of active celery workers
-    inspect_ = app.control.inspect()
-    active = inspect_.active()  # None if no active workers
-    celery_count = len(active) if active is not None else 0
+    celery_queues = {}
 
-    return celery_count
+    celery_inspect = app.control.inspect()
+    active_queues = celery_inspect.active_queues()
+    if active_queues is None:
+        return celery_queues
+    for task_queue_list in active_queues.values():
+        distinct_queues = {q["name"] for q in task_queue_list}
+        for queue in distinct_queues:
+            celery_queues.setdefault(queue, 0)
+            celery_queues[queue] += 1
+
+    return celery_queues
+
+
+def get_worker_count(request=None, queue=None):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    """
+    celery_queues = get_celery_queues()
+    if not queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    return celery_queues.get(queue, 0)
+
+
+def task_queues_as_choices(task_queues):
+    """
+    Returns a list of 2-tuples for use in the form field `choices` argument. Appends
+    worker count to the description.
+    """
+    if not task_queues:
+        task_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
+
+    choices = []
+    celery_queues = get_celery_queues()
+    for queue in task_queues:
+        if not queue:
+            worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
+        else:
+            worker_count = celery_queues.get(queue, 0)
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        choices.append((queue, description))
+    return choices
 
 
 # namedtuple class yielded by the jobs_in_directory generator function, below

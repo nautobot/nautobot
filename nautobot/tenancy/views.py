@@ -82,7 +82,7 @@ class TenantListView(generic.ObjectListView):
 
 
 class TenantView(generic.ObjectView):
-    queryset = Tenant.objects.prefetch_related("group")
+    queryset = Tenant.objects.select_related("group")
 
     def get_extra_context(self, request, instance):
         stats = {
@@ -125,13 +125,13 @@ class TenantBulkImportView(generic.BulkImportView):
 
 
 class TenantBulkEditView(generic.BulkEditView):
-    queryset = Tenant.objects.prefetch_related("group")
+    queryset = Tenant.objects.select_related("group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable
     form = forms.TenantBulkEditForm
 
 
 class TenantBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tenant.objects.prefetch_related("group")
+    queryset = Tenant.objects.select_related("group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable

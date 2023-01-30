@@ -72,7 +72,9 @@ SEARCH_TYPES = OrderedDict(
         (
             "circuit",
             {
-                "queryset": Circuit.objects.prefetch_related("type", "provider", "tenant", "terminations__site"),
+                "queryset": Circuit.objects.select_related("type", "provider", "tenant").prefetch_related(
+                    "terminations__site"
+                ),
                 "filterset": CircuitFilterSet,
                 "table": CircuitTable,
                 "url": "circuits:circuit_list",
@@ -81,7 +83,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "providernetwork",
             {
-                "queryset": ProviderNetwork.objects.prefetch_related("provider"),
+                "queryset": ProviderNetwork.objects.select_related("provider"),
                 "filterset": ProviderNetworkFilterSet,
                 "table": ProviderNetworkTable,
                 "url": "circuits:providernetwork_list",
@@ -91,7 +93,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "site",
             {
-                "queryset": Site.objects.prefetch_related("region", "tenant"),
+                "queryset": Site.objects.select_related("region", "tenant"),
                 "filterset": SiteFilterSet,
                 "table": SiteTable,
                 "url": "dcim:site_list",
@@ -100,7 +102,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "rack",
             {
-                "queryset": Rack.objects.prefetch_related("site", "group", "tenant", "role"),
+                "queryset": Rack.objects.select_related("site", "group", "tenant", "role"),
                 "filterset": RackFilterSet,
                 "table": RackTable,
                 "url": "dcim:rack_list",
@@ -115,7 +117,7 @@ SEARCH_TYPES = OrderedDict(
                     "group",
                     "rack_count",
                     cumulative=True,
-                ).prefetch_related("site"),
+                ).select_related("site"),
                 "filterset": RackGroupFilterSet,
                 "table": RackGroupTable,
                 "url": "dcim:rackgroup_list",
@@ -124,7 +126,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "devicetype",
             {
-                "queryset": DeviceType.objects.prefetch_related("manufacturer").annotate(
+                "queryset": DeviceType.objects.select_related("manufacturer").annotate(
                     instance_count=count_related(Device, "device_type")
                 ),
                 "filterset": DeviceTypeFilterSet,
@@ -135,7 +137,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "device",
             {
-                "queryset": Device.objects.prefetch_related(
+                "queryset": Device.objects.select_related(
                     "device_type__manufacturer",
                     "device_role",
                     "tenant",
@@ -152,7 +154,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "virtualchassis",
             {
-                "queryset": VirtualChassis.objects.prefetch_related("master").annotate(
+                "queryset": VirtualChassis.objects.select_related("master").annotate(
                     member_count=count_related(Device, "virtual_chassis")
                 ),
                 "filterset": VirtualChassisFilterSet,
@@ -182,7 +184,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "cluster",
             {
-                "queryset": Cluster.objects.prefetch_related("type", "group").annotate(
+                "queryset": Cluster.objects.select_related("type", "group").annotate(
                     device_count=count_related(Device, "cluster"),
                     vm_count=count_related(VirtualMachine, "cluster"),
                 ),
@@ -194,7 +196,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "virtualmachine",
             {
-                "queryset": VirtualMachine.objects.prefetch_related(
+                "queryset": VirtualMachine.objects.select_related(
                     "cluster",
                     "tenant",
                     "platform",
@@ -210,7 +212,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "vrf",
             {
-                "queryset": VRF.objects.prefetch_related("tenant"),
+                "queryset": VRF.objects.select_related("tenant"),
                 "filterset": VRFFilterSet,
                 "table": VRFTable,
                 "url": "ipam:vrf_list",
@@ -219,7 +221,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "aggregate",
             {
-                "queryset": Aggregate.objects.prefetch_related("rir"),
+                "queryset": Aggregate.objects.select_related("rir"),
                 "filterset": AggregateFilterSet,
                 "table": AggregateTable,
                 "url": "ipam:aggregate_list",
@@ -228,7 +230,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "prefix",
             {
-                "queryset": Prefix.objects.prefetch_related("site", "vrf__tenant", "tenant", "vlan", "role"),
+                "queryset": Prefix.objects.select_related("site", "vrf__tenant", "tenant", "vlan", "role"),
                 "filterset": PrefixFilterSet,
                 "table": PrefixTable,
                 "url": "ipam:prefix_list",
@@ -237,7 +239,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "ipaddress",
             {
-                "queryset": IPAddress.objects.prefetch_related("vrf__tenant", "tenant"),
+                "queryset": IPAddress.objects.select_related("vrf__tenant", "tenant"),
                 "filterset": IPAddressFilterSet,
                 "table": IPAddressTable,
                 "url": "ipam:ipaddress_list",
@@ -246,7 +248,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "vlan",
             {
-                "queryset": VLAN.objects.prefetch_related("site", "group", "tenant", "role"),
+                "queryset": VLAN.objects.select_related("site", "group", "tenant", "role"),
                 "filterset": VLANFilterSet,
                 "table": VLANTable,
                 "url": "ipam:vlan_list",
@@ -256,7 +258,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "tenant",
             {
-                "queryset": Tenant.objects.prefetch_related("group"),
+                "queryset": Tenant.objects.select_related("group"),
                 "filterset": TenantFilterSet,
                 "table": TenantTable,
                 "url": "tenancy:tenant_list",

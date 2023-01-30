@@ -3,17 +3,15 @@ import uuid
 from contextlib import contextmanager
 
 from celery.contrib.testing.worker import start_worker
-from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import Client, tag, TransactionTestCase as _TransactionTestCase
+from django.test import tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.celery import app
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import run_job
-from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
-from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 
 from .api import APITestCase, APIViewTestCases
 from .filters import FilterTestCases
@@ -37,6 +35,7 @@ __all__ = (
     "FilterTestCases",
     "ModelTestCase",
     "ModelViewTestCase",
+    "NautobotTestClient",
     "TestCase",
     "ViewTestCases",
     "create_test_user",
@@ -94,7 +93,8 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         if request:
             yield request
         else:
-            yield web_request_context(user=user)
+            with web_request_context(user=user) as ctx_request:
+                yield ctx_request
 
     with _web_request_context(user=user_instance) as wrapped_request:
         run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk)
@@ -116,19 +116,7 @@ class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
         django.test.TransactionTestCase truncates the database after each test runs. We need at least the default
         statuses present in the database in order to run tests."""
         super().setUp()
-
-        # Re-populate status choices after database truncation by TransactionTestCase
-        populate_status_choices(apps, None)
-
-        # Create the test user and assign permissions
-        self.user = User.objects.create_user(username="testuser")
-        self.add_permissions(*self.user_permissions)
-
-        # Initialize the test client
-        self.client = Client()
-
-        # Force login explicitly with the first-available backend
-        self.client.force_login(self.user)
+        self.setUpNautobot(client=True, populate_status=True)
 
 
 class CeleryTestCase(TransactionTestCase):
@@ -143,7 +131,9 @@ class CeleryTestCase(TransactionTestCase):
         # Special namespace loading of methods needed by start_worker, per the celery docs
         app.loader.import_module("celery.contrib.testing.tasks")
         cls.clear_worker()
-        cls.celery_worker = start_worker(app, concurrency=1)
+        # `celery.ping` not registered is a known issue https://github.com/celery/celery/issues/3642
+        # fixed by setting `perform_ping_check` to False
+        cls.celery_worker = start_worker(app, perform_ping_check=False, concurrency=1)
         cls.celery_worker.__enter__()
 
     @classmethod

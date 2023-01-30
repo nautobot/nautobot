@@ -4,7 +4,7 @@ from nautobot.utilities.testing.integration import SeleniumTestCase
 class PluginBannerTestCase(SeleniumTestCase):
     """Integration test for rendering of plugin-injected banner content."""
 
-    fixtures = ["user-data.json"]
+    fixtures = ("user-data",)
 
     def test_banner_not_rendered(self):
         """As implemented, plugin banner does not render if the user is not logged in.
@@ -28,3 +28,5 @@ class PluginBannerTestCase(SeleniumTestCase):
             self.assertIn(f"Hello, <strong>{self.user.username}</strong>", banners_html.first["innerHTML"])
         finally:
             self.logout()
+
+    # TODO: Expand banner testing to ensure the banner is visible on more than just the homepage.

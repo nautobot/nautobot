@@ -10,11 +10,11 @@ Using the django-request-logging module can lead to password leaks if not config
 
 Before:
 
-> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword
+> `DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword`
 
 After:
 
-> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***
+> `DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***`
 
 ```python
 def add_username(record):
@@ -100,11 +100,11 @@ LOGGING = {
 
 ## Add User Information to ALL Requests
 
-Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the django.request logger.  We can get more information
+Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the django.request logger. We can get more information
 from all requests by installing the [`django-request-logging`](https://github.com/Rhumbix/django-request-logging) package.
 
 ```no-highlight
-$ sudo -u nautobot pip install django-request-logging
+sudo -u nautobot pip install django-request-logging
 ```
 
 Add the following to `nautobot_config.py`:

@@ -332,7 +332,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
                 nat_ips = (
-                    IPAddress.objects.prefetch_related("nat_inside")
+                    IPAddress.objects.select_related("nat_inside")
                     .ip_family(family)
                     .filter(
                         nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
@@ -761,11 +761,17 @@ class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, Boot
 
 
 class VMInterfaceBulkCreateForm(
-    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode"]),
+    form_from_model(VMInterface, ["enabled", "mtu", "description", "mode", "tags"]),
     VirtualMachineBulkAddComponentForm,
 ):
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={"content_types": VMInterface._meta.label_lower},
+    )
+
     field_order = (
         "name_pattern",
+        "status",
         "enabled",
         "mtu",
         "description",

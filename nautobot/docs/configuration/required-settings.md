@@ -80,6 +80,8 @@ DATABASES = {
 
 ### MySQL Unicode Settings
 
++++ 1.1.0
+
 !!! tip
     By default, MySQL is case-insensitive in its handling of text strings. This is different from PostgreSQL which is case-sensitive by default. We strongly recommend that you configure MySQL to be case-sensitive for use with Nautobot, either when you enable the MySQL server, or when you create the Nautobot database in MySQL. If you follow the provided installation instructions for CentOS or Ubuntu, the recommended steps there will include the appropriate database configuration.
 
@@ -100,8 +102,11 @@ DATABASES = {
 }
 ```
 
-!!! tip
-    Starting in v1.1.0, if you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
++++ 1.1.0
+    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
+
++/- 1.1.5
+    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already present in your config and no action is required.
 
 ---
 
@@ -163,7 +168,7 @@ Additional settings may be available and are not covered here. Please see the of
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel). For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
 setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
@@ -290,6 +295,7 @@ RQ_QUEUES = {
 
 The following environment variables may also be set for some of the above values:
 
+* `NAUTOBOT_REDIS_SCHEME`
 * `NAUTOBOT_REDIS_HOST`
 * `NAUTOBOT_REDIS_PORT`
 * `NAUTOBOT_REDIS_PASSWORD`
@@ -303,6 +309,8 @@ The following environment variables may also be set for some of the above values
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 ### Task Queuing with Celery
+
++++ 1.1.0
 
 Out of the box you do not need to make any changes to utilize task queueing with Celery. All of the default settings are sufficient for most installations.
 
@@ -346,7 +354,21 @@ Environment Variable: `NAUTOBOT_SECRET_KEY`
 
 This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
 
-Please note that this key is **not** used directly for hashing user passwords or for the encrypted storage of secret data in Nautobot.
+!!! bug
+    Due to an [unresolved bug in the `django-cryptography` library](https://github.com/georgemarshall/django-cryptography/issues/56), if you have any [Git repositories](../models/extras/gitrepository.md) configured in your database, changing the `SECRET_KEY` will cause errors like:
+
+    ```
+    <class 'django.core.signing.BadSignature'>
+
+    Signature "b'mG5+660ye92rJBEtyZxuorLD6A6tcRmeS7mrGCP9ayg=\n'" does not match
+    ```
+
+    If you encounter this error, it can be resolved in one of two ways:
+
+    1. Change the `SECRET_KEY` back to its previous value, and delete all Git repository records via the UI or API.
+    2. Connect to the database and use SQL commands to delete all Git repository records without needing to revert the `SECRET_KEY`.
+
+Please note that this key is **not** used directly for hashing user passwords or (with the exception of the aforementioned `django-cryptography` bug) for the encrypted storage of secret data in Nautobot.
 
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 
@@ -356,14 +378,24 @@ Please note that this key is **not** used directly for hashing user passwords or
 You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
 ```no-highlight
-$ nautobot-server generate_secret_key
+nautobot-server generate_secret_key
+```
+
+Sample output:
+
+```no-highlight
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
 Alternatively use the following command to generate a secret even before `nautobot-server` is runnable:
 
 ```no-highlight
-$ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
+LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
+```
+
+Example output:
+
+```no-highlight
 9.V$@Kxkc@@Kd@z<a/=.J-Y;rYc79<y@](9o9(L(*sS)Q+ud5P
 ```
 

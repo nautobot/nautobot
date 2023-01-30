@@ -671,6 +671,16 @@ class CoreConfig(NautobotConfig):
             """Convert BigIntegerField to BigInteger scalar."""
             return BigInteger()
 
+        from django.conf import settings
+        from django.contrib.auth.models import update_last_login
+        from django.contrib.auth.signals import user_logged_in
+
+        # If maintenance mode is enabled, assume the database is read-only, and disable updating the user's
+        # last_login time upon authentication.
+        if settings.MAINTENANCE_MODE:
+            logger.warning("Maintenance mode enabled: disabling update of most recent login time")
+            user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
+
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
 
         super().ready()
@@ -687,13 +697,3 @@ class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
     verbose_name = "Configuration"
-
-
-class ConstanceDatabaseAppConfig(AppConfig):
-    """
-    Add an AppConfig for constance.backends.database
-    to work around https://github.com/jazzband/django-constance/issues/454
-    """
-
-    name = "constance.backends.database"
-    default_auto_field = "django.db.models.AutoField"

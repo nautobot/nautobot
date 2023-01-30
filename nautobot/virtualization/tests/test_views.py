@@ -4,7 +4,7 @@ from netaddr import EUI
 
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import DeviceRole, Platform, Site
-from nautobot.extras.models import ConfigContextSchema, CustomField, Status
+from nautobot.extras.models import ConfigContextSchema, CustomField, Status, Tag
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, post_data
 from nautobot.virtualization.models import (
@@ -112,8 +112,6 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             site=sites[0],
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "Cluster X",
             "group": clustergroups[1].pk,
@@ -121,7 +119,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "site": sites[1].pk,
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
 
         cls.csv_data = (
@@ -188,8 +186,6 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=statuses[0],
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "cluster": clusters[1].pk,
             "tenant": None,
@@ -203,7 +199,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "memory": 32768,
             "disk": 4000,
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(VirtualMachine)],
             "local_context_data": None,
         }
 
@@ -309,8 +305,6 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         statuses = Status.objects.get_for_model(VMInterface)
         status_active = statuses.get(slug="active")
 
@@ -327,7 +321,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
         }
 
         cls.bulk_create_data = {
@@ -343,7 +337,19 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
+        }
+
+        cls.bulk_add_data = {
+            "virtual_machine": virtualmachines[1].pk,
+            "name_pattern": "Interface [4-6]",
+            "enabled": True,
+            "status": status_active.pk,
+            "mtu": 1500,
+            "description": "New Description",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "custom_field_1": "Custom field data",
+            "tags": [],
         }
 
         cls.csv_data = (

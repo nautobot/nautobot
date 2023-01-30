@@ -29,13 +29,15 @@ html[data-theme="dark"] .version {
 }
 
 /* Darker background color, offset to not be fully black */
-html[data-theme="dark"] body {
+html[data-theme="dark"] body,
+html[data-theme="dark"] .container-fluid.wrapper {
   background-color: rgb(217, 217, 217) !important;
 }
 
 /* Lighter than the background */
 html[data-theme="dark"] .navbar,                          /* Top menu navbar */
-html[data-theme="dark"] .footer {                         /* Bottom footer bar */
+html[data-theme="dark"] .footer,                          /* Bottom footer bar */
+html[data-theme="dark"] .footer .row {                    /* Bottom footer bar */
   background-color: rgb(209, 216, 221) !important;
 }
 
@@ -78,7 +80,7 @@ html[data-theme="dark"] .CodeMirror-gutters {              /* GraphiQL primary b
 
 /* Preserve blue text color on selected tabs */
 html[data-theme="dark"] .nav-tabs>li.active>a {
-  color: rgb(72, 133, 204);                             
+  color: rgb(72, 133, 204);
 }
 
 /* Swagger API Docs */
@@ -151,4 +153,16 @@ html[data-theme="dark"] .breadcrumb>li+li:before {
 /* Code */
 html[data-theme="dark"] code {
   color: rgb(0, 255, 0);
+}
+
+/* Dynamic filter selection outside box */
+html[data-theme="dark"] .filter-container .filter-selection {
+  background-color: rgb(201, 201, 201);                 /* Background color of dynamic filters selected across most pages, outer box */
+  border: 1px solid rgb(170, 170, 170);                 /* Border color of dynamic filters selected across most pages, outer box */
+}
+
+/* Dynamic filter box selection inside box selected filter */
+html[data-theme="dark"] .filter-container .filter-selection .filter-selection-choice {
+  background-color: rgb(185, 185, 185);                 /* Background color of dynamic filters selected across most pages, inner selection box */
+  border: 1px solid rgb(170, 170, 170);                 /* Border color of dynamic filters selected across most pages, inner selection box */
 }

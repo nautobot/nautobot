@@ -7,7 +7,12 @@ When installing Nautobot for the first time on a Redhat-based Linux Distribution
 An example of a broken application can be seen in the Nginx error logs below:
 
 ```no-highlight
-$ sudo tail -f /var/log/nginx/error.log
+sudo tail -f /var/log/nginx/error.log
+```
+
+Example output:
+
+```no-highlight
 2021/02/26 15:16:55 [crit] 67245#0: *494 connect() to 127.0.0.1:8080 failed (13: Permission denied) while connecting to upstream, client: 47.221.167.40, server: nautobot.example.com, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "nautobot.example.com"
 2021/02/26 15:16:56 [crit] 67245#0: *494 connect() to 127.0.0.1:8080 failed (13: Permission denied) while connecting to upstream, client: 47.221.167.40, server: nautobot.example.com, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:8080/favicon.ico", host: "nautobot.example.com", referrer: "https://nautobot.example.com/"
 2021/02/26 15:16:58 [crit] 67245#0: *544 connect() to 127.0.0.1:8080 failed (13: Permission denied) while connecting to upstream, client: 47.221.167.40, server: nautobot.example.com, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "nautobot.example.com"

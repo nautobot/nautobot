@@ -4,18 +4,16 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client
 from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
-from rest_framework.test import APIClient
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import TestCase
+from nautobot.utilities.testing import NautobotTestClient, TestCase
 
 
 # Use the proper swappable User model
@@ -30,12 +28,16 @@ TEST_AUTHENTICATION_BACKENDS = [
 
 
 class ExternalAuthenticationTestCase(TestCase):
+    client_class = NautobotTestClient
+
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create(username="remoteuser1")
 
     def setUp(self):
-        self.client = Client()
+        """
+        Override nautobot.utilities.testing.TestCase.setUp() so that it doesn't automatically log in the test client.
+        """
 
     def test_remote_auth_disabled(self):
         """
@@ -234,16 +236,12 @@ class ExternalAuthenticationTestCase(TestCase):
 
 
 class ObjectPermissionAPIViewTestCase(TestCase):
-    client_class = APIClient
+    client_class = NautobotTestClient
 
     @classmethod
     def setUpTestData(cls):
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
+        cls.sites = Site.objects.all()[:3]
 
         statuses = Status.objects.get_for_model(Prefix)
 
@@ -278,7 +276,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": self.sites[0].name},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -305,7 +303,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": self.sites[0].name},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -314,7 +312,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Retrieve all objects. Only permitted objects should be returned.
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["count"], 3)
+        self.assertEqual(response.data["count"], Prefix.objects.filter(site=self.sites[0]).count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_create_object(self):
@@ -333,7 +331,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": self.sites[0].name},
             actions=["add"],
         )
         obj_perm.users.add(self.user)
@@ -362,7 +360,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": f"{self.sites[0].name}"},
             actions=["change"],
         )
         obj_perm.users.add(self.user)
@@ -397,7 +395,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": self.sites[0].name},
             actions=["delete"],
         )
         obj_perm.users.add(self.user)

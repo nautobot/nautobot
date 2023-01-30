@@ -1,10 +1,17 @@
 import json
+import logging
 import re
 
 import yaml
 from django import forms
+from django.forms import formset_factory
+from django.urls import reverse
 
 from nautobot.ipam.formfields import IPNetworkFormField
+from nautobot.utilities.utils import (
+    build_lookup_label,
+    get_filterset_parameter_form_field,
+)
 
 __all__ = (
     "AddressFieldMixin",
@@ -13,11 +20,15 @@ __all__ = (
     "BulkRenameForm",
     "ConfirmationForm",
     "CSVModelForm",
+    "DynamicFilterForm",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
     "TableConfigForm",
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class AddressFieldMixin(forms.ModelForm):
@@ -233,3 +244,109 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
+
+
+class DynamicFilterForm(BootstrapMixin, forms.Form):
+    """
+    Form for dynamically inputting filter values for an object list.
+    """
+
+    lookup_field = forms.ChoiceField(
+        choices=[],
+        required=False,
+        label="Field",
+    )
+    lookup_type = forms.ChoiceField(
+        choices=[],
+        required=False,
+    )
+    lookup_value = forms.CharField(
+        required=False,
+        label="Value",
+    )
+
+    def __init__(self, *args, filterset_class=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
+
+        # cls.model is set at `dynamic_formset_factory()`
+        self.filterset_class = filterset_class or getattr(self, "filterset_class", None)
+
+        # Raise exception if `cls.filterset_class` not set and `filterset_class` not passed
+        if self.filterset_class is None:
+            raise AttributeError("'DynamicFilterForm' object requires `filterset_class` attribute")
+
+        model = self.filterset_class._meta.model
+
+        if self.filterset_class is not None:
+            filterset_class = self.filterset_class()
+            self.filterset_filters = filterset_class.filters
+            contenttype = model._meta.app_label + "." + model._meta.model_name
+
+            # Configure fields: Add css class and set choices for lookup_field
+            self.fields["lookup_field"].choices = add_blank_choice(self._get_lookup_field_choices())
+            self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
+
+            # Update lookup_type and lookup_value fields to match expected field types derived from data
+            # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.
+            if "data" in kwargs and "prefix" in kwargs:
+                data = kwargs["data"]
+                prefix = kwargs["prefix"]
+                lookup_type = data.get(prefix + "-lookup_type")
+                lookup_value = data.getlist(prefix + "-lookup_value")
+
+                if lookup_type and lookup_value and lookup_type in self.filterset_filters:
+                    verbose_name = self.filterset_filters[lookup_type].lookup_expr
+                    label = build_lookup_label(lookup_type, verbose_name)
+                    self.fields["lookup_type"].choices = [(lookup_type, label)]
+                    self.fields["lookup_value"] = get_filterset_parameter_form_field(model, lookup_type)
+                elif lookup_type and lookup_type not in self.filterset_filters:
+                    logger.warning(f"{lookup_type} is not a valid {filterset_class.__class__.__name__} field")
+
+            self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
+            self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
+            self.fields["lookup_type"].widget.attrs["data-url"] = reverse("core-api:filtersetfield-list-lookupchoices")
+            self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
+
+            lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class") or ""
+            self.fields["lookup_value"].widget.attrs["class"] = " ".join(
+                [lookup_value_css, "lookup_value-input form-control"]
+            )
+        else:
+            logger.warning(f"FilterSet for {model.__class__} not found.")
+
+    @staticmethod
+    def capitalize(field):
+        field = field.replace("_custom_field_data__", "")
+        split_field = field.split("__") if "__" in field else field.split("_")
+        words = " ".join(split_field)
+        return words[0].upper() + words[1:]
+
+    def _get_lookup_field_choices(self):
+        """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
+        filterset_without_lookup = (
+            (name, field.label or self.capitalize(field.field_name))
+            for name, field in self.filterset_filters.items()
+            if "__" not in name and name != "q"
+        )
+        return sorted(filterset_without_lookup, key=lambda x: x[1])
+
+
+def dynamic_formset_factory(filterset_class, data=None, **kwargs):
+    filter_form = DynamicFilterForm
+    filter_form.filterset_class = filterset_class
+
+    params = {
+        "can_delete_extra": True,
+        "can_delete": True,
+        "extra": 3,
+    }
+    kwargs.update(params)
+    form = formset_factory(form=filter_form, **kwargs)
+    if data:
+        form = form(data=data)
+
+    return form
+
+
+DynamicFilterFormSet = dynamic_formset_factory

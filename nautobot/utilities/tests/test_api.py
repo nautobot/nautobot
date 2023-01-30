@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client, TestCase
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
@@ -7,7 +7,7 @@ from nautobot.dcim.models import Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, disable_warnings
+from nautobot.utilities.testing import APITestCase, NautobotTestClient, disable_warnings
 
 
 class WritableNestedSerializerTest(APITestCase):
@@ -18,7 +18,7 @@ class WritableNestedSerializerTest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.region_a = Region.objects.create(name="Region A", slug="region-a")
+        self.region_a = Region.objects.filter(sites__isnull=True).first()
         self.site1 = Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
         self.site2 = Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
 
@@ -51,7 +51,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
@@ -83,7 +83,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
@@ -93,7 +93,7 @@ class WritableNestedSerializerTest(APITestCase):
             "status": "active",
             "site": {
                 "region": {
-                    "name": "Region A",
+                    "name": self.region_a.name,
                 },
             },
         }
@@ -103,7 +103,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Multiple objects match"))
 
     def test_related_by_invalid(self):
@@ -119,13 +119,13 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
 
 class APIDocsTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
+    client_class = NautobotTestClient
 
+    def setUp(self):
         # Populate a CustomField to activate CustomFieldSerializer
         content_type = ContentType.objects.get_for_model(Site)
         self.cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="test")

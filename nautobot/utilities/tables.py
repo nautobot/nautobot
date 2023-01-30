@@ -11,8 +11,8 @@ from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
-from nautobot.extras.models import ComputedField, CustomField
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import ComputedField, CustomField, Relationship
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.utilities.utils import get_route_for_model
 
 from .templatetags.helpers import render_boolean
@@ -40,6 +40,23 @@ class BaseTable(tables.Table):
 
         for cpf in ComputedField.objects.filter(content_type=obj_type):
             self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
+
+        for relationship in Relationship.objects.filter(source_type=obj_type):
+            if not relationship.symmetric:
+                self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
+                    relationship, side=RelationshipSideChoices.SIDE_SOURCE
+                )
+            else:
+                self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
+                    relationship, side=RelationshipSideChoices.SIDE_PEER
+                )
+
+        for relationship in Relationship.objects.filter(destination_type=obj_type):
+            if not relationship.symmetric:
+                self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
+                    relationship, side=RelationshipSideChoices.SIDE_DESTINATION
+                )
+            # symmetric relationships are already handled above in the source_type case
 
         # Init table
         super().__init__(*args, **kwargs)
@@ -81,6 +98,7 @@ class BaseTable(tables.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
@@ -346,8 +364,10 @@ class ComputedFieldColumn(tables.Column):
     def __init__(self, computedfield, *args, **kwargs):
         self.computedfield = computedfield
         kwargs["verbose_name"] = computedfield.label
+        kwargs["empty_values"] = []
+        kwargs["orderable"] = False
 
-        super().__init__(*args, empty_values=[], **kwargs)
+        super().__init__(*args, **kwargs)
 
     def render(self, record):
         return self.computedfield.render({"obj": record})
@@ -358,6 +378,9 @@ class CustomFieldColumn(tables.Column):
     Display custom fields in the appropriate format.
     """
 
+    # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
+    empty_values = (None, "", [])
+
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
         # 2.0 TODO: #824 replace customfield.name with customfield.slug
@@ -367,15 +390,10 @@ class CustomFieldColumn(tables.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
-        if value is None:
-            return self.default
-
         template = ""
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-            if not value:
-                return self.default
             for v in value:
                 template += format_html('<span class="label label-default">{}</span> ', v)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
@@ -384,5 +402,60 @@ class CustomFieldColumn(tables.Column):
             template = format_html('<a href="{}">{}</a>', value, value)
         else:
             template = escape(value)
+
+        return mark_safe(template)
+
+
+class RelationshipColumn(tables.Column):
+    """
+    Display relationship association instances in the appropriate format.
+    """
+
+    # Add [] to empty_values so when there is no relationship associations i.e. [], "—" is returned automatically.
+    empty_values = (None, "", [])
+
+    def __init__(self, relationship, side, *args, **kwargs):
+        self.relationship = relationship
+        self.side = side
+        self.peer_side = RelationshipSideChoices.OPPOSITE[side]
+        kwargs.setdefault("verbose_name", relationship.get_label(side))
+        kwargs.setdefault("accessor", Accessor("associations"))
+        super().__init__(orderable=False, *args, **kwargs)
+
+    def render(self, record, value):  # pylint: disable=arguments-differ
+        # Filter the relationship associations by the relationship instance.
+        # Since associations accessor returns all the relationship associations regardless of the relationship.
+        value = [v for v in value if v.relationship == self.relationship]
+        if not self.relationship.symmetric:
+            if self.side == RelationshipSideChoices.SIDE_SOURCE:
+                value = [v for v in value if v.source_id == record.id]
+            else:
+                value = [v for v in value if v.destination_id == record.id]
+
+        template = ""
+        # Handle Symmetric Relationships
+        # List `value` could be empty here [] after the filtering from above
+        if len(value) < 1:
+            return "—"
+        else:
+            # Handle Relationships on the many side.
+            if self.relationship.has_many(self.peer_side):
+                v = value[0]
+                meta = type(v.get_peer(record))._meta
+                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+                template += format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    self.relationship.slug,
+                    self.side,
+                    record.id,
+                    len(value),
+                    name,
+                )
+            # Handle Relationships on the one side.
+            else:
+                v = value[0]
+                peer = v.get_peer(record)
+                template += format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
 
         return mark_safe(template)

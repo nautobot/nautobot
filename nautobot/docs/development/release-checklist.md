@@ -89,35 +89,60 @@ The new version should ideally be a valid semver string or a valid bump rule: `p
 Display the current version with no arguments:
 
 ```no-highlight
-$ poetry version
+poetry version
+```
+
+Example output:
+
+```no-highlight
 nautobot 1.0.0-beta.2
 ```
 
 Bump pre-release versions using `prerelease`:
 
 ```no-highlight
-$ poetry version prerelease
+poetry version prerelease
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0-beta.2 to 1.0.0-beta.3
 ```
 
 For major versions, use `major`:
 
 ```no-highlight
-$ poetry version major
+poetry version major
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0-beta.2 to 1.0.0
 ```
 
 For patch versions, use `minor`:
 
 ```no-highlight
-$ poetry version minor
+poetry version minor
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0 to 1.1.0
 ```
 
 And lastly, for patch versions, you guessed it, use `patch`:
 
 ```no-highlight
-$ poetry version patch
+poetry version patch
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.1.0 to 1.1.1
 ```
 
@@ -125,7 +150,7 @@ Please see the [official Poetry documentation on `version`](https://python-poetr
 
 ### Update the Changelog
 
-Create a release branch off of `develop` (`git checkout -b release-1.4.3 develop`)
+Create a release branch off of `develop` (`git checkout -b release/1.4.3 develop`)
 
 Generate release notes with `towncrier build --version 1.4.3` and answer `yes` to the prompt `Is it okay if I remove those files? [Y/n]:`. This will update the release notes in `nautobot/docs/release-notes/version-1.4.md`, stage that file in git, and `git rm` all of the fragments that have now been incorporated into the release notes.
 
@@ -138,11 +163,14 @@ Commit and push the staged changes.
 !!! important
     The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
 
-### Submit Pull Requests
+### Submit Pull Request
 
-Submit a pull request to merge your release branch into `develop`. Once merged, submit another pull request titled **"Release vX.Y.Z"** to merge the `develop` branch into `main`. Copy the documented release notes into the pull request's body.
+Submit a pull request titled **"Release vX.Y.Z"** to merge your release branch into `main`. Copy the documented release notes into the pull request's body.
 
 Once CI has completed on the PR, merge it.
+
+!!! important
+    Do not squash merge this branch into `main`. Make sure to select `Create a merge commit` when merging in GitHub.
 
 ### Create a New Release
 
@@ -167,13 +195,13 @@ poetry run mkdocs build --no-directory-urls --strict
 Second, you'll need to build the Python package distributions (which will include the rendered documentation):
 
 ```no-highlight
-$ poetry build
+poetry build
 ```
 
 Finally, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
 
 ```no-highlight
-$ poetry publish --username __token__ --password <api_token>
+poetry publish --username __token__ --password <api_token>
 ```
 
 ### Publish Docker Images
@@ -195,7 +223,8 @@ Test the images locally - to do this you need to set the following in your `invo
 nautobot:
   compose_files:
     - "docker-compose.yml"
-    - "docker-compose.build.yml"
+    - "docker-compose.postgres.yml"
+    - "docker-compose.final.yml"
 ```
 
 !!! warning
@@ -222,11 +251,19 @@ done
 
 ### Bump the Development Version
 
-Use `poetry version prepatch` to bump the version to the next release and commit it to the `develop` branch.
+Create a new branch off of `main` and use `poetry version prepatch` to bump the version to the next release. Then open a pull request to the `develop` branch to update the version and sync the release notes and changelog fragment updates from `main`.
 
 For example, if you just released `v1.1.0`:
 
 ```no-highlight
-$ poetry version prepatch
+poetry version prepatch
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.1.0 to 1.1.1-alpha.0
 ```
+
+!!! important
+    Do not squash merge this branch into `develop`. Make sure to select `Create a merge commit` when merging in GitHub.

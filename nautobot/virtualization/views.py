@@ -38,7 +38,7 @@ class ClusterTypeView(generic.ObjectView):
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(type=instance)
-            .prefetch_related("group", "site", "tenant")
+            .select_related("group", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -98,7 +98,7 @@ class ClusterGroupView(generic.ObjectView):
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(group=instance)
-            .prefetch_related("type", "site", "tenant")
+            .select_related("type", "site", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -161,7 +161,7 @@ class ClusterView(generic.ObjectView):
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(cluster=instance)
-            .prefetch_related("site", "rack", "tenant", "device_type__manufacturer")
+            .select_related("site", "rack", "tenant", "device_type__manufacturer")
         )
         device_table = DeviceTable(list(devices), orderable=False)
         if request.user.has_perm("virtualization.change_cluster"):
@@ -189,14 +189,14 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.prefetch_related("type", "group", "site")
+    queryset = Cluster.objects.select_related("type", "group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.prefetch_related("type", "group", "site")
+    queryset = Cluster.objects.select_related("type", "group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 
@@ -311,7 +311,7 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
-    queryset = VirtualMachine.objects.prefetch_related("tenant__group")
+    queryset = VirtualMachine.objects.select_related("tenant__group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
@@ -361,14 +361,14 @@ class VirtualMachineBulkImportView(generic.BulkImportView):
 
 
 class VirtualMachineBulkEditView(generic.BulkEditView):
-    queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
+    queryset = VirtualMachine.objects.select_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
     form = forms.VirtualMachineBulkEditForm
 
 
 class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
-    queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
+    queryset = VirtualMachine.objects.select_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
 
@@ -392,7 +392,7 @@ class VMInterfaceView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
         ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").prefetch_related("vrf", "tenant"),
+            data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
             orderable=False,
         )
 
@@ -407,7 +407,8 @@ class VMInterfaceView(generic.ObjectView):
         if instance.untagged_vlan is not None:
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
-        for vlan in instance.tagged_vlans.restrict(request.user).prefetch_related("site", "group", "tenant", "role"):
+
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
@@ -419,7 +420,7 @@ class VMInterfaceView(generic.ObjectView):
         }
 
 
-# TODO: This should not use ComponentCreateView
+# 2.0 TODO: This will be collapsed into `InterfaceCreateView` and will go away.
 class VMInterfaceCreateView(generic.ComponentCreateView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceCreateForm

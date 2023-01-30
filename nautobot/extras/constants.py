@@ -31,11 +31,12 @@ JOB_OVERRIDABLE_FIELDS = (
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",
+    "task_queues",
 )
 
 
 # Job field length limits
-JOB_MAX_NAME_LENGTH = 100  # TODO this should really be a more general-purpose constant, like NAME_MAX_LENGTH
+JOB_MAX_NAME_LENGTH = 100  # TODO(Glenn): this should really be a more general-purpose constant, like NAME_MAX_LENGTH
 JOB_MAX_SLUG_LENGTH = 320  # 16 source, 100 GitRepository.name, 100 module_name, 100 job_class_name
 JOB_MAX_GROUPING_LENGTH = 255
 JOB_MAX_SOURCE_LENGTH = 16  # "git", "local", "plugins"
@@ -45,3 +46,7 @@ JOB_MAX_SOURCE_LENGTH = 16  # "git", "local", "plugins"
 JOB_LOG_MAX_GROUPING_LENGTH = 100
 JOB_LOG_MAX_LOG_OBJECT_LENGTH = 200
 JOB_LOG_MAX_ABSOLUTE_URL_LENGTH = 255
+
+# ChangeLog Truncation Length
+CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL = 400
+CHANGELOG_MAX_OBJECT_REPR = 200

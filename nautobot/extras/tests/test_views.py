@@ -11,6 +11,7 @@ from django.utils import timezone
 from unittest import mock
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -44,7 +45,9 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.extras.utils import get_job_content_type
+from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
+from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
+from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
@@ -141,7 +144,7 @@ class ConfigContextTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         # Create three ConfigContexts
         for i in range(1, 4):
@@ -605,7 +608,7 @@ class NoteTestCase(
     def setUpTestData(cls):
 
         content_type = ContentType.objects.get_for_model(Site)
-        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = Site.objects.first()
         user = User.objects.first()
 
         # Notes Objects to test
@@ -671,14 +674,12 @@ class SecretTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        tags = cls.create_tags("alpha", "beta", "gamma")
-
         secrets = (
             Secret(
                 name="View Test 1",
                 provider="environment-variable",
                 parameters={"variable": "VIEW_TEST_1"},
-                tags=[t.pk for t in tags],
+                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
             ),
             Secret(
                 name="View Test 2",
@@ -728,7 +729,7 @@ class SecretsGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
             SecretsGroup.objects.create(name="Group 2", slug="group-2"),
             SecretsGroup.objects.create(name="Group 3", slug="group-3"),
         )
@@ -1516,6 +1517,8 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
+            "task_queues": "overridden,priority",
+            "task_queues_override": True,
         }
 
     #
@@ -1801,6 +1804,30 @@ class JobTestCase(
             self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_invalid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        self.test_pass.task_queues = []
+        self.test_pass.task_queues_override = True
+        self.test_pass.validated_save()
+
+        data = {
+            "_schedule_type": "immediately",
+            "_task_queue": "invalid",
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(
+                errors,
+                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
@@ -1841,6 +1868,16 @@ class JobTestCase(
                 "One of these two flags must be removed before this job can be scheduled or run.",
                 content,
             )
+
+    def test_job_object_change_log_view(self):
+        """Assert Job change log view displays appropriate header"""
+        instance = self.test_pass
+        self.add_permissions("extras.view_objectchange", "extras.view_job")
+        response = self.client.get(instance.get_changelog_url())
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertHttpStatus(response, 200)
+        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
 
 
 # TODO: Convert to StandardTestCases.Views
@@ -1886,6 +1923,7 @@ class RelationshipTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    RequiredRelationshipTestMixin,
 ):
     model = Relationship
     slug_source = "name"
@@ -1893,8 +1931,8 @@ class RelationshipTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        device_type = ContentType.objects.get_for_model(Device)
         interface_type = ContentType.objects.get_for_model(Interface)
+        device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         Relationship(
@@ -1934,6 +1972,78 @@ class RelationshipTestCase(
 
         cls.slug_test_object = "Primary Interface"
 
+    def test_required_relationships(self):
+        """
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+        4. Test bulk edit
+        """
+
+        # Parameterized tests (for creating and updating single objects):
+        self.required_relationships_test(interact_with="ui")
+
+        # 4. Bulk create/edit tests:
+
+        vlans = VLANFactory.create_batch(6)
+
+        # Try deleting all devices and then editing the 6 VLANs (fails):
+        Device.objects.all().delete()
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
+        )
+        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
+
+        # Create test device for association
+        device_for_association = test_views.create_test_device("VLAN Required Device")
+
+        # Try editing all 6 VLANs without adding the required device(fails):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
+        )
+        self.assertContains(
+            response,
+            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
+        )
+
+        # Try editing 3 VLANs without adding the required device(fails):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
+        )
+        self.assertContains(
+            response,
+            "These VLANs require a device for the required "
+            "relationship &quot;VLANs require at least one Device&quot;",
+        )
+        for vlan in vlans[:3]:
+            self.assertContains(response, f"{str(vlan)}")
+
+        # Try editing 6 VLANs and adding the required device (succeeds):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"),
+            data={
+                "pk": [str(vlan.id) for vlan in vlans],
+                "add_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "_apply": [""],
+            },
+            follow=True,
+        )
+        self.assertContains(response, "Updated 6 VLANs")
+
+        # Try editing 6 VLANs and removing the required device (fails):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"),
+            data={
+                "pk": [str(vlan.id) for vlan in vlans],
+                "remove_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "_apply": [""],
+            },
+        )
+        self.assertContains(
+            response,
+            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
+        )
+
 
 class RelationshipAssociationTestCase(
     # TODO? ViewTestCases.CreateObjectViewTestCase,
@@ -1961,7 +2071,7 @@ class RelationshipAssociationTestCase(
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
@@ -2010,11 +2120,6 @@ class StatusTestCase(
     def setUpTestData(cls):
 
         # Status objects to test.
-        Status.objects.create(name="Status 1", slug="status-1")
-        Status.objects.create(name="Status 2", slug="status-2")
-        Status.objects.create(name="Status 3", slug="status-3")
-        Status.objects.create(name="Status 4")
-
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
@@ -2038,7 +2143,7 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Status 4"
+        cls.slug_test_object = Status.objects.first().name
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -2046,21 +2151,12 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
-
         cls.form_data = {
             "name": "Tag X",
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
-            "content_types": [ContentType.objects.get_for_model(Site).id],
+            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
 
         cls.csv_data = (
@@ -2116,8 +2212,8 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
-        site = Site.objects.create(name="site 1", slug="site-1")
+        tag_1 = Tag.objects.get_for_model(Site).first()
+        site = Site.objects.first()
         site.tags.add(tag_1)
 
         form_data = {

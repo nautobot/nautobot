@@ -1,11 +1,7 @@
 from django import forms
 
-from nautobot.extras.forms import NautobotModelForm
-from nautobot.utilities.forms import (
-    BootstrapMixin,
-    BulkEditForm,
-    CSVModelForm,
-)
+from nautobot.apps.forms import BulkEditForm, CSVModelForm, NautobotModelForm
+from nautobot.utilities.forms import BootstrapMixin
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 

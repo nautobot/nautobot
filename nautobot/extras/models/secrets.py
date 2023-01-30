@@ -88,7 +88,7 @@ class Secret(PrimaryModel):
         """
         provider = registry["secrets_providers"].get(self.provider)
         if not provider:
-            raise SecretProviderError(self, None, f'No registered provider "{self.provider}" is available')
+            raise SecretProviderError(self, self.provider, f'No registered provider "{self.provider}" is available')
 
         try:
             return provider.get_value_for_secret(self, obj=obj)

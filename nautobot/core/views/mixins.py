@@ -19,7 +19,8 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
-from rest_framework import mixins
+from rest_framework import mixins, exceptions
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -27,6 +28,8 @@ from drf_spectacular.utils import extend_schema
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.forms import NoteForm
+from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -35,7 +38,6 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.permissions import resolve_permission
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
@@ -52,6 +54,8 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_create": "add",
     "bulk_destroy": "delete",
     "bulk_update": "change",
+    "changelog": "view",
+    "notes": "view",
 }
 
 
@@ -68,10 +72,12 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     filterset_class = None
     filterset_form_class = None
     form_class = None
+    parser_classes = [FormParser, MultiPartParser]
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     table_class = None
+    notes_form_class = NoteForm
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -101,36 +107,53 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             )
         return self.get_permissions_for_model(queryset.model, permissions)
 
-    def has_permission(self):
+    def check_permissions(self, request):
         """
         Check whether the user has the permissions needed to perform certain actions.
         """
         user = self.request.user
-        queryset = self.get_queryset()
         permission_required = self.get_required_permission()
-        # Check that the user has been granted the required permission(s).
-        if user.has_perms(permission_required):
+        # Check that the user has been granted the required permission(s) one by one.
+        # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
+        for permission in permission_required:
+            # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
+            # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
+            # Cast permission to a list since has_perms() takes a list type parameter.
+            if not user.has_perms([permission]):
+                self.permission_denied(
+                    request,
+                    message=getattr(permission, "message", None),
+                    code=getattr(permission, "code", None),
+                )
 
-            # Update the view's QuerySet to filter only the permitted objects
-            for permission in permission_required:
-                action = resolve_permission(permission)[1]
-                queryset = queryset.restrict(user, action)
-
-            return True
-
-        return False
-
-    def check_permissions(self, request):
+    def dispatch(self, request, *args, **kwargs):
         """
+        Override the default dispatch() method to check permissions first.
         Used to determine whether the user has permissions to a view and object-level permissions.
         Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
-        if not self.has_permission():
-            self.handle_no_permission()
+        # self.initialize_request() converts a WSGI request and returns an API request object which can be passed into self.check_permissions()
+        # If the user is not authenticated or does not have the permission to perform certain actions,
+        # DRF NotAuthenticated or PermissionDenied exception can be raised appropriately and handled by self.handle_no_permission() in the UI.
+        # initialize_request() also instantiates self.action which is needed for permission checks.
+        api_request = self.initialize_request(request, *args, **kwargs)
+        try:
+            self.check_permissions(api_request)
+        # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
+        # We handle them by a single except statement since self.handle_no_permission() is able to handle both errors
+        except (exceptions.NotAuthenticated, exceptions.PermissionDenied):
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
         # If not, display an error message
+        if self.action == "notes":
+            return NoteTable
+        elif self.action == "changelog":
+            return ObjectChangeTable
+
         assert (
             self.table_class is not None
         ), f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
@@ -181,7 +204,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         self.has_error = True
 
     def _handle_validation_error(self, e):
-        messages.error(self.request, f"{self.obj} failed validation: {e}")
+        # For bulk_create/bulk_update view, self.obj is not set since there are multiple
+        # The errors will be rendered on the form itself.
+        if self.action not in ["bulk_create", "bulk_update"]:
+            messages.error(self.request, f"{self.obj} failed validation: {e}")
         self.has_error = True
 
     def form_valid(self, form):
@@ -712,6 +738,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
     UI mixin to bulk create model instances.
     """
 
+    bulk_create_active_tab = "csv-data"
     bulk_create_form_class = None
     bulk_create_widget_attrs = {}
 
@@ -723,6 +750,10 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
         with transaction.atomic():
             if request.FILES:
                 field_name = "csv_file"
+                # Set the bulk_create_active_tab to "csv-file"
+                # In case the form validation fails, the user will be redirected
+                # to the tab with errors rendered on the form.
+                self.bulk_create_active_tab = "csv-file"
             else:
                 field_name = "csv_data"
             headers, records = form.cleaned_data[field_name]
@@ -735,7 +766,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
                     new_objs.append(obj)
                 else:
                     for field, err in obj_form.errors.items():
-                        form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
+                        form.add_error(field_name, f"Row {row} {field}: {err[0]}")
                     raise ValidationError("")
 
             # Enforce object-level permissions
@@ -759,7 +790,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
 
     def perform_bulk_create(self, request):
         form_class = self.get_form_class()
-        form = form_class(request.POST)
+        form = form_class(request.POST, request.FILES)
         if form.is_valid():
             return self.form_valid(form)
         else:
@@ -891,4 +922,32 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             )
             return redirect(self.get_return_url(request))
         data.update({"table": table})
+        return Response(data)
+
+
+class ObjectChangeLogViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin to list a model's changelog queryset
+    """
+
+    base_template = None
+
+    def changelog(self, request, *args, **kwargs):
+        data = {
+            "base_template": self.base_template,
+        }
+        return Response(data)
+
+
+class ObjectNotesViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for an Object's Notes.
+    """
+
+    base_template = None
+
+    def notes(self, request, *args, **kwargs):
+        data = {
+            "base_template": self.base_template,
+        }
         return Response(data)

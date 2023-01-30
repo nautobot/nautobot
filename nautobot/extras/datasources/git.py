@@ -15,7 +15,7 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -266,7 +266,7 @@ def ensure_git_repository(
     Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
     Args:
-      repository_record (GitRepository)
+      repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
       logger (logging.Logger): Optional Logger to additionally log results to.
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
@@ -399,6 +399,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "locations",
         "device_types",
         "roles",
         "platforms",
@@ -534,6 +535,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("locations", Location),
         ("device_types", DeviceType),
         ("roles", DeviceRole),
         ("platforms", Platform),
@@ -913,7 +915,7 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     installed_jobs = []
-    if not delete:
+    if "extras.job" in repository_record.provided_contents and not delete:
         jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
         if os.path.isdir(jobs_path):
             for job_info in jobs_in_directory(jobs_path, report_errors=True):

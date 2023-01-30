@@ -528,7 +528,7 @@ def log_entry_color_css(record):
 
 
 class JobTable(BaseTable):
-    # TODO pk = ToggleColumn()
+    # TODO(Glenn): pk = ToggleColumn()
     source = tables.Column()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
     name = tables.Column(linkify=True)
@@ -832,6 +832,7 @@ class RelationshipTable(BaseTable):
             "source_type",
             "destination_type",
             "actions",
+            "required_on",
         )
 
 

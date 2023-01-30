@@ -1,1 +1,0 @@
-Fixed NautobotHTMLRenderer incorrectly overrides selected pk_list for bulk_destroy and bulk_update.

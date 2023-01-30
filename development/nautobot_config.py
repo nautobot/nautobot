@@ -1,95 +1,31 @@
 """Nautobot development configuration file."""
 import os
-import sys
 
 from nautobot.core.settings import *  # noqa: F403
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
-
-
-#
-# Misc. settings
-#
-
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
+from nautobot.core.settings_funcs import is_truthy
 
 #
-# Databases
+# Debugging defaults to True rather than False for the development environment
 #
-
-DATABASES = {
-    "default": {
-        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
-        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
-        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
-        "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
-        "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
-        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
-    }
-}
-
-# Ensure proper Unicode handling for MySQL
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
-    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
-
-#
-# Debug
-#
-
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "True"))
 
-# Django Debug Toolbar
-DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
-
-if "debug_toolbar" not in INSTALLED_APPS:  # noqa: F405
-    INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
-if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
-    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
+# Django Debug Toolbar - enabled only when debugging
+if DEBUG:
+    if "debug_toolbar" not in INSTALLED_APPS:  # noqa: F405
+        INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
+    if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
+        MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
+    # By default the toolbar only displays when the request is coming from one of INTERNAL_IPS.
+    # For the Docker dev environment, we don't know in advance what that IP may be, so override to skip that check
+    DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG}
 
 #
-# Logging
+# Logging for the development environment, taking into account the redefinition of DEBUG above
 #
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
-
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
-
-# Verbose logging during normal development operation, but quiet logging during unit test execution
-if not TESTING:
-    LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "normal": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
-                "datefmt": "%H:%M:%S",
-            },
-            "verbose": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
-                "datefmt": "%H:%M:%S",
-            },
-        },
-        "handlers": {
-            "normal_console": {
-                "level": "INFO",
-                "class": "logging.StreamHandler",
-                "formatter": "normal",
-            },
-            "verbose_console": {
-                "level": "DEBUG",
-                "class": "logging.StreamHandler",
-                "formatter": "verbose",
-            },
-        },
-        "loggers": {
-            "django": {"handlers": ["normal_console"], "level": "INFO"},
-            "nautobot": {
-                "handlers": ["verbose_console" if DEBUG else "normal_console"],
-                "level": LOG_LEVEL,
-            },
-        },
-    }
+LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]  # noqa: F405
+LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
 #
 # Plugins
@@ -99,33 +35,4 @@ PLUGINS = [
     "example_plugin",
 ]
 
-#
-# Redis
-#
-
-# The django-redis cache is used to establish concurrent locks using Redis. The
-# django-rq settings will use the same instance/database by default.
-#
-# This "default" server is now used by RQ_QUEUES.
-# >> See: nautobot.core.settings.RQ_QUEUES
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": parse_redis_connection(redis_database=0),
-        "TIMEOUT": 300,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    }
-}
-
-# RQ_QUEUES is not set here because it just uses the default that gets imported
-# up top via `from nautobot.core.settings import *`.
-
-# Redis Cacheops
-CACHEOPS_REDIS = parse_redis_connection(redis_database=1)
-
-#
-# Celery settings are not defined here because they can be overloaded with
-# environment variables. By default they use `CACHES["default"]["LOCATION"]`.
-#
+METRICS_ENABLED = True

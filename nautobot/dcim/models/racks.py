@@ -54,7 +54,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     location = models.ForeignKey(
@@ -82,7 +82,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
         ordering = ["site", "name"]
         unique_together = [
             ["site", "name"],
-            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
+            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
 
@@ -455,7 +455,7 @@ class Rack(PrimaryModel, StatusModel):
 
             # Retrieve all devices installed within the rack
             queryset = (
-                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
+                Device.objects.select_related("device_type", "device_type__manufacturer", "device_role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
@@ -497,7 +497,7 @@ class Rack(PrimaryModel, StatusModel):
         :param exclude: List of devices IDs to exclude (useful when moving a device within a rack)
         """
         # Gather all devices which consume U space within the rack
-        devices = self.devices.prefetch_related("device_type").filter(position__gte=1)
+        devices = self.devices.select_related("device_type").filter(position__gte=1)
         if exclude is not None:
             devices = devices.exclude(pk__in=exclude)
 
@@ -604,6 +604,7 @@ class Rack(PrimaryModel, StatusModel):
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
             _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
         )
+        direct_allocated_draw = pf_powerports.aggregate(Sum("allocated_draw"))["allocated_draw__sum"] or 0
         poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
         allocated_draw_total = (
             PowerPort.objects.filter(
@@ -612,6 +613,7 @@ class Rack(PrimaryModel, StatusModel):
             ).aggregate(Sum("allocated_draw"))["allocated_draw__sum"]
             or 0
         )
+        allocated_draw_total += direct_allocated_draw
 
         return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
 

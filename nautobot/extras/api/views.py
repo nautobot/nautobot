@@ -1,4 +1,5 @@
 from datetime import timedelta
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -11,6 +12,7 @@ from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -325,7 +327,7 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = DynamicGroup.objects.prefetch_related("content_type")
+    queryset = DynamicGroup.objects.select_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
@@ -350,7 +352,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
+    queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
 
@@ -443,7 +445,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -455,6 +457,8 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
+        "celery_kwargs": celery_kwargs,
+        "task_queue": task_queue,
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
@@ -492,6 +496,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         user=request.user,
         approval_required=job_model.approval_required,
         crontab=crontab,
+        queue=task_queue,
     )
     scheduled_job.save()
     return scheduled_job
@@ -522,27 +527,84 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
-    input_serializer = serializers.JobInputSerializer(data=request.data, context={"request": request})
-    input_serializer.is_valid(raise_exception=True)
+    valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+    # Get a default queue from either the job model's specified task queue or system default to fall back on if request doesn't provide one
+    default_valid_queue = valid_queues[0]
 
-    data = input_serializer.validated_data.get("data", {})
-    commit = input_serializer.validated_data.get("commit", None)
+    # We need to call request.data for both cases as this is what pulls and caches the request data
+    data = request.data
+    files = None
+    schedule_data = None
+
+    # We must extract from the request:
+    # - Job Form data (for submission to the job itself)
+    # - Schedule data
+    # - Commit flag state
+    # - Desired task queue
+    # Depending on request content type (largely for backwards compatibility) the keys at which these are found are different
+    if "multipart/form-data" in request.content_type:
+        data = request._data.dict()  # .data will return data and files, we just want the data
+        files = request.FILES
+
+        # JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer
+        input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
+        input_serializer.is_valid(raise_exception=True)
+
+        commit = input_serializer.validated_data.get("_commit", None)
+        task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
+
+        # JobMultiPartInputSerializer only has keys for executing job (commit, task_queue, etc),
+        # everything else is a candidate for the job form's data.
+        # job_class.validate_data will throw an error for any unexpected key/value pairs.
+        non_job_keys = input_serializer.validated_data.keys()
+        for non_job_key in non_job_keys:
+            data.pop(non_job_key, None)
+
+        # List of keys in serializer that are effectively exploded versions of the schedule dictionary from JobInputSerializer
+        schedule_keys = ("_schedule_name", "_schedule_start_time", "_schedule_interval", "_schedule_crontab")
+
+        # Assign the key from the validated_data output to dictionary without prefixed "_schedule_"
+        # For all the keys that are schedule keys
+        # Assign only if the key is in the output since we don't want None's if not provided
+        if any(schedule_key in non_job_keys for schedule_key in schedule_keys):
+            schedule_data = {
+                k.replace("_schedule_", ""): input_serializer.validated_data[k]
+                for k in schedule_keys
+                if k in input_serializer.validated_data
+            }
+
+    else:
+        input_serializer = serializers.JobInputSerializer(data=data, context={"request": request})
+        input_serializer.is_valid(raise_exception=True)
+
+        data = input_serializer.validated_data.get("data", {})
+        commit = input_serializer.validated_data.get("commit", None)
+        task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
+        schedule_data = input_serializer.validated_data.get("schedule", None)
+
     if commit is None:
         commit = job_model.commit_default
 
+    if task_queue not in valid_queues:
+        raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
+
+    cleaned_data = None
     try:
-        job.validate_data(data)
+        cleaned_data = job.validate_data(data, files=files)
+        cleaned_data.pop(
+            "_commit", None
+        )  # We don't get commit from the form, instead it's part of the serializer's validated data
+
     except FormsValidationError as e:
         # message_dict can only be accessed if ValidationError got a dict
         # in the constructor (saved as error_dict). Otherwise we get a list
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count():
-        raise CeleryWorkerNotRunningException()
+    if not get_worker_count(queue=task_queue):
+        raise CeleryWorkerNotRunningException(queue=task_queue)
 
     job_content_type = get_job_content_type()
-    schedule_data = input_serializer.validated_data.get("schedule")
 
     # Default to a null JobResult.
     job_result = None
@@ -562,7 +624,16 @@ def _run_job(request, job_model, legacy_response=False):
 
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
+        schedule = _create_schedule(
+            schedule_data,
+            job_class.serialize_data(cleaned_data),
+            commit,
+            job,
+            job_model,
+            request,
+            celery_kwargs={"queue": task_queue},
+            task_queue=input_serializer.validated_data.get("task_queue", None),
+        )
     else:
         schedule = None
 
@@ -573,9 +644,11 @@ def _run_job(request, job_model, legacy_response=False):
             job.class_path,
             job_content_type,
             request.user,
-            data=data,
+            celery_kwargs={"queue": task_queue},
+            data=job_class.serialize_data(cleaned_data),
             request=copy_safe_request(request),
             commit=commit,
+            task_queue=input_serializer.validated_data.get("task_queue", None),
         )
         job.result = job_result
 
@@ -740,10 +813,18 @@ class JobViewSet(
 
     @extend_schema(
         methods=["post"],
-        request=serializers.JobInputSerializer,
+        request={
+            "application/json": serializers.JobInputSerializer,
+            "multipart/form-data": serializers.JobMultiPartInputSerializer,
+        },
         responses={"201": serializers.JobRunResponseSerializer},
     )
-    @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[JobRunTokenPermissions],
+        parser_classes=[JSONParser, MultiPartParser],
+    )
     def run(self, request, *args, pk, **kwargs):
         """Run the specified Job."""
         job_model = self.get_object()
@@ -762,6 +843,7 @@ class JobViewSet(
         permission_classes=[JobRunTokenPermissions],
         url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",  # /api/extras/jobs/<class_path>/run/
         url_name="run",
+        parser_classes=[JSONParser, MultiPartParser],
     )
     def run_deprecated(self, request, class_path):
         """
@@ -803,7 +885,7 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
-    queryset = JobLogEntry.objects.prefetch_related("job_result")
+    queryset = JobLogEntry.objects.select_related("job_result")
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
 
@@ -821,7 +903,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.select_related("job_model", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -843,7 +925,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
-    queryset = ScheduledJob.objects.prefetch_related("user")
+    queryset = ScheduledJob.objects.select_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
@@ -964,9 +1046,11 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             job_model.class_path,
             job_content_type,
             request.user,
+            celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
             data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
+            task_queue=scheduled_job.kwargs.get("task_queue", None),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
@@ -980,7 +1064,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 class NoteViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
-    queryset = Note.objects.prefetch_related("user")
+    queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
 
@@ -1000,7 +1084,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
 
     metadata_class = ContentTypeMetadata
-    queryset = ObjectChange.objects.prefetch_related("user")
+    queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
 

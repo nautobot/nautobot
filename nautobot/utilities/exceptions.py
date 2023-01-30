@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
@@ -8,7 +9,7 @@ class AbortTransaction(Exception):
     """
 
 
-# TODO remove this in 2.0
+# 2.0 TODO remove this in 2.0
 class RQWorkerNotRunningException(APIException):
     """
     Indicates the temporary inability to enqueue a legacy RQ task  because no RQ worker processes are currently running.
@@ -26,5 +27,20 @@ class CeleryWorkerNotRunningException(APIException):
     """
 
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_detail = "Unable to process request: Celery worker process not running."
+    default_detail = (
+        f"Unable to process request: No celery workers running on queue {settings.CELERY_TASK_DEFAULT_QUEUE}."
+    )
     default_code = "celery_worker_not_running"
+
+    def __init__(self, queue=None):
+        if queue:
+            detail = f"Unable to process request: No celery workers running on queue {queue}."
+        else:
+            detail = self.default_detail
+        super().__init__(detail=detail)
+
+
+class FilterSetFieldNotFound(Exception):
+    """
+    An exception indicating that a filterset field could not be found.
+    """

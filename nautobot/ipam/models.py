@@ -28,7 +28,7 @@ from .constants import (
     VRF_RD_MAX_LENGTH,
 )
 from .fields import VarbinaryIPField
-from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
+from .querysets import AggregateQuerySet, IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
 
 
@@ -194,6 +194,8 @@ class RIR(OrganizationalModel):
 
     csv_headers = ["name", "slug", "is_private", "description"]
 
+    objects = RIRQuerySet.as_manager()
+
     class Meta:
         ordering = ["name"]
         verbose_name = "RIR"
@@ -201,6 +203,9 @@ class RIR(OrganizationalModel):
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.name,)
 
     def get_absolute_url(self):
         return reverse("ipam:rir", args=[self.slug])
@@ -1042,7 +1047,7 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(
         to="dcim.Site",
@@ -1068,10 +1073,10 @@ class VLANGroup(OrganizationalModel):
             "name",
         )  # (site, name) may be non-unique
         unique_together = [
-            # TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
+            # 2.0 TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
             # with the same name. This should probably be fixed with a custom validate_unique() function!
             ["site", "name"],
-            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
+            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"
@@ -1163,7 +1168,7 @@ class VLAN(PrimaryModel, StatusModel):
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=255, db_index=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1208,7 +1213,7 @@ class VLAN(PrimaryModel, StatusModel):
             "vid",
         )  # (site, group, vid) may be non-unique
         unique_together = [
-            # TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
+            # 2.0 TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
             # the same vid and name. We should probably fix this with a custom validate_unique() function.
             ["group", "vid"],
             ["group", "name"],

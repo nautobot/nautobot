@@ -91,6 +91,20 @@ function setDarkTheme() {
     //  Nautobot initially loads in as light theme, then any page refresh or new page will load in dark theme
     // This line prevents that initial light screen load, with an initial, one-time "flash" from light to dark
     darkElement.disabled = undefined;
+
+    for (let obj of document.getElementsByTagName('object')) {
+        obj.addEventListener('load', (event) => {
+            if (event.target.contentDocument) {
+                images = event.target.contentDocument.getElementsByTagName('image');
+                short_names = event.target.contentDocument.getElementsByClassName('rack-device-shortname');
+                full_names = event.target.contentDocument.getElementsByClassName('rack-device-fullname');
+                all = [].concat(Array.from(images), Array.from(short_names), Array.from(full_names))
+                for (let rack_image of all) {
+                    rack_image.setAttribute('filter', 'url(#darkmodeinvert)')
+                }
+            }
+        });
+    }
 }
 
 function setLightTheme() {

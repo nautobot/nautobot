@@ -25,6 +25,8 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectBulkDestroyViewMixin,
     view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
 ):
     bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
@@ -40,7 +42,8 @@ class CircuitTypeUIViewSet(
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(type=instance)
-                .prefetch_related("type", "tenant", "terminations__site")
+                .select_related("type", "tenant")
+                .prefetch_related("terminations__site")
             )
 
             circuits_table = tables.CircuitTable(circuits)
@@ -59,6 +62,8 @@ class CircuitTerminationUIViewSet(
     view_mixins.ObjectDetailViewMixin,
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
 ):
     form_class = forms.CircuitTerminationForm
     lookup_field = "pk"
@@ -91,7 +96,8 @@ class ProviderUIViewSet(NautobotUIViewSet):
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(provider=instance)
-                .prefetch_related("type", "tenant", "terminations__site")
+                .select_related("type", "tenant")
+                .prefetch_related("terminations__site")
             )
             circuits_table = tables.CircuitTable(circuits)
             circuits_table.columns.hide("provider")
@@ -113,6 +119,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.CircuitFilterForm
     form_class = forms.CircuitForm
     lookup_field = "pk"
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
@@ -124,7 +131,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
             # A-side termination
             termination_a = (
                 CircuitTermination.objects.restrict(request.user, "view")
-                .prefetch_related("site__region")
+                .select_related("site__region")
                 .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_A)
                 .first()
             )
@@ -140,7 +147,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
             # Z-side termination
             termination_z = (
                 CircuitTermination.objects.restrict(request.user, "view")
-                .prefetch_related("site__region")
+                .select_related("site__region")
                 .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_Z)
                 .first()
             )
@@ -175,7 +182,8 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
-                .prefetch_related("type", "tenant", "terminations__site")
+                .select_related("type", "tenant")
+                .prefetch_related("terminations__site")
             )
 
             circuits_table = tables.CircuitTable(circuits)

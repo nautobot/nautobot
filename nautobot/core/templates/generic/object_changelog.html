@@ -1,0 +1,17 @@
+{% extends base_template %}
+{% load helpers %}
+
+{% block title %}{{ block.super }} - Change Log{% endblock %}
+
+{% block content %}
+    {% include 'panel_table.html' %}
+    {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+    <div class="text-muted">
+        Change log retention:
+        {% if "CHANGELOG_RETENTION"|settings_or_config %}
+            {{ "CHANGELOG_RETENTION"|settings_or_config }} days
+        {% else %}
+            Indefinite
+        {% endif %}
+    </div>
+{% endblock %}

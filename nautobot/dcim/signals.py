@@ -2,7 +2,7 @@ import logging
 
 from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
 
@@ -15,7 +15,9 @@ from .models import (
     Rack,
     RackGroup,
     VirtualChassis,
+    Interface,
 )
+from .utils import validate_interface_tagged_vlans
 
 
 def create_cablepath(node, rebuild=True):
@@ -270,3 +272,16 @@ def nullify_connected_endpoints(instance, **kwargs):
             )
         else:
             cablepath.delete()
+
+
+#
+# Interface tagged VLAMs
+#
+
+
+@receiver(m2m_changed, sender=Interface.tagged_vlans.through)
+def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, action, **kwargs):
+    if action != "pre_add":
+        return
+
+    validate_interface_tagged_vlans(instance, kwargs["model"], kwargs["pk_set"])
