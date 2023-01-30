@@ -447,9 +447,6 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-from nautobot.extras.models.jobs import TaskStateChoices, celery_states
-
-
 def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
@@ -712,7 +709,7 @@ class JobViewSet(
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=job_content_type,
-                status__in=celery_states.READY_STATES,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
             .defer("data")
             .order_by("date_created")
@@ -761,7 +758,7 @@ class JobViewSet(
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
             name=job.class_path,
-            status__in=celery_states.READY_STATES,
+            status__in=JobResultStatusChoices.READY_STATES,
         ).first()
 
         serializer = serializers.JobClassDetailSerializer(job, context={"request": request})

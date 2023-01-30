@@ -6,7 +6,6 @@ import os
 import uuid
 
 from celery import schedules
-from celery import states as celery_states
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -18,7 +17,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
-from django_celery_results.models import TASK_STATE_CHOICES
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
@@ -505,9 +503,6 @@ class JobLogEntry(BaseModel):
 # Job results
 #
 
-_task_states = list(dict(TASK_STATE_CHOICES))
-TaskStateChoices = models.TextChoices("TaskStateChoices", _task_states)
-
 
 @extras_features(
     "custom_fields",
@@ -539,32 +534,14 @@ class JobResult(BaseModel, CustomFieldModel):
     )
 
     date_created = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def created(self):
-        return self.date_created
-
-    @created.setter
-    def set_created(self):
-        self.date_created = created
-
     date_done = models.DateTimeField(null=True, blank=True)
-
-    @property
-    def completed(self):
-        return self.date_done
-
-    @completed.setter
-    def set_completed(self, completed):
-        self.date_done = completed
-
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
     status = models.CharField(
         max_length=30,
-        choices=TaskStateChoices.choices,
-        default=TaskStateChoices.PENDING,
+        choices=JobResultStatusChoices,
+        default=JobResultStatusChoices.STATUS_PENDING,
         help_text="Current state of the Job being run",
         db_index=True,
     )
@@ -610,14 +587,6 @@ class JobResult(BaseModel, CustomFieldModel):
     task_id = models.UUIDField(unique=True)
 
     objects = JobResultManager()
-
-    @property
-    def job_id(self):
-        return self.task_id
-
-    @job_id.setter
-    def set_job_id(self, job_id):
-        self.task_id = job_id
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -744,8 +713,7 @@ class JobResult(BaseModel, CustomFieldModel):
         time is also set.
         """
         self.status = status
-        # if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-        if status in celery_states.READY_STATES:
+        if status in JobResultStatusChoices.READY_STATES:
             self.date_done = timezone.now()
 
     @classmethod

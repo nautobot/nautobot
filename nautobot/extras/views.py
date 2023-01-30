@@ -791,8 +791,6 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 # Git repositories
 #
 
-from nautobot.extras.models.jobs import TaskStateChoices, celery_states
-
 
 class GitRepositoryListView(generic.ObjectListView):
     queryset = GitRepository.objects.all()
@@ -808,7 +806,7 @@ class GitRepositoryListView(generic.ObjectListView):
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=git_repository_content_type,
-                status__in=celery_states.READY_STATES,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
             .order_by("date_done")
             .defer("data")

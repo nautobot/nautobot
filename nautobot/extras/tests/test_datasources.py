@@ -282,7 +282,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 self.repo.refresh_from_db()
@@ -324,7 +324,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 MockGitRepo.assert_called_with(
@@ -363,7 +363,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 MockGitRepo.assert_called_with(
@@ -433,7 +433,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 MockGitRepo.assert_called_with(
@@ -457,7 +457,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
 
@@ -498,7 +498,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
 
@@ -583,7 +583,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_FAILED,
+                    JobResultStatusChoices.STATUS_FAILURE,
                     self.job_result.data,
                 )
 
@@ -696,7 +696,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
 
@@ -789,7 +789,7 @@ class GitTest(TransactionTestCase):
                 git_repository_diff_origin_and_local(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
-                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
+                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS, self.job_result.data)
 
                 MockGitRepo.return_value.checkout.assert_not_called()
                 MockGitRepo.assert_called_with(

@@ -192,14 +192,13 @@ def git_repository_pre_delete(instance, **kwargs):
     GitRepository itself to be deleted.
     """
     from nautobot.extras.datasources import refresh_datasource_content
-    from nautobot.extras.models.jobs import TaskStateChoices, celery_states
 
     job_result = JobResult.objects.create(
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),
         user=None,
         task_id=uuid.uuid4(),
-        status=TaskStateChoices.STARTED,
+        status=JobResultStatusChoices.STATUS_STARTED,
     )
 
     # This isn't running in the context of a Job execution transaction,
@@ -209,8 +208,8 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in celery_states.READY_STATES:
-        job_result.set_status(TaskStateChoices.SUCCESS)
+    if job_result.status not in JobResultStatusChoices.READY_STATES:
+        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.save()
 
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone

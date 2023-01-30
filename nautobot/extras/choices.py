@@ -1,3 +1,5 @@
+from celery import states
+
 from nautobot.core.choices import ChoiceSet
 
 
@@ -178,25 +180,22 @@ class JobExecutionType(ChoiceSet):
 
 class JobResultStatusChoices(ChoiceSet):
 
-    STATUS_PENDING = "pending"
-    STATUS_RUNNING = "running"
-    STATUS_COMPLETED = "completed"
-    STATUS_ERRORED = "errored"
-    STATUS_FAILED = "failed"
+    STATUS_FAILURE = states.FAILURE
+    STATUS_PENDING = states.PENDING
+    STATUS_RECEIVED = states.RECEIVED
+    STATUS_RETRY = states.RETRY
+    STATUS_REVOKED = states.REVOKED
+    STATUS_STARTED = states.STARTED
+    STATUS_SUCCESS = states.SUCCESS
 
-    CHOICES = (
-        (STATUS_PENDING, "Pending"),
-        (STATUS_RUNNING, "Running"),
-        (STATUS_COMPLETED, "Completed"),
-        (STATUS_ERRORED, "Errored"),
-        (STATUS_FAILED, "Failed"),
-    )
+    CHOICES = sorted(zip(states.ALL_STATES, states.ALL_STATES))
 
-    TERMINAL_STATE_CHOICES = (
-        STATUS_COMPLETED,
-        STATUS_ERRORED,
-        STATUS_FAILED,
-    )
+    ALL_STATES = states.ALL_STATES
+    EXCEPTION_STATES = states.EXCEPTION_STATES
+    PRECEDENCE = states.PRECEDENCE
+    PROPAGATE_STATES = states.PROPAGATE_STATES
+    READY_STATES = states.READY_STATES
+    UNREADY_STATES = states.UNREADY_STATES
 
 
 #

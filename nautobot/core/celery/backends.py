@@ -1,4 +1,5 @@
 from django_celery_results.backends import DatabaseBackend
+
 # from kombu.serialization import dumps, loads
 
 from nautobot.extras.models import JobResult

@@ -831,13 +831,11 @@ class JobRunResponseSerializer(serializers.Serializer):
 # Job Results
 #
 
-from nautobot.extras.models.jobs import TaskStateChoices
-
 
 class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
-    status = ChoiceField(choices=TaskStateChoices.choices, read_only=True)
+    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
     schedule = NestedScheduledJobSerializer(read_only=True)

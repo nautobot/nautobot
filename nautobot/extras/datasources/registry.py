@@ -46,7 +46,7 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
                     job_result.log(
                         f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE
                     )
-                    job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+                    job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
                 job_result.save()
             job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
             job_result.save()
@@ -57,7 +57,7 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
                 entry.callback(record, job_result, delete=delete)
             except Exception as exc:
                 job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
-                job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+                job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.save()
         job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
         job_result.save()

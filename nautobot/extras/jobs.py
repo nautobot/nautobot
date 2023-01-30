@@ -6,7 +6,6 @@ import logging
 import os
 import shutil
 from textwrap import dedent
-import traceback
 import warnings
 
 from db_file_storage.form_widgets import DBClearableFileInput
@@ -16,7 +15,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
@@ -40,7 +39,7 @@ from nautobot.ipam.validators import (
     prefix_validator,
 )
 
-from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from .choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
@@ -579,7 +578,7 @@ class BaseJob:
             self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
         else:
             self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
-        raise JobRunTaskFailed(message)
+        raise RunJobTaskFailed(message)
 
     # Convenience functions
 
@@ -1053,7 +1052,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     and rollback conditions, plus post execution cleanup and saving the JobResult record.
     """
     from nautobot.extras.models import JobResult  # avoid circular import
-    from nautobot.extras.models.jobs import TaskStateChoices, celery_states
 
     # Getting the correct job result can fail if the stored data cannot be serialized.
     # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
@@ -1162,7 +1160,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
 
-        except Exception as exc:
+        except Exception:
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
             raise

@@ -45,16 +45,16 @@ class JobResultAdmin(NautobotModelAdmin):
     list_display = [
         "obj_type",
         "name",
-        "created",
-        "completed",
+        "date_created",
+        "date_done",
         "user",
         "status",
     ]
     fields = [
         "obj_type",
         "name",
-        "created",
-        "completed",
+        "date_created",
+        "date_done",
         "user",
         "status",
         "data",
