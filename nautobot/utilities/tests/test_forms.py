@@ -13,10 +13,11 @@ from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.models import CustomField
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
-from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, VLANGroup, VRF
 from nautobot.utilities.filters import MultiValueCharFilter
 from nautobot.utilities.forms.fields import (
     CSVDataField,
+    DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
     MultiMatchModelMultipleChoiceField,
@@ -454,6 +455,21 @@ class CSVDataFieldTest(TestCase):
         """
         with self.assertRaises(forms.ValidationError):
             self.field.clean(input_)
+
+
+class DynamicModelChoiceFieldTest(TestCase):
+    """Tests for DynamicModelChoiceField."""
+
+    def setUp(self):
+        self.field = DynamicModelChoiceField(
+            empty_label="Global",
+            null_option="Global",
+            queryset=VRF.objects.all(),
+            required=True,
+        )
+
+    def test_model_choice_iterator(self):
+        self.assertIn(("null", "Global"), self.field.choices)
 
 
 class DynamicModelMultipleChoiceFieldTest(TestCase):

@@ -466,8 +466,19 @@ class DynamicModelChoiceMixin:
     :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
     """
 
+    class ModelChoiceIterator(forms.models.ModelChoiceIterator):
+        """Custom choice iterator that inserts the literal string "null" for blank values in order to correctly display empty selected options."""
+
+        def __iter__(self):
+            """Get an iterator for the model choices."""
+            for (value, label) in super().__iter__():
+                if value == "":
+                    value = "null"
+                yield (value, label)
+
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
+    iterator = ModelChoiceIterator
 
     def __init__(
         self,
