@@ -1,0 +1,1 @@
+Fixed empty placeholder option selection for DynamicModelChoiceField.
