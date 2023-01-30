@@ -52,7 +52,7 @@ def reverse_role_data_migrate(apps, schema):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0009_alter_ipam_role_add_new_role"),
+        ("ipam", "0010_alter_ipam_role_add_new_role"),
     ]
 
     operations = [
