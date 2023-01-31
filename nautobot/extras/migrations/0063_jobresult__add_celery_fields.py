@@ -7,7 +7,7 @@ import nautobot.core.celery
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0061_rename_configcontext_role"),
+        ("extras", "0062_rename_configcontext_role"),
     ]
 
     operations = [
