@@ -44,15 +44,10 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
+    location = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device__location",
+        queryset=Location.objects.all(),
+        label="Location (slug or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -62,21 +57,12 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
 
 
 class LocatableModelFilterSetMixin(django_filters.FilterSet):
-    """Mixin to add `region`, `site`, and `location` filter fields to a FilterSet.
+    """Mixin to add `location` filter fields to a FilterSet.
 
     The expectation is that the linked model has `site` and `location` FK fields,
     while `region` is indirectly associated via the `site`.
     """
 
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Location (slug or ID)",

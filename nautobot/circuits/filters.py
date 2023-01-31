@@ -15,7 +15,7 @@ from nautobot.dcim.filters import (
     LocatableModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 )
-from nautobot.dcim.models import Location, Region, Site
+from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
@@ -50,16 +50,6 @@ class ProviderFilterSet(NautobotFilterSet):
     has_provider_networks = RelatedMembershipBooleanFilter(
         field_name="provider_networks",
         label="Has provider networks",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuits__circuit_terminations__site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="circuits__circuit_terminations__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuits__circuit_terminations__location",
@@ -153,20 +143,10 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         to_field_name="slug",
         label="Circuit type (slug or ID)",
     )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="circuit_terminations__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuit_terminations__site__region",
-        label="Region (slug or ID)",
     )
     has_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",

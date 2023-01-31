@@ -335,7 +335,6 @@ class LocationFactory(PrimaryModelFactory):
             "has_contact_name",
             "has_contact_phone",
             "has_contact_email",
-            "has_site",
             "has_tenant",
             "has_description",
             "_parent",
@@ -407,9 +406,6 @@ class LocationFactory(PrimaryModelFactory):
             return factory.random.randgen.choice(parents)
         return None
 
-    has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
-    site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
-
     has_tenant = factory.Faker("pybool")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
@@ -443,15 +439,7 @@ class RackFactory(PrimaryModelFactory):
     has_role = factory.Faker("pybool")
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
 
-    has_location = factory.Faker("pybool")
-    location = factory.Maybe(
-        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
-    )
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        random_instance(Site),
-    )
+    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
 
     has_group = factory.Faker("pybool")
     group = factory.Maybe("has_group", random_instance(RackGroup), None)  # TODO there's no RackGroupFactory yet...

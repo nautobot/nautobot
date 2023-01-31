@@ -54,7 +54,6 @@ class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:location_list")
@@ -67,7 +66,6 @@ class LocationTable(StatusTableMixin, BaseTable):
             "name",
             "slug",
             "status",
-            "site",
             "location_type",
             "parent",
             "tenant",
@@ -85,5 +83,5 @@ class LocationTable(StatusTableMixin, BaseTable):
             "contact_email",
             "tags",
         )
-        default_columns = ("pk", "name", "status", "site", "tenant", "description", "tags", "actions")
+        default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")
         orderable = False

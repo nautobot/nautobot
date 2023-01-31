@@ -95,8 +95,6 @@ class CircuitTerminationFactory(PrimaryModelFactory):
     class Meta:
         model = CircuitTermination
         exclude = (
-            "has_region",
-            "has_site",
             "has_location",
             "has_port_speed",
             "has_upstream_speed",
@@ -113,34 +111,20 @@ class CircuitTerminationFactory(PrimaryModelFactory):
 
     term_side = factory.Faker("random_element", elements=choices.CircuitTerminationSideChoices.values())
 
-    has_region = None  # overridable attribute to force site that has a region
-    has_site = factory.Maybe("has_region", True, factory.Faker("pybool"))
-
-    @factory.lazy_attribute
-    def site(self):
-        if self.has_region:
-            return faker.Faker().random_element(elements=dcim_models.Site.objects.filter(region__isnull=False))
-        if self.has_site:
-            return faker.Faker().random_element(elements=dcim_models.Site.objects.all())
-        return None
-
-    has_location = factory.Maybe("has_site", factory.Faker("pybool"), False)
+    has_location = factory.Faker("pybool")
     location = factory.Maybe(
         "has_location",
-        factory.LazyAttribute(
-            lambda o: dcim_models.Location.objects.get_for_model(CircuitTermination).filter(site=o.site).first()
-        ),
+        factory.LazyAttribute(lambda o: dcim_models.Location.objects.get_for_model(CircuitTermination).first()),
         None,
     )
 
     @factory.lazy_attribute
     def provider_network(self):
-        # site and provider_network are mutually exclusive but cannot both be null
-        if self.has_site:
+        # location and provider_network are mutually exclusive but cannot both be null
+        if self.has_location:
             return None
         if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
             return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))
-        return ProviderNetworkFactory(provider=self.circuit.provider)
 
     has_port_speed = factory.Faker("pybool")
     port_speed = factory.Maybe("has_port_speed", factory.Faker("pyint", max_value=100000000), None)

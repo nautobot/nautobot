@@ -127,7 +127,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_type = tables.LinkColumn(
@@ -162,7 +161,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "platform",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "position",
@@ -197,7 +195,7 @@ class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
     status = ColoredLabelColumn()
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
@@ -208,7 +206,7 @@ class DeviceImportTable(BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
+            "location",
             "rack",
             "position",
             "role",
