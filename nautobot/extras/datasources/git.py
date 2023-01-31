@@ -32,6 +32,7 @@ from nautobot.extras.models import (
     JobLogEntry,
     JobResult,
     Tag,
+    DynamicGroup,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
