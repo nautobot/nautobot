@@ -363,7 +363,6 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
             "url",
             "name",
             "slug",
-            "site",
             "location",
             "parent",
             "description",
