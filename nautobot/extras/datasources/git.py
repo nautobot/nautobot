@@ -545,7 +545,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         ("tenant_groups", TenantGroup),
         ("tenants", Tenant),
         ("tags", Tag),
-        ("dynamic_groups", DynamicGoup),
+        ("dynamic_groups", DynamicGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):
