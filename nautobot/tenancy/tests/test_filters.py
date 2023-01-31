@@ -154,7 +154,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"aggregates": [aggregates[0].pk, aggregates[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__in=aggregates),
+            self.queryset.filter(aggregates__in=aggregates).distinct(),
         )
 
     def test_has_aggregates(self):
