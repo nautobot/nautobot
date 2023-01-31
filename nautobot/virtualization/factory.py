@@ -1,7 +1,7 @@
 import factory
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
-from nautobot.dcim.models import Site, Location, Platform
+from nautobot.dcim.models import Location, Platform
 from nautobot.extras.models import Role, Status
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
@@ -38,7 +38,6 @@ class ClusterFactory(PrimaryModelFactory):
             "has_comments",
             "has_cluster_group",
             "has_location",
-            "has_site",
             "has_tenant",
         )
 
@@ -54,17 +53,6 @@ class ClusterFactory(PrimaryModelFactory):
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Cluster), allow_null=False), None
-    )
-
-    has_site = factory.Faker("pybool")
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe(
-            "has_site",
-            random_instance(Site),
-            None,
-        ),
     )
 
     has_tenant = factory.Faker("pybool")

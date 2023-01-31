@@ -125,6 +125,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             return None
         if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
             return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))
+        return ProviderNetworkFactory(provider=self.circuit.provider)
 
     has_port_speed = factory.Faker("pybool")
     port_speed = factory.Maybe("has_port_speed", factory.Faker("pyint", max_value=100000000), None)

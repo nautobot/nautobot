@@ -499,7 +499,7 @@ class VLANFilterSet(
         """Return all VLANs available to the specified Device(value)."""
         try:
             device = Device.objects.get(id=value)
-            return queryset.filter(Q(site__isnull=True) | Q(site=device.site))
+            return queryset.filter(Q(location__isnull=True) | Q(location=device.location))
         except Device.DoesNotExist:
             return queryset.none()
 

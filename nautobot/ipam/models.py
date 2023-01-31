@@ -400,7 +400,7 @@ class Aggregate(PrimaryModel):
 class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
-    Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
+    Prefixes can optionally be assigned to Locations and VRFs.
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
     """
@@ -412,13 +412,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -462,7 +455,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "prefix",
         "vrf",
         "tenant",
-        "site",
         "location",
         "vlan_group",
         "vlan",
@@ -472,7 +464,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "description",
     ]
     clone_fields = [
-        "site",
         "location",
         "vrf",
         "tenant",
@@ -547,10 +538,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
@@ -571,7 +558,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.prefix,
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,
             self.vlan.vid if self.vlan else None,
@@ -990,13 +976,6 @@ class VLANGroup(OrganizationalModel):
     name = models.CharField(max_length=100, db_index=True)
     # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="vlan_groups",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1006,19 +985,19 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "site", "location", "description"]
+    csv_headers = ["name", "slug", "location", "description"]
 
     class Meta:
         ordering = (
-            "site",
+            "location",
             "name",
-        )  # (site, name) may be non-unique
+        )  # (location, name) may be non-unique
         unique_together = [
-            # 2.0 TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
+            # 2.0 TODO: since location is nullable, and NULL != NULL, this means that we can have multiple non-Location VLANGroups
             # with the same name. This should probably be fixed with a custom validate_unique() function!
-            ["site", "name"],
+            ["location", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["site", "slug"],
+            ["location", "slug"],
         ]
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
@@ -1028,10 +1007,6 @@ class VLANGroup(OrganizationalModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
@@ -1048,7 +1023,6 @@ class VLANGroup(OrganizationalModel):
         return (
             self.name,
             self.slug,
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.description,
         )
@@ -1078,20 +1052,13 @@ class VLANGroup(OrganizationalModel):
 class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
-    Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
+    Each VLAN must be assigned to a Location, however VLAN IDs need not be unique within a Location.
     A VLAN may optionally be assigned to a VLANGroup, within which all VLAN IDs and names but be unique.
 
     Like Prefixes, each VLAN is assigned an operational status and optionally a user-defined Role. A VLAN can have zero
     or more Prefixes assigned to it.
     """
 
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1120,7 +1087,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = [
-        "site",
         "location",
         "vlan_group",
         "vid",
@@ -1131,7 +1097,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
         "description",
     ]
     clone_fields = [
-        "site",
         "location",
         "vlan_group",
         "tenant",
@@ -1142,10 +1107,10 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
     class Meta:
         ordering = (
-            "site",
+            "location",
             "vlan_group",
             "vid",
-        )  # (site, group, vid) may be non-unique
+        )  # (location, group, vid) may be non-unique
         unique_together = [
             # 2.0 TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
             # the same vid and name. We should probably fix this with a custom validate_unique() function.
@@ -1166,10 +1131,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
@@ -1177,9 +1138,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
                 )
 
         # Validate VLAN group
-        if self.vlan_group and self.vlan_group.site != self.site:
-            raise ValidationError({"vlan_group": f"VLAN group must belong to the assigned site ({self.site})."})
-
         if (
             self.vlan_group is not None
             and self.location is not None
@@ -1194,7 +1152,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
     def to_csv(self):
         return (
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.vlan_group.name if self.vlan_group else None,
             self.vid,

@@ -14,7 +14,6 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
-    NestedSiteSerializer,
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
@@ -161,7 +160,6 @@ class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class VLANGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vlan_count = serializers.IntegerField(read_only=True)
 
@@ -171,7 +169,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
             "url",
             "name",
             "slug",
-            "site",
             "location",
             "description",
             "vlan_count",
@@ -181,11 +178,11 @@ class VLANGroupSerializer(NautobotModelSerializer):
 
     def validate(self, data):
 
-        # Validate uniqueness of name and slug if a site has been assigned.
+        # Validate uniqueness of name and slug if a location has been assigned.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        if data.get("site", None):
+        if data.get("location", None):
             for field in ["name", "slug"]:
-                validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("site", field))
+                validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("location", field))
                 validator(data, self)
 
         # Enforce model validation
@@ -198,7 +195,6 @@ class VLANSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vlan_group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -208,7 +204,6 @@ class VLANSerializer(
         model = VLAN
         fields = [
             "url",
-            "site",
             "location",
             "vlan_group",
             "vid",
@@ -246,7 +241,6 @@ class PrefixSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -258,7 +252,6 @@ class PrefixSerializer(
             "url",
             "family",
             "prefix",
-            "site",
             "location",
             "vrf",
             "tenant",
