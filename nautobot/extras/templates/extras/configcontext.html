@@ -220,8 +220,8 @@
                         <td>
                             {% if object.dynamic_groups.all %}
                                 <ul>
-                                    {% for tag in object.dynamic_groups.all %}
-                                        <li>{{ dynamic_groups|hyperlinked_object }}</li>
+                                    {% for dynamic_group in object.dynamic_groups.all %}
+                                        <li>{{ dynamic_group|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
