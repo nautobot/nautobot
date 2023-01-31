@@ -13,6 +13,7 @@ from nautobot.core.factory import (
 )
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Role, Status
+from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 
@@ -441,7 +442,6 @@ class PrefixFactory(PrimaryModelFactory):
         UniqueFaker("ipv4", network=True, private=True),
     )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-    is_pool = factory.Faker("pybool")
     # TODO: create a LocationGetOrCreateFactory to get or create a location with matching site
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
@@ -457,12 +457,11 @@ class PrefixFactory(PrimaryModelFactory):
         random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=False),
         None,
     )
-    status = factory.Maybe(
+    status = random_instance(lambda: Status.objects.get_for_model(Prefix), allow_null=False)
+    type = factory.Maybe(
         "is_container",
-        factory.LazyFunction(lambda: Prefix.STATUS_CONTAINER),
-        random_instance(
-            lambda: Status.objects.get_for_model(Prefix).exclude(pk=Prefix.STATUS_CONTAINER.pk), allow_null=False
-        ),
+        PrefixTypeChoices.TYPE_CONTAINER,
+        factory.Faker("random_element", elements=PrefixTypeChoices.values()),
     )
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     vlan = factory.Maybe(
@@ -513,7 +512,7 @@ class PrefixFactory(PrimaryModelFactory):
         is_ipv6 = self.family == 6
 
         # Create child prefixes for containers, otherwise create child ip addresses
-        child_factory = PrefixFactory if self.status == Prefix.STATUS_CONTAINER else IPAddressFactory
+        child_factory = PrefixFactory if self.type == PrefixTypeChoices.TYPE_CONTAINER else IPAddressFactory
         method = getattr(child_factory, action)
 
         # Default to maximum of 4 children unless overridden in kwargs

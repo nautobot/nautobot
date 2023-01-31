@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer, Site
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.choices import IPAddressStatusChoices
+from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
 
 
@@ -173,7 +173,7 @@ class TestPrefix(TestCase):
     def test_get_child_prefixes(self):
         vrfs = VRF.objects.all()[:3]
         prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=Prefix.STATUS_CONTAINER),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER),
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), vrf=None),
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.1.0/24"), vrf=vrfs[0]),
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.2.0/24"), vrf=vrfs[1]),
@@ -196,7 +196,9 @@ class TestPrefix(TestCase):
 
     def test_get_child_ips(self):
         vrfs = VRF.objects.all()[:3]
-        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=Prefix.STATUS_CONTAINER)
+        parent_prefix = Prefix.objects.create(
+            prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER
+        )
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.1/24"), vrf=None),
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.1.1/24"), vrf=vrfs[0]),
@@ -217,7 +219,7 @@ class TestPrefix(TestCase):
 
         # Make sure /31 is handled correctly
         parent_prefix_31 = Prefix.objects.create(
-            prefix=netaddr.IPNetwork("10.0.4.0/31"), status=Prefix.STATUS_CONTAINER
+            prefix=netaddr.IPNetwork("10.0.4.0/31"), type=PrefixTypeChoices.TYPE_CONTAINER
         )
         ips_31 = (
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.0/31"), vrf=None),
@@ -311,7 +313,7 @@ class TestPrefix(TestCase):
     def test_get_utilization(self):
 
         # Container Prefix
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=Prefix.STATUS_CONTAINER)
+        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), type=PrefixTypeChoices.TYPE_CONTAINER)
         Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/26")),
@@ -321,7 +323,7 @@ class TestPrefix(TestCase):
         self.assertEqual(prefix.get_utilization(), (128, 256))
 
         # IPv4 Non-container Prefix /24
-        prefix.status = self.statuses.get(slug="active")
+        prefix.type = PrefixTypeChoices.TYPE_NETWORK
         prefix.save()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix
@@ -334,7 +336,7 @@ class TestPrefix(TestCase):
         self.assertEqual(prefix.get_utilization(), (32, 254))
 
         # Change prefix to a pool, network and broadcast address will count toward numerator and denominator in utilization
-        prefix.is_pool = True
+        prefix.type = PrefixTypeChoices.TYPE_POOL
         prefix.save()
         self.assertEqual(prefix.get_utilization(), (34, 256))
 

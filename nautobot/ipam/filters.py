@@ -239,7 +239,7 @@ class PrefixFilterSet(
 
     class Meta:
         model = Prefix
-        fields = ["id", "is_pool", "prefix"]
+        fields = ["id", "type", "prefix"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()

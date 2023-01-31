@@ -450,7 +450,7 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
         "name": "Staging",
         "slug": "staging"
     },
-    "is_pool": false,
+    "type": "network",
     "description": "Example prefix",
     "tags": [],
     "custom_fields": {},
@@ -576,7 +576,7 @@ http://nautobot/api/ipam/prefixes/ \
     "label": "Active"
   },
   "role": null,
-  "is_pool": false,
+  "type": "network",
   "description": "",
   "tags": [],
   "custom_fields": {},
@@ -660,7 +660,7 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
     "label": "Reserved"
   },
   "role": null,
-  "is_pool": false,
+  "type": "network",
   "description": "",
   "tags": [],
   "custom_fields": {},

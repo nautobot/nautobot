@@ -355,7 +355,6 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
-    is_pool = BooleanColumn(verbose_name="Pool")
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -370,12 +369,13 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "location",
             "vlan",
             "role",
-            "is_pool",
+            "type",
             "description",
         )
         default_columns = (
             "pk",
             "prefix",
+            "type",
             "status",
             "vrf",
             "tenant",
@@ -399,6 +399,7 @@ class PrefixDetailTable(PrefixTable):
         fields = (
             "pk",
             "prefix",
+            "type",
             "status",
             "children",
             "vrf",
@@ -408,13 +409,13 @@ class PrefixDetailTable(PrefixTable):
             "location",
             "vlan",
             "role",
-            "is_pool",
             "description",
             "tags",
         )
         default_columns = (
             "pk",
             "prefix",
+            "type",
             "status",
             "children",
             "vrf",

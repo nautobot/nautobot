@@ -185,7 +185,9 @@ class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         for value in test_values:
             with self.subTest(value=value):
                 params = {"q": value}
-                self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs, self.queryset.string_search(value)
+                )
 
     def test_family(self):
         params = {"family": "4"}
@@ -234,16 +236,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"family": "6"}
         ipv6_prefixes = self.queryset.ip_family(6)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
-
-    def test_is_pool(self):
-        params = {"is_pool": "true"}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(is_pool=True)
-        )
-        params = {"is_pool": "false"}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.exclude(is_pool=True)
-        )
 
     def test_within(self):
         unique_description = f"test_{__name__}"
