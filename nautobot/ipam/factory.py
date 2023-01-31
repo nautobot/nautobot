@@ -314,7 +314,7 @@ class VLANFactory(PrimaryModelFactory):
     # and we might want to consider intentionally reusing non-unique values for test purposes?
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
     # Generate names like "vlan__0001__purple__GROUP__Floor-1__242_Vasquez_Freeway" or "vlan__1234__easy",
-    # depending on which of (group, location, site) are defined, if any.
+    # depending on which of (group, location) are defined, if any.
     name = factory.LazyAttribute(
         lambda o: "__".join(
             [
@@ -327,7 +327,6 @@ class VLANFactory(PrimaryModelFactory):
                         faker.Faker().word(part_of_speech="adjective"),
                         o.vlan_group,  # may be None
                         o.location,  # may be None
-                        str(o.site).replace(" ", "_") if o.site else None,  # may be None
                     ),
                 )
             ]
