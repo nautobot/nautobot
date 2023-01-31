@@ -57,7 +57,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
                 Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
                 Q(tenants=obj.tenant) | Q(tenants=None),
                 Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
-                Q(dynamic_groups__slug__in=obj.dynamic_groups.slugs() | Q(dynamic_groups=None)),
+                Q(dynamic_groups=obj.dynamic_groups) | Q(dynamic_groups=None),
                 is_active=True,
             )
             .order_by("weight", "name")
