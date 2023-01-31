@@ -408,6 +408,7 @@ def update_git_config_contexts(repository_record, job_result):
         "tenant_groups",
         "tenants",
         "tags",
+        "dynamic_groups",
     ):
         if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
             job_result.log(
