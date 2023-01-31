@@ -99,7 +99,7 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer, NotesSeriali
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     location = NestedLocationSerializer(required=False, allow_null=True)
     provider_network = NestedProviderNetworkSerializer()
-    connected_endpoint = NestedCircuitTerminationSerializer()
+    connected_endpoint = NestedInterfaceSerializer()
 
     class Meta:
         model = CircuitTermination

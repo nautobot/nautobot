@@ -407,7 +407,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     Role, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
+    Each Device must be assigned to a Location, and optionally to a Rack within that.
     Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
     do not consume rack units).
 
@@ -442,13 +442,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         verbose_name="Asset tag",
         help_text="A unique tag used to identify this device",
     )
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="devices",
-        blank=True,
-        null=True,
     )
     rack = models.ForeignKey(
         to="dcim.Rack",
@@ -538,7 +535,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         "serial",
         "asset_tag",
         "status",
-        "site",
         "location",
         "rack_group",
         "rack_name",
@@ -555,7 +551,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         "role",
         "tenant",
         "platform",
-        "site",
         "location",
         "rack",
         "status",
@@ -566,7 +561,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     class Meta:
         ordering = ("_name",)  # Name may be null
         unique_together = (
-            ("site", "tenant", "name"),  # See validate_unique below
+            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -579,32 +574,19 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
     def validate_unique(self, exclude=None):
 
-        # Check for a duplicate name on a device assigned to the same Site and no Tenant. This is necessary
+        # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
-        if self.name and hasattr(self, "site") and self.tenant is None:
-            if Device.objects.exclude(pk=self.pk).filter(name=self.name, site=self.site, tenant__isnull=True):
+        if self.name and hasattr(self, "location") and self.tenant is None:
+            if Device.objects.exclude(pk=self.pk).filter(name=self.name, location=self.location, tenant__isnull=True):
                 raise ValidationError({"name": "A device with this name already exists."})
 
         super().validate_unique(exclude)
 
     def clean(self):
         super().clean()
-
-        # Validate site/rack combination
-        if self.rack and self.site != self.rack.site:
-            raise ValidationError(
-                {
-                    "rack": f"Rack {self.rack} does not belong to site {self.site}.",
-                }
-            )
-
         # Validate location
         if self.location is not None:
-            if self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
                 raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
@@ -723,12 +705,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                     }
                 )
 
-        # A Device can only be assigned to a Cluster in the same Site (or no Site)
-        if self.cluster and self.cluster.site is not None and self.cluster.site != self.site:
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a different site ({self.cluster.site})"}
-            )
-
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
         if (
             self.cluster is not None
@@ -782,10 +758,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.frontporttemplates.all()])
             DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.devicebaytemplates.all()])
 
-        # Update Site and Rack assignment for any child Devices
+        # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
         for device in devices:
-            device.site = self.site
+            device.location = self.location
             device.rack = self.rack
             device.save()
 
@@ -800,8 +776,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             self.serial,
             self.asset_tag,
             self.get_status_display(),
-            self.site.name,
-            self.location.name if self.location else None,
+            self.location.name,
             self.rack.group.name if self.rack and self.rack.group else None,
             self.rack.name if self.rack else None,
             self.position,

@@ -53,14 +53,14 @@ def rebuild_paths(obj):
 
 
 #
-# Site/location/rack/device assignment
+# location/rack/device assignment
 #
 
 
 @receiver(post_save, sender=RackGroup)
-def handle_rackgroup_site_location_change(instance, created, **kwargs):
+def handle_rackgroup_location_change(instance, created, **kwargs):
     """
-    Update child RackGroups, Racks, and PowerPanels if Site or Location assignment has changed.
+    Update child RackGroups, Racks, and PowerPanels if Location assignment has changed.
 
     We intentionally recurse through each child object instead of calling update() on the QuerySet
     to ensure the proper change records get created for each.
@@ -84,60 +84,42 @@ def handle_rackgroup_site_location_change(instance, created, **kwargs):
 
         for rackgroup in instance.children.all():
             changed = False
-            if rackgroup.site != instance.site:
-                rackgroup.site = instance.site
-                changed = True
 
             if instance.location is not None:
                 if rackgroup.location is not None and rackgroup.location not in descendants:
                     rackgroup.location = instance.location if rack_groups_permitted else None
                     changed = True
-            elif rackgroup.location is not None and rackgroup.location.base_site != instance.site:
-                rackgroup.location = None
-                changed = True
 
             if changed:
                 rackgroup.save()
 
         for rack in Rack.objects.filter(group=instance):
             changed = False
-            if rack.site != instance.site:
-                rack.site = instance.site
-                changed = True
 
             if instance.location is not None:
                 if rack.location is not None and rack.location not in descendants:
                     rack.location = instance.location if racks_permitted else None
                     changed = True
-            elif rack.location is not None and rack.location.base_site != instance.site:
-                rack.location = None
-                changed = True
 
             if changed:
                 rack.save()
 
         for powerpanel in PowerPanel.objects.filter(rack_group=instance):
             changed = False
-            if powerpanel.site != instance.site:
-                powerpanel.site = instance.site
-                changed = True
 
             if instance.location is not None:
                 if powerpanel.location is not None and powerpanel.location not in descendants:
                     powerpanel.location = instance.location if power_panels_permitted else None
                     changed = True
-            elif powerpanel.location is not None and powerpanel.location.base_site != instance.site:
-                powerpanel.location = None
-                changed = True
 
             if changed:
                 powerpanel.save()
 
 
 @receiver(post_save, sender=Rack)
-def handle_rack_site_location_change(instance, created, **kwargs):
+def handle_rack_location_change(instance, created, **kwargs):
     """
-    Update child Devices if Site or Location assignment has changed.
+    Update child Devices if Location assignment has changed.
 
     Note that this is non-trivial for Location changes, since a LocationType that can contain Racks
     may or may not be permitted to contain Devices. If it's not permitted, rather than trying to search
@@ -151,17 +133,11 @@ def handle_rack_site_location_change(instance, created, **kwargs):
 
         for device in Device.objects.filter(rack=instance):
             changed = False
-            if device.site != instance.site:
-                device.site = instance.site
-                changed = True
 
             if instance.location is not None:
                 if device.location is not None and device.location != instance.location:
                     device.location = instance.location if devices_permitted else None
                     changed = True
-            elif device.location is not None and device.location.base_site != instance.site:
-                device.location = None
-                changed = True
 
             if changed:
                 device.save()

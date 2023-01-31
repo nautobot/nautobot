@@ -19,7 +19,6 @@ from nautobot.dcim.models import (
     PowerPanel,
     PowerPort,
     RearPort,
-    Site,
 )
 
 from nautobot.dcim.utils import object_to_path_node
@@ -40,22 +39,21 @@ class CablePathTestCase(TestCase):
     def setUpTestData(cls):
 
         # Create a single device that will hold all components
-        cls.site = Site.objects.first()
-        cls.location = Location.objects.first()
+        cls.location = Location.objects.filter(parent__isnull=True).first()
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         cls.device = Device.objects.create(
-            site=cls.site,
+            location=cls.location,
             device_type=device_type,
             role=device_role,
             name="Test Device",
             status=device_status,
         )
 
-        cls.powerpanel = PowerPanel.objects.create(site=cls.site, name="Power Panel")
+        cls.powerpanel = PowerPanel.objects.create(location=cls.location, name="Power Panel")
 
         provider = Provider.objects.create(name="Provider", slug="provider")
         circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")

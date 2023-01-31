@@ -11,7 +11,7 @@ from nautobot.core.factory import (
     get_random_instances,
     random_instance,
 )
-from nautobot.dcim.models import Location, Site
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -279,13 +279,12 @@ class VLANGroupFactory(OrganizationalModelFactory):
         exclude = (
             "has_description",
             "has_location",
-            "has_site",
         )
 
     class Params:
         unique_name = UniqueFaker("word", part_of_speech="noun")
 
-    # TODO: name is not globally unique, but (site, name) tuple must be.
+    # TODO: name is not globally unique, but (location, name) tuple must be.
     # The likelihood of collision with random names is pretty low, but non-zero.
     # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
     name = factory.LazyAttribute(lambda o: o.unique_name.upper())
@@ -298,18 +297,6 @@ class VLANGroupFactory(OrganizationalModelFactory):
         "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
     )
 
-    has_site = factory.Faker("pybool")
-
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe(
-            "has_site",
-            random_instance(Site),
-            None,
-        ),
-    )
-
 
 class VLANFactory(PrimaryModelFactory):
     class Meta:
@@ -319,7 +306,6 @@ class VLANFactory(PrimaryModelFactory):
             "has_vlan_group",
             "has_location",
             "has_role",
-            "has_site",
             "has_tenant",
         )
 
@@ -355,24 +341,13 @@ class VLANFactory(PrimaryModelFactory):
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
-    has_site = factory.Faker("pybool")
-    site = factory.Maybe(
-        "has_vlan_group",
-        factory.LazyAttribute(lambda l: l.vlan_group.site),
-        factory.Maybe(
-            "has_location",
-            factory.LazyAttribute(lambda l: l.location.site),
-            factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
-        ),
-    )
-
     has_tenant = factory.Faker("pybool")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("vlan_group", "location", "site", "tenant")
+        django_get_or_create = ("vlan_group", "location", "tenant")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -407,7 +382,6 @@ class PrefixFactory(PrimaryModelFactory):
         has_description = factory.Faker("pybool")
         has_location = factory.Faker("pybool")
         has_role = factory.Faker("pybool")
-        has_site = factory.Faker("pybool")
         has_tenant = factory.Faker("pybool")
         has_vlan = factory.Faker("pybool")
         has_vrf = factory.Faker("pybool")
@@ -426,15 +400,9 @@ class PrefixFactory(PrimaryModelFactory):
     )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     is_pool = factory.Faker("pybool")
-    # TODO: create a LocationGetOrCreateFactory to get or create a location with matching site
+    # TODO: create a LocationGetOrCreateFactory to get or create a location
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
-    )
-    # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
     )
     role = factory.Maybe(
         "has_role",
@@ -455,7 +423,6 @@ class PrefixFactory(PrimaryModelFactory):
             VLANGetOrCreateFactory,
             vlan_group=None,
             location=factory.SelfAttribute("..location"),
-            site=factory.SelfAttribute("..site"),
             tenant=factory.SelfAttribute("..tenant"),
         ),
         None,
@@ -529,13 +496,12 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.family == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
-            # Create child prefixes, preserving site, location, vrf and is_ipv6 from parent
+            # Create child prefixes, preserving location, vrf and is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
                     break
                 method(
                     prefix=str(address.cidr),
-                    site=self.site,
                     location=self.location,
                     children__max_count=4,
                     is_ipv6=is_ipv6,

@@ -683,6 +683,8 @@ class APIViewTestCases:
             data = [{"id": id} for id in id_list]
 
             initial_count = self._get_queryset().count()
+            print(self._get_list_url())
+            print(self.header)
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))

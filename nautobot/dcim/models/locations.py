@@ -169,13 +169,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         on_delete=models.PROTECT,
         related_name="locations",
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.CASCADE,
-        related_name="locations",
-        blank=True,
-        null=True,
-    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -220,7 +213,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         "name",
         "slug",
         "location_type",
-        "site",
         "status",
         "parent",
         "tenant",
@@ -240,7 +232,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
 
     clone_fields = [
         "location_type",
-        "site",
         "status",
         "parent",
         "tenant",
@@ -272,7 +263,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
             self.name,
             self.slug,
             self.location_type.name,
-            self.site.name if self.site else None,
             self.get_status_display(),
             self.parent.name if self.parent else None,
             self.tenant.name if self.tenant else None,
@@ -290,10 +280,10 @@ class Location(TreeModel, StatusModel, PrimaryModel):
             self.comments,
         )
 
-    @property
-    def base_site(self):
-        """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
-        return self.site or self.ancestors().first().site
+    # @property
+    # def base_site(self):
+    #     """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
+    #     return self.site or self.ancestors().first().site
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
@@ -335,22 +325,7 @@ class Location(TreeModel, StatusModel, PrimaryModel):
                         {"parent": f"A Location of type {self.location_type} must not have a parent Location."}
                     )
 
-                # In a future release, Site will become a kind of Location, and the resulting data migration will be
-                # much cleaner if it doesn't have to deal with Locations that have two "parents".
-                if self.site is not None:
-                    raise ValidationError(
-                        {"site": "A Location cannot have both a parent Location and an associated Site."}
-                    )
-
         else:  # Our location type has a parent type of its own
-            # We must *not* have a site.
-            # In a future release, Site will become a kind of Location, and the resulting data migration will be
-            # much cleaner if it doesn't have to deal with Locations that have two "parents".
-            if self.site is not None:
-                raise ValidationError(
-                    {"site": f"A location of type {self.location_type} must not have an associated Site."}
-                )
-
             # We *must* have a parent location.
             if self.parent is None:
                 raise ValidationError(

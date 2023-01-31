@@ -938,8 +938,6 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = VLANGroup
         fields = [
-            "region",
-            "site",
             "location",
             "name",
             "slug",
@@ -972,7 +970,6 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     class Meta:
         model = VLAN
         fields = [
-            "site",
             "location",
             "vlan_group",
             "vid",
@@ -985,7 +982,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "site": "Leave blank if this VLAN spans multiple sites",
+            "location": "Leave blank if this VLAN spans multiple locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",

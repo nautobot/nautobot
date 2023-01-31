@@ -11,7 +11,7 @@ from nautobot.circuits.filters import (
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location, Region, Site
+from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location, Region
 from nautobot.extras.models import Role, Status
 
 
@@ -95,7 +95,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     )
 
     def test_location(self):
-        locations = Location.objects.filter(children__isnull=True, site__isnull=False)[:2]
+        locations = Location.objects.filter(children__isnull=True, parent__isnull=True)[:2]
         factory.CircuitTerminationFactory.create(
             has_location=True,
             location=locations[0],
@@ -134,8 +134,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        sites = Site.objects.all()
+        location = Location.objects.filter(parent__isnull=False).first()
         devicetype = DeviceType.objects.first()
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
@@ -143,15 +142,15 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
             device_type=devicetype,
             role=devicerole,
             name="TestDevice1",
-            site=sites[0],
             status=device_status,
+            location=location,
         )
         device2 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
             name="TestDevice2",
-            site=sites[1],
             status=device_status,
+            location=location,
         )
         interface1 = Interface.objects.create(device=device1, name="eth0")
         interface2 = Interface.objects.create(device=device2, name="eth0")

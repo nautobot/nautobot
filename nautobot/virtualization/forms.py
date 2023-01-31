@@ -118,8 +118,6 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "region",
-            "site",
             "location",
             "comments",
             "tags",
@@ -165,7 +163,6 @@ class ClusterBulkEditForm(
         model = Cluster
         nullable_fields = [
             "cluster_group",
-            "site",
             "location",
             "comments",
             "tenant",
@@ -174,7 +171,7 @@ class ClusterBulkEditForm(
 
 class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm):
     model = Cluster
-    field_order = ["q", "cluster_type", "region", "site", "cluster_group", "tenant_group", "tenant"]
+    field_order = ["q", "cluster_type", "location", "cluster_group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     cluster_type = DynamicModelMultipleChoiceField(
         queryset=ClusterType.objects.all(), to_field_name="slug", required=False
