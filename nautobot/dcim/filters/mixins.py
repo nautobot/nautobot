@@ -10,7 +10,7 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.dcim.models import Cable, Device, DeviceType, Region, Site, Location
+from nautobot.dcim.models import Cable, Device, DeviceType, Location
 from nautobot.extras.filters import CustomFieldModelFilterSetMixin
 
 
@@ -59,8 +59,7 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
 class LocatableModelFilterSetMixin(django_filters.FilterSet):
     """Mixin to add `location` filter fields to a FilterSet.
 
-    The expectation is that the linked model has `site` and `location` FK fields,
-    while `region` is indirectly associated via the `site`.
+    The expectation is that the linked model has `location` FK fields.
     """
 
     location = TreeNodeMultipleChoiceFilter(

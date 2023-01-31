@@ -938,8 +938,6 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = VLANGroup
         fields = [
-            "region",
-            "site",
             "location",
             "name",
             "slug",
@@ -966,13 +964,12 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location_id": "$location"},
     )
 
     class Meta:
         model = VLAN
         fields = [
-            "site",
             "location",
             "vlan_group",
             "vid",
@@ -985,7 +982,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "site": "Leave blank if this VLAN spans multiple sites",
+            "location": "Leave blank if this VLAN spans multiple locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -1063,8 +1060,6 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "region",
-        "site",
         "location",
         "group_id",
         "status",
@@ -1078,7 +1073,7 @@ class VLANFilterForm(
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"region": "$region"},
+        query_params={"location": "$location"},
     )
     tag = TagFilterField(model)
 

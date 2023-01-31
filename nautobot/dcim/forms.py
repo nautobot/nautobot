@@ -706,6 +706,7 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
 
             # Limit group queryset by assigned location
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
+            self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
 
 
 class RackBulkEditForm(
