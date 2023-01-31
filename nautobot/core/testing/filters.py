@@ -35,17 +35,12 @@ class FilterTestCases:
             if queryset is None:
                 queryset = self.queryset
             qs_count = queryset.count()
-            values_with_count = (
-                queryset.filter(**{f"{field_name}__isnull": False})
-                .values(field_name)
-                .annotate(count=Count(field_name))
-                .order_by("count")
-            )
+            values_with_count = queryset.values(field_name).annotate(count=Count(field_name)).order_by("count")
             for value in values_with_count:
                 # randomly break out of loop after 2 values have been selected
                 if len(test_values) > 1 and random.choice([True, False]):
                     break
-                if value["count"] < qs_count:
+                if value[field_name] and value["count"] < qs_count:
                     qs_count -= value["count"]
                     test_values.append(str(value[field_name]))
 

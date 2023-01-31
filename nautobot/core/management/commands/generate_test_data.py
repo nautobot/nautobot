@@ -124,11 +124,13 @@ Type 'yes' to continue, or 'no' to cancel: """
         AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
         AggregateFactory.create_batch(10)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(14)  # All 14 hard-coded Manufacturers for now.
+        ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False)
+        self.stdout.write("Creating Manufacturers without platforms...")
+        ManufacturerFactory.create_batch(4)  # Remaining 4 hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
         DeviceTypeFactory.create_batch(20)
         self.stdout.write("Creating DeviceRedundancyGroups...")
@@ -141,6 +143,8 @@ Type 'yes' to continue, or 'no' to cancel: """
         ProviderNetworkFactory.create_batch(10)
         self.stdout.write("Creating Circuits...")
         CircuitFactory.create_batch(20)
+        self.stdout.write("Creating Providers without Circuits...")
+        ProviderFactory.create_batch(10)
         self.stdout.write("Creating CircuitTerminations...")
         CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
         CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
