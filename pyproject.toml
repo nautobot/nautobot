@@ -329,6 +329,7 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [tool.towncrier.fragment.added]
 [tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.dependencies]
 [tool.towncrier.fragment.deprecated]
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]
