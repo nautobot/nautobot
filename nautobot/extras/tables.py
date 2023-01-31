@@ -663,7 +663,7 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     linked_record = tables.Column(verbose_name="Job / Git Repository", linkify=True)
     name = tables.Column()
-    created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )

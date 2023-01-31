@@ -531,6 +531,8 @@ class JobResult(BaseModel, CustomFieldModel):
         limit_choices_to=FeatureQuery("job_results"),
         help_text="The object type to which this job result applies",
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
 
     date_created = models.DateTimeField(auto_now_add=True)
@@ -651,7 +653,10 @@ class JobResult(BaseModel, CustomFieldModel):
             # Related object is an extras.Job subclass, our `name` matches its `class_path`
             return get_job(self.name)
 
-        model_class = self.obj_type.model_class()
+        if self.obj_type:
+            model_class = self.obj_type.model_class()
+        else:
+            model_class = None
 
         if model_class is not None:
             if hasattr(model_class, "name"):

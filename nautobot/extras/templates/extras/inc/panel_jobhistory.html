@@ -4,7 +4,7 @@
             <a href="{% url 'extras:jobresult' pk=result.pk %}">
                 {{ result.obj_type.name }} - {{ result.related_name }}
             </a>
-            <span class="pull-right" title="{{ result.created }}">{% include 'extras/inc/job_label.html' %}</span>
+            <span class="pull-right" title="{{ result.date_created }}">{% include 'extras/inc/job_label.html' %}</span>
             <br>
             <small>
                 <span class="text-muted">{{ result.user }} - {{ result.date_done|date:'SHORT_DATETIME_FORMAT' }}</span>
