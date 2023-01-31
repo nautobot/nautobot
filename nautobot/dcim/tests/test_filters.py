@@ -1333,7 +1333,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             )
 
     def test_prefixes(self):
-        prefixes = list(Prefix.objects.filter(site__isnull=False)[:2])
+        prefixes = list(Prefix.objects.filter(site__locations__isnull=False)[:2])
         params = {"prefixes": [prefixes[0].pk, prefixes[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(prefixes__in=prefixes).distinct()
