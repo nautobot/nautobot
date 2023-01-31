@@ -82,7 +82,7 @@ class Command(BaseCommand):
                 obj_type=job_content_type,
                 user=user,
                 job_model=job,
-                job_id=uuid.uuid4(),
+                task_id=uuid.uuid4(),
             )
             run_job(
                 data=data,

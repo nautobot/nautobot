@@ -17,7 +17,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
     # JobResult.
     def encode_content(self, data):
         # return dumps(data, "nautobot_json")
-        return data
+        return "x-nautobot-json", "utf-8", data
 
     def decode_content(self, obj, content):
         # return loads(content, obj.content_type, obj.content_encoding)
