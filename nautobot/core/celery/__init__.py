@@ -47,7 +47,7 @@ app.autodiscover_tasks()
 def setup_prometheus(**kwargs):
     """This sets up an HTTP server to serve prometheus metrics from the celery workers."""
     # Don't set up the server if the port is undefined
-    if not settings.CELERY_WORKER_PROMETHEUS_PORT:
+    if not settings.CELERY_WORKER_PROMETHEUS_PORTS:
         return
 
     logger.info("Setting up prometheus metrics HTTP server for celery worker.")
@@ -61,7 +61,7 @@ def setup_prometheus(**kwargs):
     # Set up the collector registry
     registry = CollectorRegistry()
     multiprocess.MultiProcessCollector(registry, path=multiprocess_coordination_directory)
-    for port in settings.CELERY_WORKER_PROMETHEUS_PORT:
+    for port in settings.CELERY_WORKER_PROMETHEUS_PORTS:
         try:
             start_http_server(port, registry=registry)
             break

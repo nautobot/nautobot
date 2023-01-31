@@ -744,10 +744,10 @@ CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10
 # highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then
 # use the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in
 # that case. Set this to an empty string to disable it.
-CELERY_WORKER_PROMETHEUS_PORT = []
-if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORT"):
-    CELERY_WORKER_PROMETHEUS_PORT = [
-        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORT").split(",")
+CELERY_WORKER_PROMETHEUS_PORTS = []
+if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
+    CELERY_WORKER_PROMETHEUS_PORTS = [
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
     ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
