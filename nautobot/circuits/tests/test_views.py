@@ -107,26 +107,26 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Circuit.objects.create(
             cid="Circuit 1",
             provider=providers[0],
-            type=circuittypes[0],
+            circuit_type=circuittypes[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 2",
             provider=providers[0],
-            type=circuittypes[0],
+            circuit_type=circuittypes[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 3",
             provider=providers[0],
-            type=circuittypes[0],
+            circuit_type=circuittypes[0],
             status=statuses[0],
         )
 
         cls.form_data = {
             "cid": "Circuit X",
             "provider": providers[1].pk,
-            "type": circuittypes[1].pk,
+            "circuit_type": circuittypes[1].pk,
             "status": statuses.get(slug="decommissioned").pk,
             "tenant": None,
             "install_date": datetime.date(2020, 1, 1),
@@ -137,7 +137,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "cid,provider,type,status",
+            "cid,provider,circuit_type,status",
             "Circuit 4,Provider 1,Circuit Type 1,active",
             "Circuit 5,Provider 1,Circuit Type 1,planned",
             "Circuit 6,Provider 1,Circuit Type 1,decommissioned",
@@ -145,7 +145,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "provider": providers[1].pk,
-            "type": circuittypes[1].pk,
+            "circuit_type": circuittypes[1].pk,
             "status": statuses.get(slug="decommissioned").pk,
             "tenant": None,
             "commit_rate": 2000,
@@ -226,7 +226,7 @@ class CircuitTerminationTestCase(NautobotTestCase):
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=active_status,
         )
         termination = CircuitTermination.objects.create(
@@ -270,7 +270,7 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=active_status,
         )
         CircuitTermination.objects.create(
@@ -290,9 +290,13 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
-        termination_a = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
-        termination_z = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z)
+        circuit_termination_a = CircuitTermination.objects.get(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
+        )
+        circuit_termination_z = CircuitTermination.objects.get(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
+        )
 
         # Assert Swap
-        self.assertEqual(termination_a.provider_network, provider_networks[1])
-        self.assertEqual(termination_z.provider_network, provider_networks[0])
+        self.assertEqual(circuit_termination_a.provider_network, provider_networks[1])
+        self.assertEqual(circuit_termination_z.provider_network, provider_networks[0])

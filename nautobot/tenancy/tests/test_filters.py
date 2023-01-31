@@ -10,7 +10,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
-from nautobot.circuits.factory import CircuitFactory, CircuitTypeFactory, ProviderFactory
 from nautobot.dcim.factory import RackFactory, RackReservationFactory
 from nautobot.users.factory import UserFactory
 from nautobot.virtualization.factory import (
@@ -109,9 +108,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
         factory.random.reseed_random("Nautobot")
-        CircuitTypeFactory.create_batch(10)
-        ProviderFactory.create_batch(10)
-        CircuitFactory.create_batch(10)
         UserFactory.create_batch(10)
         RackFactory.create_batch(10)
         RackReservationFactory.create_batch(10)
@@ -158,7 +154,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"aggregates": [aggregates[0].pk, aggregates[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__in=aggregates),
+            self.queryset.filter(aggregates__in=aggregates).distinct(),
         )
 
     def test_has_aggregates(self):

@@ -9,6 +9,7 @@ from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
     DeviceFaceChoices,
+    InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
@@ -1078,8 +1079,8 @@ class CableTestCase(TestCase):
         self.provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
         self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        self.circuit1 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="1")
-        self.circuit2 = Circuit.objects.create(provider=self.provider, type=self.circuittype, cid="2")
+        self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
+        self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
         self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="A")
         self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="Z")
         self.circuittermination3 = CircuitTermination.objects.create(
@@ -1321,6 +1322,9 @@ class InterfaceTestCase(TestCase):
             site=site,
             status=status,
         )
+        self.other_site_vlan = VLAN.objects.create(
+            name="Other Site VLAN", vid=100, site=Site.objects.create(name="Other Site")
+        )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = Interface.objects.create(
@@ -1332,6 +1336,20 @@ class InterfaceTestCase(TestCase):
             interface.tagged_vlans.add(self.vlan)
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+        )
+
+    def test_error_raised_when_adding_tagged_vlan_with_different_site_from_interface_parent_site(self):
+        with self.assertRaises(ValidationError) as err:
+            interface = Interface.objects.create(
+                name="Test Interface",
+                mode=InterfaceModeChoices.MODE_TAGGED,
+                device=self.device,
+            )
+            interface.tagged_vlans.add(self.other_site_vlan)
+        self.assertEqual(
+            err.exception.message_dict["tagged_vlans"][0],
+            f"Tagged VLAN with names {[self.other_site_vlan.name]} must all belong to the "
+            f"same site as the interface's parent device, or it must be global.",
         )
 
 

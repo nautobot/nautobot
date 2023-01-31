@@ -40,7 +40,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         circuit = Circuit.objects.create(
             provider=provider1,
             cid="1234",
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=active_circuit_status,
         )
         site = Site.objects.create(

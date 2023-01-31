@@ -196,7 +196,7 @@ class Circuit(PrimaryModel, StatusModel):
 
     cid = models.CharField(max_length=100, verbose_name="Circuit ID")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="circuits")
-    type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
+    circuit_type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -210,7 +210,7 @@ class Circuit(PrimaryModel, StatusModel):
     comments = models.TextField(blank=True)
 
     # Cache associated CircuitTerminations
-    termination_a = models.ForeignKey(
+    circuit_termination_a = models.ForeignKey(
         to="circuits.CircuitTermination",
         on_delete=models.SET_NULL,
         related_name="+",
@@ -218,7 +218,7 @@ class Circuit(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    termination_z = models.ForeignKey(
+    circuit_termination_z = models.ForeignKey(
         to="circuits.CircuitTermination",
         on_delete=models.SET_NULL,
         related_name="+",
@@ -230,7 +230,7 @@ class Circuit(PrimaryModel, StatusModel):
     csv_headers = [
         "cid",
         "provider",
-        "type",
+        "circuit_type",
         "status",
         "tenant",
         "install_date",
@@ -240,7 +240,7 @@ class Circuit(PrimaryModel, StatusModel):
     ]
     clone_fields = [
         "provider",
-        "type",
+        "circuit_type",
         "status",
         "tenant",
         "install_date",
@@ -262,7 +262,7 @@ class Circuit(PrimaryModel, StatusModel):
         return (
             self.cid,
             self.provider.name,
-            self.type.name,
+            self.circuit_type.name,
             self.get_status_display(),
             self.tenant.name if self.tenant else None,
             self.install_date,
@@ -284,7 +284,7 @@ class Circuit(PrimaryModel, StatusModel):
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
-    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
+    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="circuit_terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(
         to="dcim.Site",
