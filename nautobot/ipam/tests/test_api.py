@@ -519,7 +519,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "vid": 4,
-                "name": "VLAN 4",
+                "name": "VLAN 4 with a name much longer than 64 characters to verify that we increased the limit",
                 "vlan_group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,

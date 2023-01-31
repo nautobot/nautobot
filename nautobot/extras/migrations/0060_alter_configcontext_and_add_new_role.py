@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0058_alter_role_options"),
+        ("extras", "0059_alter_role_options"),
     ]
 
     operations = [
