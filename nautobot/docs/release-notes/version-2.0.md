@@ -218,7 +218,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#204](https://github.com/nautobot/nautobot/issues/204) - Added style guide documentation for importing python modules in Nautobot.
 - [#1731](https://github.com/nautobot/nautobot/issues/1731) - Added missing filters to `circuits` app.
 - [#1733](https://github.com/nautobot/nautobot/issues/1733) - Added support for filtering on many more fields to the `Tenant` and `TenantGroup` filtersets.
-- [#2954](https://github.com/nautobot/nautobot/issues/2954) - Added `Site` model fields to `Location` model.
+- [#2954](https://github.com/nautobot/nautobot/issues/2954) - Added fields (`contact_name`, `latitude`, etc.) from `Site` model to `Location` model to prepare for merging all sites into locations.
 - [#2955](https://github.com/nautobot/nautobot/issues/2955) - Added "Region" and "Site" `LocationTypes` and their respective locations based on existing `Site` and `Region` instances.
 - [#3132](https://github.com/nautobot/nautobot/issues/3132) - Added the ability for apps to register their models for inclusion in the global Nautobot search.
 
@@ -235,7 +235,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#2721](https://github.com/nautobot/nautobot/issues/2721) - Collapsed `nautobot.utilities` into `nautobot.core`. Refer to the 2.0 migration guide for details.
 - [#2771](https://github.com/nautobot/nautobot/issues/2771) - Updated `jsonschema` version to `~4.17.0`.
 - [#2788](https://github.com/nautobot/nautobot/issues/2788) - Changed REST framework allowed versions logic to support 1.2-1.5 and 2.0+.
-- [#2803](https://github.com/nautobot/nautobot/issues/2803) - Update `mkdocs-include-markdown-plugin` to `3.9.1`.
+- [#2803](https://github.com/nautobot/nautobot/issues/2803) - Updated `mkdocs-include-markdown-plugin` to `3.9.1`.
 - [#2809](https://github.com/nautobot/nautobot/issues/2809) - Renamed `tag` filter on `TenantFilterSet` to `tags` same as elsewhere.
 - [#2844](https://github.com/nautobot/nautobot/issues/2844) - Updated development dependency `mkdocstrings-python` to 0.8.0.
 - [#2872](https://github.com/nautobot/nautobot/issues/2872) - Refactored imports in `utilities` app to follow new code style.
@@ -244,7 +244,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#2943](https://github.com/nautobot/nautobot/issues/2943) - Updated dependency `rich` to `~12.6.0`.
 - [#2955](https://github.com/nautobot/nautobot/issues/2955) - Changed `CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster` instances associated with existing `Site` model instances to use the newly created corresponding `Locations` of `LocationType` "Site".
 - [#2993](https://github.com/nautobot/nautobot/issues/2993) - Implemented initial database backend for Celery task results.
-- [#3027](https://github.com/nautobot/nautobot/issues/3027) - Update dependencies `prometheus-client`, `django-storages`, `drf-spectacular`, `black`, `django-debug-toolbar`, `mkdocstrings`, `mkdocstrings-python`, `pylint`, `requests`, `selenium`, `watchdog`.
+- [#3027](https://github.com/nautobot/nautobot/issues/3027) - Updated dependencies `prometheus-client`, `django-storages`, `drf-spectacular`, `black`, `django-debug-toolbar`, `mkdocstrings`, `mkdocstrings-python`, `pylint`, `requests`, `selenium`, `watchdog`.
 - [#3068](https://github.com/nautobot/nautobot/issues/3068) - Renamed fields on `Circuit` model: `type` to `circuit_type`, `terminations` to `circuit_terminations`, `termination_a` to `circuit_termination_a`, and `termination_z` to `circuit_termination_z`.
 - [#3068](https://github.com/nautobot/nautobot/issues/3068) - Renamed reverse-relation `circuittermination` to `circuit_terminations` on the `CablePath` model.
 - [#3068](https://github.com/nautobot/nautobot/issues/3068) - Renamed `group` field to `vlan_group` on VLAN model, renamed `ipaddresses` to `ip_addresses` on `Service` model.
