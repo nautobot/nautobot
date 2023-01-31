@@ -624,8 +624,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
 
-        cls.vlan1 = VLAN.objects.first()
-        cls.vlan2 = VLAN.objects.last()
+        vlans = VLAN.objects.filter(site=None)[:2]
+        cls.vlan1 = vlans[0]
+        cls.vlan2 = vlans[1]
 
         vminterfaces = (
             VMInterface.objects.create(

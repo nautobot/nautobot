@@ -23,7 +23,7 @@ def null_webhook_fields_to_empty(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0053_relationship_required_on"),
+        ("extras", "0054_scheduledjob_kwargs_request_user_change"),
     ]
 
     operations = [

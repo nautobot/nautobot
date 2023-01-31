@@ -61,22 +61,46 @@ def bulk_create_roles(apps, roles_to_create, content_types):
     """Bulk create role and set its contenttypes"""
     Role = apps.get_model("extras", "Role")
     ContentType = apps.get_model("contenttypes", "ContentType")
+    ObjectChange = apps.get_model("extras", "ObjectChange")
+
+    old_role_ct = None
+    new_role_ct = None
+
+    if hasattr(roles_to_create, "model"):
+        old_role_ct = ContentType.objects.get_for_model(roles_to_create.model)
+        # No sense fetching this if we don't have an old role content type
+        new_role_ct = ContentType.objects.get_for_model(Role)
 
     # Exclude roles whose names are already exists from bulk create.
     existing_roles = Role.objects.values_list("name", flat=True)
     roles_instances = [
-        Role(
-            name=data.name,
-            slug=data.slug,
-            description=data.description,
-            color=getattr(data, "color", color_map["default"]),
-            weight=getattr(data, "weight", None),
+        (
+            data,
+            Role(
+                name=data.name,
+                slug=data.slug,
+                description=data.description,
+                color=getattr(data, "color", color_map["default"]),
+                weight=getattr(data, "weight", None),
+            ),
         )
         for data in roles_to_create
         if data.name not in existing_roles
     ]
     if roles_instances:
-        Role.objects.bulk_create(roles_instances, batch_size=1000)
+        for old_role, new_role in roles_instances:
+            # TODO: We need to handle new role collisions
+            new_role.save()
+            if old_role_ct:
+                # Move over existing object change records to the new role we created
+                ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(
+                    changed_object_type=new_role_ct, changed_object_id=new_role.pk
+                )
+
+    # This is for all of the change records for roles which no longer exist
+    if old_role_ct:
+        # TODO: Should we null out the changed_object_id?
+        ObjectChange.objects.filter(changed_object_type=old_role_ct).update(changed_object_type=new_role_ct)
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
@@ -106,7 +130,7 @@ def clear_populated_roles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0056_role_and_alter_status"),
+        ("extras", "0057_role_and_alter_status"),
     ]
 
     operations = [

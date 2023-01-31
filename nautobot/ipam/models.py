@@ -1076,7 +1076,7 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=255, db_index=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
