@@ -42,10 +42,10 @@ If you do not wish to utilize the default location, you have two options:
 
 ### Config argument
 
-You may provide the `--config` argument when executing `nautobot-server` to tell Nautobot where to find your configuration. For example, to start a shell with the configuration in an alternate location:
+You may provide the `--config` argument when executing `nautobot-server` to tell Nautobot where to find your configuration. For example, to start a Nautobot shell with the configuration in an alternate location:
 
 ```no-highlight
-nautobot-server --config=/etc/nautobot_config.py shell
+nautobot-server --config=/etc/nautobot_config.py nbshell
 ```
 
 ### Environment variable
@@ -54,7 +54,7 @@ You may also set the `NAUTOBOT_CONFIG` environment variable to the location of y
 
 ```no-highlight
 export NAUTOBOT_CONFIG=/etc/nautobot_config.py
-nautobot-server shell
+nautobot-server nbshell
 ```
 
 ## Nautobot Root Directory
@@ -108,10 +108,10 @@ sudo systemctl restart nautobot nautobot-worker
 
 To facilitate troubleshooting and debugging of settings, try inspecting the settings from a shell.
 
-First get a shell and load the Django settings:
+First get a Nautobot shell, which automatically loads the Django settings:
 
 ```no-highlight
-nautobot-server shell
+nautobot-server nbshell
 ```
 
 Output:
@@ -119,7 +119,9 @@ Output:
 ```no-highlight
 # Shell Plus Model Imports
 ...
-# Shell Plus Model Imports
+# Shell Plus Django Imports
+..
+from django.conf import settings
 ...
 # Django version 3.2.16
 # Nautobot version 2.0.0a0
@@ -128,7 +130,7 @@ Python 3.7.13 (default, May 11 2022, 08:57:12)
 [GCC 10.2.1 20210110] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
->>> from django.conf import settings
+>>>
 ```
 
 Inspect the `SETTINGS_PATH` variable. Does it match the configuration you're expecting to be loading?

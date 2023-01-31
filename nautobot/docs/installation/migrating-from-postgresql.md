@@ -51,10 +51,10 @@ nautobot-server migrate
 
 ## Remove the auto-populated Status records from the MySQL database
 
-A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server shell` command in our MySQL instance of Nautobot (`(nautobot-mysql) $` shell prompt):
+A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server nbshell` command in our MySQL instance of Nautobot (`(nautobot-mysql) $` shell prompt):
 
 ```no-highlight
-nautobot-server shell
+nautobot-server nbshell
 ```
 
 Example output:
@@ -73,7 +73,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>>
 ```
 
-Press Control-D to exit the `shell` when you are finished.
+Press Control-D to exit the `nbshell` when you are finished.
 
 ## Import the database dump into MySQL
 

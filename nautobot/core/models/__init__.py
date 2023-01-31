@@ -45,7 +45,7 @@ class BaseModel(models.Model):
         which in effect enforces model validation prior to saving the instance, without having
         to manually make these calls seperately. This is a slight departure from Django norms,
         but is intended to offer an optional, simplified interface for performing this common
-        workflow. The intended use is for user defined Jobs and scripts run via the `shell`
+        workflow. The intended use is for user defined Jobs and scripts run via the `nautobot-server nbshell`
         command.
         """
         self.full_clean()

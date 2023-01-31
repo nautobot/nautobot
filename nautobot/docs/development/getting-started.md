@@ -208,13 +208,12 @@ Available tasks:
   makemigrations         Perform makemigrations operation in Django.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
-  nbshell                Launch an interactive nbshell session (DEPRECATED, use 'invoke shell' instead).
+  nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
   serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
-  shell                  Launch an interactive shell_plus session.
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
@@ -501,16 +500,16 @@ The worker is started in Docker Workflow with [watchdog](https://pythonhosted.or
 
 Nautobot provides an [interactive Python shell](../administration/nautobot-shell.md) that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
 
-Run the Nautobot interactive shell with `invoke shell` (Docker) or the `nautobot-server shell` management command:
+Run the Nautobot interactive shell with `invoke nbshell` (Docker) or the `nautobot-server nbshell` management command:
 
 | Docker Compose Workflow | Virtual Environment Workflow |
 | ----------------------- | ---------------------------- |
-| `invoke shell`          | `nautobot-server shell`      |
+| `invoke nbshell`        | `nautobot-server nbshell`    |
 
 For example:
 
 ```bash
-nautobot-server shell
+nautobot-server nbshell
 ```
 
 Example output:

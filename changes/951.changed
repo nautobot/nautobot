@@ -1,1 +1,1 @@
-Deprecated `nautobot-server nbshell` command. `nautobot-server shell` is now preferred.
+The `nautobot-server nbshell` command is now based on `shell_plus` from `django-extensions`.

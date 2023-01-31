@@ -3,13 +3,13 @@
 Nautobot includes a Python management shell within which objects can be directly queried, created, modified, and deleted. To enter the shell, run the following command:
 
 ```no-highlight
-nautobot-server shell
+nautobot-server nbshell
 ```
 
 This will launch a lightly customized version of [the django-extensions `shell_plus` shell](https://django-extensions.readthedocs.io/en/latest/shell_plus.html), which is an extension of [the built-in Django shell](https://docs.djangoproject.com/en/stable/ref/django-admin/#shell) with all relevant Nautobot models pre-loaded.
 
 ```no-highlight
-nautobot-server shell
+nautobot-server nbshell
 ```
 
 Example output:
