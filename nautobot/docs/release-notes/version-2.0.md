@@ -218,7 +218,6 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#204](https://github.com/nautobot/nautobot/issues/204) - Added style guide documentation for importing python modules in Nautobot.
 - [#1731](https://github.com/nautobot/nautobot/issues/1731) - Added missing filters to `circuits` app.
 - [#1733](https://github.com/nautobot/nautobot/issues/1733) - Added support for filtering on many more fields to the `Tenant` and `TenantGroup` filtersets.
-- [#2822](https://github.com/nautobot/nautobot/issues/2822) - Collapsed `DeviceRole`, `RackRole`, IPAM `Role` model and `IPAddressRoleChoices` into a single generic `Role` model.
 - [#2954](https://github.com/nautobot/nautobot/issues/2954) - Added `Site` model fields to `Location` model.
 - [#2955](https://github.com/nautobot/nautobot/issues/2955) - Added "Region" and "Site" `LocationTypes` and their respective locations based on existing `Site` and `Region` instances.
 - [#3132](https://github.com/nautobot/nautobot/issues/3132) - Added the ability for apps to register their models for inclusion in the global Nautobot search.
@@ -231,6 +230,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#510](https://github.com/nautobot/nautobot/issues/510) - Renamed field `_depth` to `tree_depth` in the REST API for `Region`, `RackGroup`, `TenantGroup`, and `InventoryItem`.
 - [#510](https://github.com/nautobot/nautobot/issues/510) - Renamed InventoryItem database relation `child_items` and filter fields `child_items` and `has_child_items` to `children` and `has_children` respectively.
 - [#2163](https://github.com/nautobot/nautobot/issues/2163) - `JobLogEntry.log_object`, `JobLogEntry.absolute_url`, `ScheduledJob.queue`, and `WebHook.ca_file_path` no longer permit null database values; use `""` instead if needed.
+- [#2822](https://github.com/nautobot/nautobot/issues/2822) - Collapsed `DeviceRole`, `RackRole`, IPAM `Role` model and `IPAddressRoleChoices` into a single generic `Role` model.
 - [#2674](https://github.com/nautobot/nautobot/issues/2674) - Updated development dependency `black` to `~22.10.0`.
 - [#2721](https://github.com/nautobot/nautobot/issues/2721) - Collapsed `nautobot.utilities` into `nautobot.core`. Refer to the 2.0 migration guide for details.
 - [#2771](https://github.com/nautobot/nautobot/issues/2771) - Updated `jsonschema` version to `~4.17.0`.
