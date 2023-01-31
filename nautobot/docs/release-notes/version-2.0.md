@@ -218,9 +218,9 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#204](https://github.com/nautobot/nautobot/issues/204) - Added style guide documentation for importing python modules in Nautobot.
 - [#1731](https://github.com/nautobot/nautobot/issues/1731) - Added missing filters to `circuits` app.
 - [#1733](https://github.com/nautobot/nautobot/issues/1733) - Added support for filtering on many more fields to the `Tenant` and `TenantGroup` filtersets.
-- [#2822](https://github.com/nautobot/nautobot/issues/2822) - Collapsed DeviceRole, RackRole, IPAM Role model and IPAddressRoleChoices into a single generic Role model.
-- [#2954](https://github.com/nautobot/nautobot/issues/2954) - Added Site Model fields to Location Model.
-- [#2955](https://github.com/nautobot/nautobot/issues/2955) - Added Region and Site Location Types and their respective locations based on existing Site and Region instances.
+- [#2822](https://github.com/nautobot/nautobot/issues/2822) - Collapsed `DeviceRole`, `RackRole`, IPAM `Role` model and `IPAddressRoleChoices` into a single generic `Role` model.
+- [#2954](https://github.com/nautobot/nautobot/issues/2954) - Added `Site` model fields to `Location` model.
+- [#2955](https://github.com/nautobot/nautobot/issues/2955) - Added "Region" and "Site" `LocationTypes` and their respective locations based on existing `Site` and `Region` instances.
 - [#3132](https://github.com/nautobot/nautobot/issues/3132) - Added the ability for apps to register their models for inclusion in the global Nautobot search.
 
 ### Changed
