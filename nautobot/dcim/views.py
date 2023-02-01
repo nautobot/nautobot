@@ -2446,12 +2446,10 @@ class CableCreateView(generic.ObjectEditView):
         # Parse initial data manually to avoid setting field values as lists
         initial_data = {k: request.GET[k] for k in request.GET}
 
-        # Set initial site and rack based on side A termination (if not already set)
-        termination_a_site = getattr(obj.termination_a.parent, "site", None)
-        if termination_a_site and "termination_b_region" not in initial_data:
-            initial_data["termination_b_region"] = termination_a_site.region
-        if "termination_b_site" not in initial_data:
-            initial_data["termination_b_site"] = termination_a_site
+        # Set initial location and rack based on side A termination (if not already set)
+        termination_a_location = getattr(obj.termination_a.parent, "location", None)
+        if "termination_b_location" not in initial_data:
+            initial_data["termination_b_location"] = termination_a_location
         if "termination_b_rack" not in initial_data:
             initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
 

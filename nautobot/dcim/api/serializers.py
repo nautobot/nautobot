@@ -126,6 +126,7 @@ from .nested_serializers import (  # noqa: F401
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
     NestedRegionSerializer,
+    NestedSiteSerializer,
     NestedVirtualChassisSerializer,
 )
 
@@ -221,12 +222,6 @@ class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
     region = NestedRegionSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
-    circuit_count = serializers.IntegerField(read_only=True)
-    device_count = serializers.IntegerField(read_only=True)
-    prefix_count = serializers.IntegerField(read_only=True)
-    rack_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Site
@@ -249,12 +244,6 @@ class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
             "contact_phone",
             "contact_email",
             "comments",
-            "circuit_count",
-            "device_count",
-            "prefix_count",
-            "rack_count",
-            "virtualmachine_count",
-            "vlan_count",
         ]
 
 

@@ -244,10 +244,6 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     def clean(self):
         super().clean()
 
-        # Validate group/site assignment
-        if self.site and self.group and self.group.site != self.site:
-            raise ValidationError(f"Assigned rack group must belong to parent site ({self.site}).")
-
         # Validate location
         # Validate group/location assignment
         if (

@@ -365,7 +365,7 @@ class LookupRelatedFunctionTest(TestCase):
     def test_is_single_choice_field(self):
         # Assert function returns True for any field starting with create or has_
         # Cause these fields are either boolean fields or date time fields which one accepts single values
-        filterset_class = dcim_filters.SiteFilterSet
+        filterset_class = dcim_filters.LocationFilterSet
 
         single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters", "q")
         for field in single_choice_fields:
@@ -390,14 +390,14 @@ class LookupRelatedFunctionTest(TestCase):
 
     def test_get_all_lookup_expr_for_field(self):
         with self.subTest():
-            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Site, "status")
+            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Location, "status")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not exact (n)"}],
             )
 
         with self.subTest("Test field with has_ prefix"):
-            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Site, "has_vlans")
+            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Location, "has_vlans")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "has_vlans", "name": "exact"}],
@@ -405,24 +405,24 @@ class LookupRelatedFunctionTest(TestCase):
 
         with self.subTest("Test unknown field"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_all_lookup_expr_for_field(dcim_models.Site, "unknown_field")
+                filtering.get_all_lookup_expr_for_field(dcim_models.Location, "unknown_field")
             self.assertEqual(str(err.exception), "field_name not found")
 
     def test_get_filterset_field(self):
         with self.subTest():
-            field = filtering.get_filterset_field(dcim_filters.SiteFilterSet, "name")
-            self.assertEqual(field.__class__, dcim_filters.SiteFilterSet().filters.get("name").__class__)
+            field = filtering.get_filterset_field(dcim_filters.LocationFilterSet, "name")
+            self.assertEqual(field.__class__, dcim_filters.LocationFilterSet().filters.get("name").__class__)
 
         with self.subTest("Test invalid field"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_filterset_field(dcim_filters.SiteFilterSet, "unknown")
-            self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
+                filtering.get_filterset_field(dcim_filters.LocationFilterSet, "unknown")
+            self.assertEqual(str(err.exception), "unknown is not a valid LocationFilterSet field")
 
     def test_get_filterset_parameter_form_field(self):
         with self.subTest("Test get CharFields"):
-            site_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
-            for field_name in site_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+            location_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
+            for field_name in location_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
                 self.assertIsInstance(form_field, django_forms.CharField)
 
             device_fields = ["serial", "name"]
@@ -431,7 +431,7 @@ class LookupRelatedFunctionTest(TestCase):
                 self.assertIsInstance(form_field, django_forms.CharField)
 
         with self.subTest("Test IntegerField"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, "asn")
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "asn")
             self.assertIsInstance(form_field, django_forms.IntegerField)
 
             device_fields = ["vc_position", "vc_priority"]
@@ -440,20 +440,20 @@ class LookupRelatedFunctionTest(TestCase):
                 self.assertIsInstance(form_field, django_forms.IntegerField)
 
         with self.subTest("Test DynamicModelMultipleChoiceField"):
-            site_fields = ["region", "tenant", "status"]
-            for field_name in site_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+            location_fields = ["tenant", "status"]
+            for field_name in location_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
-            device_fields = ["cluster", "device_type", "region"]
+            device_fields = ["cluster", "device_type", "location"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
         with self.subTest("Test ChoiceField"):
-            site_fields = ["has_locations", "has_circuit_terminations", "has_devices"]
-            for field_name in site_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+            location_fields = ["has_devices"]
+            for field_name in location_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
                 self.assertIsInstance(form_field, django_forms.ChoiceField)
 
             device_fields = ["has_console_ports", "has_interfaces", "face"]
@@ -462,14 +462,14 @@ class LookupRelatedFunctionTest(TestCase):
                 self.assertIsInstance(form_field, django_forms.ChoiceField)
 
         with self.subTest("Test DateTimePicker"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, "last_updated")
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "last_updated")
             self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "last_updated")
             self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
         with self.subTest("Test DatePicker"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, "created")
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "created")
             self.assertIsInstance(form_field.widget, forms.DatePicker)
 
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "created")
@@ -477,8 +477,8 @@ class LookupRelatedFunctionTest(TestCase):
 
         with self.subTest("Test Invalid parameter"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_filterset_parameter_form_field(dcim_models.Site, "unknown")
-            self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
+                filtering.get_filterset_parameter_form_field(dcim_models.Location, "unknown")
+            self.assertEqual(str(err.exception), "unknown is not a valid LocationFilterSet field")
 
         with self.subTest("Test Content types"):
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Status, "content_types")

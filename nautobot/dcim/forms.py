@@ -4202,7 +4202,7 @@ class PowerFeedForm(NautobotModelForm):
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        initial_params={"powerpanel": "$power_panel"},
+        initial_params={"powerpanels": "$power_panel"},
     )
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
     rack = DynamicModelChoiceField(

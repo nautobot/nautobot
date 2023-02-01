@@ -4,8 +4,8 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     Interface,
+    Location,
     Manufacturer,
-    Site,
 )
 from nautobot.extras.models import Role
 
@@ -13,7 +13,7 @@ from nautobot.extras.models import Role
 class NaturalOrderingTestCase(TestCase):
     def setUp(self):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -22,10 +22,7 @@ class NaturalOrderingTestCase(TestCase):
         )
         devicerole = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
-            device_type=devicetype,
-            role=devicerole,
-            name="Test Device 1",
-            site=site,
+            device_type=devicetype, role=devicerole, name="Test Device 1", location=location
         )
 
     def test_interface_ordering_numeric(self):

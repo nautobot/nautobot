@@ -95,13 +95,14 @@ def create_test_device(name):
     """
     Convenience method for creating a Device (e.g. for component testing).
     """
-    site, _ = Site.objects.get_or_create(name="Site 1", slug="site-1")
+    location_type = LocationType.objects.get(name="Campus")
+    location, _ = Location.objects.get_or_create(name="Location 1", slug="location-1", location_type=location_type)
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")
     device_ct = ContentType.objects.get_for_model(Device)
     devicerole.content_types.add(device_ct)
-    device = Device.objects.create(name=name, site=site, device_type=devicetype, role=devicerole)
+    device = Device.objects.create(name=name, location=location, device_type=devicetype, role=devicerole)
 
     return device
 
@@ -302,11 +303,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             lt.validated_save()
 
         active = Status.objects.get(name="Active")
-        site = Site.objects.first()
         tenant = Tenant.objects.first()
 
-        loc1 = Location.objects.create(name="Root 1", location_type=lt1, site=site, status=active)
-        loc2 = Location.objects.create(name="Root 2", location_type=lt1, site=site, status=active, tenant=tenant)
+        loc1 = Location.objects.create(name="Root 1", location_type=lt1, status=active)
+        loc2 = Location.objects.create(name="Root 2", location_type=lt1, status=active, tenant=tenant)
         loc3 = Location.objects.create(name="Intermediate 1", location_type=lt2, parent=loc2, status=active)
         loc4 = Location.objects.create(name="Leaf 1", location_type=lt3, parent=loc3, status=active, description="Hi!")
         for loc in [loc1, loc2, loc3, loc4]:
@@ -315,7 +315,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "location_type": lt1.pk,
             "parent": None,
-            "site": site.pk,
             "name": "Root 3",
             "slug": "root-3",
             "status": active.pk,
@@ -330,22 +329,22 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "contact_name": "Hank Hill",
             "contact_phone": "123-555-9999",
             "contact_email": "hank@stricklandpropane.com",
-            "comments": "Test site",
+            "comments": "Test Location",
             "tags": [t.pk for t in Tag.objects.get_for_model(Location)],
             "description": "A new root location",
         }
 
         cls.csv_data = (
-            "name,slug,location_type,parent,site,status,tenant,description",
-            f'Root 3,root-3,"{lt1.name}",,"{site.name}",active,,',
-            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",,active,"{tenant.name}",Hello world!',
-            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",,active,"{tenant.name}",',
+            "name,slug,location_type,parent,status,tenant,description",
+            f'Root 3,root-3,"{lt1.name}",,active,,',
+            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",active,"{tenant.name}",Hello world!',
+            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",active,"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
             "description": "A generic description",
             # Because we have a mix of root and non-root LocationTypes,
-            # we can't bulk-edit the parent or site fields in this generic test
+            # we can't bulk-edit the parent in this generic test
             "tenant": tenant.pk,
             "status": Status.objects.get(name="Planned").pk,
             "asn": 65009,
@@ -362,26 +361,26 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
 
-        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=site)
-        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=site)
-        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=site)
-        RackGroup.objects.create(name="Rack Group 8", site=site)
+        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
+        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=location)
+        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", location=location)
+        RackGroup.objects.create(name="Rack Group 8", location=location)
 
         cls.form_data = {
             "name": "Rack Group X",
             "slug": "rack-group-x",
-            "site": site.pk,
+            "location": location.pk,
             "description": "A new rack group",
         }
 
         cls.csv_data = (
-            "site,name,slug,description",
-            f"{site.name},Rack Group 4,rack-group-4,Fourth rack group",
-            f"{site.name},Rack Group 5,rack-group-5,Fifth rack group",
-            f"{site.name},Rack Group 6,rack-group-6,Sixth rack group",
-            f"{site.name},Rack Group 7,,Seventh rack group",
+            "location,name,slug,description",
+            f"{location.name},Rack Group 4,rack-group-4,Fourth rack group",
+            f"{location.name},Rack Group 5,rack-group-5,Fifth rack group",
+            f"{location.name},Rack Group 6,rack-group-6,Sixth rack group",
+            f"{location.name},Rack Group 7,,Seventh rack group",
         )
         cls.slug_test_object = "Rack Group 8"
         cls.slug_source = "name"
@@ -396,11 +395,11 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         user2 = User.objects.create_user(username="testuser2")
         user3 = User.objects.create_user(username="testuser3")
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
 
-        rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=site)
+        rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
 
-        rack = Rack.objects.create(name="Rack 1", site=site, group=rack_group)
+        rack = Rack.objects.create(name="Rack 1", location=location, group=rack_group)
 
         RackReservation.objects.create(rack=rack, user=user2, units=[1, 2, 3], description="Reservation 1")
         RackReservation.objects.create(rack=rack, user=user2, units=[4, 5, 6], description="Reservation 2")
@@ -416,10 +415,10 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "site,rack_group,rack,units,description",
-            f'{site.name},Rack Group 1,Rack 1,"10,11,12",Reservation 1',
-            f'{site.name},Rack Group 1,Rack 1,"13,14,15",Reservation 2',
-            f'{site.name},Rack Group 1,Rack 1,"16,17,18",Reservation 3',
+            "location,rack_group,rack,units,description",
+            f'{location.name},Rack Group 1,Rack 1,"10,11,12",Reservation 1',
+            f'{location.name},Rack Group 1,Rack 1,"13,14,15",Reservation 2',
+            f'{location.name},Rack Group 1,Rack 1,"16,17,18",Reservation 3',
         )
 
         cls.bulk_edit_data = {
@@ -435,18 +434,18 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.sites = Site.objects.all()[:2]
+        cls.locations = Location.objects.filter(parent__isnull=True)[:2]
 
         powerpanels = (
-            PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 1"),
-            PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 2"),
+            PowerPanel.objects.create(location=cls.locations[0], name="Power Panel 1"),
+            PowerPanel.objects.create(location=cls.locations[0], name="Power Panel 2"),
         )
 
         # Assign power panels generated to the class object for use later.
         cls.powerpanels = powerpanels
         rackgroups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=cls.sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[1]),
+            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=cls.locations[0]),
+            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=cls.locations[1]),
         )
 
         rackroles = Role.objects.get_for_model(Rack)[:2]
@@ -469,16 +468,22 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         racks = (
             Rack.objects.create(
-                name="Rack 1", site=cls.sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["red"]}
+                name="Rack 1",
+                location=cls.locations[0],
+                status=cls.status_active,
+                _custom_field_data={"rack-colors": ["red"]},
             ),
             Rack.objects.create(
                 name="Rack 2",
-                site=cls.sites[0],
+                location=cls.locations[0],
                 status=cls.status_active,
                 _custom_field_data={"rack-colors": ["green"]},
             ),
             Rack.objects.create(
-                name="Rack 3", site=cls.sites[0], status=cls.status_active, _custom_field_data={"rack-colors": ["blue"]}
+                name="Rack 3",
+                location=cls.locations[0],
+                status=cls.status_active,
+                _custom_field_data={"rack-colors": ["blue"]},
             ),
         )
 
@@ -487,13 +492,13 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.relationships = (
             Relationship(
-                name="Backup Sites",
-                slug="backup-sites",
+                name="Backup Locations",
+                slug="backup-locations",
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 source_type=ContentType.objects.get_for_model(Rack),
-                source_label="Backup site(s)",
-                destination_type=ContentType.objects.get_for_model(Site),
-                destination_label="Racks using this site as a backup",
+                source_label="Backup location(s)",
+                destination_type=ContentType.objects.get_for_model(Location),
+                destination_label="Racks using this location as a backup",
             ),
         )
         for relationship in cls.relationships:
@@ -501,13 +506,13 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         for rack in racks:
             RelationshipAssociation(
-                relationship=cls.relationships[0], source=rack, destination=cls.sites[1]
+                relationship=cls.relationships[0], source=rack, destination=cls.locations[1]
             ).validated_save()
 
         cls.form_data = {
             "name": "Rack X",
             "facility_id": "Facility X",
-            "site": cls.sites[1].pk,
+            "location": cls.locations[1].pk,
             "group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="planned").pk,
@@ -524,18 +529,18 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Rack)],
             "cf_rack-colors": ["red", "green", "blue"],
-            "cr_backup-sites__destination": [cls.sites[0].pk],
+            "cr_backup-location__destination": [cls.locations[0].pk],
         }
 
         cls.csv_data = (
-            "site,group,name,width,u_height,status",
-            f"{cls.sites[0].name},,Rack 4,19,42,planned",
-            f"{cls.sites[0].name},Rack Group 1,Rack 5,19,42,active",
-            f"{cls.sites[1].name},Rack Group 2,Rack 6,19,42,reserved",
+            "location,group,name,width,u_height,status",
+            f"{cls.locations[0].name},,Rack 4,19,42,planned",
+            f"{cls.locations[0].name},Rack Group 1,Rack 5,19,42,active",
+            f"{cls.locations[1].name},Rack Group 2,Rack 6,19,42,reserved",
         )
 
         cls.bulk_edit_data = {
-            "site": cls.sites[1].pk,
+            "location": cls.locations[1].pk,
             "group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="deprecated").pk,
@@ -575,7 +580,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         devices = (
             Device.objects.create(
                 name="Power Panel 1",
-                site=self.sites[0],
+                location=self.locations[0],
                 rack=self.racks[0],
                 device_type=device_types[0],
                 role=device_roles[0],
@@ -584,7 +589,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
             Device.objects.create(
                 name="Dev 1",
-                site=self.sites[0],
+                location=self.locations[0],
                 rack=self.racks[0],
                 device_type=device_types[0],
                 role=device_roles[0],
@@ -1303,13 +1308,13 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(parent__isnull=True)[:2]
 
-        rack_group = RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1")
+        rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1")
 
         racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0], group=rack_group),
-            Rack.objects.create(name="Rack 2", site=sites[1]),
+            Rack.objects.create(name="Rack 1", location=locations[0], group=rack_group),
+            Rack.objects.create(name="Rack 2", location=locations[1]),
         )
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -1342,7 +1347,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         devices = (
             Device.objects.create(
                 name="Device 1",
-                site=sites[0],
+                location=locations[0],
                 rack=racks[0],
                 device_type=devicetypes[0],
                 role=deviceroles[0],
@@ -1352,7 +1357,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
             Device.objects.create(
                 name="Device 2",
-                site=sites[0],
+                location=locations[0],
                 rack=racks[0],
                 device_type=devicetypes[0],
                 role=deviceroles[0],
@@ -1362,7 +1367,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
             Device.objects.create(
                 name="Device 3",
-                site=sites[0],
+                location=locations[0],
                 rack=racks[0],
                 device_type=devicetypes[0],
                 role=deviceroles[0],
@@ -1406,7 +1411,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Device X",
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "asset_tag": "ABCDEF",
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "rack": racks[1].pk,
             "position": 1,
             "face": DeviceFaceChoices.FACE_FRONT,
@@ -1426,10 +1431,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 4,{sites[0].name},Rack Group 1,Rack 1,10,front,",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 5,{sites[0].name},Rack Group 1,Rack 1,20,front,",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 6,{sites[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
+            "role,manufacturer,device_type,status,name,location,rack_group,rack,position,face,secrets_group",
+            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 4,{locations[0].name},Rack Group 1,Rack 1,10,front,",
+            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 5,{locations[0].name},Rack Group 1,Rack 1,20,front,",
+            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 6,{locations[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -1439,7 +1444,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "status": statuses.get(slug="decommissioning").pk,
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "rack": racks[1].pk,
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
@@ -1844,10 +1849,10 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         )
 
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN1", site=device.site),
-            VLAN.objects.create(vid=101, name="VLAN101", site=device.site),
-            VLAN.objects.create(vid=102, name="VLAN102", site=device.site),
-            VLAN.objects.create(vid=103, name="VLAN103", site=device.site),
+            VLAN.objects.create(vid=1, name="VLAN1", location=device.location),
+            VLAN.objects.create(vid=101, name="VLAN101", location=device.location),
+            VLAN.objects.create(vid=102, name="VLAN102", location=device.location),
+            VLAN.objects.create(vid=103, name="VLAN103", location=device.location),
         )
 
         cls.form_data = {
@@ -2127,7 +2132,7 @@ class CableTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
@@ -2135,25 +2140,25 @@ class CableTestCase(
         devices = (
             Device.objects.create(
                 name="Device 1",
-                site=site,
+                location=location,
                 device_type=devicetype,
                 role=devicerole,
             ),
             Device.objects.create(
                 name="Device 2",
-                site=site,
+                location=location,
                 device_type=devicetype,
                 role=devicerole,
             ),
             Device.objects.create(
                 name="Device 3",
-                site=site,
+                location=location,
                 device_type=devicetype,
                 role=devicerole,
             ),
             Device.objects.create(
                 name="Device 4",
-                site=site,
+                location=location,
                 device_type=devicetype,
                 role=devicerole,
             ),
@@ -2277,7 +2282,7 @@ class CableTestCase(
         """Test for https://github.com/nautobot/nautobot/issues/1694."""
         self.add_permissions("dcim.delete_cable")
 
-        site = Site.objects.first()
+        location = Location.objects.first()
         device = Device.objects.first()
 
         interfaces = [
@@ -2291,10 +2296,10 @@ class CableTestCase(
 
         circuit_terminations = [
             CircuitTermination.objects.create(
-                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
             ),
             CircuitTermination.objects.create(
-                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z, site=site
+                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z, location=location
             ),
         ]
 
@@ -2418,7 +2423,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
 
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
@@ -2434,7 +2439,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             PowerOutlet.objects.create(device=device_2, name="Power Outlet 2", power_port=powerports[1]),
         )
 
-        powerpanel = PowerPanel.objects.create(site=site, name="Power Panel 1")
+        powerpanel = PowerPanel.objects.create(location=location, name="Power Panel 1")
         powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1")
 
         Cable.objects.create(
@@ -2483,7 +2488,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.first()
 
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
@@ -2503,7 +2508,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
         circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
         circuittermination = CircuitTermination.objects.create(
-            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
         )
 
         connected = Status.objects.get(slug="connected")
@@ -2572,7 +2577,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
@@ -2582,7 +2587,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_type,
                 role=device_role,
                 name=f"Device {num}",
-                site=site,
+                location=location,
             )
             for num in range(1, 13)
         ]
@@ -2655,32 +2660,32 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(parent__isnull=True)[:2]
         rackgroups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
+            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=locations[1]),
         )
 
-        PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name="Power Panel 1")
-        PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name="Power Panel 2")
-        PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name="Power Panel 3")
+        PowerPanel.objects.create(location=locations[0], rack_group=rackgroups[0], name="Power Panel 1")
+        PowerPanel.objects.create(location=locations[0], rack_group=rackgroups[0], name="Power Panel 2")
+        PowerPanel.objects.create(location=locations[0], rack_group=rackgroups[0], name="Power Panel 3")
 
         cls.form_data = {
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "rack_group": rackgroups[1].pk,
             "name": "Power Panel X",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerPanel)],
         }
 
         cls.csv_data = (
-            "site,rack_group,name",
-            f"{sites[0].name},Rack Group 1,Power Panel 4",
-            f"{sites[0].name},Rack Group 1,Power Panel 5",
-            f"{sites[0].name},Rack Group 1,Power Panel 6",
+            "location,rack_group,name",
+            f"{locations[0].name},Rack Group 1,Power Panel 4",
+            f"{locations[0].name},Rack Group 1,Power Panel 5",
+            f"{locations[0].name},Rack Group 1,Power Panel 6",
         )
 
         cls.bulk_edit_data = {
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "rack_group": rackgroups[1].pk,
         }
 
@@ -2691,22 +2696,22 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
 
-        # Assign site generated to the class object for use later.
-        cls.site = site
+        # Assign location generated to the class object for use later.
+        cls.location = location
 
         powerpanels = (
-            PowerPanel.objects.create(site=site, name="Power Panel 1"),
-            PowerPanel.objects.create(site=site, name="Power Panel 2"),
+            PowerPanel.objects.create(location=location, name="Power Panel 1"),
+            PowerPanel.objects.create(location=location, name="Power Panel 2"),
         )
 
         # Assign power panels generated to the class object for use later.
         cls.powerpanels = powerpanels
 
         racks = (
-            Rack.objects.create(site=site, name="Rack 1"),
-            Rack.objects.create(site=site, name="Rack 2"),
+            Rack.objects.create(location=location, name="Rack 1"),
+            Rack.objects.create(location=location, name="Rack 2"),
         )
 
         powerfeed_1 = PowerFeed.objects.create(name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0])
@@ -2736,10 +2741,10 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "site,power_panel,name,voltage,amperage,max_utilization,status",
-            f"{site.name},Power Panel 1,Power Feed 4,120,20,80,active",
-            f"{site.name},Power Panel 1,Power Feed 5,120,20,80,failed",
-            f"{site.name},Power Panel 1,Power Feed 6,120,20,80,offline",
+            "location,power_panel,name,voltage,amperage,max_utilization,status",
+            f"{location.name},Power Panel 1,Power Feed 4,120,20,80,active",
+            f"{location.name},Power Panel 1,Power Feed 5,120,20,80,failed",
+            f"{location.name},Power Panel 1,Power Feed 6,120,20,80,offline",
         )
 
         cls.bulk_edit_data = {
@@ -2765,7 +2770,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             device_type=device_type,
             role=device_role,
             name="Device1",
-            site=self.site,
+            location=self.location,
         )
 
         powerport = PowerPort.objects.create(device=device, name="Power Port 1")
@@ -2793,9 +2798,12 @@ class PathTraceViewTestCase(ModelViewTestCase):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.create(
+            location_type=location_type, name="Location 1", slug="location-1", status=active
+        )
         device = Device.objects.create(
-            device_type=devicetype, role=devicerole, name="Device 1", site=site, status=active
+            device_type=devicetype, role=devicerole, name="Device 1", location=location, status=active
         )
         obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
         peer_obj = Interface.objects.create(device=device, name="eth0", status=active)

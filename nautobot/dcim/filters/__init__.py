@@ -1432,10 +1432,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     location = MultiValueCharFilter(
         method="filter_device", field_name="device__location__slug", label="Location (name)"
     )
-    region_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site__region_id", label="Region (ID)")
-    region = MultiValueCharFilter(
-        method="filter_device", field_name="device__site__region__slug", label="Region (name)"
-    )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     termination_a_type = ContentTypeMultipleChoiceFilter(

@@ -6,7 +6,7 @@ from django.test import override_settings
 
 from nautobot.core.testing import ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Location, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
@@ -144,7 +144,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
 
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(parent__isnull=True)[:2]
         vrfs = VRF.objects.all()[:2]
 
         roles = Role.objects.get_for_model(Prefix)[:2]
@@ -154,7 +154,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
             "vlan": None,
@@ -174,7 +174,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.bulk_edit_data = {
             "location": None,
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
             "status": status_reserved.pk,
@@ -253,12 +253,12 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
             "slug": "vlan-group-x",
-            "site": site.pk,
+            "location": location.pk,
             "description": "A new VLAN group",
         }
 
@@ -279,14 +279,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        locations = Location.objects.filter(site__isnull=False)
-        cls.sites = Site.objects.filter(locations__in=locations)
-
-        site_1 = cls.sites.first()
+        cls.locations = Location.objects.filter(parent__isnull=True)
+        location_1 = cls.locations.first()
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites.last()),
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=cls.locations.first()),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=cls.locations.last()),
         )
 
         roles = Role.objects.get_for_model(VLAN)[:2]
@@ -299,7 +297,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             vlan_group=vlangroups[0],
             vid=101,
             name="VLAN101",
-            site=site_1,
+            location=location_1,
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -308,7 +306,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             vlan_group=vlangroups[0],
             vid=102,
             name="VLAN102",
-            site=site_1,
+            location=location_1,
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -317,7 +315,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             vlan_group=vlangroups[0],
             vid=103,
             name="VLAN103",
-            site=site_1,
+            location=location_1,
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -327,8 +325,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
-            "site": vlangroups[1].site.pk,
+            "location": cls.locations.last().pk,
             "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
@@ -347,8 +344,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "location": Location.objects.filter(site=site_1).first().pk,
-            "site": site_1.pk,
+            "location": cls.locations.first().pk,
             "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
@@ -374,11 +370,11 @@ class ServiceTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(parent__isnull=True).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        device = Device.objects.create(name="Device 1", site=site, device_type=devicetype, role=devicerole)
+        device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)
 
         Service.objects.bulk_create(
             [
