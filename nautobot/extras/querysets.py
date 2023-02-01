@@ -28,13 +28,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # Get the group of the assigned tenant, if any
         tenant_group = obj.tenant.tenant_group if obj.tenant else None
 
-        # Match against the directly assigned region as well as any parent regions.
-        region = getattr(obj.site, "region", None)
-        if region:
-            regions = region.ancestors(include_self=True)
-        else:
-            regions = []
-
         # Match against the directly assigned location as well as any parent locations
         location = getattr(obj, "location", None)
         if location:
@@ -44,8 +37,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
 
         queryset = (
             self.filter(
-                Q(regions__in=regions) | Q(regions=None),
-                Q(sites=obj.site) | Q(sites=None),
                 Q(locations__in=locations) | Q(locations=None),
                 Q(roles=role) | Q(roles=None),
                 Q(device_types=device_type) | Q(device_types=None),
@@ -127,22 +118,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
-            region_field = "site__region"
+            base_query.add((Q(locations=OuterRef("location")) | Q(locations=None)), Q.AND)
 
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
-            region_field = "cluster__site__region"
-
-        # Avoid circular import error
-        from nautobot.dcim.models import Region
-
-        # Query for regions=(None OR site__region OR site__region__parent OR site__region__parent__parent OR ...)
-        region_query = Q(regions=None) | Q(regions=OuterRef(region_field))
-        for _i in range(Region.objects.all().max_tree_depth()):
-            region_field = f"{region_field}__parent"
-            region_query |= Q(regions=OuterRef(region_field))
-        base_query.add(region_query, Q.AND)
+            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(locations=None)), Q.AND)
 
         return base_query
 

@@ -123,7 +123,8 @@ def web_request_context(user, context_detail="", change_id=None):
     >>> from nautobot.extras.context_managers import web_request_context
     >>> user = User.objects.get(username="admin")
     >>> with web_request_context(user, context_detail="manual-fix"):
-    ...     lax = Site(name="LAX")
+    ...     lt = LocationType.objects.get(name="Campus")
+    ...     lax = Location(name="LAX", location_type=lt)
     ...     lax.validated_save()
 
     :param user: User object

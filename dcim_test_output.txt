@@ -1,0 +1,196 @@
+Running docker-compose command "ps --services --filter status=running"
+Running docker-compose command "exec nautobot coverage run --module nautobot.core.cli test 
+nautobot.dcim.tests --config=nautobot/core/tests/nautobot_config.py --keepdb --buffer"
+PYTHON_VER=3.7 \
+docker-compose \
+    --project-name "nautobot" \
+    --project-directory "development" \
+    -f "development/docker-compose.yml" \
+    -f "development/docker-compose.postgres.yml" \
+    -f "development/docker-compose.dev.yml" exec nautobot coverage run \
+    --module nautobot.core.cli test nautobot.dcim.tests \
+    --config=nautobot/core/tests/nautobot_config.py \
+    --keepdb \
+    --buffer
+Using NautobotPerformanceTestRunner to run tests ...
+Using existing test database for alias 'default'...
+Pre-populating test database with factory data...
+[33;1mFlushing all existing data from the database...[0m
+Seeding the pseudo-random number generator with seed "Nautobot"...
+Creating Roles...
+Creating Statuses...
+
+Creating Tags...
+Creating TenantGroups...
+Creating Tenants...
+Creating Regions...
+Creating Sites...
+Creating LocationTypes...
+Creating Locations...
+Creating RIRs...
+Creating RouteTargets...
+Creating VRFs...
+Creating VLANGroups...
+Creating VLANs...
+Creating Aggregates, Prefixes and IP Addresses...
+Creating Manufacturers...
+Creating Platforms (with manufacturers)...
+Creating Platforms (without manufacturers)...
+Creating Manufacturers without platforms...
+Creating DeviceTypes...
+Creating DeviceRedundancyGroups...
+Creating CircuitTypes...
+Creating Providers...
+Creating ProviderNetworks...
+Creating Circuits...
+Creating Providers without Circuits...
+Creating CircuitTerminations...
+[32;1mDatabase populated successfully![0m
+System check identified some issues:
+
+WARNINGS:
+[33;1m<Settings "nautobot_config">: (nautobot.core.W005) STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.[0m
+
+System check identified 1 issue (0 silenced).
+................................................s........................s.........................s........................s.........................s........................s.................................................................................s........................s........................s.........................s..................................s.....................................................s......................................................s........................s........................s.................................................s........................s.........................s........................s........................s...........................s........................s......................................................s........................s.........................s........................................................s..............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................E..EF......................................................................................................................................................................................................................................................................................................................................................................................................s.................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+======================================================================
+ERROR: test_change_rackgroup_location_children_not_permitted (nautobot.dcim.tests.test_models.RackGroupTestCase)
+Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup changes Locations.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+psycopg2.errors.NotNullViolation: null value in column "location_id" of relation "dcim_rack" violates not-null constraint
+DETAIL:  Failing row contains (a198a7c3-692f-4b75-bc9c-aca8cf179eff, 2023-02-01, 2023-02-01 00:48:12.904121+00, {}, Rack 2, Rack 00000002, null, , null, , 19, 42, f, null, null, , , cd33326a-801b-49c4-b94e-a91cc6f4821b, null, null, null, null).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/source/nautobot/dcim/tests/test_models.py", line 268, in test_change_rackgroup_location_children_not_permitted
+    self.rackgroup_a1.save()
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 740, in save
+    force_update=force_update, update_fields=update_fields)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 789, in save_base
+    update_fields=update_fields, raw=raw, using=using,
+  File "/usr/local/lib/python3.7/site-packages/django/dispatch/dispatcher.py", line 182, in send
+    for receiver in self._live_receivers(sender)
+  File "/usr/local/lib/python3.7/site-packages/django/dispatch/dispatcher.py", line 182, in <listcomp>
+    for receiver in self._live_receivers(sender)
+  File "/source/nautobot/dcim/signals.py", line 93, in handle_rackgroup_location_change
+    rackgroup.save()
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 740, in save
+    force_update=force_update, update_fields=update_fields)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 789, in save_base
+    update_fields=update_fields, raw=raw, using=using,
+  File "/usr/local/lib/python3.7/site-packages/django/dispatch/dispatcher.py", line 182, in send
+    for receiver in self._live_receivers(sender)
+  File "/usr/local/lib/python3.7/site-packages/django/dispatch/dispatcher.py", line 182, in <listcomp>
+    for receiver in self._live_receivers(sender)
+  File "/source/nautobot/dcim/signals.py", line 104, in handle_rackgroup_location_change
+    rack.save()
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 740, in save
+    force_update=force_update, update_fields=update_fields)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 778, in save_base
+    force_update, using, update_fields,
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 859, in _save_table
+    forced_update)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 912, in _do_update
+    return filtered._update(values) > 0
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/query.py", line 802, in _update
+    return query.get_compiler(self.db).execute_sql(CURSOR)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/sql/compiler.py", line 1559, in execute_sql
+    cursor = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/sql/compiler.py", line 1175, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/lib/python3.7/site-packages/cacheops/transaction.py", line 97, in execute
+    result = self._no_monkey.execute(self, sql, params)
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 66, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 75, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/lib/python3.7/site-packages/django/db/utils.py", line 90, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+django.db.utils.IntegrityError: null value in column "location_id" of relation "dcim_rack" violates not-null constraint
+DETAIL:  Failing row contains (a198a7c3-692f-4b75-bc9c-aca8cf179eff, 2023-02-01, 2023-02-01 00:48:12.904121+00, {}, Rack 2, Rack 00000002, null, , null, , 19, 42, f, null, null, , , cd33326a-801b-49c4-b94e-a91cc6f4821b, null, null, null, null).
+
+
+======================================================================
+ERROR: test_change_rack_location_devices_not_permitted (nautobot.dcim.tests.test_models.RackTestCase)
+Check that changing a Rack's Location also affects child Devices.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+psycopg2.errors.NotNullViolation: null value in column "location_id" of relation "dcim_device" violates not-null constraint
+DETAIL:  Failing row contains (753d44ba-7532-4624-99c8-e0675e20d550, 2023-02-01, 2023-02-01 00:48:13.092925+00, {}, null, null, null, null, , null, null, , null, null, , null, 76926578-5ab0-48ee-97ca-14c10ff0183c, null, null, null, null, 680a2d0f-5a0a-46ef-a0ca-dd24d8274e67, null, null, null, null, null, null, null, null, 01bd3bfb-07b8-4b22-90b6-70aa0f3d6e2e).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/source/nautobot/dcim/tests/test_models.py", line 448, in test_change_rack_location_devices_not_permitted
+    self.rack.save()
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 740, in save
+    force_update=force_update, update_fields=update_fields)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 789, in save_base
+    update_fields=update_fields, raw=raw, using=using,
+  File "/usr/local/lib/python3.7/site-packages/django/dispatch/dispatcher.py", line 182, in send
+    for receiver in self._live_receivers(sender)
+  File "/usr/local/lib/python3.7/site-packages/django/dispatch/dispatcher.py", line 182, in <listcomp>
+    for receiver in self._live_receivers(sender)
+  File "/source/nautobot/dcim/signals.py", line 142, in handle_rack_location_change
+    device.save()
+  File "/source/nautobot/dcim/models/devices.py", line 747, in save
+    super().save(*args, **kwargs)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 740, in save
+    force_update=force_update, update_fields=update_fields)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 778, in save_base
+    force_update, using, update_fields,
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 859, in _save_table
+    forced_update)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/base.py", line 912, in _do_update
+    return filtered._update(values) > 0
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/query.py", line 802, in _update
+    return query.get_compiler(self.db).execute_sql(CURSOR)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/sql/compiler.py", line 1559, in execute_sql
+    cursor = super().execute_sql(result_type)
+  File "/usr/local/lib/python3.7/site-packages/django/db/models/sql/compiler.py", line 1175, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/lib/python3.7/site-packages/cacheops/transaction.py", line 97, in execute
+    result = self._no_monkey.execute(self, sql, params)
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 66, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 75, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/lib/python3.7/site-packages/django/db/utils.py", line 90, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/lib/python3.7/site-packages/django/db/backends/utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+django.db.utils.IntegrityError: null value in column "location_id" of relation "dcim_device" violates not-null constraint
+DETAIL:  Failing row contains (753d44ba-7532-4624-99c8-e0675e20d550, 2023-02-01, 2023-02-01 00:48:13.092925+00, {}, null, null, null, null, , null, null, , null, null, , null, 76926578-5ab0-48ee-97ca-14c10ff0183c, null, null, null, null, 680a2d0f-5a0a-46ef-a0ca-dd24d8274e67, null, null, null, null, null, null, null, null, 01bd3bfb-07b8-4b22-90b6-70aa0f3d6e2e).
+
+
+======================================================================
+FAIL: test_change_rack_location_devices_permitted (nautobot.dcim.tests.test_models.RackTestCase)
+Check that changing a Rack's Location also affects child Devices.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/source/nautobot/dcim/tests/test_models.py", line 428, in test_change_rack_location_devices_permitted
+    self.assertEqual(Device.objects.get(pk=device2.pk).location, None)
+AssertionError: <Location: Location2> != None
+
+----------------------------------------------------------------------
+Ran 2682 tests in 408.995s
+
+FAILED (failures=1, errors=2, skipped=27)
+Emptying test database...
+Database emptied!
+Preserving test database for alias 'default'...
+[0m

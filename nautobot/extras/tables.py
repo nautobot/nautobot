@@ -152,8 +152,6 @@ class ConfigContextTable(BaseTable):
             "weight",
             "is_active",
             "description",
-            "regions",
-            "sites",
             "roles",
             "platforms",
             "cluster_groups",
