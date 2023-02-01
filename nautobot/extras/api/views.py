@@ -178,8 +178,7 @@ class ConfigContextQuerySetMixin:
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContext.objects.prefetch_related(
-        "regions",
-        "sites",
+        "locations",
         "roles",
         "device_types",
         "platforms",
