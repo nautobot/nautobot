@@ -6,6 +6,7 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
 from nautobot.virtualization.choices import VMInterfaceStatusChoices
@@ -148,10 +149,16 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         clustergroup = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        location_type = LocationType.objects.get(name="Campus")
+        locations = Location.objects.filter(location_type=location_type)[:2]
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, cluster_group=clustergroup),
-            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, cluster_group=clustergroup),
+            Cluster.objects.create(
+                name="Cluster 1", cluster_type=clustertype, cluster_group=clustergroup, location=locations[0]
+            ),
+            Cluster.objects.create(
+                name="Cluster 2", cluster_type=clustertype, cluster_group=clustergroup, location=locations[1]
+            ),
         )
 
         statuses = Status.objects.get_for_model(VirtualMachine)

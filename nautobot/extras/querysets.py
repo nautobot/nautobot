@@ -121,7 +121,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             base_query.add((Q(locations=OuterRef("location")) | Q(locations=None)), Q.AND)
 
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(location=None)), Q.AND)
+            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(locations=None)), Q.AND)
         return base_query
 
 
