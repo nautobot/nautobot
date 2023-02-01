@@ -174,7 +174,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.bulk_edit_data = {
             "location": None,
-            "location": locations[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
             "status": status_reserved.pk,

@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases
-from nautobot.core.utils.data import flatten_iterable
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform
 from nautobot.extras.models import Role, Status, Tag

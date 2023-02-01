@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
