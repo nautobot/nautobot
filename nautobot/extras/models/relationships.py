@@ -47,7 +47,7 @@ class RelationshipModel(models.Model):
         "extras.RelationshipAssociation",
         content_type_field="source_type",
         object_id_field="source_id",
-        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_site', 'source_ipam_vlan'
+        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_location', 'source_ipam_vlan'
     )
     destination_for_associations = GenericRelation(
         "extras.RelationshipAssociation",
