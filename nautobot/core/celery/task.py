@@ -12,7 +12,9 @@ class NautobotTask(Task):
 Task = NautobotTask  # noqa: So that the class path resolves.
 
 
-@signals.task_prerun.connect
+# TODO(jathan): Remove this once this body of work is done. This is just useful for debugging but it
+# results int a lot of noise and slows things down.
+# @signals.task_prerun.connect
 def debug_task_prerun(sender, task_id, task, args, kwargs, **extra):
     logger.error(">>>    SENDER = %s", sender)
     logger.error(">>>      TASK = %s", task)

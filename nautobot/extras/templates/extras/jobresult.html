@@ -100,6 +100,14 @@
                         {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
                     </div>
                 </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Traceback</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.traceback format="python" %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

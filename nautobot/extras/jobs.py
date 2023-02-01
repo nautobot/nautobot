@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 from textwrap import dedent
+import traceback
 import warnings
 
 from db_file_storage.form_widgets import DBClearableFileInput
@@ -15,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
@@ -1107,7 +1108,18 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # or it might be bad input from an API request, or manual execution.
 
         data = job_class.deserialize_data(data)
+    # TODO(jathan): Another place where because `log()` is called which mutates `.data`, we must
+    # explicitly call `save()` again. We need to see if we can move more of this to `NauotbotTask`
+    # and/or the DB backend as well.
     except Exception:
+        stacktrace = traceback.format_exc()
+        job_result.log(
+            f"Error initializing job:\n```\n{stacktrace}\n```",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="initialization",
+            logger=logger,
+        )
+        job_result.save()
         if file_ids:
             # Cleanup FileProxy objects
             job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
@@ -1165,16 +1177,17 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                 job.log_info(message="Database changes have been reverted due to error.")
             raise
 
-        # Is this legacy?
+        # TODO(jathan): For now we still need to call `save()` so that any output data from the job
+        # that was stored gets saved to the `JobResult`. We need to consider where this should be
+        # moved as we get closer to eliminating `run_job()` entirely. Hint: Probably inside of
+        # `NautobotTask` class.
         finally:
-            """
             try:
                 job_result.save()
             except IntegrityError:
                 # handle job_model deleted while job was running
                 job_result.job_model = None
                 job_result.save()
-            """
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
@@ -1190,12 +1203,18 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # 2.0 TODO Remove post_run() method entirely
         job.active_test = "post_run"
         output = job.post_run()
+        # TODO(jathan): We need to call `save()` here too so that any appended output from
+        # `post_run` gets stored on the `JobResult`. We need to move this out of here as well.
         if output:
             job.results["output"] += "\n" + str(output)
+            job_result.save()
 
         job_result.refresh_from_db()
         job.logger.info(f"Job completed in {job_result.duration}")
 
+        # TODO(jathan): For now this is only output from `post_run()` which is# not straightforward.
+        # We need to think about what we want to be returned from job runs and stored as
+        # `JobResult.result`, otherwise it will always be `None`.
         return output
 
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
@@ -1204,9 +1223,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
         change_context = context_class(user=request.user, context_detail=job_model.slug)
         with change_logging(change_context):
-            return _run_job()
+            output = _run_job()
     else:
-        return _run_job()
+        output = _run_job()
+
+    # This is just passing through the return value from `post_run()` which for now will always be
+    # `None` (see above).
+    return output
 
 
 @nautobot_task

@@ -5,7 +5,9 @@ from django_celery_results.managers import TaskResultManager, transaction_retry
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 
-# This subclass is a hack. We'll fix it in post.
+# TODO(jathan): This subclass is a hack. We'll fix it in post. Realistically the # work for
+# `django-natural-keys` and establishing managers vs. querysets.as_manager() patterns across the
+# board will be the right palce to do this, as we can then just subclass the manager class.
 class JobResultManager(RestrictedQuerySet.as_manager().__class__, TaskResultManager):
     @transaction_retry(max_retries=2)
     def store_result(self, *args, **kwargs):

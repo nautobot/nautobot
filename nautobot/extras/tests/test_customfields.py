@@ -4,7 +4,6 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
-from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -330,12 +329,6 @@ class CustomFieldTest(TestCase):
         # Delete the custom field
         cf.delete()
 
-    @override_settings(
-        CELERY_TASK_ALWAYS_EAGER=True,
-        CELERY_TASK_EAGER_PROPOGATES=True,
-        CELERY_BROKER_URL="memory://",
-        CELERY_BACKEND="memory",
-    )
     def test_regex_validation(self):
         obj_type = ContentType.objects.get_for_model(Site)
 
@@ -1872,12 +1865,6 @@ class CustomFieldChoiceTest(TestCase):
             self.assertEqual(CustomField.objects.count(), 0)
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
-    @override_settings(
-        CELERY_TASK_ALWAYS_EAGER=True,
-        CELERY_TASK_EAGER_PROPOGATES=True,
-        CELERY_BROKER_URL="memory://",
-        CELERY_BACKEND="memory",
-    )
     def test_regex_validation(self):
         obj_type = ContentType.objects.get_for_model(Site)
 
