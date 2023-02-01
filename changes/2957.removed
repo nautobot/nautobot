@@ -1,1 +1,2 @@
 Removed Site constraints for objects (CircuitTermination, Device, Location, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
+Removed regions and sites attribute from ConfigContext
