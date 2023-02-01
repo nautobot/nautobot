@@ -17,16 +17,13 @@ def set_prefix_type(apps, schema_editor):
         prefix_default_status = Status.objects.filter(content_types=prefix_ct).exclude(slug="container").first()
 
     # Set Prefix.type to container for prefixes with status of container
-    Prefix.objects.filter(status__slug="container", is_pool=False).update(
+    Prefix.objects.filter(status__slug="container").update(
         status=prefix_default_status,
         type=choices.PrefixTypeChoices.TYPE_CONTAINER,
     )
 
     # Set Prefix.type to pool for prefixes with `is_pool=True`
-    Prefix.objects.filter(is_pool=True).update(
-        status=prefix_default_status,
-        type=choices.PrefixTypeChoices.TYPE_POOL,
-    )
+    Prefix.objects.filter(is_pool=True).update(type=choices.PrefixTypeChoices.TYPE_POOL)
 
     # Remove Prefix from container status and delete the status object if no other models are related
     if Status.objects.filter(slug="container").exists():
