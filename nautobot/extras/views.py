@@ -277,7 +277,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
         device_table = DeviceTable(
             data=instance.dcim_device_related.select_related(
                 "tenant",
-                "location",
+                "site",
                 "rack",
                 "device_type",
                 "role",
@@ -1821,7 +1821,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 
             devices = instance.dcim_device_related.select_related(
                 "status",
-                "location",
+                "site",
                 "tenant",
                 "role",
                 "rack",
@@ -1833,7 +1833,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "assigned_object_type",
             )
             prefixes = instance.ipam_prefix_related.select_related(
-                "location",
+                "site",
                 "status",
                 "tenant",
                 "vlan",
@@ -1847,7 +1847,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             )
             vlans = instance.ipam_vlan_related.select_related(
                 "vlan_group",
-                "location",
+                "site",
                 "status",
                 "tenant",
             )

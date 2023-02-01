@@ -175,16 +175,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             exclude_lt="Site",
         )
 
-    # Reassign Region Models to Locations of Region LocationType
-    if Region.objects.exists():
-        ConfigContext = apps.get_model("extras", "configcontext")
-        ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", "regions")
-        for cc in ccs:
-            region_locs = []
-            for region in cc.regions:
-                region_locs.append(Location.objects.get(name=region.name))
-            cc.locations.add(region_locs)
-
     # Reassign Site Models to Locations of Site LocationType
     if Site.objects.exists():  # Iff Site instances exist
         CircuitTermination = apps.get_model("circuits", "circuittermination")
@@ -201,14 +191,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for ct in cts:
             ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
-
-        ConfigContext = apps.get_model("extras", "configcontext")
-        ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", "sites")
-        for cc in ccs:
-            site_locs = []
-            for site in cc.sites:
-                site_locs.append(Location.objects.get(name=site.name))
-            cc.locations.add(site_locs)
 
         devices = Device.objects.filter(location__isnull=True).select_related("site")
         for device in devices:

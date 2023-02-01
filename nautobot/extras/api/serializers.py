@@ -27,8 +27,10 @@ from nautobot.dcim.api.nested_serializers import (
     NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedRackSerializer,
+    NestedRegionSerializer,
+    NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -275,6 +277,18 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     )
     owner = serializers.SerializerMethodField(read_only=True)
     schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    regions = SerializedPKRelatedField(
+        queryset=Region.objects.all(),
+        serializer=NestedRegionSerializer,
+        required=False,
+        many=True,
+    )
+    sites = SerializedPKRelatedField(
+        queryset=Site.objects.all(),
+        serializer=NestedSiteSerializer,
+        required=False,
+        many=True,
+    )
     locations = SerializedPKRelatedField(
         queryset=Location.objects.all(),
         serializer=NestedLocationSerializer,
@@ -337,6 +351,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "description",
             "schema",
             "is_active",
+            "regions",
+            "sites",
             "locations",
             "roles",
             "device_types",
@@ -714,6 +730,8 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
             serializer = NestedLocationSerializer
         elif isinstance(obj.parent, Rack):
             serializer = NestedRackSerializer
+        elif isinstance(obj.parent, Site):
+            serializer = NestedSiteSerializer
         else:
             raise Exception("Unexpected type of parent object for ImageAttachment")
 

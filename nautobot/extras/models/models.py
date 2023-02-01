@@ -65,8 +65,8 @@ class ConfigContextSchemaValidationMixin:
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
-    qualifiers (Tenant, location etc.). For example, the data stored in a ConfigContext assigned to location A and tenant B
-    will be available to a Device in location A assigned to tenant B. Data is stored in JSON format.
+    qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
+    will be available to a Device in site A assigned to tenant B. Data is stored in JSON format.
     """
 
     name = models.CharField(max_length=100, db_index=True)
@@ -98,6 +98,8 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         blank=True,
         help_text="Optional schema to validate the structure of the data",
     )
+    regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
+    sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
     # TODO(timizuo): Find a way to limit role choices to Device; as of now using
     #  limit_choices_to=Role.objects.get_for_model(Device), causes a partial import error
