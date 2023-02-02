@@ -2,6 +2,7 @@ import logging
 
 from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
@@ -66,53 +67,68 @@ def handle_rackgroup_location_change(instance, created, **kwargs):
 
     Note that this is non-trivial for Location changes, since a LocationType that can contain RackGroups
     may or may not be permitted to contain Racks or PowerPanels. If it's not permitted, rather than trying to search
-    through child locations to find the "right" one, the best we can do is simply to null out the location.
+    through child locations to find the "right" one, the best we can do is to raise to raise a ValidationError and roll back the changes we made.
     """
-    if not created:
-        if instance.location is not None:
+    with transaction.atomic():
+        if not created:
             descendants = instance.location.descendants(include_self=True)
             content_types = instance.location.location_type.content_types.all()
             rack_groups_permitted = ContentType.objects.get_for_model(RackGroup) in content_types
             racks_permitted = ContentType.objects.get_for_model(Rack) in content_types
             power_panels_permitted = ContentType.objects.get_for_model(PowerPanel) in content_types
-        else:
-            descendants = None
-            rack_groups_permitted = False
-            racks_permitted = False
-            power_panels_permitted = False
 
-        for rackgroup in instance.children.all():
-            changed = False
+            for rackgroup in instance.children.all():
+                changed = False
 
-            if instance.location is not None:
-                if rackgroup.location is not None and rackgroup.location not in descendants:
-                    rackgroup.location = instance.location if rack_groups_permitted else None
-                    changed = True
+                if rackgroup.location not in descendants:
+                    if rack_groups_permitted:
+                        rackgroup.location = instance.location
+                        changed = True
+                    else:
+                        raise ValidationError(
+                            {
+                                f"location {instance.location.name}": "RackGroups may not associate to locations of type "
+                                f'"{instance.location.location_type}"'
+                            }
+                        )
 
-            if changed:
-                rackgroup.save()
+                if changed:
+                    rackgroup.save()
 
-        for rack in Rack.objects.filter(group=instance):
-            changed = False
+            for rack in Rack.objects.filter(group=instance):
+                changed = False
 
-            if instance.location is not None:
-                if rack.location is not None and rack.location not in descendants:
-                    rack.location = instance.location if racks_permitted else None
-                    changed = True
+                if rack.location not in descendants:
+                    if racks_permitted:
+                        rack.location = instance.location
+                        changed = True
+                    else:
+                        raise ValidationError(
+                            {
+                                f"location {instance.location.name}": "Racks may not associate to locations of type "
+                                f'"{instance.location.location_type}"'
+                            }
+                        )
 
-            if changed:
-                rack.save()
+                if changed:
+                    rack.save()
 
-        for powerpanel in PowerPanel.objects.filter(rack_group=instance):
-            changed = False
+            for powerpanel in PowerPanel.objects.filter(rack_group=instance):
+                changed = False
 
-            if instance.location is not None:
-                if powerpanel.location is not None and powerpanel.location not in descendants:
-                    powerpanel.location = instance.location if power_panels_permitted else None
-                    changed = True
-
-            if changed:
-                powerpanel.save()
+                if powerpanel.location not in descendants:
+                    if power_panels_permitted:
+                        powerpanel.location = instance.location
+                        changed = True
+                    else:
+                        raise ValidationError(
+                            {
+                                f"location {instance.location.name}": "PowerPanels may not associate to locations of type "
+                                f'"{instance.location.location_type}"'
+                            }
+                        )
+                if changed:
+                    powerpanel.save()
 
 
 @receiver(post_save, sender=Rack)
@@ -122,24 +138,30 @@ def handle_rack_location_change(instance, created, **kwargs):
 
     Note that this is non-trivial for Location changes, since a LocationType that can contain Racks
     may or may not be permitted to contain Devices. If it's not permitted, rather than trying to search
-    through child locations to find the "right" one, the best we can do is simply to null out the location.
+    through child locations to find the "right" one, the best we can do is to raise a ValidationError and roll back the changes we made.
     """
-    if not created:
-        if instance.location is not None:
+    with transaction.atomic():
+        if not created:
             devices_permitted = (
                 ContentType.objects.get_for_model(Device) in instance.location.location_type.content_types.all()
             )
 
-        for device in Device.objects.filter(rack=instance):
-            changed = False
+            for device in Device.objects.filter(rack=instance):
+                changed = False
+                if device.location != instance.location:
+                    if devices_permitted:
+                        device.location = instance.location
+                        changed = True
+                    else:
+                        raise ValidationError(
+                            {
+                                f"location {instance.location.name}": "Devices may not associate to locations of type "
+                                f'"{instance.location.location_type}"'
+                            }
+                        )
 
-            if instance.location is not None:
-                if device.location is not None and device.location != instance.location:
-                    device.location = instance.location if devices_permitted else None
-                    changed = True
-
-            if changed:
-                device.save()
+                if changed:
+                    device.save()
 
 
 #

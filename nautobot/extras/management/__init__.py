@@ -16,6 +16,7 @@ CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
+    "dcim.Site": dcim_choices.SiteStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
@@ -73,10 +74,10 @@ DESCRIPTION_MAP = {
     "planned": "Unit has been planned",
     "provisioning": "Circuit is being provisioned",
     "reserved": "Unit is reserved",
-    "retired": "Location has been retired",
+    "retired": "Site or Location has been retired",
     "slaac": "Dynamically assigned IPv6 address",
     "staged": "Unit has been staged",
-    "staging": "Location is in the process of being staged",
+    "staging": "Site or Location is in the process of being staged",
 }
 
 

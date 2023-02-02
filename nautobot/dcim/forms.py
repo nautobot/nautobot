@@ -451,7 +451,6 @@ class LocationForm(NautobotModelForm, TenancyForm):
         to_field_name="slug",
         required=False,
     )
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
@@ -459,7 +458,6 @@ class LocationForm(NautobotModelForm, TenancyForm):
         fields = [
             "location_type",
             "parent",
-            "site",
             "name",
             "slug",
             "status",
@@ -510,7 +508,6 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
     # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
     asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
@@ -523,7 +520,6 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     class Meta:
         nullable_fields = [
             "parent",
-            "site",
             "tenant",
             "description",
             "asn",
@@ -543,12 +539,6 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         required=False,
         to_field_name="name",
         help_text="Parent location",
-    )
-    site = CSVModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent site",
     )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -3311,7 +3301,7 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
         self.fields["installed_device"].queryset = Device.objects.filter(
-            site=device_bay.device.site,
+            location=device_bay.device.location,
             rack=device_bay.device.rack,
             parent_bay__isnull=True,
             device_type__u_height=0,

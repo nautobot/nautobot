@@ -1,5 +1,5 @@
 from nautobot.extras.jobs import JobHookReceiver
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location, LocationType
 
 
 class TestJobHookReceiverLog(JobHookReceiver):
@@ -12,7 +12,8 @@ class TestJobHookReceiverLog(JobHookReceiver):
 
 class TestJobHookReceiverChange(JobHookReceiver):
     def receive_job_hook(self, change, action, changed_object):
-        Site.objects.create(name="test_jhr")
+        location_type = LocationType.objects.create(name="New Root")
+        Location.objects.create(name="test_jhr", location_type=location_type)
 
 
 class TestJobHookReceiverFail(JobHookReceiver):

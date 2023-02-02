@@ -265,13 +265,9 @@ class RackGroupTestCase(TestCase):
         location_c = Location.objects.create(name="Location C", location_type=location_type_c, parent=self.location_a)
 
         self.rackgroup_a1.location = location_c
-        self.rackgroup_a1.save()
-
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).location, location_c)
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, location_c)
-        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, None)
-        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, None)
-        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, None)
+        with self.assertRaises(ValidationError) as cm:
+            self.rackgroup_a1.save()
+        self.assertIn(f'Racks may not associate to locations of type "{location_type_c}"', str(cm.exception))
 
 
 class RackTestCase(TestCase):
@@ -411,7 +407,7 @@ class RackTestCase(TestCase):
             device_type=self.device_type["cc5000"],
             role=self.role["Switch"],
         )
-        # Device2 is defaulted to a null Location
+        # Device2 is explicitly assigned to the same location as the Rack
         device2 = Device.objects.create(
             location=self.location1,
             rack=self.rack,
@@ -425,7 +421,7 @@ class RackTestCase(TestCase):
         self.rack.save()
 
         self.assertEqual(Device.objects.get(pk=device1.pk).location, location2)
-        self.assertEqual(Device.objects.get(pk=device2.pk).location, None)
+        self.assertEqual(Device.objects.get(pk=device2.pk).location, location2)
 
     def test_change_rack_location_devices_not_permitted(self):
         """
@@ -433,7 +429,7 @@ class RackTestCase(TestCase):
 
         In this test, the new Location does not permit Devices.
         """
-        device1 = Device.objects.create(
+        Device.objects.create(
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
@@ -445,9 +441,9 @@ class RackTestCase(TestCase):
         location_type_b.content_types.add(ContentType.objects.get_for_model(Rack))
         location2 = Location.objects.create(name="Location2", location_type=location_type_b)
         self.rack.location = location2
-        self.rack.save()
-
-        self.assertEqual(Device.objects.get(pk=device1.pk).location, None)
+        with self.assertRaises(ValidationError) as cm:
+            self.rack.save()
+        self.assertIn(f'Devices may not associate to locations of type "{location_type_b}"', str(cm.exception))
 
     def test_rack_location_validation(self):
         # Rack group location and rack location must relate
