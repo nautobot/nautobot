@@ -37,6 +37,8 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
     job_result.save()
     if request:
         change_context = JobChangeContext(user=request.user)
+        # TODO(jathan): Review how we can eliminate these deliberate `set_status()` and `save()`
+        # calls,moving them to Celery-friendly primitives instead.
         with change_logging(change_context):
             for entry in get_datasource_contents(model_name):
                 job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
@@ -51,6 +53,8 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
             job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
             job_result.save()
     else:
+        # TODO(jathan): Review how we can eliminate these deliberate `set_status()` and `save()`
+        # calls,moving them to Celery-friendly primitives instead.
         for entry in get_datasource_contents(model_name):
             job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
             try:

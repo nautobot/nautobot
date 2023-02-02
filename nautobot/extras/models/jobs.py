@@ -520,10 +520,13 @@ class JobResult(BaseModel, CustomFieldModel):
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
     )
-
     name = models.CharField(max_length=255, db_index=True)
-    task_name = models.CharField(max_length=255, null=True, db_index=True)
-
+    task_name = models.CharField(
+        max_length=255,
+        null=True,
+        db_index=True,
+        help_text="Registered name of the Celery task for this job. Internal use only.",
+    )
     obj_type = models.ForeignKey(
         to=ContentType,
         related_name="job_results",
@@ -534,7 +537,6 @@ class JobResult(BaseModel, CustomFieldModel):
         null=True,
         blank=True,
     )
-
     date_created = models.DateTimeField(auto_now_add=True)
     date_done = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(
@@ -548,7 +550,22 @@ class JobResult(BaseModel, CustomFieldModel):
         db_index=True,
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
-    periodic_task_name = models.CharField(null=True, max_length=255)
+    """
+    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
+
+    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
+
+    Log Messages now go to their own object, the JobLogEntry.
+
+    data = {
+        "output": <optional string, such as captured stdout/stderr>,
+    }
+    """
+    periodic_task_name = models.CharField(
+        null=True,
+        max_length=255,
+        help_text="Registered name of the Celery periodic task for this job. Internal use only.",
+    )
     worker = models.CharField(max_length=100, default=None, null=True)
     task_args = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
@@ -574,17 +591,6 @@ class JobResult(BaseModel, CustomFieldModel):
     traceback = models.TextField(blank=True, null=True)
     meta = models.JSONField(null=True, default=None, editable=False)
     schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
-    """
-    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
-
-    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
-
-    Log Messages now go to their own object, the JobLogEntry.
-
-    data = {
-        "output": <optional string, such as captured stdout/stderr>,
-    }
-    """
 
     task_id = models.UUIDField(unique=True)
 
