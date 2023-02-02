@@ -424,7 +424,7 @@ def vscode(context):
 # ------------------------------------------------------------------------------
 @task
 def nbshell(context):
-    """Launch an interactive nbshell session."""
+    """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     run_command(context, command, pty=True)
