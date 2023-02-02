@@ -297,11 +297,9 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Tag (slug)",
     )
-    dynamic_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="dynamic_groups",
+    dynamic_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DynamicGroup.objects.all(),
-        to_field_name="slug",
-        label="Dynamic Group (slug or PK)",
+        label="Dynamic Groups (slug or ID)",
     )
 
     class Meta:
