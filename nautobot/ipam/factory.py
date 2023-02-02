@@ -461,7 +461,9 @@ class PrefixFactory(PrimaryModelFactory):
     type = factory.Maybe(
         "is_container",
         PrefixTypeChoices.TYPE_CONTAINER,
-        factory.Faker("random_element", elements=PrefixTypeChoices.values()),
+        factory.Faker(
+            "random_element", elements=[v for v in PrefixTypeChoices.values() if v != PrefixTypeChoices.TYPE_CONTAINER]
+        ),
     )
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     vlan = factory.Maybe(

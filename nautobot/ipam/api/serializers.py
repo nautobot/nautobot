@@ -267,7 +267,6 @@ class PrefixSerializer(
             "vlan",
             "status",
             "role",
-            "type",
             "description",
         ]
         read_only_fields = ["family"]

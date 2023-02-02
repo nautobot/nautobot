@@ -182,7 +182,12 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test retrieval of all available prefixes within a parent prefix.
         """
-        prefix = Prefix.objects.ip_family(6).filter(prefix_length__lt=128).exclude(type="container").first()
+        prefix = (
+            Prefix.objects.ip_family(6)
+            .filter(prefix_length__lt=128)
+            .exclude(type=choices.PrefixTypeChoices.TYPE_CONTAINER)
+            .first()
+        )
         if prefix is None:
             self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})

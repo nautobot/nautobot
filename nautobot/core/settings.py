@@ -241,6 +241,7 @@ SPECTACULAR_SETTINGS = {
         "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
         "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
         "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
+        "PrefixTypeChoices": "nautobot.ipam.choices.PrefixTypeChoices",
         "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
         "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
         "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
