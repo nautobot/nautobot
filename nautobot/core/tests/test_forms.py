@@ -26,7 +26,7 @@ class SearchFormTestCase(TestCase):
 
         # Assert the q field placeholder is overridden
         self.assertEqual(
-            SearchForm(q_placeholder="Search Sites").fields["q"].widget.attrs["placeholder"], "Search Sites"
+            SearchForm(q_placeholder="Search Locations").fields["q"].widget.attrs["placeholder"], "Search Locations"
         )
 
 
@@ -702,6 +702,7 @@ class DynamicFilterFormTest(TestCase):
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
+                    ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_circuit_terminations", "Has circuit terminations"),
                     ("has_clusters", "Has clusters"),
@@ -747,7 +748,7 @@ class DynamicFilterFormTest(TestCase):
                 """return a dict of the filters' field and field value class.
 
                 This is required because instantiated classes of the same type are not equal.
-                For Example `Site()` != `Site()` but `Site().__class__` == `Site().__class__`
+                For Example `Location()` != `Location()` but `Location().__class__` == `Location().__class__`
                 """
                 return {field: value.__class__ for field, value in filters_dict.items()}
 

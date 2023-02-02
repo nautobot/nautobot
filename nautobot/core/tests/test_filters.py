@@ -388,11 +388,11 @@ class BaseFilterSetTest(TestCase):
         macaddressfield = filters.MACAddressFilter()
         modelchoicefield = django_filters.ModelChoiceFilter(
             field_name="integerfield",  # We're pretending this is a ForeignKey field
-            queryset=dcim_models.Site.objects.all(),
+            queryset=dcim_models.Location.objects.all(),
         )
         modelmultiplechoicefield = django_filters.ModelMultipleChoiceFilter(
             field_name="integerfield",  # We're pretending this is a ForeignKey field
-            queryset=dcim_models.Site.objects.all(),
+            queryset=dcim_models.Location.objects.all(),
         )
         multiplechoicefield = django_filters.MultipleChoiceFilter(field_name="choicefield")
         multivaluecharfield = filters.MultiValueCharFilter(field_name="charfield")
@@ -734,8 +734,8 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     device_queryset = dcim_models.Device.objects.all()
     device_filterset = dcim_filters.DeviceFilterSet
-    site_queryset = dcim_models.Site.objects.all()
-    site_filterset = dcim_filters.SiteFilterSet
+    location_queryset = dcim_models.Location.objects.all()
+    location_filterset = dcim_filters.LocationFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -781,17 +781,10 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         dcim_models.Platform.objects.bulk_create(platforms)
 
-        cls.regions = dcim_models.Region.objects.filter(sites__isnull=False)[:3]
-
-        cls.sites = (
-            dcim_models.Site.objects.filter(region=cls.regions[0]).first(),
-            dcim_models.Site.objects.filter(region=cls.regions[1]).first(),
-            dcim_models.Site.objects.filter(region=cls.regions[2]).first(),
-        )
-        cls.sites[0].asn = 65001
-        cls.sites[1].asn = 65101
-        cls.sites[2].asn = 65201
-        cls.locations = Location.objects.filter(parent__isnull=True)[:3]
+        cls.locations = dcim_models.Location.objects.filter(parent__isnull=False)[:3]
+        cls.locations[0].asn = 65001
+        cls.locations[1].asn = 65101
+        cls.locations[2].asn = 65201
 
         racks = (
             dcim_models.Rack(name="Rack 1", location=cls.locations[0]),
@@ -864,131 +857,135 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 "comments",
             ]
 
-    def test_site_name_negation(self):
-        params = {"name__n": ["Site 1"]}
+    def test_location_name_negation(self):
+        params = {"name__n": ["Location 1"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(name="Site 1"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(name="Location 1"),
         )
 
-    def test_site_slug_icontains(self):
+    def test_location_slug_icontains(self):
         params = {"slug__ic": ["-1"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.filter(slug__icontains="-1"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(slug__icontains="-1"),
         )
 
-    def test_site_slug_icontains_negation(self):
+    def test_location_slug_icontains_negation(self):
         params = {"slug__nic": ["-1"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(slug__icontains="-1"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(slug__icontains="-1"),
         )
 
-    def test_site_slug_startswith(self):
-        startswith = dcim_models.Site.objects.first().slug[:3]
+    def test_location_slug_startswith(self):
+        startswith = dcim_models.Location.objects.first().slug[:3]
         params = {"slug__isw": [startswith]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.filter(slug__istartswith=startswith),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(slug__istartswith=startswith),
         )
 
-    def test_site_slug_startswith_negation(self):
-        startswith = dcim_models.Site.objects.first().slug[:3]
+    def test_location_slug_startswith_negation(self):
+        startswith = dcim_models.Location.objects.first().slug[:3]
         params = {"slug__nisw": [startswith]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(slug__icontains=startswith),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(slug__icontains=startswith),
         )
 
-    def test_site_slug_endswith(self):
-        endswith = dcim_models.Site.objects.first().slug[
-            len(dcim_models.Site.objects.first().slug) - 2 : len(dcim_models.Site.objects.first().slug)
+    def test_location_slug_endswith(self):
+        endswith = dcim_models.Location.objects.first().slug[
+            len(dcim_models.Location.objects.first().slug) - 2 : len(dcim_models.Location.objects.first().slug)
         ]
         params = {"slug__iew": [endswith]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.filter(slug__iendswith=endswith),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(slug__iendswith=endswith),
         )
 
-    def test_site_slug_endswith_negation(self):
-        endswith = dcim_models.Site.objects.first().slug[
-            len(dcim_models.Site.objects.first().slug) - 2 : len(dcim_models.Site.objects.first().slug)
+    def test_location_slug_endswith_negation(self):
+        endswith = dcim_models.Location.objects.first().slug[
+            len(dcim_models.Location.objects.first().slug) - 2 : len(dcim_models.Location.objects.first().slug)
         ]
         params = {"slug__niew": [endswith]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(slug__iendswith=endswith),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(slug__iendswith=endswith),
         )
 
-    def test_site_slug_regex(self):
+    def test_location_slug_regex(self):
         params = {"slug__re": ["-1$"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.filter(slug__regex="-1$"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(slug__regex="-1$"),
         )
 
-    def test_site_slug_regex_negation(self):
+    def test_location_slug_regex_negation(self):
         params = {"slug__nre": ["-1$"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(slug__regex="-1$"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(slug__regex="-1$"),
         )
 
-    def test_site_slug_iregex(self):
-        params = {"slug__ire": ["SITE"]}
+    def test_location_slug_iregex(self):
+        params = {"slug__ire": ["location"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.filter(slug__iregex="SITE"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(slug__iregex="location"),
         )
 
-    def test_site_slug_iregex_negation(self):
-        params = {"slug__nire": ["SITE"]}
+    def test_location_slug_iregex_negation(self):
+        params = {"slug__nire": ["location"]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(slug__iregex="SITE"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(slug__iregex="location"),
         )
 
-    def test_site_asn_lt(self):
-        asn = dcim_models.Site.objects.filter(asn__isnull=False).first().asn
+    def test_location_asn_lt(self):
+        asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__lt": [asn]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs, dcim_models.Site.objects.filter(asn__lt=asn)
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(asn__lt=asn),
         )
 
-    def test_site_asn_lte(self):
-        asn = dcim_models.Site.objects.filter(asn__isnull=False).first().asn
+    def test_location_asn_lte(self):
+        asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__lte": [asn]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs, dcim_models.Site.objects.filter(asn__lte=asn)
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(asn__lte=asn),
         )
 
-    def test_site_asn_gt(self):
-        asn = dcim_models.Site.objects.filter(asn__isnull=False).first().asn
+    def test_location_asn_gt(self):
+        asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__gt": [asn]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs, dcim_models.Site.objects.filter(asn__gt=asn)
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(asn__gt=asn),
         )
 
-    def test_site_asn_gte(self):
-        asn = dcim_models.Site.objects.filter(asn__isnull=False).first().asn
+    def test_location_asn_gte(self):
+        asn = dcim_models.Location.objects.filter(asn__isnull=False).first().asn
         params = {"asn__gte": [asn]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs, dcim_models.Site.objects.filter(asn__gte=asn)
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.filter(asn__gte=asn),
         )
 
-    def test_site_region_negation(self):
-        params = {"region__n": ["region-1"]}
+    def test_location_parent_negation(self):
+        params = {"parent__n": [self.locations[0].parent.slug]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(region__slug="region-1"),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(parent__slug__in=[self.locations[0].parent.slug]),
         )
 
-    def test_site_region_id_negation(self):
-        params = {"region__n": [self.regions[0].pk]}
+    def test_location_parent_id_negation(self):
+        params = {"parent__n": [self.locations[0].parent.pk]}
         self.assertQuerysetEqual(
-            dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(region__in=self.regions[0].descendants(include_self=True)),
+            dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
+            dcim_models.Location.objects.exclude(parent__in=[self.locations[0].parent.pk]),
         )
 
     def test_device_name_eq(self):
@@ -1142,12 +1139,12 @@ class DynamicFilterLookupExpressionTest(TestCase):
 class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     """Tests for `BaseFilterTestCase.get_filterset_test_values()`."""
 
-    queryset = dcim_models.Site.objects.filter(name__startswith="getfiltersettest")
-    exception_message = "Cannot find valid test data for Site field description"
+    queryset = dcim_models.Location.objects.filter(name__startswith="getfiltersettest")
+    exception_message = "Cannot find valid test data for Location field description"
 
     @classmethod
     def setUpTestData(cls):
-        statuses = extras_models.Status.objects.get_for_model(dcim_models.Site)
+        statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
         cls.status_active = statuses.get(slug="active")
 
     def test_empty_queryset(self):
@@ -1155,28 +1152,42 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
             self.get_filterset_test_values("description")
 
     def test_object_return_count(self):
+        location_type = LocationType.objects.get(name="Campus")
         for n in range(1, 11):
-            dcim_models.Site.objects.create(
-                name=f"getfiltersettestSite{n}", status=self.status_active, description=f"description {n}"
+            dcim_models.Location.objects.create(
+                name=f"getfiltersettestLocation{n}",
+                status=self.status_active,
+                description=f"description {n}",
+                location_type=location_type,
             )
         test_values = self.get_filterset_test_values("description", self.queryset)
         self.assertNotEqual(len(test_values), 0)
         self.assertNotEqual(len(test_values), self.queryset.count())
 
     def test_insufficient_unique_values(self):
-        dcim_models.Site.objects.create(name="getfiltersettestUniqueSite", description="UniqueSite description")
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
+        dcim_models.Location.objects.create(
+            name="getfiltersettestUniqueLocation", description="UniqueLocation description", location_type=location_type
+        )
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
-        dcim_models.Site.objects.create(name="getfiltersettestSite1", status=self.status_active)
-        dcim_models.Site.objects.create(name="getfiltersettestSite2", status=self.status_active)
+        dcim_models.Location.objects.create(
+            name="getfiltersettestLocation1", status=self.status_active, location_type=location_type
+        )
+        dcim_models.Location.objects.create(
+            name="getfiltersettestLocation2", status=self.status_active, location_type=location_type
+        )
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
 
     def test_no_unique_values(self):
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
         for n in range(1, 11):
-            dcim_models.Site.objects.create(name=f"getfiltersettestSite{n}", status=self.status_active)
-        for site in self.queryset:
-            site.delete()
+            dcim_models.Location.objects.create(
+                name=f"getfiltersettestLocation{n}", status=self.status_active, location_type=location_type
+            )
+        for location in self.queryset:
+            location.delete()
             with self.assertRaisesMessage(ValueError, self.exception_message):
                 self.get_filterset_test_values("description")
 
@@ -1184,24 +1195,45 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
 class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     """Tests for the `SearchFilter` filter class."""
 
-    filterset_class = dcim_filters.SiteFilterSet
+    filterset_class = dcim_filters.LocationFilterSet
 
     def setUp(self):
 
         super().setUp()
-
-        self.region1 = dcim_models.Region.objects.create(name="Test Region 1", slug="test-region-1")
-        self.region2 = dcim_models.Region.objects.create(name="Test Region 2", slug="test-region-2")
-        self.site1 = dcim_models.Site.objects.create(
-            region=self.region1, name="Test Site 1", slug="test-site1", asn=1234
+        self.lt = dcim_models.LocationType.objects.get(name="Campus")
+        self.parent_location_1 = Location.objects.create(
+            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.lt
         )
-        self.site2 = dcim_models.Site.objects.create(
-            region=self.region2, name="Test Site 2", slug="test-site2", asn=12345
+        self.parent_location_2 = Location.objects.create(
+            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.lt
         )
-        self.site3 = dcim_models.Site.objects.create(region=None, name="Test Site 3", slug="test-site3")
-        self.site4 = dcim_models.Site.objects.create(region=None, name="Test Site4", slug="test-site4")
-
-        self.queryset = dcim_models.Site.objects.all()
+        self.child_location_1 = Location.objects.create(
+            parent=self.parent_location_1,
+            name="Test Child Location 1",
+            slug="test-child-location1",
+            location_type=self.lt,
+            asn=1234,
+        )
+        self.child_location_2 = Location.objects.create(
+            parent=self.parent_location_2,
+            name="Test Child Location 2",
+            slug="test-child-location2",
+            location_type=self.lt,
+            asn=12345,
+        )
+        self.child_location_3 = Location.objects.create(
+            parent=None,
+            name="Test Child Location 3",
+            slug="test-child-location3",
+            location_type=self.lt,
+        )
+        self.child_location_4 = Location.objects.create(
+            parent=None,
+            name="Test Child Location4",
+            slug="test-child-location4",
+            location_type=self.lt,
+        )
+        self.queryset = dcim_models.Location.objects.all()
 
     def get_filterset_count(self, params, klass=None):
         """To save ourselves some boilerplate."""
@@ -1211,18 +1243,19 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
     def test_default_icontains(self):
         """Test a default search for an "icontains" value."""
-        params = {"q": "Test Site"}
+        params = {"q": "Test Child Location"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site")
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location")
         )
-        params = {"q": "Test Site 3"}
+        params = {"q": "Test Child Location 3"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site 3")
+            self.filterset_class(params, self.queryset).qs,
+            self.queryset.filter(name__icontains="Test Child Location 3"),
         )
         # Trailing space should only match the first 3.
-        params = {"q": "Test Site "}
+        params = {"q": "Test Child Location "}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site ")
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location ")
         )
 
     def test_default_exact(self):
@@ -1232,7 +1265,10 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
         asn = (
-            dcim_models.Site.objects.exclude(asn="1234").exclude(asn__isnull=True).values_list("asn", flat=True).first()
+            dcim_models.Location.objects.exclude(asn="1234")
+            .exclude(asn__isnull=True)
+            .values_list("asn", flat=True)
+            .first()
         )
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
@@ -1242,7 +1278,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     def test_default_id(self):
         """Test default search on "id" field."""
         # Search is iexact so UUID search for lower/upper return the same result.
-        obj_pk = str(self.site1.pk)
+        obj_pk = str(self.child_location_1.pk)
         params = {"q": obj_pk.lower()}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(id__iexact=obj_pk.lower())
@@ -1255,33 +1291,33 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     def test_typed_valid(self):
         """Test that validly-typed predicate mappings are handled correctly."""
 
-        class MySiteFilterSet(dcim_filters.SiteFilterSet):
+        class MyLocationFilterSet(dcim_filters.LocationFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
         params = {"q": "1234"}
         self.assertQuerysetEqualAndNotEmpty(
-            MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
+            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
         params = {"q": "123"}
         # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
-        self.assertQuerysetEqual(MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="123"))
+        self.assertQuerysetEqual(MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="123"))
 
         # Further an invalid type (e.g. dict) will just result in the predicate for ASN to be skipped
-        class MySiteFilterSet2(dcim_filters.SiteFilterSet):
+        class MyLocationFilterSet2(dcim_filters.LocationFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "1234"}
         # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet2), 0)
+        self.assertEqual(self.get_filterset_count(params, MyLocationFilterSet2), 0)
 
     def test_typed_icontains(self):
         """Test a preprocessor to strip icontains (which wouldn't be by default)."""
 
-        class MySiteFilterSet(dcim_filters.SiteFilterSet):
+        class MyLocationFilterSet(dcim_filters.LocationFilterSet):
             """Overload the default just to illustrate that it's all we're testing for here."""
 
             q = filters.SearchFilter(
@@ -1289,13 +1325,13 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             )
 
         # Both searches should return the same results.
-        params = {"q": "Test Site"}
+        params = {"q": "Test Child Location"}
         self.assertQuerysetEqualAndNotEmpty(
-            MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site")
+            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location")
         )
-        params = {"q": "Test Site "}
+        params = {"q": "Test Child Location "}
         self.assertQuerysetEqualAndNotEmpty(
-            MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site")
+            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Child Location")
         )
 
     def test_typed_invalid(self):
@@ -1304,7 +1340,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         with self.assertRaises(TypeError):
             barf = None
 
-            class BarfSiteFilterSet(dcim_filters.SiteFilterSet):  # pylint: disable=unused-variable
+            class BarfLocationFilterSet(dcim_filters.LocationFilterSet):  # pylint: disable=unused-variable
                 q = filters.SearchFilter(
                     filter_predicates={
                         "asn": {"preprocessor": barf, "lookup_expr": "exact"},
@@ -1314,13 +1350,13 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         # Missing preprocessor callable in expanded form should also fail
         with self.assertRaises(TypeError):
 
-            class MissingSiteFilterSet(dcim_filters.SiteFilterSet):  # pylint: disable=unused-variable
+            class MissingLocationFilterSet(dcim_filters.LocationFilterSet):  # pylint: disable=unused-variable
                 q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact"}})
 
         # Incorrect lookup_info type (must be str or dict)
         with self.assertRaises(TypeError):
 
-            class InvalidSiteFilterSet(dcim_filters.SiteFilterSet):  # pylint: disable=unused-variable
+            class InvalidLocationFilterSet(dcim_filters.LocationFilterSet):  # pylint: disable=unused-variable
                 q = filters.SearchFilter(filter_predicates={"asn": ["icontains"]})
 
 

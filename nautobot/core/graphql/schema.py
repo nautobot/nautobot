@@ -37,7 +37,7 @@ from nautobot.dcim.graphql.types import (
     PowerPortType,
     RackType,
     RearPortType,
-    SiteType,
+    LocationType,
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship
@@ -63,7 +63,7 @@ registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
 registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
-registry["graphql_types"]["dcim.site"] = SiteType
+registry["graphql_types"]["dcim.location"] = LocationType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
 registry["graphql_types"]["ipam.aggregate"] = AggregateType

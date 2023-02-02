@@ -54,7 +54,7 @@ class APIDocsTestCase(TestCase):
 
     def setUp(self):
         # Populate a CustomField to activate CustomFieldSerializer
-        content_type = ContentType.objects.get_for_model(dcim_models.Site)
+        content_type = ContentType.objects.get_for_model(dcim_models.Location)
         self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")
         self.cf_text.save()
         self.cf_text.content_types.set([content_type])
@@ -265,14 +265,14 @@ class LookupTypeChoicesTestCase(testing.APITestCase):
             self.assertEqual(response.data, "content_type not found")
 
         with self.subTest("Test invalid field_name"):
-            response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
+            response = self.client.get(url + "?content_type=dcim.location&field_name=fake", **self.header)
 
             self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_choices(self):
         url = reverse("core-api:filtersetfield-list-lookupchoices")
-        response = self.client.get(url + "?content_type=dcim.site&field_name=status", **self.header)
+        response = self.client.get(url + "?content_type=dcim.location&field_name=status", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -304,14 +304,14 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             self.assertEqual(response.data, "content_type not found")
 
         with self.subTest("Test invalid field_name"):
-            response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
+            response = self.client.get(url + "?content_type=dcim.location&field_name=fake", **self.header)
 
             self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
-        response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
+        response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(

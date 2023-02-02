@@ -5,7 +5,7 @@ from nautobot.dcim import models
 
 class NaturalOrderByManagerTest(TestCase):
     """
-    Ensure consistent natural ordering given myriad sample data. We use dcim.Site as our guinea pig because it's simple.
+    Ensure consistent natural ordering given myriad sample data. We use dcim.Location as our guinea pig because it's simple.
     """
 
     def setUp(self):
@@ -13,16 +13,19 @@ class NaturalOrderByManagerTest(TestCase):
 
     def evaluate_ordering(self, names):
 
-        # Create the Sites
-        models.Site.objects.bulk_create(models.Site(name=name, slug=name.lower()) for name in names)
+        # Create the Locations
+        location_type = models.LocationType.objects.get(name="Campus")
+        models.Location.objects.bulk_create(
+            models.Location(name=name, slug=name.lower(), location_type=location_type) for name in names
+        )
 
         # Validate forward ordering
-        self.assertEqual(names, list(models.Site.objects.filter(name__in=names).values_list("name", flat=True)))
+        self.assertEqual(names, list(models.Location.objects.filter(name__in=names).values_list("name", flat=True)))
 
         # Validate reverse ordering
         self.assertEqual(
             list(reversed(names)),
-            list(models.Site.objects.filter(name__in=names).reverse().values_list("name", flat=True)),
+            list(models.Location.objects.filter(name__in=names).reverse().values_list("name", flat=True)),
         )
 
     def test_leading_digits(self):
