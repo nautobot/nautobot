@@ -11,7 +11,7 @@ from rest_framework.routers import APIRootView
 from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
+from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
     Aggregate,
@@ -92,7 +92,7 @@ class AggregateViewSet(NautobotModelViewSet):
 #
 
 
-class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
         "role",
         "site",
@@ -289,7 +289,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
     retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
     update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
 )
-class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
         "nat_inside",
         "status",
@@ -348,7 +348,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
-class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
             "vlan_group",

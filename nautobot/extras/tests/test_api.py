@@ -1765,7 +1765,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         "type_update": True,
         "type_delete": False,
     }
-    validation_excluded_fields = []
     api_version = "1.3"
 
     @classmethod
@@ -1904,7 +1903,6 @@ class JobTestVersion13(
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
     }
-    validation_excluded_fields = []
 
     run_success_response_status = status.HTTP_201_CREATED
     api_version = "1.3"

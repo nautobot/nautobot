@@ -726,7 +726,7 @@ class APITransactionTestCase(_APITransactionTestCase, mixins.NautobotTestCaseMix
         """
         Create a superuser and token for API calls.
         """
-        super().setUpNautobot()
+        super().setUpNautobot(populate_status=True)
         self.user.is_superuser = True
         self.user.save()
         self.token = users_models.Token.objects.create(user=self.user)

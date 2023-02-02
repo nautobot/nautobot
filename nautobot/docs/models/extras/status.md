@@ -59,11 +59,12 @@ Any model form that is intended to have a `status` field must inherit from one o
 
 - FIXME: CSV import forms
 
-### `StatusSerializerField` serializer field
+### `StatusModelSerializerMixin` serializer mixin
 
-Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
+Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.nested_serializers.NestedStatusSerializer` to the serializer.
 
-The `StatusSerializerField` is a writable slug-related choice field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be converted to lowercase.
++/- 2.0.0
+    This mixin was changed to use a `NestedStatusSerializer`; the former `StatusSerializerField` was removed from Nautobot.
 
 ### Table field
 

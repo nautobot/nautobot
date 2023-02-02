@@ -19,7 +19,6 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.utils import (
     get_serializer_for_model,
     SerializerForAPIVersions,
@@ -255,7 +254,6 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
@@ -365,7 +363,6 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 
 
 class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
@@ -436,7 +433,6 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
 
 
 class ImageAttachmentViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
@@ -1065,7 +1061,6 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 
 class NoteViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -1085,7 +1080,6 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     Retrieve a list of recent changes.
     """
 
-    metadata_class = ContentTypeMetadata
     queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
@@ -1097,14 +1091,12 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 
 
 class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
     filterset_class = filters.RelationshipFilterSet
 
 
 class RelationshipAssociationViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
@@ -1169,14 +1161,6 @@ class StatusViewSet(NautobotModelViewSet):
     queryset = Status.objects.all()
     serializer_class = serializers.StatusSerializer
     filterset_class = filters.StatusFilterSet
-
-
-class StatusViewSetMixin(ModelViewSet):
-    """
-    Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
-    """
-
-    metadata_class = StatusFieldMetadata
 
 
 #

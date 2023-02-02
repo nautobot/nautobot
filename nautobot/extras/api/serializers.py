@@ -31,7 +31,6 @@ from nautobot.dcim.api.nested_serializers import (
     NestedSiteSerializer,
 )
 from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
-from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -168,25 +167,13 @@ class NautobotModelSerializer(
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
-    status = StatusSerializerField(queryset=Status.objects.all())
+    status = NestedStatusSerializer()
 
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "status")
         return fields
-
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def status_choices(cls):  # pylint: disable=no-self-argument
-        """
-        Get the list of valid status values for this serializer.
-
-        In the case where multiple serializers have the same set of status choices, it's necessary to set
-        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] for at least one of the matching serializers,
-        or else drf-spectacular will report:
-        'enum naming encountered a non-optimally resolvable collision for fields named "status"'
-        """
-        return list(cls().fields["status"].get_choices().keys())
 
 
 class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
