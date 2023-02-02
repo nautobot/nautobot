@@ -33,7 +33,7 @@ def set_prefix_type(apps, schema_editor):
         status_container = Status.objects.get(slug="container")
         status_container.content_types.remove(prefix_ct)
         if not status_container.content_types.exists():
-            print("Removing unused status container")
+            print("Removing unused Status: 'container'")
             status_container.delete()
 
 
