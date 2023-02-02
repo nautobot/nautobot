@@ -431,6 +431,10 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
         "label": "IPv4"
     },
     "prefix": "192.0.2.0/24",
+    "type": {
+        "value": "container",
+        "label": "Container"
+    },
     "site": {
         "id": "b9edf2ee-cad9-48be-9921-006294bff730",
         "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
@@ -441,8 +445,8 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
     "tenant": null,
     "vlan": null,
     "status": {
-        "value": "container",
-        "label": "Container"
+        "value": "reserved",
+        "label": "Reserved"
     },
     "role": {
         "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",

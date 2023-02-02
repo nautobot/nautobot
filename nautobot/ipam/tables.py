@@ -361,6 +361,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "prefix",
+            "type",
             "status",
             "children",
             "vrf",
@@ -369,7 +370,6 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "location",
             "vlan",
             "role",
-            "type",
             "description",
         )
         default_columns = (
