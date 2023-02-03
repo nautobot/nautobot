@@ -491,7 +491,7 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-        location_type = LocationType.objects.get("Campus")
+        location_type = LocationType.objects.get(name="Campus")
         location = Location(name="this location has a matching name", slug="location1", location_type=location_type)
 
         with self.assertRaises(ValidationError):
