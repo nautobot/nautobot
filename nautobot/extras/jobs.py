@@ -1212,7 +1212,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.refresh_from_db()
         job.logger.info(f"Job completed in {job_result.duration}")
 
-        # TODO(jathan): For now this is only output from `post_run()` which is# not straightforward.
+        # TODO(jathan): For now this is only output from `post_run()` which is not straightforward.
         # We need to think about what we want to be returned from job runs and stored as
         # `JobResult.result`, otherwise it will always be `None`.
         return output

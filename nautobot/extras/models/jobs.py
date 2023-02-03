@@ -569,24 +569,16 @@ class JobResult(BaseModel, CustomFieldModel):
     worker = models.CharField(max_length=100, default=None, null=True)
     task_args = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    content_type = models.CharField(
-        default="application/x-nautobot-json",
-        max_length=128,
-        verbose_name=("Result Content Type"),
-        help_text="Content type of the result data",
-    )
-    content_encoding = models.CharField(
-        default="utf-8",
-        max_length=64,
-        verbose_name=("Result Encoding"),
-        help_text="The encoding used to save the task result data",
-    )
+    # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
+    # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
+    # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
+    # eliminated for our implmentation
     result = models.TextField(
         null=True,
         default=None,
         editable=False,
         verbose_name="Result Data",
-        help_text="The data returned by the task. Use content_encoding and content_type fields to read.",
+        help_text="The data returned by the task",
     )
     traceback = models.TextField(blank=True, null=True)
     meta = models.JSONField(null=True, default=None, editable=False)

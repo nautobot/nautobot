@@ -96,6 +96,8 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     # Instead of a context manager, we're just explicitly creating a `NautobotFakeRequest`.
     wrapped_request = copy_safe_request(request)
 
+    # This runs the job synchronously in the current thread as if it were being executed by a
+    # worker, therefore resulting in updating the `JobResult` as expected.
     celery_result = run_job.apply(
         kwargs=dict(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk),
         task_id=job_result.task_id,

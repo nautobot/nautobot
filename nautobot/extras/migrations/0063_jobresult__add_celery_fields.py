@@ -58,16 +58,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="jobresult",
-            name="content_encoding",
-            field=models.CharField(default="utf-8", max_length=64),
-        ),
-        migrations.AddField(
-            model_name="jobresult",
-            name="content_type",
-            field=models.CharField(default="application/x-nautobot-json", max_length=128),
-        ),
-        migrations.AddField(
-            model_name="jobresult",
             name="meta",
             field=models.JSONField(default=None, editable=False, null=True),
         ),
