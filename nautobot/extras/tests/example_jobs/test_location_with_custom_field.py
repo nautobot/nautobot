@@ -19,9 +19,9 @@ class TestCreateLocationWithCustomField(Job):
 
         self.log_success(obj=cf, message="CustomField created successfully.")
 
-        location_type = LocationType.objects.get(name="Campus")
+        location_type = LocationType.objects.create(name="Test Location Type 1")
         location_1 = Location.objects.create(
-            name="Test Site One", slug="test-location-one", location_type=location_type
+            name="Test Location", slug="test-location-one", location_type=location_type
         )
         # 2.0 TODO: #824 cf.slug rather than cf.name
         location_1.cf[cf.name] = "some-value"
