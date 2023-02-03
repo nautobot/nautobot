@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    DynamicGroup,
     Webhook,
 )
 from nautobot.extras.utils import get_job_content_type
@@ -122,6 +123,9 @@ class ConfigContextTest(TestCase):
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
+        self.dynamic_group = DynamicGroup.objects.create(
+            name="Dynamic Group", content_type=ContentType.objects.get_for_model(Device)
+        )
 
         self.device = Device.objects.create(
             name="Device 1",
@@ -197,6 +201,10 @@ class ConfigContextTest(TestCase):
         tenant_context.tenants.add(self.tenant)
         tag_context = ConfigContext.objects.create(name="tag", weight=100, data={"tag": 1})
         tag_context.tags.add(self.tag)
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic group", weight=100, data={"dynamic_group": 1}
+        )
+        dynamic_group_context.dynamic_group.add(self.dynamic_group)
 
         device = Device.objects.create(
             name="Device 2",
@@ -212,7 +220,7 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "site", "region", "platform", "tenant_group", "tenant", "tag"]:
+        for key in ["location", "site", "region", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
