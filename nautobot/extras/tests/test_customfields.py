@@ -1957,7 +1957,7 @@ class CustomFieldChoiceTest(TestCase):
 class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
-        location_type = LocationType.objects.get(name="Campus")
+        location_type = LocationType.objects.create(name="Root Type 1")
         location = Location(name="Location 1", slug="location-1", location_type=location_type)
         location.save()
 
@@ -1983,7 +1983,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.save()
         logging.disable(logging.ERROR)
         cf.content_types.set([obj_type])
-        location_type = LocationType.objects.get(name="Campus")
+        location_type = LocationType.objects.create(name="Root Type 2")
         location = Location(
             name="Location 1",
             slug="location-1",
@@ -2015,7 +2015,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
-        location_type = LocationType.objects.get(name="Campus")
+        location_type = LocationType.objects.create(name="Root Type 3")
         location = Location(
             name="Location 1", slug="location-1", _custom_field_data={"cf1": "Foo"}, location_type=location_type
         )
@@ -2105,7 +2105,7 @@ class CustomFieldTableTest(TestCase):
         statuses = Status.objects.get_for_model(Location)
 
         # Create a location
-        location_type = LocationType.objects.get(name="Campus")
+        location_type = LocationType.objects.create(name="Root Type 4")
         self.location = Location.objects.create(
             name="Location Custom", slug="location-1", status=statuses.get(slug="active"), location_type=location_type
         )
