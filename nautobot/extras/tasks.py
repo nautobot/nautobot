@@ -175,3 +175,15 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
         raise requests.exceptions.RequestException(
             f"Status {response.status_code} returned with content '{response.content}', webhook FAILED to process."
         )
+
+
+# TODO(jathan): Delete these two functions before we ship this. These are handy
+# for Jobs v2 testing for now.
+@nautobot_task
+def add(x, y):
+    return x + y
+
+
+@nautobot_task
+def fail():
+    raise Exception("You have failed.")

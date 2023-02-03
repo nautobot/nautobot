@@ -1167,7 +1167,8 @@ class JobAPIRunTestMixin:
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.default_job_name = "local/api_test_job/APITestJob"
+        self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
         self.job_model.validated_save()
 
@@ -1231,7 +1232,7 @@ class JobAPIRunTestMixin:
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path(self.default_job_name)
         job_model.enabled = False
         job_model.save()
 
@@ -1355,8 +1356,8 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        # Assert that a JobResult was NOT created.
-        self.assertFalse(JobResult.objects.exists())
+        # Assert that a JobResult for this job was NOT created.
+        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
         # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
@@ -1383,7 +1384,7 @@ class JobAPIRunTestMixin:
 
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
-        deserialized_data = get_job("local/api_test_job/APITestJob").deserialize_data(job_data)
+        deserialized_data = get_job(self.default_job_name).deserialize_data(job_data)
 
         self.assertEqual(
             deserialized_data,
@@ -1394,12 +1395,12 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.last()
-        self.assertIn("data", job_result.job_kwargs)
+        job_result = JobResult.objects.get(name=self.default_job_name)
+        self.assertIn("data", job_result.task_kwargs)
 
-        # Ensure the stored job_kwargs deserialize to the same as originally inputted
+        # Ensure the stored task_kwargs deserialize to the same as originally inputted
         self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.job_kwargs["data"]), deserialized_data
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
         return (response, job_result)  # so subclasses can do additional testing
@@ -1585,7 +1586,7 @@ class JobAPIRunTestMixin:
                 "name": "test",
             },
         }
-        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job = Job.objects.get_for_class_path(self.default_job_name)
         job.has_sensitive_variables = True
         job.has_sensitive_variables_override = True
         job.validated_save()
@@ -1594,8 +1595,8 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.last()
-        self.assertEqual(job_result.job_kwargs, None)
+        job_result = JobResult.objects.get(name=self.default_job_name)
+        self.assertEqual(job_result.task_kwargs, None)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -2133,7 +2134,7 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["completed", "created", "display", "id", "name", "status", "url", "user"]
+    brief_fields = ["date_created", "date_done", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2145,37 +2146,37 @@ class JobResultTest(
             job_model=jobs[0],
             name=jobs[0].class_path,
             obj_type=job_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
-            status=JobResultStatusChoices.STATUS_COMPLETED,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
             data={"output": "\nRan for 3 seconds"},
-            job_kwargs=None,
+            task_kwargs=None,
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=None,
             name="Git Repository",
             obj_type=git_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
-            status=JobResultStatusChoices.STATUS_COMPLETED,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
             data=None,
-            job_kwargs={"repository_pk": uuid.uuid4()},
+            task_kwargs={"repository_pk": uuid.uuid4()},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=jobs[1],
             name=jobs[1].class_path,
             obj_type=job_ct,
-            completed=None,
+            date_done=None,
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
-            job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
+            task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
 
@@ -2202,7 +2203,7 @@ class JobLogEntryTest(
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 

@@ -37,6 +37,8 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
     job_result.save()
     if request:
         change_context = JobChangeContext(user=request.user)
+        # TODO(jathan): Review how we can eliminate these deliberate `set_status()` and `save()`
+        # calls,moving them to Celery-friendly primitives instead.
         with change_logging(change_context):
             for entry in get_datasource_contents(model_name):
                 job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
@@ -46,18 +48,20 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
                     job_result.log(
                         f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE
                     )
-                    job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+                    job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
                 job_result.save()
             job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
             job_result.save()
     else:
+        # TODO(jathan): Review how we can eliminate these deliberate `set_status()` and `save()`
+        # calls,moving them to Celery-friendly primitives instead.
         for entry in get_datasource_contents(model_name):
             job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
             try:
                 entry.callback(record, job_result, delete=delete)
             except Exception as exc:
                 job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
-                job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+                job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.save()
         job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
         job_result.save()

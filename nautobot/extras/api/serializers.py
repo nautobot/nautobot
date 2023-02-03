@@ -844,16 +844,16 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
         model = JobResult
         fields = [
             "url",
-            "created",
-            "completed",
+            "date_created",
+            "date_done",
             "name",
             "job_model",
             "obj_type",
             "status",
             "user",
             "data",
-            "job_id",
-            "job_kwargs",
+            "task_id",
+            "task_kwargs",
             "schedule",
         ]
 

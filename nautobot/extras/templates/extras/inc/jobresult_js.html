@@ -2,7 +2,7 @@
 {% load static %}
 
 <script type="text/javascript">
-{% if not result.completed %}
+{% if not result.date_done %}
 var pending_result_id = "{{ result.pk }}";
 {% else %}
 var pending_result_id = null;

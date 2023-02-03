@@ -453,7 +453,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
-    job_kwargs = {
+    task_kwargs = {
         "data": data,
         "request": copy_safe_request(request),
         "user": request.user.pk,
@@ -492,7 +492,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
         job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
-        kwargs=job_kwargs,
+        kwargs=task_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
@@ -709,10 +709,10 @@ class JobViewSet(
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
             .defer("data")
-            .order_by("created")
+            .order_by("date_created")
         }
 
         job_models = Job.objects.restrict(request.user, "view")
@@ -758,7 +758,7 @@ class JobViewSet(
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
             name=job.class_path,
-            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+            status__in=JobResultStatusChoices.READY_STATES,
         ).first()
 
         serializer = serializers.JobClassDetailSerializer(job, context={"request": request})

@@ -107,11 +107,11 @@ class JobTest(TransactionTestCase):
             obj_type=job_content_type,
             job_model=job_model,
             user=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
         job_result = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
     def test_job_pass(self):
         """
@@ -120,7 +120,7 @@ class JobTest(TransactionTestCase):
         module = "test_pass"
         name = "TestPass"
         job_result = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
     def test_job_fail(self):
         """
@@ -131,7 +131,7 @@ class JobTest(TransactionTestCase):
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
         logging.disable(logging.NOTSET)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
     def test_field_default(self):
         """
@@ -193,7 +193,7 @@ class JobTest(TransactionTestCase):
         module = "test_read_only_pass"
         name = "TestReadOnlyPass"
         job_result = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
 
     def test_read_only_job_fail(self):
@@ -205,7 +205,7 @@ class JobTest(TransactionTestCase):
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
         logging.disable(logging.NOTSET)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
         run_log = JobLogEntry.objects.filter(grouping="run")
@@ -265,7 +265,7 @@ class JobTest(TransactionTestCase):
         job_result_data = json.loads(log_info.log_object) if log_info.log_object else None
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(form_data, job_result_data)
 
     @override_settings(
@@ -309,7 +309,7 @@ class JobTest(TransactionTestCase):
         ).first()
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual({"role": str(role.pk), "roles": [str(role.pk)]}, job_result_data)
         self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, f"Role: {role.name}")
@@ -329,7 +329,7 @@ class JobTest(TransactionTestCase):
         ).first()
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, "The Region if any that the user provided.")
         self.assertEqual(job_result.data["output"], "\nNice Region (or not)!")
@@ -346,7 +346,7 @@ class JobTest(TransactionTestCase):
         logging.disable(logging.NOTSET)
 
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         log_failure = JobLogEntry.objects.filter(
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
@@ -363,7 +363,7 @@ class JobTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
         logging.disable(logging.NOTSET)
         # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         log_failure = JobLogEntry.objects.filter(
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
@@ -376,13 +376,13 @@ class JobTest(TransactionTestCase):
         module = "test_pass"
         name = "TestPass"
         job_result_1 = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_SUCCESS)
         job_result_2 = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_SUCCESS)
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertGreaterEqual(job_model.results.count(), 2)
         latest_job_result = job_model.latest_result
-        self.assertEqual(job_result_2.completed, latest_job_result.completed)
+        self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
     @mock.patch("nautobot.extras.utils.get_celery_queues")
     def test_job_class_task_queues(self, mock_get_celery_queues):
@@ -500,6 +500,10 @@ class JobFileUploadTest(TransactionTestCase):
         # Run the job
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
+        self.assertIsNotNone(job_result.traceback)
+        # TODO(jathan): If there are more use-cases for asserting class comparison for errors raised
+        # by Jobs, factor this into a test case method.
+        self.assertIn(job_class.exception.__name__, job_result.traceback)
         logging.disable(logging.NOTSET)
 
         # Assert that file contents were correctly read
@@ -634,7 +638,7 @@ class JobSiteCustomFieldTest(CeleryTestCase):
         self.wait_on_active_tasks()
         job_result.refresh_from_db()
 
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
         # Test site with a value for custom_field
         site_1 = Site.objects.filter(slug="test-site-one")
@@ -711,7 +715,7 @@ class JobHookReceiverTest(TransactionTestCase):
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
         logging.disable(logging.NOTSET)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
 class JobHookTest(CeleryTestCase):

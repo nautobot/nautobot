@@ -718,7 +718,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user"):
         name=job.class_path,
         obj_type=ContentType.objects.get_for_model(Job),
         user=user,
-        job_id=uuid.uuid4(),
+        task_id=uuid.uuid4(),
     )
     with web_request_context(user=user) as request:
         run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
