@@ -158,10 +158,6 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-api').each(function(){
         thisobj = $(this)
-        // console.log(thisobj.attr("name"));
-        // console.log(thisobj.val());
-        // console.log(thisobj.attr("data-null-option"));
-        // console.log("===");
         placeholder = thisobj.attr("data-null-option") || "---------";
         thisobj.select2({
             allowClear: true,
@@ -297,7 +293,6 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     results = Object.values(results);
 
                     // Handle the null option, but only add it once
-                    console.log(data.previous)
                     if (element.getAttribute('data-null-option') && data.previous === null) {
                         results.unshift({
                             id: 'null',
