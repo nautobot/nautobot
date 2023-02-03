@@ -491,7 +491,7 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-        location_type = LocationType.objects.create(name="New Root")
+        location_type = LocationType.objects.get("Campus")
         location = Location(name="this location has a matching name", slug="location1", location_type=location_type)
 
         with self.assertRaises(ValidationError):
@@ -538,7 +538,7 @@ class FilterExtensionTest(TestCase):
         Tenant.objects.create(
             name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
         )
-        location_type = LocationType.objects.create(name="New Root")
+        location_type = LocationType.objects.get(name="Campus")
         Location.objects.create(
             name="Location 1",
             slug="location-1",

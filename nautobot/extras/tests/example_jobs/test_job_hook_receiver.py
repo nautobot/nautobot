@@ -12,7 +12,7 @@ class TestJobHookReceiverLog(JobHookReceiver):
 
 class TestJobHookReceiverChange(JobHookReceiver):
     def receive_job_hook(self, change, action, changed_object):
-        location_type = LocationType.objects.create(name="New Root")
+        location_type = LocationType.objects.get(name="Campus")
         Location.objects.create(name="test_jhr", location_type=location_type)
 
 

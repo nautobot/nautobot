@@ -663,7 +663,7 @@ class JobHookReceiverTest(TransactionTestCase):
 
         # generate an ObjectChange by creating a new location
         with web_request_context(self.user):
-            location_type = LocationType.objects.create(name="New Root")
+            location_type = LocationType.objects.get(name="Campus")
             location = Location(name="Test Location 1", location_type=location_type)
             location.save()
         location.refresh_from_db()
@@ -732,7 +732,7 @@ class JobHookTest(CeleryTestCase):
             job=self.job_model,
         )
         obj_type = ContentType.objects.get_for_model(Location)
-        self.location_type = LocationType.objects.get(name="New Root")
+        self.location_type = LocationType.objects.get(name="Campus")
         job_hook.save()
         job_hook.content_types.set([obj_type])
 
