@@ -1180,7 +1180,7 @@ class CustomFieldImportTest(TestCase):
                 "Choice B",
                 '"Choice A,Choice B"',
             ],
-            ["Location 3", "location-3", "Test Root", "active", "", "", "", "", "", ""],
+            ["Location 3", "location-3", "Test Root", "active", "", "", "", "", "", "", ""],
         )
         if "example_plugin" in settings.PLUGINS:
             data[0].append("cf_example_plugin_auto_custom_field")

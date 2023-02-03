@@ -2670,6 +2670,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             data={
                 "name": "New location",
                 "status": "active",
+                "location_type": location_type.pk,
                 "relationships": {
                     self.relationships[0].slug: {
                         "peer": {
