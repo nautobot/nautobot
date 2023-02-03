@@ -892,7 +892,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
         queryset=Job.objects.all(),
         required=False,
         to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -967,7 +967,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         queryset=Job.objects.all(),
         required=False,
         to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     # 2.0 TODO(glenn) filtering by obj_type should be solved by dynamic filter form generation
     name = forms.CharField(required=False)

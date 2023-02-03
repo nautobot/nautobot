@@ -444,67 +444,11 @@ class CreatedUpdatedFilterTest(APITestCase):
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
 
-class CustomFieldTestVersion12(APIViewTestCases.APIViewTestCase):
-    """Tests for the API version 1.2/1.3 CustomField REST API."""
+class CustomFieldTest(APIViewTestCases.APIViewTestCase):
+    """Tests for the CustomField REST API."""
 
     model = CustomField
-    api_version = "1.2"
     brief_fields = ["display", "id", "name", "url"]
-    create_data = [
-        {
-            "content_types": ["dcim.site"],
-            "name": "cf4",
-            "type": "date",
-        },
-        {
-            "content_types": ["dcim.site"],
-            "name": "cf5",
-            "type": "url",
-        },
-        {
-            "content_types": ["dcim.site"],
-            "name": "cf6",
-            "type": "select",
-            "label": "Custom Field 6",
-        },
-    ]
-    update_data = {
-        "content_types": ["dcim.site"],
-        "name": "cf1",
-        "label": "foo",
-    }
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["filter_logic", "type"]
-    slug_source = "label"
-    slugify_function = staticmethod(slugify_dashes_to_underscores)
-
-    @classmethod
-    def setUpTestData(cls):
-        site_ct = ContentType.objects.get_for_model(Site)
-
-        custom_fields = (
-            CustomField(name="cf1", type="text"),
-            CustomField(name="cf2", type="integer"),
-            CustomField(name="cf3", type="boolean"),
-        )
-        for cf in custom_fields:
-            cf.validated_save()
-            cf.content_types.add(site_ct)
-
-    def test_create_object(self):
-        super(APIViewTestCases.APIViewTestCase, self).test_create_object()
-        # Verify that label is auto-populated when not specified
-        for create_data in self.create_data:
-            instance = self._get_queryset().get(name=create_data["name"])
-            self.assertEqual(instance.label, create_data.get("label", instance.name))
-
-
-class CustomFieldTestVersion14(CustomFieldTestVersion12):
-    """Tests for the API version 1.4+ CustomField REST API."""
-
-    api_version = "1.4"
     create_data = [
         {
             "content_types": ["dcim.site"],
@@ -535,6 +479,12 @@ class CustomFieldTestVersion14(CustomFieldTestVersion12):
         "description": "New description",
         "label": "Non-unique label",
     }
+    bulk_update_data = {
+        "description": "New description",
+    }
+    choices_fields = ["filter_logic", "type"]
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -550,7 +500,7 @@ class CustomFieldTestVersion14(CustomFieldTestVersion12):
             cf.content_types.add(site_ct)
 
     def test_create_object(self):
-        super(APIViewTestCases.APIViewTestCase, self).test_create_object()
+        super().test_create_object()
         # 2.0 TODO: #824 remove name entirely
         # For now, check that name is correctly populated in the model even though it's not an API field.
         for create_data in self.create_data:
@@ -1163,10 +1113,52 @@ class ImageAttachmentTest(
         )
 
 
-class JobAPIRunTestMixin:
-    """
-    Mixin providing test cases for the "run" API endpoint, shared between the different versions of Job API testing.
-    """
+class JobTest(
+    # note no CreateObjectViewTestCase - we do not support user creation of Job records
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.UpdateObjectViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
+):
+    """Test cases for the Jobs REST API."""
+
+    model = Job
+    brief_fields = ["display", "grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
+    choices_fields = None
+    update_data = {
+        # source, module_name, job_class_name, installed are NOT editable
+        "grouping_override": True,
+        "grouping": "Overridden grouping",
+        "name_override": True,
+        "name": "Overridden name",
+        "slug": "overridden-slug",
+        "description_override": True,
+        "description": "This is an overridden description.",
+        "enabled": True,
+        "approval_required_override": True,
+        "approval_required": True,
+        "commit_default_override": True,
+        "commit_default": False,
+        "hidden_override": True,
+        "hidden": True,
+        "read_only_override": True,
+        "read_only": True,
+        "soft_time_limit_override": True,
+        "soft_time_limit": 350.1,
+        "time_limit_override": True,
+        "time_limit": 650,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
+        "task_queues": ["default", "priority"],
+        "task_queues_override": True,
+    }
+    bulk_update_data = {
+        "enabled": True,
+        "approval_required_override": True,
+        "approval_required": True,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
+    }
 
     def setUp(self):
         super().setUp()
@@ -1175,12 +1167,69 @@ class JobAPIRunTestMixin:
         self.job_model.enabled = True
         self.job_model.validated_save()
 
-    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
-        """To be implemented by classes using this mixin."""
-        raise NotImplementedError
+    run_success_response_status = status.HTTP_201_CREATED
 
-    # Status code for successful submission of a job or schedule - to be set by subclasses
-    run_success_response_status = None
+    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+        job_model = Job.objects.get_for_class_path(class_path)
+        return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+
+    def test_get_job_variables(self):
+        """Test the job/<pk>/variables API endpoint."""
+        self.add_permissions("extras.view_job")
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
+        self.assertEqual(4, len(response.data))  # 4 variables, in order
+        self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
+        self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
+        self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
+        self.assertEqual(
+            response.data[3],
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.has_sensitive_variables = True
+        job_model.has_sensitive_variables_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "approval_required_override": True,
+            "approval_required": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["approval_required"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.approval_required = True
+        job_model.approval_required_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "has_sensitive_variables": True,
+            "has_sensitive_variables_override": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["has_sensitive_variables"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_run_job_anonymous_not_permitted(self):
@@ -1324,7 +1373,17 @@ class JobAPIRunTestMixin:
         schedule = ScheduledJob.objects.last()
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
-        return (response, schedule)  # so subclasses can do additional testing
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(
+            response.data["schedule"]["url"],
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+        )
+        self.assertEqual(response.data["schedule"]["name"], schedule.name)
+        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1369,8 +1428,6 @@ class JobAPIRunTestMixin:
         self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
-        return (response, schedule)  # so subclasses can do additional testing
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_object_var_lookup(self, mock_get_worker_count):
@@ -1406,7 +1463,17 @@ class JobAPIRunTestMixin:
             get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
-        return (response, job_result)  # so subclasses can do additional testing
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertIsNone(response.data["schedule"])
+        # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
+        data_job_result = response.data["job_result"]
+        del data_job_result["url"]
+        del data_job_result["user"]["url"]
+        expected_data_job_result = NestedJobResultSerializer(job_result, context={"request": None}).data
+        del expected_data_job_result["url"]
+        del expected_data_job_result["user"]["url"]
+        self.assertEqual(data_job_result, expected_data_job_result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1433,8 +1500,6 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        return response  # so subclasses can do additional testing
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_file_data_only(self, mock_get_worker_count):
@@ -1458,8 +1523,6 @@ class JobAPIRunTestMixin:
         url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
-
-        return response  # so subclasses can do additional testing
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1489,11 +1552,10 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        return response  # so subclasses can do additional testing
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future(self, mock_get_worker_count):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         d = Role.objects.get_for_model(Device).first()
@@ -1512,8 +1574,19 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         schedule = ScheduledJob.objects.last()
+        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
 
-        return (response, schedule)  # so subclasses can do additional testing
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(
+            response.data["schedule"]["url"],
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+        )
+        self.assertEqual(response.data["schedule"]["name"], schedule.name)
+        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1643,7 +1716,17 @@ class JobAPIRunTestMixin:
 
         schedule = ScheduledJob.objects.last()
 
-        return (response, schedule)  # so subclasses can do additional testing
+        self.assertIn("schedule", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(
+            response.data["schedule"]["url"],
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+        )
+        self.assertEqual(response.data["schedule"]["name"], schedule.name)
+        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_invalid_data(self):
@@ -1768,7 +1851,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         "type_update": True,
         "type_delete": False,
     }
-    api_version = "1.3"
 
     @classmethod
     def setUpTestData(cls):
@@ -1857,276 +1939,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
             status_code=400,
         )
-
-
-class JobTestVersion13(
-    JobAPIRunTestMixin,
-    # note no CreateObjectViewTestCase - we do not support user creation of Job records
-    APIViewTestCases.GetObjectViewTestCase,
-    APIViewTestCases.ListObjectsViewTestCase,
-    APIViewTestCases.UpdateObjectViewTestCase,
-    APIViewTestCases.DeleteObjectViewTestCase,
-):
-    """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
-
-    model = Job
-    brief_fields = ["display", "grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
-    choices_fields = None
-    update_data = {
-        # source, module_name, job_class_name, installed are NOT editable
-        "grouping_override": True,
-        "grouping": "Overridden grouping",
-        "name_override": True,
-        "name": "Overridden name",
-        "slug": "overridden-slug",
-        "description_override": True,
-        "description": "This is an overridden description.",
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "commit_default_override": True,
-        "commit_default": False,
-        "hidden_override": True,
-        "hidden": True,
-        "read_only_override": True,
-        "read_only": True,
-        "soft_time_limit_override": True,
-        "soft_time_limit": 350.1,
-        "time_limit_override": True,
-        "time_limit": 650,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-        "task_queues": ["default", "priority"],
-        "task_queues_override": True,
-    }
-    bulk_update_data = {
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-    }
-
-    run_success_response_status = status.HTTP_201_CREATED
-    api_version = "1.3"
-
-    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
-        job_model = Job.objects.get_for_class_path(class_path)
-        return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
-
-    def test_get_job_variables(self):
-        """Test the job/<pk>/variables API endpoint."""
-        self.add_permissions("extras.view_job")
-        route = get_route_for_model(self.model, "variables", api=True)
-        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
-        self.assertEqual(4, len(response.data))  # 4 variables, in order
-        self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
-        self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
-        self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
-        self.assertEqual(
-            response.data[3],
-            {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        job_model.has_sensitive_variables = True
-        job_model.has_sensitive_variables_override = True
-        job_model.validated_save()
-
-        url = self._get_detail_url(job_model)
-        data = {
-            "approval_required_override": True,
-            "approval_required": True,
-        }
-
-        self.add_permissions("extras.change_job")
-
-        response = self.client.patch(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["approval_required"][0],
-            "A job with sensitive variables cannot also be marked as requiring approval",
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
-        job_model.approval_required = True
-        job_model.approval_required_override = True
-        job_model.validated_save()
-
-        url = self._get_detail_url(job_model)
-        data = {
-            "has_sensitive_variables": True,
-            "has_sensitive_variables_override": True,
-        }
-
-        self.add_permissions("extras.change_job")
-
-        response = self.client.patch(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["has_sensitive_variables"][0],
-            "A job with sensitive variables cannot also be marked as requiring approval",
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var(self):  # pylint: disable=arguments-differ
-        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
-        response, schedule = super().test_run_job_object_var()
-
-        self.assertIn("schedule", response.data)
-        self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["schedule"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
-        self.assertIsNone(response.data["job_result"])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var_lookup(self):  # pylint: disable=arguments-differ
-        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
-        response, job_result = super().test_run_job_object_var_lookup()
-
-        self.assertIn("schedule", response.data)
-        self.assertIn("job_result", response.data)
-        self.assertIsNone(response.data["schedule"])
-        # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
-        data_job_result = response.data["job_result"]
-        del data_job_result["url"]
-        del data_job_result["user"]["url"]
-        expected_data_job_result = NestedJobResultSerializer(job_result, context={"request": None}).data
-        del expected_data_job_result["url"]
-        del expected_data_job_result["user"]["url"]
-        self.assertEqual(data_job_result, expected_data_job_result)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_future(self):  # pylint: disable=arguments-differ
-        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
-        response, schedule = super().test_run_job_future()
-
-        self.assertIn("schedule", response.data)
-        self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["schedule"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
-        self.assertIsNone(response.data["job_result"])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_future_schedule_kwargs_pk(self):
-        """In addition to the base test case provided by JobAPIRunTestMixin, also verify that kwargs['scheduled_job_pk'] was set in the scheduled job."""
-        _, schedule = super().test_run_job_future()
-
-        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_interval(self):  # pylint: disable=arguments-differ
-        """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
-        response, schedule = super().test_run_job_interval()
-
-        self.assertIn("schedule", response.data)
-        self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["schedule"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
-        self.assertIsNone(response.data["job_result"])
-
-
-class JobTestVersion12(
-    JobAPIRunTestMixin,
-    APITestCase,
-):
-    """Test cases for the Jobs REST API under API version 1.2 - deprecated JobClass-based API pattern."""
-
-    run_success_response_status = status.HTTP_200_OK
-    api_version = "1.2"
-
-    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
-        return reverse("extras-api:job-run", kwargs={"class_path": class_path})
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_list_jobs_anonymous(self):
-        url = reverse("extras-api:job-list")
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_list_jobs_without_permission(self):
-        url = reverse("extras-api:job-list")
-        with disable_warnings("django.request"):
-            response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_list_jobs_with_permission(self):
-        self.add_permissions("extras.view_job")
-        url = reverse("extras-api:job-list")
-        response = self.client.get(url, **self.header)
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        # At a minimum, the job provided by the example plugin should be present
-        self.assertNotEqual(response.data, [])
-        self.assertIn(
-            "plugins/example_plugin.jobs/ExampleJob",
-            [job["id"] for job in response.data],
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_get_job_anonymous(self):
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_job_without_permission(self):
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        with disable_warnings("django.request"):
-            response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_job_with_permission(self):
-        self.add_permissions("extras.view_job")
-        # Try GET to permitted object
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/APITestJob"})
-        response = self.client.get(url, **self.header)
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], "Job for API Tests")
-        self.assertEqual(response.data["vars"]["var1"], "StringVar")
-        self.assertEqual(response.data["vars"]["var2"], "IntegerVar")
-        self.assertEqual(response.data["vars"]["var3"], "BooleanVar")
-
-        # Try GET to non-existent object
-        url = reverse("extras-api:job-detail", kwargs={"class_path": "local/api_test_job/NoSuchJob"})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-
-
-class JobTestVersionDefault(JobTestVersion12):
-    """
-    Test cases for the Jobs REST API when not explicitly requesting a specific API version.
-
-    Currently we default to version 1.2, but this may change in a future major release.
-    """
-
-    api_version = None
 
 
 class JobResultTest(
@@ -3391,52 +3203,14 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     slug_source = "name"
 
 
-class TagTestVersion12(APIViewTestCases.APIViewTestCase):
+class TagTest(APIViewTestCases.APIViewTestCase):
     model = Tag
     brief_fields = ["color", "display", "id", "name", "slug", "url"]
-    create_data = [
-        {
-            "name": "Tag 4",
-            "slug": "tag-4",
-        },
-        {
-            "name": "Tag 5",
-            "slug": "tag-5",
-        },
-        {
-            "name": "Tag 6",
-            "slug": "tag-6",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-
-    def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
-        self.add_permissions("extras.add_tag")
-
-        self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
-
-        tag = Tag.objects.get(slug=self.create_data[0]["slug"])
-        self.assertEqual(
-            tag.content_types.count(),
-            TaggableClassesQuery().as_queryset().count(),
-        )
-
-
-class TagTestVersion13(
-    APIViewTestCases.CreateObjectViewTestCase,
-    APIViewTestCases.UpdateObjectViewTestCase,
-):
-    model = Tag
-    brief_fields = ["color", "display", "id", "name", "slug", "url"]
-    api_version = "1.3"
     create_data = [
         {"name": "Tag 4", "slug": "tag-4", "content_types": [Site._meta.label_lower]},
         {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
         {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
     ]
-    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
