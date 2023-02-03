@@ -61,10 +61,10 @@ Any model form that is intended to have a `status` field must inherit from one o
 
 ### `StatusModelSerializerMixin` serializer mixin
 
-Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.nested_serializers.NestedStatusSerializer` to the serializer.
+Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
 
 +/- 2.0.0
-    This mixin was changed to use a `NestedStatusSerializer`; the former `StatusSerializerField` was removed from Nautobot.
+    The `StatusSerializerField` was changed to use a `NestedStatusSerializer` instead of presenting choices as a list of enums.
 
 ### Table field
 

@@ -342,7 +342,9 @@ class ParallelPrefixTest(APITransactionTestCase):
         status_active = Status.objects.get(slug="active")
 
         # 5 Prefixes
-        requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": status_active.pk} for i in range(1, 6)]
+        requests = [
+            {"prefix_length": 30, "description": f"Test Prefix {i}", "status": status_active.pk} for i in range(1, 6)
+        ]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)

@@ -82,6 +82,8 @@ class DCIMRootView(APIRootView):
 
 
 class PathEndpointMixin:
+
+    # TODO: the OpenAPI schema for this endpoint is wrong since it defaults to the same as "retrieve".
     @action(detail=True, url_path="trace")
     def trace(self, request, pk):
         """

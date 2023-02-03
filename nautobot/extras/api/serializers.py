@@ -3,7 +3,6 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
-from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -83,7 +82,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
-from .fields import MultipleChoiceJSONField
+from .fields import MultipleChoiceJSONField, RoleSerializerField, StatusSerializerField
 from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -167,7 +166,7 @@ class NautobotModelSerializer(
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
-    status = NestedStatusSerializer()
+    status = StatusSerializerField(required=True)
 
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
@@ -1174,10 +1173,6 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 #
 # Roles
 #
-
-
-class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
-    """NestedSerializer field for `Role` object fields."""
 
 
 class RoleModelSerializerMixin(BaseModelSerializer):

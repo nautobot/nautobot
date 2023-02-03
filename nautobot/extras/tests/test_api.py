@@ -95,6 +95,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "label",
         "url",
     ]
+    choices_fields = ["content_type"]
     create_data = [
         {
             "content_type": "dcim.site",
@@ -197,6 +198,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["owner_content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -326,7 +328,7 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = []
+    choices_fields = ["owner_content_type"]
     slug_source = "name"
 
     @classmethod
@@ -602,7 +604,7 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             "new_window": False,
         },
     ]
-    choices_fields = ["button_class"]
+    choices_fields = ["button_class", "content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -704,6 +706,7 @@ class DynamicGroupTestMixin:
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
     brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    choices_fields = ["content_type"]
     create_data = [
         {
             "name": "API DynamicGroup 4",
@@ -2656,7 +2659,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:site-list"),
             data={
                 "name": "New Site",
-                "status": "active",
+                "status": Status.objects.get(slug="active").pk,
                 "relationships": {
                     self.relationships[0].slug: {
                         "peer": {
@@ -2745,10 +2748,16 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 **self.header,
             )
 
+        status_active = Status.objects.get(slug="active")
+
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
-            "post", data=[{"vid": "1", "name": "1", "status": "active"}, {"vid": "2", "name": "2", "status": "active"}]
+            "post",
+            data=[
+                {"vid": "1", "name": "1", "status": status_active.pk},
+                {"vid": "2", "name": "2", "status": status_active.pk},
+            ],
         )
         self.assertHttpStatus(response, 400)
         self.assertEqual(
@@ -2781,21 +2790,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 vlan1_json_data = {
                     "vid": "1",
                     "name": "1",
-                    "status": "active",
+                    "status": status_active.pk,
                 }
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": "active",
+                    "status": status_active.pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": "active", "id": str(vlan1.id)}
+                vlan1_json_data = {"status": status_active.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
 
-                vlan2_json_data = {"status": "active", "id": str(vlan2.id)}
+                vlan2_json_data = {"status": status_active.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})

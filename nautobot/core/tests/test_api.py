@@ -346,6 +346,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         super().setUp()
 
         self.region_a = dcim_models.Region.objects.filter(sites__isnull=True).first()
+        self.status = extras_models.Status.objects.get(name="Active")
         self.site1 = dcim_models.Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
         self.site2 = dcim_models.Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
 
@@ -354,7 +355,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "site": self.site1.pk,
-            "status": "active",
+            "status": self.status.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -364,13 +365,14 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.site, self.site1)
+        self.assertEqual(vlan.status, self.status)
 
     def test_related_by_pk_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "site": "00000000-0000-0000-0000-0000000009eb",
-            "status": "active",
+            "status": self.status.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -385,7 +387,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": "active",
+            "status": {"name": self.status.name},
             "site": {"name": "Site 1"},
         }
         url = reverse("ipam-api:vlan-list")
@@ -396,12 +398,13 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.site, self.site1)
+        self.assertEqual(vlan.status, self.status)
 
     def test_related_by_attributes_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": "active",
+            "status": self.status.pk,
             "site": {"name": "Site X"},
         }
         url = reverse("ipam-api:vlan-list")
@@ -417,7 +420,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": "active",
+            "status": self.status.pk,
             "site": {
                 "region": {
                     "name": self.region_a.name,
@@ -438,7 +441,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "site": "XXX",
-            "status": "active",
+            "status": self.status.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")

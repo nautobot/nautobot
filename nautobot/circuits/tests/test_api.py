@@ -183,6 +183,7 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
             "status": statuses[2].pk,
         }
 
+
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
     model = CircuitTermination
     brief_fields = ["cable", "circuit", "display", "id", "term_side", "url"]

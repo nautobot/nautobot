@@ -1,7 +1,8 @@
-from collections import OrderedDict
-
 from django.forms.fields import CallableChoiceIterator
 from rest_framework import serializers
+
+from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
+from nautobot.extras.api.nested_serializers import NestedRoleSerializer, NestedStatusSerializer
 
 
 class MultipleChoiceJSONField(serializers.MultipleChoiceField):
@@ -17,3 +18,11 @@ class MultipleChoiceJSONField(serializers.MultipleChoiceField):
     def to_internal_value(self, data):
         set_value = super().to_internal_value(data)
         return sorted(set_value)
+
+
+class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
+    """NestedSerializer field for `Role` object fields."""
+
+
+class StatusSerializerField(LimitQuerysetChoicesSerializerMixin, NestedStatusSerializer):
+    """NestedSerializer field for `Status` object fields."""

@@ -179,32 +179,32 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         regions = Region.objects.all()[:2]
-        statuses = Status.objects.get_for_model(Site)
+        cls.statuses = Status.objects.get_for_model(Site)
 
         cls.create_data = [
             {
                 "name": "Site 4",
                 "slug": "site-4",
                 "region": regions[1].pk,
-                "status": statuses[0].pk,
+                "status": cls.statuses[0].pk,
             },
             {
                 "name": "Site 5",
                 "slug": "site-5",
                 "region": regions[1].pk,
-                "status": statuses[0].pk,
+                "status": cls.statuses[0].pk,
             },
             {
                 "name": "Site 6",
                 "slug": "site-6",
                 "region": regions[1].pk,
-                "status": statuses[0].pk,
+                "status": cls.statuses[0].pk,
             },
-            {"name": "Site 7", "region": regions[1].pk, "status": statuses[0].pk},
+            {"name": "Site 7", "region": regions[1].pk, "status": cls.statuses[0].pk},
         ]
 
         cls.bulk_update_data = {
-            "status": statuses[1].pk,
+            "status": cls.statuses[1].pk,
         }
 
     def get_deletable_object_pks(self):
@@ -223,7 +223,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": Status.objects.get_for_model(Site)[0], "time_zone": None}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": None}
 
         # Attempt to create new site with null time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -238,7 +238,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": Status.objects.get_for_model(Site)[0], "time_zone": ""}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": ""}
 
         # Attempt to create new site with blank time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -254,7 +254,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
         time_zone = "UTC"
-        site = {"name": "foo", "slug": "foo", "status": Status.objects.get_for_model(Site)[0], "time_zone": time_zone}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": time_zone}
 
         # Attempt to create new site with valid time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -270,7 +270,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
         time_zone = "IDONOTEXIST"
-        site = {"name": "foo", "slug": "foo", "status": Status.objects.get_for_model(Site)[0], "time_zone": time_zone}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": time_zone}
 
         # Attempt to create new site with invalid time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
