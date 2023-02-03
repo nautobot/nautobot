@@ -80,6 +80,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
         # Change Device selection to "Device 2"
         self.browser.find_by_xpath("//label[@for='id_termination_b_device']").click()
         self.browser.driver.switch_to.active_element.click()
+        time.sleep(0.2)
         self.browser.find_by_xpath(
             "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 2')]"
         ).click()

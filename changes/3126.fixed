@@ -1,0 +1,1 @@
+Fixed interface not raising exception when adding a VLAN from a different site in tagged_vlans.
