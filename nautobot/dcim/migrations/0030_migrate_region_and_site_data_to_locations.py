@@ -183,9 +183,12 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for cc in ccs:
             region_name_list = list(cc.regions.all().values_list("name", flat=True))
             region_locs = list(Location.objects.filter(name__in=region_name_list, location_type=region_lt))
-            original_locs = list(cc.locations.all())
-            locations = region_locs + original_locs
-            cc.locations.set(locations)
+            if len(region_locs) < len(region_name_list):
+                logger.warning(
+                    f'There is a mismatch between the number of Regions ({len(region_name_list)}) and the number of "Region" LocationType locations ({len(region_locs)})'
+                    f" found in this ConfigContext {cc.name}"
+                )
+            cc.locations.add(*region_locs)
             cc.save()
 
     # Reassign Site Models to Locations of Site LocationType
@@ -213,9 +216,12 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for cc in ccs:
             site_name_list = list(cc.sites.all().values_list("name", flat=True))
             site_locs = list(Location.objects.filter(name__in=site_name_list, location_type=site_lt))
-            original_locs = list(cc.locations.all())
-            locations = site_locs + original_locs
-            cc.locations.set(site_locs + original_locs)
+            if len(site_locs) < len(site_name_list):
+                logger.warning(
+                    f'There is a mismatch between the number of Sites ({len(site_name_list)}) and the number of "Site" LocationType locations ({len(site_locs)})'
+                    f" found in this ConfigContext {cc.name}"
+                )
+            cc.locations.add(*site_locs)
             cc.save()
 
         devices = Device.objects.filter(location__isnull=True).select_related("site")
