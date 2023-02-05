@@ -196,6 +196,10 @@ splinter = "~0.18.0"
 towncrier = "~22.8.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~2.2.0"
+# Type checking
+mypy = "^0.991"
+django-stubs = {extras = ["compatible-mypy"], version = "^1.14.0"}
+python-dotenv = "^0.21.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -335,3 +339,16 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]
 [tool.towncrier.fragment.security]
+
+[tool.mypy]
+plugins = "mypy_nautobot_plugin.py"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "nautobot.dcim.models.devices.*"
+disallow_untyped_defs = true
+ignore_errors = false
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "nautobot.core.settings"

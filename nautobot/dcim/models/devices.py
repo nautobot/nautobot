@@ -1,4 +1,6 @@
+import typing
 from collections import OrderedDict
+from typing import Tuple, Any, Optional
 
 import yaml
 from django.contrib.contenttypes.fields import GenericRelation
@@ -7,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, ProtectedError, Q
+from django.db.models import F, ProtectedError, Q, QuerySet
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -18,6 +20,9 @@ from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailov
 from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+if typing.TYPE_CHECKING:
+    from nautobot.ipam.models import IPAddress
+    from nautobot.dcim.models import Cable
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -38,6 +43,7 @@ __all__ = (
     "Platform",
     "VirtualChassis",
 )
+
 
 
 #
@@ -67,13 +73,13 @@ class Manufacturer(OrganizationalModel):
     class Meta:
         ordering = ["name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return reverse("dcim:manufacturer", args=[self.slug])
 
-    def to_csv(self):
+    def to_csv(self) -> Tuple:
         return (self.name, self.slug, self.description)
 
 
@@ -143,10 +149,10 @@ class DeviceType(PrimaryModel):
             ["manufacturer", "slug"],
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.model
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: int, **kwargs: int) -> None:
         super().__init__(*args, **kwargs)
 
         # Save a copy of u_height for validation in clean()
@@ -156,10 +162,10 @@ class DeviceType(PrimaryModel):
         self._original_front_image = self.front_image if self.present_in_database else None
         self._original_rear_image = self.rear_image if self.present_in_database else None
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return reverse("dcim:devicetype", args=[self.pk])
 
-    def to_yaml(self):
+    def to_yaml(self) -> str:
         data = OrderedDict(
             (
                 ("manufacturer", self.manufacturer.name),
@@ -248,7 +254,7 @@ class DeviceType(PrimaryModel):
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
 
-    def clean(self):
+    def clean(self) -> None:
         super().clean()
 
         # If editing an existing DeviceType to have a larger u_height, first validate that *all* instances of it have
@@ -292,7 +298,7 @@ class DeviceType(PrimaryModel):
         if self.u_height and self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD:
             raise ValidationError({"u_height": "Child device types must be 0U."})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         super().save(*args, **kwargs)
 
         # Delete any previously uploaded image files that are no longer in use
@@ -301,7 +307,7 @@ class DeviceType(PrimaryModel):
         if self._original_rear_image and self.rear_image != self._original_rear_image:
             self._original_rear_image.delete(save=False)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> None:
         super().delete(*args, **kwargs)
 
         # Delete any uploaded image files
@@ -311,15 +317,15 @@ class DeviceType(PrimaryModel):
             self.rear_image.delete(save=False)
 
     @property
-    def display(self):
+    def display(self) -> str:
         return f"{self.manufacturer.name} {self.model}"
 
     @property
-    def is_parent_device(self):
+    def is_parent_device(self) -> bool:
         return self.subdevice_role == SubdeviceRoleChoices.ROLE_PARENT
 
     @property
-    def is_child_device(self):
+    def is_child_device(self) -> bool:
         return self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD
 
 
@@ -373,13 +379,13 @@ class Platform(OrganizationalModel):
     class Meta:
         ordering = ["name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return reverse("dcim:platform", args=[self.slug])
 
-    def to_csv(self):
+    def to_csv(self) -> Tuple:
         return (
             self.name,
             self.slug,
@@ -571,13 +577,13 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             ("virtual_chassis", "vc_position"),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.display or super().__str__()
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return reverse("dcim:device", args=[self.pk])
 
-    def validate_unique(self, exclude=None):
+    def validate_unique(self, exclude=None) -> None:
 
         # Check for a duplicate name on a device assigned to the same Site and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
@@ -588,7 +594,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
         super().validate_unique(exclude)
 
-    def clean(self):
+    def clean(self) -> None:
         super().clean()
 
         # Validate site/rack combination
@@ -763,7 +769,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                 }
             )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
 
         is_new = not self.present_in_database
 
@@ -789,7 +795,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             device.rack = self.rack
             device.save()
 
-    def to_csv(self):
+    def to_csv(self) -> Tuple:
         return (
             self.name or "",
             self.role.name,
@@ -814,7 +820,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         )
 
     @property
-    def display(self):
+    def display(self) -> str:
         if self.name:
             return self.name
         elif self.virtual_chassis:
@@ -825,7 +831,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             return ""  # Device has not yet been created
 
     @property
-    def identifier(self):
+    def identifier(self) -> str:
         """
         Return the device name if set; otherwise return the Device's primary key as {pk}
         """
@@ -834,7 +840,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         return f"{{{self.pk}}}"
 
     @property
-    def primary_ip(self):
+    def primary_ip(self) -> Optional["IPAddress"]:
         if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
             return self.primary_ip4
         elif self.primary_ip6:
@@ -844,14 +850,14 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         else:
             return None
 
-    def get_vc_master(self):
+    def get_vc_master(self) -> Optional["Device"]:
         """
         If this Device is a VirtualChassis member, return the VC master. Otherwise, return None.
         """
         return self.virtual_chassis.master if self.virtual_chassis else None
 
     @property
-    def vc_interfaces(self):
+    def vc_interfaces(self) -> QuerySet[Interface]:
         """
         Return a QuerySet matching all Interfaces assigned to this Device or, if this Device is a VC master, to another
         Device belonging to the same VirtualChassis.
@@ -862,7 +868,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         return Interface.objects.filter(filter_q)
 
     @property
-    def common_vc_interfaces(self):
+    def common_vc_interfaces(self) -> QuerySet[Interface]:
         """
         Return a QuerySet matching all Interfaces assigned to this Device or,
         if this Device belongs to a VirtualChassis, it returns all interfaces belonging Devices with same VirtualChassis
@@ -871,7 +877,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             return self.virtual_chassis.member_interfaces
         return self.interfaces
 
-    def get_cables(self, pk_list=False):
+    def get_cables(self, pk_list: bool = False) -> typing.Union[QuerySet["Cable"], typing.List[str]]:
         """
         Return a QuerySet or PK list matching all Cables connected to a component of this Device.
         """
@@ -887,14 +893,14 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             FrontPort,
             RearPort,
         ]:
-            cable_pks += component_model.objects.filter(device=self, cable__isnull=False).values_list(
+            cable_pks += component_model.objects.filter(device=self, cable__isnull=False).values_list(  # type: ignore
                 "cable", flat=True
             )
         if pk_list:
             return cable_pks
         return Cable.objects.filter(pk__in=cable_pks)
 
-    def get_children(self):
+    def get_children(self) -> QuerySet["Device"]:
         """
         Return the set of child Devices installed in DeviceBays within this Device.
         """
@@ -936,18 +942,18 @@ class VirtualChassis(PrimaryModel):
         ordering = ["name"]
         verbose_name_plural = "virtual chassis"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return reverse("dcim:virtualchassis", kwargs={"pk": self.pk})
 
     @property
-    def member_interfaces(self):
+    def member_interfaces(self) -> QuerySet[Interface]:
         """Return a list of Interfaces common to all member devices."""
         return Interface.objects.filter(pk__in=self.members.values_list("interfaces", flat=True))
 
-    def clean(self):
+    def clean(self) -> None:
         super().clean()
 
         # Verify that the selected master device has been assigned to this VirtualChassis. (Skip when creating a new
@@ -957,7 +963,7 @@ class VirtualChassis(PrimaryModel):
                 {"master": f"The selected master ({self.master}) is not assigned to this virtual chassis."}
             )
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> Tuple[int, typing.Dict[str, int]]:
 
         # Check for LAG interfaces split across member chassis
         interfaces = Interface.objects.filter(device__in=self.members.all(), lag__isnull=False).exclude(
@@ -971,7 +977,7 @@ class VirtualChassis(PrimaryModel):
 
         return super().delete(*args, **kwargs)
 
-    def to_csv(self):
+    def to_csv(self) -> Tuple:
         return (
             self.name,
             self.domain,
@@ -1028,16 +1034,16 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
         ordering = ("name",)
 
     @property
-    def members_sorted(self):
+    def members_sorted(self) -> QuerySet[Device]:
         return self.members.order_by("device_redundancy_group_priority")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return reverse("dcim:deviceredundancygroup", args=[self.slug])
 
-    def to_csv(self):
+    def to_csv(self) -> Tuple:
         return (
             self.name,
             self.failover_strategy,
