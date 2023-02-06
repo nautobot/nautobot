@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0053_relationship_required_on"),
+        ("extras", "0054_scheduledjob_kwargs_request_user_change"),
     ]
 
     operations = [
