@@ -259,7 +259,7 @@ The global Celery task hard timeout (in seconds). Any background task that excee
 
 ## CELERY_WORKER_PROMETHEUS_PORTS
 
-+++ 1.5.x
++++ 1.5.10
 
 Default: `[]` (disabled)
 
