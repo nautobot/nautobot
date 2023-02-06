@@ -45,11 +45,14 @@ def _get_user_if_authenticated(user, objectchange):
         return None
 
 
-def _handle_changed_object(change_context, sender, instance, **kwargs):
+def _handle_changed_object(change_context, sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
+
+    if raw:
+        return
 
     object_m2m_changed = False
 
@@ -237,11 +240,13 @@ def dynamic_group_children_changed(sender, instance, action, reverse, model, pk_
         )
 
 
-def dynamic_group_membership_created(sender, instance, **kwargs):
+def dynamic_group_membership_created(sender, instance, raw=False, **kwargs):
     """
     Forcibly call `full_clean()` when a new `DynamicGroupMembership` object
     is manually created to prevent inadvertantly creating invalid memberships.
     """
+    if raw:
+        return
     instance.full_clean()
 
 

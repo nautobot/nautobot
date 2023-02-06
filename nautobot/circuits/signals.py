@@ -36,10 +36,12 @@ def rebuild_paths_circuits(obj):
 
 
 @receiver(post_save, sender=CircuitTermination)
-def update_circuit(instance, **kwargs):
+def update_circuit(instance, raw=False, **kwargs):
     """
     When a CircuitTermination has been modified, update its parent Circuit.
     """
+    if raw:
+        return
     if instance.term_side in CircuitTerminationSideChoices.values():
         termination_name = f"circuit_termination_{instance.term_side.lower()}"
         setattr(instance.circuit, termination_name, instance)
@@ -48,10 +50,12 @@ def update_circuit(instance, **kwargs):
 
 
 @receiver(post_save, sender=CircuitTermination)
-def update_connected_terminations(instance, **kwargs):
+def update_connected_terminations(instance, raw=False, **kwargs):
     """
     When a CircuitTermination has been modified, update the Cable Paths if the Circuit Termination has a peer.
     """
+    if raw:
+        return
     peer = instance.get_peer_termination()
     # Check if Circuit Termination has a peer
     if peer:
