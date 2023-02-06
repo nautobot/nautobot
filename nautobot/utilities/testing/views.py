@@ -1061,42 +1061,52 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_objects_with_constrained_permission(self):
-            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
-            data = {
-                "pk": pk_list,
-                "_apply": True,  # Form button
-            }
-
-            # Append the form data to the request
-            data.update(post_data(self.bulk_edit_data))
-
-            # Dynamically determine a constraint that will *not* be matched by the updated objects.
+            # Select some objects that are *not* already set to match the first value in self.bulk_edit_data or null.
+            # We have to exclude null cases because Django filter()/exclude() doesn't like `__in=[None]` as a case.
             attr_name = list(self.bulk_edit_data.keys())[0]
-            field = self.model._meta.get_field(attr_name)
-            value = field.value_from_object(
-                self._get_queryset().exclude(**{attr_name: self.bulk_edit_data[attr_name]}).first()
-            )
+            objects = (
+                self._get_queryset()
+                .exclude(**{attr_name: self.bulk_edit_data[attr_name]})
+                .exclude(**{f"{attr_name}__isnull": True})
+            )[:3]
+            self.assertEqual(objects.count(), 3)
+            pk_list = list(objects.values_list("pk", flat=True))
 
-            # Assign constrained permission
+            # Define a permission that permits the above objects, but will not permit them after updating them.
+            field = self.model._meta.get_field(attr_name)
+            values = [field.value_from_object(obj) for obj in objects]
             obj_perm = ObjectPermission(
                 name="Test permission",
-                constraints={attr_name: value},
+                constraints={f"{attr_name}__in": values},
                 actions=["change"],
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
+            # Build form data
+            data = {
+                "pk": pk_list,
+                "_apply": True,  # Form button
+            }
+            data.update(post_data(self.bulk_edit_data))
+
             # Attempt to bulk edit permitted objects into a non-permitted state
             response = self.client.post(self._get_url("bulk_edit"), data)
+            # 200 because we're sent back to the edit form to try again; if the update were successful it'd be a 302
             self.assertHttpStatus(response, 200)
+            # Assert that the objects are NOT updated
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                self.assertIn(field.value_from_object(instance), values)
+                self.assertNotEqual(field.value_from_object(instance), self.bulk_edit_data[attr_name])
 
-            # Update permission constraints
+            # Update permission constraints to permit all objects
             obj_perm.constraints = {"pk__gt": 0}
             obj_perm.save()
 
-            # Bulk edit permitted objects
+            # Bulk edit permitted objects and expect a redirect back to the list view
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
+            # Assert that the objects were all updated correctly
             for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
