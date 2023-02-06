@@ -11,7 +11,7 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Cluster
 * Tenant group
 * Tenant
-* Device redundancy groups
+* Device redundancy group
 * Tag
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.

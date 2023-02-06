@@ -3354,10 +3354,11 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
                 status=interface_status_map["active"],
             ),
         )
+        interface_taggable_vlan = VLAN.objects.filter(site=devices[2].site).first()
 
-        cabled_interfaces[3].tagged_vlans.add(vlans[0])
-        cabled_interfaces[4].tagged_vlans.add(vlans[1])
-        cabled_interfaces[5].tagged_vlans.add(vlans[2])
+        cabled_interfaces[3].tagged_vlans.add(interface_taggable_vlan)
+        cabled_interfaces[4].tagged_vlans.add(interface_taggable_vlan)
+        cabled_interfaces[5].tagged_vlans.add(interface_taggable_vlan)
 
         Interface.objects.filter(pk=cabled_interfaces[0].pk).update(
             enabled=True,

@@ -356,7 +356,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "site": vlangroups[1].site.pk,
             "group": vlangroups[1].pk,
             "vid": 999,
-            "name": "VLAN999",
+            "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,
