@@ -124,7 +124,14 @@ class ConfigContextTest(TestCase):
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
         self.dynamic_group = DynamicGroup.objects.create(
-            name="Dynamic Group", content_type=ContentType.objects.get_for_model(Device)
+            name="Dynamic Group",
+            content_type=ContentType.objects.get_for_model(Device),
+            filter={"name": ["Device 1", "Device 2", "VM 1"]},
+        )
+        self.dynamic_group_2 = DynamicGroup.objects.create(
+            name="Dynamic Group 2",
+            content_type=ContentType.objects.get_for_model(Device),
+            filter={"name": ["Device 2"]},
         )
 
         self.device = Device.objects.create(
@@ -254,6 +261,10 @@ class ConfigContextTest(TestCase):
         )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic group", weight=100, data={"dynamic_group": 1}
+        )
+        dynamic_group_context.dynamic_group.add(self.dynamic_group)
 
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
@@ -277,6 +288,7 @@ class ConfigContextTest(TestCase):
             "tag",
             "cluster_group",
             "cluster",
+            "dynamic_group",
         ]:
             self.assertIn(key, vm_context)
 
