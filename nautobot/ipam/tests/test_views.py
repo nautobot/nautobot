@@ -6,7 +6,7 @@ from django.test import override_settings
 
 from nautobot.core.testing import ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Location, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices

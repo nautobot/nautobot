@@ -10,7 +10,7 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.testing.api import APITransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, Location, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (

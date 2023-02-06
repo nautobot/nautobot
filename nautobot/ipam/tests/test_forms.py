@@ -2,7 +2,7 @@
 
 from django.test import TestCase
 
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import forms, models
 
