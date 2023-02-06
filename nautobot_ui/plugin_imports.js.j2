@@ -1,7 +1,7 @@
 export const NautobotPlugins = {
-    {% for plugin in plugins %}
+{% for plugin in plugins %}
     "{{ plugin }}": import("@{{ plugin }}"),
-    {% endfor %}
+{% endfor %}
 }
 
 export default NautobotPlugins

@@ -233,7 +233,7 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Node.js, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
@@ -297,6 +297,22 @@ brew install hadolint
 ```no-highlight
 brew install markdownlint-cli
 ```
+
+#### Install npm
+
+[npm](https://www.npmjs.com/) is the tool used to install and compile the Nautobot front-end UI. On macOS with [Homebrew](https://brew.sh) you can install npm by running:
+
+```
+brew install npm
+```
+
+You should then move to the `nautobot_ui/` subdirectory and run `npm install` to install all of the JS dependencies for local development of the Nautobot UI:
+
+```
+npm install
+```
+
+Be sure to switch back to the base directory of the repository after you do this.
 
 #### Creating a Python Virtual Environment
 
@@ -481,7 +497,27 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
+You can connect to the development server at `localhost:8080`, but normally you'll want to connect to the NGINX server instead (see below).
+
+### Starting the Node.js Server
+
+In development, you should run a Node.js server instance as well. This will handle automatically rebuilding the UI when you make changes in the `nautobot_ui` directory.
+
+| Docker Compose Workflow | Virtual Environment Workflow    |
+| ----------------------- | ------------------------------- |
+| `invoke start`          | `cd nautobot_ui; npm run start` |
+
+You can connect to the Node.js server at `localhost:3000`, but normally you'll want to connect to the NGINX server instead (see below).
+
+### Starting the NGINX Server
+
+In development, the NGINX server ties together the Nautobot development server and the Node.js server into a single unified frontend, similar to the unified server environment that you'd normally run in production.
+
+| Docker Compose Workflow | Virtual Environment Workflow |
+| ----------------------- | ---------------------------- |
+| `invoke start`          | `TODO`                       |
+
+You can connect to the NGINX server at `localhost:8888` and log in using the superuser account you created earlier.
 
 ### Starting the Worker Server
 
