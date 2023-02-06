@@ -8,7 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.tables import CustomFieldColumn
-from nautobot.core.testing import APITestCase, CeleryTestCase, TestCase
+from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
@@ -1903,9 +1903,8 @@ class CustomFieldChoiceTest(TestCase):
             cf.delete()
 
 
-class CustomFieldBackgroundTasks(CeleryTestCase):
+class CustomFieldBackgroundTasks(TransactionTestCase):
     def test_provision_field_task(self):
-        self.clear_worker()
 
         site = Site(
             name="Site 1",
@@ -1918,14 +1917,11 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        self.wait_on_active_tasks()
-
         site.refresh_from_db()
 
         self.assertEqual(site.cf["cf1"], "Foo")
 
     def test_delete_custom_field_data_task(self):
-        self.clear_worker()
 
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(
@@ -1941,15 +1937,12 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
         cf.delete()
 
-        self.wait_on_active_tasks()
-
         site.refresh_from_db()
 
         self.assertTrue("cf1" not in site.cf)
         logging.disable(logging.NOTSET)
 
     def test_update_custom_field_choice_data_task(self):
-        self.clear_worker()
 
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(
@@ -1959,8 +1952,6 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        self.wait_on_active_tasks()
-
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
 
@@ -1969,8 +1960,6 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
         choice.value = "Bar"
         choice.save()
-
-        self.wait_on_active_tasks()
 
         site.refresh_from_db()
 

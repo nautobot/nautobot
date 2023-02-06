@@ -17,7 +17,6 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.core.testing import (
-    CeleryTestCase,
     TestCase,
     TransactionTestCase,
     run_job_for_testing,
@@ -525,7 +524,7 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 0)
 
 
-class RunJobManagementCommandTest(CeleryTestCase):
+class RunJobManagementCommandTest(TransactionTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
     def run_command(self, *args):
@@ -617,7 +616,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         status.delete()
 
 
-class JobSiteCustomFieldTest(CeleryTestCase):
+class JobSiteCustomFieldTest(TransactionTestCase):
     """Test a job that creates a site and a custom field."""
 
     databases = ("default", "job_logs")
@@ -630,12 +629,10 @@ class JobSiteCustomFieldTest(CeleryTestCase):
         self.request.user = self.user
 
     def test_run(self):
-        self.clear_worker()
 
         module = "test_site_with_custom_field"
         name = "TestCreateSiteWithCustomField"
         job_result = create_job_result_and_run_job(module, name, request=self.request, commit=True)
-        self.wait_on_active_tasks()
         job_result.refresh_from_db()
 
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -718,7 +715,7 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
-class JobHookTest(CeleryTestCase):
+class JobHookTest(TransactionTestCase):
     """
     Test job hooks.
     """
@@ -739,10 +736,8 @@ class JobHookTest(CeleryTestCase):
         job_hook.content_types.set([obj_type])
 
     def test_enqueue_job_hook(self):
-        self.clear_worker()
         with web_request_context(user=self.user):
             Site.objects.create(name="Test Job Hook Site 1")
-            self.wait_on_active_tasks()
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
                 ("info", f"change: dcim | site Test Job Hook Site 1 created by {self.user.username}"),

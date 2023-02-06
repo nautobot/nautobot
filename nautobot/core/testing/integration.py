@@ -1,7 +1,5 @@
 import os
-import time
 
-from celery.contrib.testing.worker import start_worker
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import override_settings, tag
@@ -10,7 +8,7 @@ from django.utils.functional import classproperty
 from selenium import webdriver
 from splinter.browser import Browser
 
-from nautobot.core import celery, testing
+from nautobot.core import testing
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -72,8 +70,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     host = "0.0.0.0"  # Always listen publicly
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
 
-    requires_celery = False  # If true, a celery instance will be started. TODO: create celery mixin?
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -86,12 +82,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             # See: https://developer.mozilla.org/en-US/docs/Web/WebDriver/Timeouts
             # desired_capabilities={"timeouts": {"implicit": 60 * 60 * 1000 }},  # 1 hour timeout
         )
-
-        if cls.requires_celery:
-            celery.app.loader.import_module("celery.contrib.testing.tasks")
-            cls.clear_worker()
-            cls.celery_worker = start_worker(celery.app, concurrency=1)
-            cls.celery_worker.__enter__()
 
     def setUp(self):
         super().setUpNautobot(populate_status=True)
@@ -108,8 +98,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     def tearDownClass(cls):
         """Close down the browser after tests are ran."""
         cls.browser.quit()
-        if cls.requires_celery:
-            cls.celery_worker.__exit__(None, None, None)
 
     def login(self, username, password, login_url=LOGIN_URL, button_text="Log In"):
         """
@@ -140,18 +128,3 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             profile.set_preference(key, value)
 
         return profile
-
-    @staticmethod
-    def clear_worker():
-        """Purge any running or queued tasks"""
-        celery.app.control.purge()
-
-    @classmethod
-    def wait_on_active_tasks(cls):
-        """Wait on all active tasks to finish before returning"""
-        # TODO(john): admittedly, this is not great, but it seems the standard
-        # celery APIs for inspecting the worker, looping through all active tasks,
-        # and calling `.get()` on them is not working when the worker is in solo mode.
-        # Needs more investigation and until then, these tasks run very quickly, so
-        # simply delaying the test execution provides enough time for them to complete.
-        time.sleep(1)
