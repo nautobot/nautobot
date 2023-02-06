@@ -1,12 +1,24 @@
 from celery.utils.log import get_task_logger
 from celery import Task
+from celery.worker.request import Request
 
 
 logger = get_task_logger(__name__)
 
 
+class NautobotRequest(Request):
+    def on_timeout(self, soft, timeout):
+        from nautobot.core.tasks import handle_time_limit_exceeded
+
+        if not soft:
+            handle_time_limit_exceeded.delay(self.id)
+        super().on_timeout(soft, timeout)
+
+
 class NautobotTask(Task):
     """Nautobot extensions to tasks for integrating with Job machinery."""
+
+    Request = NautobotRequest
 
 
 Task = NautobotTask  # noqa: So that the class path resolves.
