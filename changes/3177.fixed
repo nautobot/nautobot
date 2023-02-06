@@ -1,1 +1,0 @@
-Fixed a spurious failure in BulkEditObjectsViewTestCase.test_bulk_edit_objects_with_constrained_permission.
