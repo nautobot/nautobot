@@ -123,7 +123,7 @@ class ConfigContextTest(TestCase):
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
-        self.dynamic_group = DynamicGroup.objects.create(
+        self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 1", "Device 2", "VM 1"]},
@@ -211,7 +211,7 @@ class ConfigContextTest(TestCase):
         dynamic_group_context = ConfigContext.objects.create(
             name="dynamic group", weight=100, data={"dynamic_group": 1}
         )
-        dynamic_group_context.dynamic_group.add(self.dynamic_group)
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
 
         device = Device.objects.create(
             name="Device 2",
@@ -264,7 +264,7 @@ class ConfigContextTest(TestCase):
         dynamic_group_context = ConfigContext.objects.create(
             name="dynamic group", weight=100, data={"dynamic_group": 1}
         )
-        dynamic_group_context.dynamic_group.add(self.dynamic_group)
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
 
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
