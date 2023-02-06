@@ -2,26 +2,24 @@ import django_tables2 as tables
 from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 
-from nautobot.dcim.models import Interface
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
-    ChoiceFieldColumn,
     LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_boolean
+from nautobot.core.templatetags.helpers import render_boolean
+from nautobot.dcim.models import Interface
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -41,7 +39,17 @@ PREFIX_LINK = """
 {% for i in record.parents|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-<a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
+    <a href="\
+{% if record.present_in_database %}\
+{% url 'ipam:prefix' pk=record.pk %}\
+{% else %}\
+{% url 'ipam:prefix_add' %}\
+?prefix={{ record }}\
+{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+{% if object.site %}&site={{ object.site.pk }}{% endif %}\
+{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
+{% endif %}\
+">{{ record.prefix }}</a>
 """
 
 PREFIX_COPY_LINK = """
@@ -49,10 +57,22 @@ PREFIX_COPY_LINK = """
 {% for i in record.parents|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-<span class="hover_copy"><a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}" id="copy_{{record.id}}">{{ record.prefix }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-                                <span class="mdi mdi-content-copy"></span>
-                            </button>
-                        </span>
+<span class="hover_copy">
+  <a href="\
+{% if record.present_in_database %}\
+{% url 'ipam:prefix' pk=record.pk %}\
+{% else %}\
+{% url 'ipam:prefix_add' %}\
+?prefix={{ record }}\
+{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+{% if object.site %}&site={{ object.site.pk }}{% endif %}\
+{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
+{% endif %}\
+" id="copy_{{record.id}}">{{ record.prefix }}</a>
+  <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
+    <span class="mdi mdi-content-copy"></span>
+  </button>
+</span>
 """
 
 PREFIX_ROLE_LINK = """
@@ -67,7 +87,13 @@ IPADDRESS_LINK = """
 {% if record.present_in_database %}
     <a href="{{ record.get_absolute_url }}">{{ record.address }}</a>
 {% elif perms.ipam.add_ipaddress %}
-    <a href="{% url 'ipam:ipaddress_add' %}?address={{ record.1 }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}" class="btn btn-xs btn-success">{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
+    <a href="\
+{% url 'ipam:ipaddress_add' %}\
+?address={{ record.1 }}\
+{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+{% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}\
+" class="btn btn-xs btn-success">\
+{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
 {% else %}
     {% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available
 {% endif %}
@@ -75,26 +101,50 @@ IPADDRESS_LINK = """
 
 IPADDRESS_COPY_LINK = """
 {% if record.present_in_database %}
-    <span class="hover_copy"><a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">{{ record.address }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-                                <span class="mdi mdi-content-copy"></span>
-                            </button>
-                        </span>
+    <span class="hover_copy">
+        <a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">
+            {{ record.address }}</a>
+        <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
+            <span class="mdi mdi-content-copy"></span>
+        </button>
+    </span>
 {% elif perms.ipam.add_ipaddress %}
-    <a href="{% url 'ipam:ipaddress_add' %}?address={{ record.1 }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}" class="btn btn-xs btn-success">{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
+    <a href="\
+{% url 'ipam:ipaddress_add' %}\
+?address={{ record.1 }}\
+{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+{% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}\
+" class="btn btn-xs btn-success">\
+{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
 {% else %}
     {% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available
 {% endif %}
 """
 
 IPADDRESS_ASSIGN_LINK = """
-<a href="{% url 'ipam:ipaddress_edit' pk=record.pk %}?{% if request.GET.interface %}interface={{ request.GET.interface }}{% elif request.GET.vminterface %}vminterface={{ request.GET.vminterface }}{% endif %}&return_url={{ request.GET.return_url }}">{{ record }}</a>
+<a href="\
+{% url 'ipam:ipaddress_edit' pk=record.pk %}\
+?{% if request.GET.interface %}interface={{ request.GET.interface }}\
+{% elif request.GET.vminterface %}\
+vminterface={{ request.GET.vminterface }}{% endif %}\
+&return_url={{ request.GET.return_url }}">{{ record }}</a>
 """
 
 IPADDRESS_ASSIGN_COPY_LINK = """
-<span class="hover_copy"><a href="{% url 'ipam:ipaddress_edit' pk=record.pk %}?{% if request.GET.interface %}interface={{ request.GET.interface }}{% elif request.GET.vminterface %}vminterface={{ request.GET.vminterface }}{% endif %}&return_url={{ request.GET.return_url }}" id="copy_{{record.pk}}">{{ record }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.pk}}">
-                                <span class="mdi mdi-content-copy"></span>
-                            </button>
-                        </span>
+<span class="hover_copy">
+<a href="\
+{% url 'ipam:ipaddress_edit' pk=record.pk %}\
+?{% if request.GET.interface %}\
+interface={{ request.GET.interface }}\
+{% elif request.GET.vminterface %}\
+vminterface={{ request.GET.vminterface }}\
+{% endif %}\
+&return_url={{ request.GET.return_url }}" id="copy_{{record.pk}}">\
+{{ record }}\
+</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.pk}}">
+    <span class="mdi mdi-content-copy"></span>
+</button>
+</span>
 """
 
 VRF_LINK = """
@@ -119,7 +169,12 @@ VLAN_LINK = """
 {% if record.present_in_database %}
     <a href="{{ record.get_absolute_url }}">{{ record.vid }}</a>
 {% elif perms.ipam.add_vlan %}
-    <a href="{% url 'ipam:vlan_add' %}?vid={{ record.vid }}&group={{ vlan_group.pk }}{% if vlan_group.site %}&site={{ vlan_group.site.pk }}{% endif %}{% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>
+    <a href="\
+{% url 'ipam:vlan_add' %}\
+?vid={{ record.vid }}&vlan_group={{ vlan_group.pk }}\
+{% if vlan_group.site %}&site={{ vlan_group.site.pk }}{% endif %}\
+{% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
+" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>\
 {% else %}
     {{ record.available }} VLAN{{ record.available|pluralize }} available
 {% endif %}
@@ -144,9 +199,12 @@ VLAN_ROLE_LINK = """
 VLANGROUP_ADD_VLAN = """
 {% with next_vid=record.get_next_available_vid %}
     {% if next_vid and perms.ipam.add_vlan %}
-        <a href="{% url 'ipam:vlan_add' %}?site={{ record.site_id }}{% if record.location %}&location={{ record.location_id }}{% endif %}&group={{ record.pk }}&vid={{ next_vid }}" title="Add VLAN" class="btn btn-xs btn-success">
-            <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
-        </a>
+        <a href="\
+{% url 'ipam:vlan_add' %}\
+?site={{ record.site_id }}\
+{% if record.location %}&location={{ record.location_id }}{% endif %}\
+&vlan_group={{ record.pk }}&vid={{ next_vid }}\
+" title="Add VLAN" class="btn btn-xs btn-success"><i class="mdi mdi-plus-thick" aria-hidden="true"></i></a>
     {% endif %}
 {% endwith %}
 """
@@ -283,49 +341,11 @@ class AggregateDetailTable(AggregateTable):
 
 
 #
-# Roles
-#
-
-
-class RoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    prefix_count = LinkedCountColumn(
-        viewname="ipam:prefix_list",
-        url_params={"role": "slug"},
-        verbose_name="Prefixes",
-    )
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"role": "slug"}, verbose_name="VLANs")
-    actions = ButtonsColumn(Role, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = Role
-        fields = (
-            "pk",
-            "name",
-            "slug",
-            "prefix_count",
-            "vlan_count",
-            "description",
-            "weight",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "prefix_count",
-            "vlan_count",
-            "description",
-            "actions",
-        )
-
-
-#
 # Prefixes
 #
 
 
-class PrefixTable(StatusTableMixin, BaseTable):
+class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
@@ -335,7 +355,6 @@ class PrefixTable(StatusTableMixin, BaseTable):
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
-    role = tables.TemplateColumn(template_code=PREFIX_ROLE_LINK)
     is_pool = BooleanColumn(verbose_name="Pool")
 
     class Meta(BaseTable.Meta):
@@ -414,13 +433,12 @@ class PrefixDetailTable(PrefixTable):
 #
 
 
-class IPAddressTable(StatusTableMixin, BaseTable):
+class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
         template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
-    role = ChoiceFieldColumn()
     tenant = TenantColumn()
     assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Interface")
     assigned_object_parent = tables.Column(
@@ -525,7 +543,7 @@ class VLANGroupTable(BaseTable):
     name = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"group": "slug"}, verbose_name="VLANs")
+    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "slug"}, verbose_name="VLANs")
     actions = ButtonsColumn(model=VLANGroup, prepend_template=VLANGROUP_ADD_VLAN)
 
     class Meta(BaseTable.Meta):
@@ -539,14 +557,13 @@ class VLANGroupTable(BaseTable):
 #
 
 
-class VLANTable(StatusTableMixin, BaseTable):
+class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    group = tables.Column(linkify=True)
+    vlan_group = tables.Column(linkify=True)
     tenant = TenantColumn()
-    role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
     class Meta(BaseTable.Meta):
         model = VLAN
@@ -555,7 +572,7 @@ class VLANTable(StatusTableMixin, BaseTable):
             "vid",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "tenant",
             "status",
@@ -578,7 +595,7 @@ class VLANDetailTable(VLANTable):
             "vid",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "prefixes",
             "tenant",
@@ -592,7 +609,7 @@ class VLANDetailTable(VLANTable):
             "vid",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "prefixes",
             "tenant",
@@ -641,7 +658,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tagged = BooleanColumn()
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    group = tables.Column(accessor=Accessor("group__name"), verbose_name="Group")
+    vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
@@ -652,7 +669,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
             "tagged",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "tenant",
             "status",
@@ -685,7 +702,7 @@ class ServiceTable(BaseTable):
             "parent",
             "protocol",
             "ports",
-            "ipaddresses",
+            "ip_addresses",
             "description",
             "tags",
         )

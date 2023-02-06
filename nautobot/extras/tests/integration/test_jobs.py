@@ -4,9 +4,9 @@ from django.contrib.contenttypes.models import ContentType
 
 from selenium.webdriver.common.keys import Keys
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.models.jobs import Job, JobLogEntry, JobResult
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 class JobResultTest(SeleniumTestCase):
@@ -33,8 +33,8 @@ class JobResultTest(SeleniumTestCase):
             name=job.class_path,
             obj_type=ContentType.objects.get_for_model(Job),
             user=self.user,
-            status=JobResultStatusChoices.STATUS_RUNNING,
-            job_id=job.pk,
+            status=JobResultStatusChoices.STATUS_STARTED,
+            task_id=job.pk,
         )
         job_result.save()
 
@@ -48,8 +48,8 @@ class JobResultTest(SeleniumTestCase):
             )
 
         # Complete the job
-        job_result.completed = datetime.now()
-        job_result.status = JobResultStatusChoices.STATUS_COMPLETED
+        job_result.date_done = datetime.now()
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
         job_result.save()
 
         # Visit the job result page

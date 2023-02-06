@@ -9,7 +9,6 @@ from textwrap import dedent
 import traceback
 import warnings
 
-
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -17,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import IntegrityError, transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
@@ -27,28 +26,27 @@ from django.utils.functional import classproperty
 import netaddr
 import yaml
 
-
-from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
-from .datasources.git import ensure_git_repository
-from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
-from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
-
 from nautobot.core.celery import nautobot_task
+from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms import (
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+)
+from nautobot.core.utils.requests import copy_safe_request
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
     MinPrefixLengthValidator,
     prefix_validator,
 )
-from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.forms import (
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-)
-from nautobot.utilities.utils import copy_safe_request
+
+from .choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
+from .datasources.git import ensure_git_repository
+from .forms import JobForm
+from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
+from .registry import registry
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 
 User = get_user_model()
@@ -581,7 +579,7 @@ class BaseJob:
             self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
         else:
             self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
-        self.failed = True
+        raise RunJobTaskFailed(message)
 
     # Convenience functions
 
@@ -1042,6 +1040,10 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
+class RunJobTaskFailed(Exception):
+    """Celery task failed for some reason."""
+
+
 @nautobot_task
 def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     """
@@ -1054,30 +1056,19 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     # Getting the correct job result can fail if the stored data cannot be serialized.
     # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
-    try:
-        job_result = JobResult.objects.get(pk=job_result_pk)
-    except TypeError as e:
-        logger.error(f"Unable to serialize data for job {job_result_pk}")
-        logger.error(e)
-        return False
+    job_result = JobResult.objects.get(pk=job_result_pk)
 
     job_model = job_result.job_model
     initialization_failure = None
-    if not job_model:
-        # 2.0 TODO: remove this fallback logic
-        try:
-            job_model = JobModel.objects.get_for_class_path(job_result.name)
-        except JobModel.DoesNotExist:
-            initialization_failure = f'Unable to locate Job database record for "{job_result.name}" to run it!'
+    job_model = JobModel.objects.get_for_class_path(job_result.name)
 
-    if not initialization_failure:
-        if not job_model.enabled:
-            initialization_failure = f"Job {job_model} is not enabled to be run!"
-        else:
-            job_class = job_model.job_class
+    if not job_model.enabled:
+        initialization_failure = f"Job {job_model} is not enabled to be run!"
+    else:
+        job_class = job_model.job_class
 
-            if not job_model.installed or not job_class:
-                initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
+        if not job_model.installed or not job_class:
+            initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
 
     if initialization_failure:
         job_result.log(
@@ -1087,24 +1078,11 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             grouping="initialization",
             logger=logger,
         )
-        job_result.status = JobResultStatusChoices.STATUS_ERRORED
-        job_result.completed = timezone.now()
-        job_result.save()
-        return False
+        raise RunJobTaskFailed(initialization_failure)
 
-    try:
-        job = job_class()
-        job.active_test = "initialization"
-        job.job_result = job_result
-    except Exception as error:
-        logger.error("Error initializing job object.")
-        logger.error(error)
-        stacktrace = traceback.format_exc()
-        job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
-        job_result.completed = timezone.now()
-        job_result.save()
-        return False
+    job = job_class()
+    job.active_test = "initialization"
+    job.job_result = job_result
 
     soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
     time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
@@ -1130,8 +1108,10 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # or it might be bad input from an API request, or manual execution.
 
         data = job_class.deserialize_data(data)
+    # TODO(jathan): Another place where because `log()` is called which mutates `.data`, we must
+    # explicitly call `save()` again. We need to see if we can move more of this to `NauotbotTask`
+    # and/or the DB backend as well.
     except Exception:
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
         stacktrace = traceback.format_exc()
         job_result.log(
             f"Error initializing job:\n```\n{stacktrace}\n```",
@@ -1139,12 +1119,11 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             grouping="initialization",
             logger=logger,
         )
-        job_result.completed = timezone.now()
         job_result.save()
         if file_ids:
             # Cleanup FileProxy objects
             job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
-        return False
+        raise
 
     if job_model.read_only:
         # Force commit to false for read only jobs.
@@ -1153,9 +1132,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # TODO(Glenn): validate that all args required by this job are set in the data or else log helpful errors?
 
     job.logger.info(f"Running job (commit={commit})")
-
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
-    job_result.save()
 
     # Add the current request as a property of the job
     job.request = request
@@ -1187,27 +1163,24 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                     if output:
                         job.results["output"] += "\n" + str(output)
 
-                if job.failed:
-                    job.logger.warning("job failed")
-                    job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
-                else:
-                    job.logger.info("job completed successfully")
-                    job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+                job.logger.info("job completed successfully")
 
                 if not commit:
-                    raise AbortTransaction()
+                    raise AbortTransaction("Database changes have been reverted automatically.")
 
         except AbortTransaction:
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted automatically.")
 
-        except Exception as exc:
-            stacktrace = traceback.format_exc()
-            job.log_failure(message=f"An exception occurred: `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```")
+        except Exception:
             if not job_model.read_only:
                 job.log_info(message="Database changes have been reverted due to error.")
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            raise
 
+        # TODO(jathan): For now we still need to call `save()` so that any output data from the job
+        # that was stored gets saved to the `JobResult`. We need to consider where this should be
+        # moved as we get closer to eliminating `run_job()` entirely. Hint: Probably inside of
+        # `NautobotTask` class.
         finally:
             try:
                 job_result.save()
@@ -1218,6 +1191,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
+        # TODO(jathan): Pretty sure this can also be handled by the backend, but
+        # leaving it for now.
         # record data about this jobrun in the schedule
         if job_result.schedule:
             job_result.schedule.total_run_count += 1
@@ -1227,24 +1202,20 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # Perform any post-run tasks
         # 2.0 TODO Remove post_run() method entirely
         job.active_test = "post_run"
-        try:
-            output = job.post_run()
-        except Exception as exc:
-            stacktrace = traceback.format_exc()
-            message = (
-                f"An exception occurred during job post_run(): `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
-            )
-            output = message
-            job.log_failure(message=message)
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
-        finally:
-            if output:
-                job.results["output"] += "\n" + str(output)
-
-            job_result.completed = timezone.now()
+        output = job.post_run()
+        # TODO(jathan): We need to call `save()` here too so that any appended output from
+        # `post_run` gets stored on the `JobResult`. We need to move this out of here as well.
+        if output:
+            job.results["output"] += "\n" + str(output)
             job_result.save()
 
-            job.logger.info(f"Job completed in {job_result.duration}")
+        job_result.refresh_from_db()
+        job.logger.info(f"Job completed in {job_result.duration}")
+
+        # TODO(jathan): For now this is only output from `post_run()` which is not straightforward.
+        # We need to think about what we want to be returned from job runs and stored as
+        # `JobResult.result`, otherwise it will always be `None`.
+        return output
 
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
@@ -1252,11 +1223,13 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
         change_context = context_class(user=request.user, context_detail=job_model.slug)
         with change_logging(change_context):
-            _run_job()
+            output = _run_job()
     else:
-        _run_job()
+        output = _run_job()
 
-    return True
+    # This is just passing through the return value from `post_run()` which for now will always be
+    # `None` (see above).
+    return output
 
 
 @nautobot_task

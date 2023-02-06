@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
+from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
@@ -17,7 +18,7 @@ class ClusterTestCase(TestCase):
         site_2 = Site.objects.create(name="Test Site 2", status=active)
         location_type = LocationType.objects.create(name="Location Type 1")
         location = Location.objects.create(name="Location 1", location_type=location_type, site=site_1)
-        cluster = Cluster(name="Test Cluster 1", type=cluster_type, site=site_1, location=location)
+        cluster = Cluster(name="Test Cluster 1", cluster_type=cluster_type, site=site_1, location=location)
         with self.assertRaises(ValidationError) as cm:
             cluster.validated_save()
         self.assertIn('Clusters may not associate to locations of type "Location Type 1"', str(cm.exception))
@@ -34,7 +35,7 @@ class VirtualMachineTestCase(TestCase):
         statuses = Status.objects.get_for_model(VirtualMachine)
 
         cluster_type = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
-        self.cluster = Cluster.objects.create(name="Test Cluster 1", type=cluster_type)
+        self.cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=cluster_type)
         self.status = statuses.get(slug="active")
 
     def test_vm_duplicate_name_per_cluster(self):
@@ -77,8 +78,11 @@ class VMInterfaceTestCase(TestCase):
         site = Site.objects.create(name="Site-1", slug="site-1")
         self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site)
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
-        cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
+        cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         self.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
+        self.other_site_vlan = VLAN.objects.create(
+            name="Other Site VLAN", vid=100, site=Site.objects.create(name="Other Site")
+        )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = VMInterface.objects.create(virtual_machine=self.virtualmachine, name="Interface 1")
@@ -86,4 +90,18 @@ class VMInterfaceTestCase(TestCase):
             interface.tagged_vlans.add(self.vlan)
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+        )
+
+    def test_error_raised_when_adding_tagged_vlan_with_different_site_from_interface_parent_site(self):
+        with self.assertRaises(ValidationError) as err:
+            interface = VMInterface.objects.create(
+                name="Test Interface",
+                mode=InterfaceModeChoices.MODE_TAGGED,
+                virtual_machine=self.virtualmachine,
+            )
+            interface.tagged_vlans.add(self.other_site_vlan)
+        self.assertEqual(
+            err.exception.message_dict["tagged_vlans"][0],
+            f"Tagged VLAN with names {[self.other_site_vlan.name]} must all belong to the "
+            f"same site as the interface's parent device, or it must be global.",
         )

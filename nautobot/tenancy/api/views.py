@@ -1,12 +1,12 @@
 from rest_framework.routers import APIRootView
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device, Rack, Site
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy import filters
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.utils import count_related
 from nautobot.virtualization.models import VirtualMachine
 from . import serializers
 
@@ -26,7 +26,7 @@ class TenancyRootView(APIRootView):
 
 
 class TenantGroupViewSet(NautobotModelViewSet):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "group"))
+    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
     serializer_class = serializers.TenantGroupSerializer
     filterset_class = filters.TenantGroupFilterSet
 
@@ -37,17 +37,20 @@ class TenantGroupViewSet(NautobotModelViewSet):
 
 
 class TenantViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (it should stay for tags)
-    queryset = Tenant.objects.prefetch_related("group", "tags").annotate(
-        circuit_count=count_related(Circuit, "tenant"),
-        device_count=count_related(Device, "tenant"),
-        ipaddress_count=count_related(IPAddress, "tenant"),
-        prefix_count=count_related(Prefix, "tenant"),
-        rack_count=count_related(Rack, "tenant"),
-        site_count=count_related(Site, "tenant"),
-        virtualmachine_count=count_related(VirtualMachine, "tenant"),
-        vlan_count=count_related(VLAN, "tenant"),
-        vrf_count=count_related(VRF, "tenant"),
+    queryset = (
+        Tenant.objects.select_related("tenant_group")
+        .prefetch_related("tags")
+        .annotate(
+            circuit_count=count_related(Circuit, "tenant"),
+            device_count=count_related(Device, "tenant"),
+            ipaddress_count=count_related(IPAddress, "tenant"),
+            prefix_count=count_related(Prefix, "tenant"),
+            rack_count=count_related(Rack, "tenant"),
+            site_count=count_related(Site, "tenant"),
+            virtualmachine_count=count_related(VirtualMachine, "tenant"),
+            vlan_count=count_related(VLAN, "tenant"),
+            vrf_count=count_related(VRF, "tenant"),
+        )
     )
     serializer_class = serializers.TenantSerializer
     filterset_class = filters.TenantFilterSet

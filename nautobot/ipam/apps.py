@@ -4,6 +4,13 @@ from nautobot.core.apps import NautobotConfig
 class IPAMConfig(NautobotConfig):
     name = "nautobot.ipam"
     verbose_name = "IPAM"
+    searchable_models = [
+        "vrf",
+        "aggregate",
+        "prefix",
+        "ipaddress",
+        "vlan",
+    ]
 
     def ready(self):
         super().ready()

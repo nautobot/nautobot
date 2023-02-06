@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -11,11 +12,11 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
 
@@ -23,12 +24,7 @@ from example_plugin.models import ExampleModel
 class PluginWebhookTest(SeleniumTestCase):
     """
     This test case proves that plugins can use the webhook functions when making changes on a model.
-
-    Because webhooks use celery a class variable is set to True called `requires_celery`. This starts
-    a celery instance in a separate thread.
     """
-
-    requires_celery = True
 
     def setUp(self):
         super().setUp()
@@ -59,24 +55,23 @@ class PluginWebhookTest(SeleniumTestCase):
         self.webhook.additional_headers = headers
         self.webhook.validated_save()
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_create(self):
         """
         Test that webhooks are correctly triggered by a plugin model create.
         """
-        self.clear_worker()
         self.update_headers("test_plugin_webhook_create")
         # Make change to model
         with web_request_context(self.user):
             ExampleModel.objects.create(name="foo", number=100)
-        self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_update(self):
         """
         Test that webhooks are correctly triggered by a plugin model update.
         """
-        self.clear_worker()
         self.update_headers("test_plugin_webhook_update")
         obj = ExampleModel.objects.create(name="foo", number=100)
 
@@ -84,30 +79,28 @@ class PluginWebhookTest(SeleniumTestCase):
         with web_request_context(self.user):
             obj.number = 200
             obj.validated_save()
-        self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_delete(self):
         """
         Test that webhooks are correctly triggered by a plugin model delete.
         """
-        self.clear_worker()
         self.update_headers(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
         obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
             obj.delete()
-        self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_with_body(self):
         """
         Verify that webhook body_template is correctly used.
         """
-        self.clear_worker()
         self.update_headers("test_plugin_webhook_with_body")
 
         self.webhook.body_template = '{"message": "{{ event }}"}'
@@ -117,7 +110,6 @@ class PluginWebhookTest(SeleniumTestCase):
         with web_request_context(self.user):
             ExampleModel.objects.create(name="bar", number=100)
 
-        self.wait_on_active_tasks()
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body")))
         with open(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"), "r") as f:
             self.assertEqual(json.loads(f.read()), {"message": "created"})
@@ -199,7 +191,7 @@ class PluginTabsTestCase(SeleniumTestCase):
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=active_status,
         )
         # Visit the circuit's detail page and check that the tab is visible

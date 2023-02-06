@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
+from nautobot.core.api import TreeModelSerializerMixin
 from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.api import TreeModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
@@ -33,7 +33,7 @@ class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
-    group = NestedTenantGroupSerializer(required=False)
+    tenant_group = NestedTenantGroupSerializer(required=False)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     ipaddress_count = serializers.IntegerField(read_only=True)
@@ -51,7 +51,7 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "url",
             "name",
             "slug",
-            "group",
+            "tenant_group",
             "description",
             "comments",
             "circuit_count",

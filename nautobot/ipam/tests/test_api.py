@@ -8,23 +8,22 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import Status
+from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
+from nautobot.core.testing.api import APITransactionTestCase
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
-from nautobot.utilities.testing.api import APITransactionTestCase
 
 
 class AppTest(APITestCase):
@@ -143,67 +142,33 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class RoleTest(APIViewTestCases.APIViewTestCase):
-    model = Role
-    brief_fields = ["display", "id", "name", "prefix_count", "slug", "url", "vlan_count"]
-    create_data = [
-        {
-            "name": "Role 4",
-            "slug": "role-4",
-        },
-        {
-            "name": "Role 5",
-            "slug": "role-5",
-        },
-        {
-            "name": "Role 6",
-            "slug": "role-6",
-        },
-        {
-            "name": "Role 7",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     brief_fields = ["display", "family", "id", "prefix", "url"]
+    choices_fields = []
 
-    create_data = [
-        {
-            "prefix": "192.168.4.0/24",
-            "status": "active",
-        },
-        {
-            "prefix": "2001:db8:abcd:12::/80",
-            "status": "active",
-        },
-        {
-            "prefix": "192.168.6.0/24",
-            "status": "active",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["status"]
-
-    # FIXME(jathan): The writable serializer for `status` takes the
-    # status `name` (str) and not the `pk` (int). Do not validate this
-    # field right now, since we are asserting that it does create correctly.
-    #
-    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
-    # needs to be enhanced to use the actual API serializers when `api=True`
-    validation_excluded_fields = ["status"]
-
-    def setUp(self):
-        super().setUp()
-        self.statuses = Status.objects.get_for_model(Prefix)
-        self.status_active = self.statuses.get(slug="active")
+    @classmethod
+    def setUpTestData(cls):
+        cls.statuses = Status.objects.get_for_model(Prefix)
+        cls.status_active = cls.statuses.get(slug="active")
+        cls.create_data = [
+            {
+                "prefix": "192.168.4.0/24",
+                "status": cls.status_active.pk,
+            },
+            {
+                "prefix": "2001:db8:abcd:12::/80",
+                "status": cls.status_active.pk,
+            },
+            {
+                "prefix": "192.168.6.0/24",
+                "status": cls.status_active.pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "description": "New description",
+            "status": cls.statuses[0].pk,
+        }
 
     def test_list_available_prefixes(self):
         """
@@ -241,7 +206,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(4):
             data = {
                 "prefix_length": child_prefix_length,
-                "status": "active",
+                "status": self.status_active.pk,
                 "description": f"Test Prefix {i + 1}",
             }
             response = self.client.post(url, data, format="json", **self.header)
@@ -278,11 +243,11 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         # Try to create five prefixes (only four are available)
         child_prefix_length = prefix.prefix_length + 2
         data = [
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 1", "status": "active"},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 2", "status": "active"},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 3", "status": "active"},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 4", "status": "active"},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 5", "status": "active"},
+            {"prefix_length": child_prefix_length, "description": "Test Prefix 1", "status": self.status_active.pk},
+            {"prefix_length": child_prefix_length, "description": "Test Prefix 2", "status": self.status_active.pk},
+            {"prefix_length": child_prefix_length, "description": "Test Prefix 3", "status": self.status_active.pk},
+            {"prefix_length": child_prefix_length, "description": "Test Prefix 4", "status": self.status_active.pk},
+            {"prefix_length": child_prefix_length, "description": "Test Prefix 5", "status": self.status_active.pk},
         ]
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
@@ -334,7 +299,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(1, 5):
             data = {
                 "description": f"Test IP {i}",
-                "status": "active",
+                "status": self.status_active.pk,
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -355,13 +320,13 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
         # Try to create nine IPs (only eight are available)
-        data = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 10)]  # 9 IPs
+        data = [{"description": f"Test IP {i}", "status": self.status_active.pk} for i in range(1, 10)]  # 9 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
         # Create all eight available IPs in a single request
-        data = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]  # 8 IPs
+        data = [{"description": f"Test IP {i}", "status": self.status_active.pk} for i in range(1, 9)]  # 8 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)
@@ -374,9 +339,12 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
+        status_active = Status.objects.get(slug="active")
 
         # 5 Prefixes
-        requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": "active"} for i in range(1, 6)]
+        requests = [
+            {"prefix_length": 30, "description": f"Test Prefix {i}", "status": status_active.pk} for i in range(1, 6)
+        ]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
@@ -387,9 +355,10 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_ips_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True)
+        status_active = Status.objects.get(slug="active")
 
         # 8 IPs
-        requests = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]
+        requests = [{"description": f"Test IP {i}", "status": status_active.pk} for i in range(1, 9)]
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
@@ -418,32 +387,29 @@ class ParallelPrefixTest(APITransactionTestCase):
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
     brief_fields = ["address", "display", "family", "id", "url"]
-    create_data = [
-        {
-            "address": "192.168.0.4/24",
-            "status": "active",
-        },
-        {
-            "address": "2001:db8:abcd:12::20/128",
-            "status": "active",
-        },
-        {
-            "address": "192.168.0.6/24",
-            "status": "active",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["assigned_object_type", "role", "status"]
+    choices_fields = ["assigned_object_type"]
 
-    # FIXME(jathan): The writable serializer for `status` takes the
-    # status `name` (str) and not the `pk` (int). Do not validate this
-    # field right now, since we are asserting that it does create correctly.
-    #
-    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
-    # needs to be enhanced to use the actual API serializers when `api=True`
-    validation_excluded_fields = ["status"]
+    @classmethod
+    def setUpTestData(cls):
+        cls.statuses = Status.objects.get_for_model(IPAddress)
+        cls.create_data = [
+            {
+                "address": "192.168.0.4/24",
+                "status": cls.statuses[0].pk,
+            },
+            {
+                "address": "2001:db8:abcd:12::20/128",
+                "status": cls.statuses[0].pk,
+            },
+            {
+                "address": "192.168.0.6/24",
+                "status": cls.statuses[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "description": "New description",
+            "status": cls.statuses[1].pk,
+        }
 
     def test_create_invalid_address(self):
         """Pass various invalid inputs and confirm they are rejected cleanly."""
@@ -451,7 +417,10 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
         for bad_address in ("", "192.168.0.0.100/24", "192.168.0.0/35", "2001:db8:1:2:3:4:5:6:7:8/64"):
             response = self.client.post(
-                self._get_list_url(), {"address": bad_address, "status": "active"}, format="json", **self.header
+                self._get_list_url(),
+                {"address": bad_address, "status": self.statuses[0].pk},
+                format="json",
+                **self.header,
             )
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertIn("address", response.data)
@@ -465,14 +434,14 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         # Create NAT outside with above address IP as inside NAT
         ip1 = self.client.post(
             self._get_list_url(),
-            {"address": "192.0.2.1/24", "nat_inside": nat_inside.pk, "status": "active"},
+            {"address": "192.0.2.1/24", "nat_inside": nat_inside.pk, "status": self.statuses[0].pk},
             format="json",
             **self.header,
         )
         self.assertHttpStatus(ip1, status.HTTP_201_CREATED)
         ip2 = self.client.post(
             self._get_list_url(),
-            {"address": "192.0.2.2/24", "nat_inside": nat_inside.pk, "status": "active"},
+            {"address": "192.0.2.2/24", "nat_inside": nat_inside.pk, "status": self.statuses[0].pk},
             format="json",
             **self.header,
         )
@@ -525,50 +494,44 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
     brief_fields = ["display", "id", "name", "url", "vid"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["status"]
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
 
         vlan_groups = VLANGroup.objects.filter(site__isnull=False, location__isnull=False)[:2]
-
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
+        statuses = Status.objects.get_for_model(VLAN)
 
         cls.create_data = [
             {
                 "vid": 4,
-                "name": "VLAN 4",
-                "group": vlan_groups[0].pk,
-                "status": "active",
+                "name": "VLAN 4 with a name much longer than 64 characters to verify that we increased the limit",
+                "vlan_group": vlan_groups[0].pk,
+                "status": statuses[0].pk,
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 5,
                 "name": "VLAN 5",
-                "group": vlan_groups[0].pk,
-                "status": "active",
+                "vlan_group": vlan_groups[0].pk,
+                "status": statuses[0].pk,
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 6,
                 "name": "VLAN 6",
-                "group": vlan_groups[0].pk,
-                "status": "active",
+                "vlan_group": vlan_groups[0].pk,
+                "status": statuses[0].pk,
                 "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
             },
         ]
+        cls.bulk_update_data = {
+            "description": "New description",
+            "status": statuses[1].pk,
+        }
 
     def test_delete_vlan_with_prefix(self):
         """
@@ -601,20 +564,20 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
             Device.objects.create(
                 name="Device 2",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
         )
         cls.devices = devices

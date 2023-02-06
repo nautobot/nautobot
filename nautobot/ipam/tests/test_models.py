@@ -6,9 +6,9 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase, override_settings
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Location, LocationType, Manufacturer, Site
-from nautobot.extras.models import Status
-from nautobot.ipam.choices import IPAddressRoleChoices, IPAddressStatusChoices
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer, Site
+from nautobot.extras.models import Role, Status
+from nautobot.ipam.choices import IPAddressStatusChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
 
 
@@ -422,13 +422,14 @@ class TestIPAddress(TestCase):
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_nonunique_role(self):
+        roles = Role.objects.get_for_model(IPAddress)
         IPAddress.objects.create(
             address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
+            role=roles[0],
         )
         IPAddress.objects.create(
             address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
+            role=roles[1],
         )
 
     def test_multiple_nat_outside(self):
@@ -482,11 +483,11 @@ class TestIPAddress(TestCase):
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         device = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="TestDevice1",
             site=site,
             status=device_status,
@@ -494,7 +495,7 @@ class TestIPAddress(TestCase):
         interface = Interface.objects.create(device=device, name="eth0")
         ipaddress_1 = IPAddress(
             address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
+            role=Role.objects.get_for_model(IPAddress).first(),
             assigned_object_id=interface.id,
         )
 
@@ -504,7 +505,7 @@ class TestIPAddress(TestCase):
         # are both provided
         ipaddress_2 = IPAddress(
             address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
+            role=Role.objects.get_for_model(IPAddress).first(),
             assigned_object_id=interface.id,
             assigned_object_type=ContentType.objects.get_for_model(Interface),
         )
@@ -538,15 +539,15 @@ class TestVLANGroup(TestCase):
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
         VLAN.objects.bulk_create(
             (
-                VLAN(name="VLAN 1", vid=1, group=vlangroup),
-                VLAN(name="VLAN 2", vid=2, group=vlangroup),
-                VLAN(name="VLAN 3", vid=3, group=vlangroup),
-                VLAN(name="VLAN 5", vid=5, group=vlangroup),
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup),
+                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup),
+                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup),
             )
         )
         self.assertEqual(vlangroup.get_next_available_vid(), 4)
 
-        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, group=vlangroup),))
+        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
@@ -571,7 +572,7 @@ class VLANTestCase(TestCase):
 
         vlan.site = location.site
         group = VLANGroup.objects.create(name="Group 1", site=site_2)
-        vlan.group = group
+        vlan.vlan_group = group
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(f"VLAN group must belong to the assigned site ({location.site.name})", str(cm.exception))

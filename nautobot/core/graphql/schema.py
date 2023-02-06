@@ -353,7 +353,7 @@ def extend_schema_type_config_context(schema_type, model):
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]
-    if "local_context_data" not in fields_name:
+    if "local_config_context_data" not in fields_name:
         return schema_type
 
     def resolve_config_context(self, args):

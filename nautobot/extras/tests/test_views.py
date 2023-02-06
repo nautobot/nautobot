@@ -10,7 +10,11 @@ from django.urls import reverse
 from django.utils import timezone
 from unittest import mock
 
-from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.core.choices import ColorChoices
+from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
+from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Site
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -36,6 +40,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -50,9 +55,6 @@ from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
-from nautobot.utilities.testing.utils import disable_warnings, post_data
-from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 # Use the proper swappable User model
@@ -1166,7 +1168,7 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("You do not have permission to run jobs", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_dry_run_not_runnable(self):
@@ -1180,7 +1182,7 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("This job cannot be run at this time", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_dry_run_needs_job_run_permission(self):
@@ -1196,7 +1198,7 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("You do not have permission to run this job", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_dry_run_needs_specific_job_run_permission(self):
@@ -1218,7 +1220,8 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("You do not have permission to run this job", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        job_names = [instance1.job_model.name, instance2.job_model.name]
+        self.assertFalse(JobResult.objects.filter(name__in=job_names).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -1236,10 +1239,11 @@ class ApprovalQueueTestCase(
 
         response = self.client.post(self._get_url("view", instance), data)
         # Job was submitted
-        self.assertEqual(
-            1, len(JobResult.objects.all()), msg=extract_page_body(response.content.decode(response.charset))
+        self.assertTrue(
+            JobResult.objects.filter(name=instance.job_model.class_path).exists(),
+            msg=extract_page_body(response.content.decode(response.charset)),
         )
-        job_result = JobResult.objects.first()
+        job_result = JobResult.objects.get(name=instance.job_model.class_path)
         self.assertEqual(job_result.job_model, instance.job_model)
         self.assertEqual(job_result.user, self.user)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
@@ -1418,17 +1422,17 @@ class JobResultTestCase(
         obj_type = get_job_content_type()
         JobResult.objects.create(
             name="local/test_pass/TestPass",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
             name="local/test_fail/TestFail",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
             name="local/test_read_only_fail/TestReadOnlyFail",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
 
@@ -1641,7 +1645,7 @@ class JobTestCase(
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not presently installed", response_body)
 
-            self.assertEqual(0, len(JobResult.objects.all()))
+            self.assertFalse(JobResult.objects.filter(name=self.test_not_installed.name).exists())
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_not_enabled(self, _):
@@ -1655,8 +1659,7 @@ class JobTestCase(
             self.assertEqual(response.status_code, 200, msg=run_url)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not enabled to be run", response_body)
-
-            self.assertEqual(0, len(JobResult.objects.all()))
+            self.assertFalse(JobResult.objects.filter(name="local/test_fail/TestFail").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
@@ -2070,12 +2073,12 @@ class RelationshipAssociationTestCase(
         relationship.validated_save()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -2285,3 +2288,36 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
+
+
+class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+    model = Role
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Status objects to test.
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            "name": "New Role",
+            "slug": "new-role",
+            "description": "I am a new role object.",
+            "color": ColorChoices.COLOR_GREY,
+            "content_types": [content_type.pk],
+        }
+
+        cls.csv_data = (
+            "name,slug,weight,color,content_types",
+            "test_role1,test-role1,1000,ffffff,dcim.device",
+            'test_role2,test-role2,200,ffffff,"dcim.device,dcim.rack"',
+            'test_role3,test-role3,100,ffffff,"dcim.device,ipam.prefix"',
+            'test_role4,test-role4,50,ffffff,"ipam.ipaddress,ipam.vlan"',
+        )
+
+        cls.bulk_edit_data = {
+            "color": "000000",
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = Role.objects.first().name

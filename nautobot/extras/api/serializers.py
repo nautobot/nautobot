@@ -3,7 +3,6 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
-from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -15,10 +14,14 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
@@ -26,8 +29,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
-from nautobot.extras.api.fields import StatusSerializerField
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -57,6 +59,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -65,16 +68,13 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
 )
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
     NestedClusterSerializer,
@@ -82,7 +82,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
-from .fields import MultipleChoiceJSONField
+from .fields import MultipleChoiceJSONField, RoleSerializerField, StatusSerializerField
 from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -99,11 +99,13 @@ from .nested_serializers import (  # noqa: F401
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobHookSerializer,
     NestedJobSerializer,
     NestedJobResultSerializer,
     NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
+    NestedRoleSerializer,
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
     NestedSecretsGroupSerializer,
@@ -111,7 +113,6 @@ from .nested_serializers import (  # noqa: F401
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
-    NestedJobHookSerializer,
 )
 
 #
@@ -171,7 +172,7 @@ class NautobotModelSerializer(
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
-    status = StatusSerializerField(queryset=Status.objects.all())
+    status = StatusSerializerField(required=True)
 
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
@@ -179,28 +180,9 @@ class StatusModelSerializerMixin(BaseModelSerializer):
         self.extend_field_names(fields, "status")
         return fields
 
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def status_choices(cls):  # pylint: disable=no-self-argument
-        """
-        Get the list of valid status values for this serializer.
 
-        In the case where multiple serializers have the same set of status choices, it's necessary to set
-        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] for at least one of the matching serializers,
-        or else drf-spectacular will report:
-        'enum naming encountered a non-optimally resolvable collision for fields named "status"'
-        """
-        return list(cls().fields["status"].get_choices().keys())
-
-
-class TagSerializerField(NestedTagSerializer):
+class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
     """NestedSerializer field for `Tag` object fields."""
-
-    def get_queryset(self):
-        """Only emit status options for this model/field combination."""
-        queryset = super().get_queryset()
-        # Get objects model e.g Site, Device... etc.
-        model = self.parent.parent.Meta.model
-        return queryset.get_for_model(model)
 
 
 class TaggedModelSerializerMixin(BaseModelSerializer):
@@ -306,8 +288,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         many=True,
     )
     roles = SerializedPKRelatedField(
-        queryset=DeviceRole.objects.all(),
-        serializer=NestedDeviceRoleSerializer,
+        queryset=Role.objects.all(),
+        serializer=NestedRoleSerializer,
         required=False,
         many=True,
     )
@@ -854,16 +836,16 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
         model = JobResult
         fields = [
             "url",
-            "created",
-            "completed",
+            "date_created",
+            "date_done",
             "name",
             "job_model",
             "obj_type",
             "status",
             "user",
             "data",
-            "job_id",
-            "job_kwargs",
+            "task_id",
+            "task_kwargs",
             "schedule",
         ]
 
@@ -1191,6 +1173,44 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
             "source_id",
             "destination_type",
             "destination_id",
+        ]
+
+
+#
+# Roles
+#
+
+
+class RoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField(required=False)
+
+
+class RoleRequiredRoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField()
+
+
+class RoleSerializer(NautobotModelSerializer):
+    """Serializer for `Role` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
+    content_types = ContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        many=True,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "url",
+            "content_types",
+            "name",
+            "slug",
+            "color",
+            "weight",
         ]
 
 

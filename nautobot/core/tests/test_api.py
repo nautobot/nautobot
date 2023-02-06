@@ -1,17 +1,23 @@
 import json
 
+from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
-from django.test import override_settings
+from django.test import override_settings, TestCase
 from django.urls import reverse
 
 from constance import config
 from constance.test import override_config
+from rest_framework import status
 
 from nautobot.circuits.models import Provider
-from nautobot.utilities.testing import APITestCase
+from nautobot.core import testing
+from nautobot.dcim import models as dcim_models
+from nautobot.extras import choices
+from nautobot.extras import models as extras_models
+from nautobot.ipam import models as ipam_models
 
 
-class AppTest(APITestCase):
+class AppTest(testing.APITestCase):
     def test_root(self):
         url = reverse("api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
@@ -43,7 +49,31 @@ class AppTest(APITestCase):
         self.assertIn("application/vnd.oai.openapi+json", response.headers["Content-Type"])
 
 
-class APIPaginationTestCase(APITestCase):
+class APIDocsTestCase(TestCase):
+    client_class = testing.NautobotTestClient
+
+    def setUp(self):
+        # Populate a CustomField to activate CustomFieldSerializer
+        content_type = ContentType.objects.get_for_model(dcim_models.Site)
+        self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")
+        self.cf_text.save()
+        self.cf_text.content_types.set([content_type])
+        self.cf_text.save()
+
+    def test_api_docs(self):
+        url = reverse("api_docs")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        headers = {
+            "HTTP_ACCEPT": "application/vnd.oai.openapi",
+        }
+        url = reverse("schema")
+        response = self.client.get(url, **headers)
+        self.assertEqual(response.status_code, 200)
+
+
+class APIPaginationTestCase(testing.APITestCase):
     """
     Testing our custom API pagination, OptionalLimitOffsetPagination.
 
@@ -139,7 +169,7 @@ class APIPaginationTestCase(APITestCase):
         self.assertEqual(len(response.data["results"]), config.MAX_PAGE_SIZE)
 
 
-class APIVersioningTestCase(APITestCase):
+class APIVersioningTestCase(testing.APITestCase):
     """
     Testing our custom API versioning, NautobotAPIVersioning.
     """
@@ -218,7 +248,7 @@ class APIVersioningTestCase(APITestCase):
         self.assertIn("Version mismatch", response.data["detail"])
 
 
-class LookupTypeChoicesTestCase(APITestCase):
+class LookupTypeChoicesTestCase(testing.APITestCase):
     def test_get_lookup_choices_without_query_params(self):
         url = reverse("core-api:filtersetfield-list-lookupchoices")
         response = self.client.get(url, **self.header)
@@ -256,7 +286,7 @@ class LookupTypeChoicesTestCase(APITestCase):
         )
 
 
-class GenerateLookupValueDomElementViewTestCase(APITestCase):
+class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
     def test_get_lookup_field_data_without_query_params(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
         response = self.client.get(url, **self.header)
@@ -290,3 +320,133 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
                 "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
             },
         )
+
+    def test_get_lookup_value_dom_element_for_configcontext(self):
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
+        response = self.client.get(url + "?content_type=extras.configcontext&field_name=role", **self.header)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
+                'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
+                'display-field="display" value-field="slug" data-url="/api/extras/roles/" id="id_for_role" '
+                "multiple>\n</select>"
+            },
+        )
+
+
+class WritableNestedSerializerTest(testing.APITestCase):
+    """
+    Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        self.region_a = dcim_models.Region.objects.filter(sites__isnull=True).first()
+        self.status = extras_models.Status.objects.get(name="Active")
+        self.site1 = dcim_models.Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
+        self.site2 = dcim_models.Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
+
+    def test_related_by_pk(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "site": self.site1.pk,
+            "status": self.status.pk,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
+        self.assertEqual(vlan.site, self.site1)
+        self.assertEqual(vlan.status, self.status)
+
+    def test_related_by_pk_no_match(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "site": "00000000-0000-0000-0000-0000000009eb",
+            "status": self.status.pk,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertTrue(response.data["site"][0].startswith("Related object not found"))
+
+    def test_related_by_attributes(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": {"name": self.status.name},
+            "site": {"name": "Site 1"},
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
+        self.assertEqual(vlan.site, self.site1)
+        self.assertEqual(vlan.status, self.status)
+
+    def test_related_by_attributes_no_match(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": self.status.pk,
+            "site": {"name": "Site X"},
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertTrue(response.data["site"][0].startswith("Related object not found"))
+
+    def test_related_by_attributes_multiple_matches(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": self.status.pk,
+            "site": {
+                "region": {
+                    "name": self.region_a.name,
+                },
+            },
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertTrue(response.data["site"][0].startswith("Multiple objects match"))
+
+    def test_related_by_invalid(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "site": "XXX",
+            "status": self.status.pk,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)

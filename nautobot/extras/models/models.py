@@ -21,9 +21,10 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     CustomLinkButtonClassChoices,
     WebhookHttpMethodChoices,
@@ -34,11 +35,9 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.utilities.utils import deepmerge, render_jinja2
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401
-
 
 #
 # Config contexts
@@ -102,7 +101,9 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
-    roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
+    # TODO(timizuo): Find a way to limit role choices to Device; as of now using
+    #  limit_choices_to=Role.objects.get_for_model(Device), causes a partial import error
+    roles = models.ManyToManyField(to="extras.Role", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     device_redundancy_groups = models.ManyToManyField(to="dcim.DeviceRedundancyGroup", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
@@ -153,37 +154,41 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     ConfigContexts.
     """
 
-    local_context_data = models.JSONField(
+    local_config_context_data = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
     )
-    local_context_schema = models.ForeignKey(
+    local_config_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name="%(app_label)s_%(class)s_related",
         help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    local_context_data_owner_content_type = models.ForeignKey(
+    local_config_context_data_owner_content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("config_context_owners"),
         default=None,
         null=True,
         blank=True,
+        related_name="%(app_label)s_%(class)s_related",
     )
-    local_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
-    local_context_data_owner = GenericForeignKey(
-        ct_field="local_context_data_owner_content_type",
-        fk_field="local_context_data_owner_object_id",
+    local_config_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    local_config_context_data_owner = GenericForeignKey(
+        ct_field="local_config_context_data_owner_content_type",
+        fk_field="local_config_context_data_owner_object_id",
     )
 
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=("local_context_data_owner_content_type", "local_context_data_owner_object_id")),
+            models.Index(
+                fields=("local_config_context_data_owner_content_type", "local_config_context_data_owner_object_id")
+            ),
         ]
 
     def get_config_context(self):
@@ -207,8 +212,8 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             data = deepmerge(data, context)
 
         # If the object has local config context data defined, merge it last
-        if self.local_context_data:
-            data = deepmerge(data, self.local_context_data)
+        if self.local_config_context_data:
+            data = deepmerge(data, self.local_config_context_data)
 
         return data
 
@@ -216,14 +221,18 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         super().clean()
 
         # Verify that JSON data is provided as an object
-        if self.local_context_data and not isinstance(self.local_context_data, dict):
-            raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+        if self.local_config_context_data and not isinstance(self.local_config_context_data, dict):
+            raise ValidationError(
+                {"local_config_context_data": 'JSON data must be in object form. Example: {"foo": 123}'}
+            )
 
-        if self.local_context_schema and not self.local_context_data:
-            raise ValidationError({"local_context_schema": "Local context data must exist for a schema to be applied."})
+        if self.local_config_context_schema and not self.local_config_context_data:
+            raise ValidationError(
+                {"local_config_context_schema": "Local config context data must exist for a schema to be applied."}
+            )
 
         # Validate data against schema
-        self._validate_with_schema("local_context_data", "local_context_schema")
+        self._validate_with_schema("local_config_context_data", "local_config_context_schema")
 
 
 @extras_features(
@@ -757,11 +766,11 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     ca_file_path = models.CharField(
         max_length=4096,
-        null=True,
         blank=True,
         verbose_name="CA File Path",
         help_text="The specific CA certificate file to use for SSL verification. "
         "Leave blank to use the system defaults.",
+        default="",
     )
 
     class Meta:

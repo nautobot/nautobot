@@ -737,7 +737,7 @@ Default:
 ]
 ```
 
-List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
 
 ---
 

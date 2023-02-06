@@ -2,9 +2,9 @@ from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, TestCase
 from nautobot.dcim.models import Site
-from nautobot.extras.models import Tag
-from nautobot.utilities.testing import APITestCase, TestCase
+from nautobot.extras.models import Status, Tag
 
 
 class TaggedItemORMTest(TestCase):
@@ -49,7 +49,7 @@ class TaggedItemTest(APITestCase):
         data = {
             "name": "Test Site",
             "slug": "test-site",
-            "status": "active",
+            "status": Status.objects.get_for_model(Site).first().pk,
             "tags": [str(t.pk) for t in self.tags],
         }
         url = reverse("dcim-api:site-list")
@@ -106,7 +106,7 @@ class TaggedItemTest(APITestCase):
         data = {
             "name": "Test Site",
             "slug": "test-site",
-            "status": "active",
+            "status": Status.objects.get_for_model(Site).first().pk,
             "tags": [tag.id],
         }
         url = reverse("dcim-api:site-list")

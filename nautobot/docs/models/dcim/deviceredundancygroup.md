@@ -142,7 +142,7 @@ The following snippet represents an example Cisco ASA failover configuration tem
 
 ```python
 # Configuration Template for Cisco ASA
-template_body="""
+template_code = """
 {% set redundancy_members = gql_data['data']['devices'][0]['device_redundancy_group']['members'] %}
 {% set failover_device_local = redundancy_members[0] if redundancy_members[0].name == device else redundancy_members[1] %}
 {% set failover_device_peer = redundancy_members[0] if redundancy_members[0].name != device else redundancy_members[1] %}
@@ -172,15 +172,15 @@ failover
 Following snippet represents an example Cisco ASA Failover rendered configuration:
 
 ```python
-from jinja2 import Template
+from nautobot.core.utils.data import render_jinja2
 
-tm=Template(template_body)
 
-nyc_fw_primary_config = tm.render(
+context = dict(
     device=hostname,
     gql_data=gql_data,
     priority_mapping={50: 'secondary', 100: 'primary'}
 )
+nyc_fw_primary_config = render_jinja2(template_code=template_code, context=context)
 
 print(nyc_fw_primary_config)
 ```

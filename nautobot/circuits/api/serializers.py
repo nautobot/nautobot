@@ -121,10 +121,10 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer, NotesSeriali
 class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
     provider = NestedProviderSerializer()
-    type = NestedCircuitTypeSerializer()
+    circuit_type = NestedCircuitTypeSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    termination_a = CircuitCircuitTerminationSerializer(read_only=True)
-    termination_z = CircuitCircuitTerminationSerializer(read_only=True)
+    circuit_termination_a = CircuitCircuitTerminationSerializer(read_only=True)
+    circuit_termination_z = CircuitCircuitTerminationSerializer(read_only=True)
 
     class Meta:
         model = Circuit
@@ -132,14 +132,14 @@ class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, Tag
             "url",
             "cid",
             "provider",
-            "type",
+            "circuit_type",
             "status",
             "tenant",
             "install_date",
             "commit_rate",
             "description",
-            "termination_a",
-            "termination_z",
+            "circuit_termination_a",
+            "circuit_termination_z",
             "comments",
             "web_url"
         ]

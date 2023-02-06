@@ -8,6 +8,7 @@ from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm, SiteForm
 import nautobot.dcim.models as dcim_models
+from nautobot.dcim.models import Device
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
@@ -21,7 +22,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
     WebhookForm,
 )
-from nautobot.extras.models import Job, JobHook, Note, Relationship, RelationshipAssociation, Status, Webhook
+from nautobot.extras.models import Job, JobHook, Note, Relationship, RelationshipAssociation, Role, Status, Webhook
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
 
@@ -220,14 +221,14 @@ class RelationshipModelFormTestCase(TestCase):
         cls.site = dcim_models.Site.objects.first()
         cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
-        cls.device_role = dcim_models.DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        cls.device_role = Role.objects.get_for_model(Device).first()
         cls.platform = dcim_models.Platform.objects.create(name="Platform 1", slug="platform-1")
         cls.status_active = Status.objects.get(slug="active")
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             site=cls.site,
             device_type=cls.device_type,
-            device_role=cls.device_role,
+            role=cls.device_role,
             platform=cls.platform,
             status=cls.status_active,
         )
@@ -235,7 +236,7 @@ class RelationshipModelFormTestCase(TestCase):
             name="Device 2",
             site=cls.site,
             device_type=cls.device_type,
-            device_role=cls.device_role,
+            role=cls.device_role,
             platform=cls.platform,
             status=cls.status_active,
         )
@@ -243,7 +244,7 @@ class RelationshipModelFormTestCase(TestCase):
             name="Device 3",
             site=cls.site,
             device_type=cls.device_type,
-            device_role=cls.device_role,
+            role=cls.device_role,
             platform=cls.platform,
             status=cls.status_active,
         )
@@ -281,7 +282,7 @@ class RelationshipModelFormTestCase(TestCase):
 
         cls.device_form_base_data = {
             "name": "New Device",
-            "device_role": cls.device_role.pk,
+            "role": cls.device_role.pk,
             "tenant": None,
             "manufacturer": cls.manufacturer.pk,
             "device_type": cls.device_type.pk,
@@ -504,7 +505,7 @@ class RelationshipModelFormTestCase(TestCase):
             instance=self.device_1,
             data={
                 "site": self.site,
-                "device_role": self.device_role,
+                "role": self.device_role,
                 "device_type": self.device_type,
                 "status": self.status_active,
                 f"cr_{self.relationship_1.slug}__destination": self.ipaddress_2.pk,
@@ -621,7 +622,7 @@ class RelationshipModelFormTestCase(TestCase):
             instance=self.device_1,
             data={
                 "site": self.site,
-                "device_role": self.device_role,
+                "role": self.device_role,
                 "device_type": self.device_type,
                 "status": self.status_active,
                 f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
@@ -647,7 +648,7 @@ class RelationshipModelFormTestCase(TestCase):
             instance=self.device_1,
             data={
                 "site": self.site,
-                "device_role": self.device_role,
+                "role": self.device_role,
                 "device_type": self.device_type,
                 "status": self.status_active,
                 f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,

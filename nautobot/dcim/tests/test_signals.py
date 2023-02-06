@@ -4,12 +4,12 @@ from django.test import TestCase
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Manufacturer,
     Site,
     VirtualChassis,
 )
+from nautobot.extras.models import Role
 
 
 class VirtualChassisTest(TestCase):
@@ -20,12 +20,12 @@ class VirtualChassisTest(TestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
-        devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             site=site,
         )
 

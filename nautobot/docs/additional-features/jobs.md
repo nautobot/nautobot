@@ -364,7 +364,7 @@ device = ObjectVar(
 )
 ```
 
-Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group_id`.
+Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group`.
 
 ```python
 region = ObjectVar(
@@ -377,7 +377,7 @@ site = ObjectVar(
     model=Site,
     query_params={
         'region': '$region',
-        'tenant_group_id': '$tenant_group'
+        'tenant_group': '$tenant_group'
     }
 )
 ```
@@ -469,10 +469,13 @@ It is advised to log a message for each object that is evaluated so that the res
 Markdown rendering is supported for log messages.
 
 +/- 1.3.4
-    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.utilities.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
+    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 !!! note
-    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.utilities.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.core.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
+
++/- 2.0.0
+    The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
 
 ### Accessing Request Data
 
@@ -648,17 +651,20 @@ While individual methods within your Job can and should be tested in isolation, 
 
 ### Nautobot 1.3.3 and later
 
-The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.utilities.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
+The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.core.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
 
-Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.utilities.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
++/- 2.0.0
+    `run_job_for_testing` was moved from the `nautobot.utilities.testing` module to `nautobot.core.testing`.
+
+Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.core.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
 When using `TransactionTestCase` (whether from Django or from Nautobot) each tests runs on a completely empty database. Furthermore, Nautobot requires new jobs to be enabled before they can run. Therefore, we need to make sure the job is enabled before each run which `run_job_for_testing` handles for us.
 
 A simple example of a Job test case for 1.3.3 and forward might look like the following:
 
 ```python
+from nautobot.core.testing import run_job_for_testing, TransactionTestCase
 from nautobot.extras.models import Job, JobLogEntry
-from nautobot.utilities.testing import run_job_for_testing, TransactionTestCase
 
 
 class MyJobTestCase(TransactionTestCase):
@@ -712,7 +718,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user"):
         name=job.class_path,
         obj_type=ContentType.objects.get_for_model(Job),
         user=user,
-        job_id=uuid.uuid4(),
+        task_id=uuid.uuid4(),
     )
     with web_request_context(user=user) as request:
         run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
@@ -751,10 +757,11 @@ This job prompts the user for three variables:
 These variables are presented as a web form to be completed by the user. Once submitted, the job's `run()` method is called to create the appropriate objects, and it returns simple CSV output to the user summarizing the created objects.
 
 ```python
+from django.contrib.contenttypes.models import ContentType
 from django.utils.text import slugify
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import Status
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Role, Status
 from nautobot.extras.jobs import *
 
 
@@ -796,14 +803,16 @@ class NewBranch(Job):
         self.log_success(obj=site, message="Created new site")
 
         # Create access switches
-        switch_role = DeviceRole.objects.get(name='Access Switch')
+        device_ct = ContentType.objects.get_for_model(Device)
+        switch_role = Role.objects.get(name='Access Switch')
+        switch_role.content_types.add(device_ct)
         for i in range(1, data['switch_count'] + 1):
             switch = Device(
                 device_type=data['switch_model'],
                 name=f'{site.slug}-switch{i}',
                 site=site,
                 status=STATUS_PLANNED,
-                device_role=switch_role
+                role=switch_role
             )
             switch.validated_save()
             self.log_success(obj=switch, message="Created new switch")

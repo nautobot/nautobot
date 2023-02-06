@@ -8,10 +8,8 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
     APISelectMultiple,
@@ -35,8 +33,8 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.virtualization.models import Cluster, ClusterGroup
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -65,6 +63,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -74,7 +73,9 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -133,6 +134,9 @@ __all__ = (
     "RelationshipForm",
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
+    "RoleBulkEditForm",
+    "RoleCSVForm",
+    "RoleForm",
     "ScheduledJobFilterForm",
     "SecretForm",
     "SecretCSVForm",
@@ -210,7 +214,11 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
-    roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    roles = DynamicModelMultipleChoiceField(
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]),
+        query_params={"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]},
+        required=False,
+    )
     device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
@@ -268,7 +276,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
+    role = DynamicModelMultipleChoiceField(
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="slug", required=False
+    )
     type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
@@ -1013,12 +1023,12 @@ class NoteForm(BootstrapMixin, forms.ModelForm):
 
 
 class LocalContextFilterForm(forms.Form):
-    local_context_data = forms.NullBooleanField(
+    local_config_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    local_context_schema = DynamicModelMultipleChoiceField(
+    local_config_context_schema = DynamicModelMultipleChoiceField(
         queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
     )
 
@@ -1029,18 +1039,18 @@ class LocalContextFilterForm(forms.Form):
 
 
 class LocalContextModelForm(forms.ModelForm):
-    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
-    local_context_data = JSONField(required=False, label="")
+    local_config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_config_context_data = JSONField(required=False, label="")
 
 
 class LocalContextModelBulkEditForm(BulkEditForm):
-    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # append nullable fields
-        self.nullable_fields.append("local_context_schema")
+        self.nullable_fields.append("local_config_context_schema")
 
 
 #
@@ -1160,6 +1170,62 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     destination_type = MultipleContentTypeField(
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
+
+
+#
+# Role
+#
+
+
+class RoleForm(NautobotModelForm):
+    """Generic create/update form for `Role` objects."""
+
+    slug = SlugField()
+    content_types = MultipleContentTypeField(
+        required=False,
+        label="Content Type(s)",
+        queryset=RoleModelsQuery().as_queryset(),
+    )
+
+    class Meta:
+        model = Role
+        widgets = {"color": ColorSelect()}
+        fields = ["name", "slug", "weight", "description", "content_types", "color"]
+
+
+class RoleBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit/delete form for `Role` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+    content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
+    )
+
+    class Meta:
+        nullable_fields = ["weight"]
+
+
+class RoleCSVForm(CustomFieldModelCSVForm):
+    """Generic CSV bulk import form for `Role` objects."""
+
+    content_types = CSVMultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        choices_as_strings=True,
+        help_text=mark_safe(
+            "The object types to which this role applies. Multiple values "
+            "must be comma-separated and wrapped in double quotes. (e.g. "
+            '<code>"dcim.device,dcim.rack"</code>)'
+        ),
+        label="Content type(s)",
+    )
+
+    class Meta:
+        model = Role
+        fields = ["name", "slug", "weight", "color", "content_types", "description"]
+        help_texts = {
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+        }
 
 
 #
@@ -1326,7 +1392,7 @@ class TagForm(NautobotModelForm):
 
         if self.instance.present_in_database:
             # check if tag is assigned to any of the removed content_types
-            content_types_id = [content_type.id for content_type in self.cleaned_data["content_types"]]
+            content_types_id = [content_type.id for content_type in self.cleaned_data.get("content_types", [])]
             errors = self.instance.validate_content_types_removal(content_types_id)
 
             if errors:

@@ -2,7 +2,17 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.core.filters import (
+    BaseFilterSet,
+    ContentTypeFilter,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueUUIDFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    SearchFilter,
+    TagFilter,
+)
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     RelationshipTypeChoices,
@@ -22,11 +32,13 @@ from nautobot.extras.filters.customfields import (
     CustomFieldNumberFilter,
 )
 from nautobot.extras.filters.mixins import (
+    ConfigContextRoleFilter,
     CustomFieldModelFilterSetMixin,
     CreatedUpdatedModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     RelationshipFilter,
     RelationshipModelFilterSetMixin,
+    RoleModelFilterSetMixin,
     StatusFilter,
     StatusModelFilterSetMixin,
 )
@@ -51,6 +63,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -59,18 +72,8 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    ContentTypeFilter,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueUUIDFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    SearchFilter,
-    TagFilter,
-)
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 
@@ -110,6 +113,8 @@ __all__ = (
     "RelationshipFilter",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
+    "RoleFilterSet",
+    "RoleModelFilterSetMixin",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",
@@ -214,17 +219,6 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=Location.objects.all(),
         label="Location (slug)",
     )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="roles",
-        queryset=DeviceRole.objects.all(),
-        label="Role",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="roles__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",
         queryset=DeviceType.objects.all(),
@@ -297,6 +291,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Tag (slug)",
     )
+    role = ConfigContextRoleFilter()
 
     class Meta:
         model = ConfigContext
@@ -660,13 +655,13 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Job (ID)",
     )
     obj_type = ContentTypeFilter()
-    created = django_filters.DateTimeFilter()
-    completed = django_filters.DateTimeFilter()
+    date_created = django_filters.DateTimeFilter()
+    date_done = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
-        fields = ["id", "created", "completed", "status", "user", "obj_type", "name"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user", "obj_type"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -995,4 +990,38 @@ class WebhookFilterSet(BaseFilterSet):
             "type_create",
             "type_update",
             "type_delete",
+        ]
+
+
+class RoleFilterSet(NautobotFilterSet):
+    """API filter for filtering custom role object fields."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "content_types__model": "icontains",
+        },
+    )
+    # TODO(timizuo): Add a feature to set conjoined to either True/False from query param in url;
+    #  this way only ConfigContext related query would set conjoined to True
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=RoleModelsQuery().get_choices,
+        # Set the 'conjoined' parameter to False to allow `ConfigContext`
+        # to filter the queryset by a combinations of content types,
+        # such as 'Device or VirtualMachine' but not 'Device and VirtualMachine'.
+        conjoined=False,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "id",
+            "content_types",
+            "color",
+            "name",
+            "slug",
+            "weight",
+            "created",
+            "last_updated",
         ]

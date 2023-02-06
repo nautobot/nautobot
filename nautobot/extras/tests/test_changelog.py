@@ -5,16 +5,16 @@ from django.utils.html import escape
 from rest_framework import status
 
 from nautobot.core.graphql import execute_query
+from nautobot.core.testing import APITestCase, TestCase
+from nautobot.core.testing.utils import post_data
+from nautobot.core.testing.views import ModelViewTestCase
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, TestCase
-from nautobot.utilities.testing.utils import post_data
-from nautobot.utilities.testing.views import ModelViewTestCase
-from nautobot.utilities.utils import get_changes_for_model
 from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
 
 
@@ -233,7 +233,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "my_field": "ABC",
                 "my_field_select": "Bar",
@@ -269,7 +269,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Site X",
             "slug": "test-site-x",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "my_field": "DEF",
                 "my_field_select": "Foo",
@@ -360,7 +360,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.add_permissions("dcim.add_site")
 
@@ -378,7 +378,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 2",
             "slug": "test-site-2",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.add_permissions("dcim.add_site")
 
@@ -398,7 +398,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.add_permissions("dcim.add_site")
 
@@ -417,7 +417,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.add_site")
@@ -435,7 +435,7 @@ class ChangeLogAPITest(APITestCase):
     def test_m2m_change(self):
         """Test that ManyToMany change only generates a single ObjectChange instance"""
         cluster_type = ClusterType.objects.create(name="test_cluster_type")
-        cluster = Cluster.objects.create(name="test_cluster", type=cluster_type)
+        cluster = Cluster.objects.create(name="test_cluster", cluster_type=cluster_type)
         vm_statuses = Status.objects.get_for_model(VirtualMachine)
         vm = VirtualMachine.objects.create(
             name="test_vm",

@@ -1,5 +1,15 @@
 from django import forms
 
+from nautobot.core.forms import (
+    CommentField,
+    CSVModelChoiceField,
+    DatePicker,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    SmallTextarea,
+    SlugField,
+    TagFilterField,
+)
 from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
@@ -16,16 +26,6 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
-    CommentField,
-    CSVModelChoiceField,
-    DatePicker,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    SmallTextarea,
-    SlugField,
-    TagFilterField,
-)
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
@@ -95,7 +95,7 @@ class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     field_order = ["q"]
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -150,10 +150,12 @@ class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 class ProviderNetworkFilterForm(NautobotFilterForm):
     model = ProviderNetwork
-    field_order = ["q", "provider_id"]
+    field_order = ["q", "provider"]
     q = forms.CharField(required=False, label="Search")
-    provider_id = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), required=False, label="Provider")
-    tag = TagFilterField(model)
+    provider = DynamicModelMultipleChoiceField(
+        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="slug"
+    )
+    tags = TagFilterField(model)
 
 
 #
@@ -189,14 +191,14 @@ class CircuitTypeCSVForm(CustomFieldModelCSVForm):
 
 class CircuitForm(NautobotModelForm, TenancyForm):
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
-    type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
+    circuit_type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
     comments = CommentField()
 
     class Meta:
         model = Circuit
         fields = [
             "cid",
-            "type",
+            "circuit_type",
             "provider",
             "status",
             "install_date",
@@ -222,7 +224,7 @@ class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Assigned provider",
     )
-    type = CSVModelChoiceField(
+    circuit_type = CSVModelChoiceField(
         queryset=CircuitType.objects.all(),
         to_field_name="name",
         help_text="Type of circuit",
@@ -239,7 +241,7 @@ class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         fields = [
             "cid",
             "provider",
-            "type",
+            "circuit_type",
             "status",
             "tenant",
             "install_date",
@@ -251,7 +253,7 @@ class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 class CircuitBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Circuit.objects.all(), widget=forms.MultipleHiddenInput)
-    type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
+    circuit_type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     commit_rate = forms.IntegerField(required=False, label="Commit rate (Kbps)")
@@ -276,7 +278,7 @@ class CircuitFilterForm(
     model = Circuit
     field_order = [
         "q",
-        "type",
+        "circuit_type",
         "provider",
         "provider_network",
         "status",
@@ -288,16 +290,19 @@ class CircuitFilterForm(
         "commit_rate",
     ]
     q = forms.CharField(required=False, label="Search")
-    type = DynamicModelMultipleChoiceField(queryset=CircuitType.objects.all(), to_field_name="slug", required=False)
+    circuit_type = DynamicModelMultipleChoiceField(
+        queryset=CircuitType.objects.all(), to_field_name="slug", required=False
+    )
     provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
-        query_params={"provider_id": "$provider"},
+        query_params={"provider": "$provider"},
+        to_field_name="slug",
         label="Provider Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #

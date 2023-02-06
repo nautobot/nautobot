@@ -1,24 +1,23 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
     Manufacturer,
     Region,
     Site,
 )
-from nautobot.extras.models import Status
-from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.extras.models import Role, Status
+from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.factory import PrefixFactory
 from nautobot.ipam.filters import (
     AggregateFilterSet,
     IPAddressFilterSet,
     PrefixFilterSet,
     RIRFilterSet,
-    RoleFilterSet,
     RouteTargetFilterSet,
     ServiceFilterSet,
     VLANFilterSet,
@@ -30,7 +29,6 @@ from nautobot.ipam.models import (
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -38,7 +36,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import (
     Cluster,
     ClusterType,
@@ -214,11 +211,6 @@ class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
         params = {"rir": [rirs[0].slug, rirs[1].slug]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
-
-
-class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
-    queryset = Role.objects.all()
-    filterset = RoleFilterSet
 
 
 class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -400,14 +392,10 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
     def test_role(self):
-        roles = list(Role.objects.filter(prefixes__isnull=False)[:2])
-        params = {"role_id": [roles[0].pk, roles[1].pk]}
+        roles = Role.objects.get_for_model(Prefix).filter(ipam_prefix_related__isnull=False)[:2]
+        params = {"role": [roles[0].pk, roles[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles)
-        )
-        params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
         )
 
     def test_status(self):
@@ -434,26 +422,26 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_role = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 device_type=device_type,
                 name="Device 1",
                 site=site,
-                device_role=device_role,
+                role=device_role,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 2",
                 site=site,
-                device_role=device_role,
+                role=device_role,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 3",
                 site=site,
-                device_role=device_role,
+                role=device_role,
             ),
         )
 
@@ -464,7 +452,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(type=clustertype, name="Cluster 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster),
@@ -478,11 +466,11 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             VMInterface.objects.create(virtual_machine=virtual_machines[2], name="Interface 3"),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(IPAddress)
         status_map = {s.slug: s for s in statuses.all()}
-
+        roles = Role.objects.get_for_model(IPAddress)
         cls.ipv4_address = IPAddress.objects.create(
             address="10.0.0.1/24",
             tenant=None,
@@ -505,7 +493,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             vrf=vrfs[1],
             assigned_object=interfaces[1],
             status=status_map["reserved"],
-            role=IPAddressRoleChoices.ROLE_VIP,
+            role=roles[0],
             dns_name="ipaddress-c",
         )
         IPAddress.objects.create(
@@ -514,7 +502,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             vrf=vrfs[2],
             assigned_object=interfaces[2],
             status=status_map["deprecated"],
-            role=IPAddressRoleChoices.ROLE_SECONDARY,
+            role=roles[1],
             dns_name="ipaddress-d",
         )
         IPAddress.objects.create(
@@ -546,7 +534,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             vrf=vrfs[1],
             assigned_object=vminterfaces[1],
             status=status_map["reserved"],
-            role=IPAddressRoleChoices.ROLE_VIP,
+            role=roles[2],
             dns_name="ipaddress-c",
         )
         IPAddress.objects.create(
@@ -555,7 +543,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             vrf=vrfs[2],
             assigned_object=vminterfaces[2],
             status=status_map["deprecated"],
-            role=IPAddressRoleChoices.ROLE_SECONDARY,
+            role=roles[1],
             dns_name="ipaddress-d",
         )
         IPAddress.objects.create(
@@ -760,7 +748,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_role(self):
-        roles = list(IPAddress.objects.exclude(role="").distinct_values_list("role", flat=True)[:2])
+        roles = list(IPAddress.objects.exclude(role__isnull=True).distinct_values_list("role", flat=True)[:2])
         params = {"role": roles}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
@@ -834,7 +822,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=None),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)[:3]
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VLAN)
         status_map = {s.slug: s for s in statuses.all()}
@@ -843,7 +831,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=101,
             name="VLAN 101",
             site=cls.sites[0],
-            group=groups[0],
+            vlan_group=groups[0],
             role=roles[0],
             tenant=tenants[0],
             status=status_map["active"],
@@ -852,7 +840,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=102,
             name="VLAN 102",
             site=cls.sites[0],
-            group=groups[0],
+            vlan_group=groups[0],
             role=roles[0],
             tenant=tenants[0],
             status=status_map["active"],
@@ -861,7 +849,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=201,
             name="VLAN 201",
             site=cls.sites[1],
-            group=groups[1],
+            vlan_group=groups[1],
             role=roles[1],
             tenant=tenants[1],
             status=status_map["deprecated"],
@@ -870,7 +858,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=202,
             name="VLAN 202",
             site=cls.sites[1],
-            group=groups[1],
+            vlan_group=groups[1],
             role=roles[1],
             tenant=tenants[1],
             status=status_map["deprecated"],
@@ -879,7 +867,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=301,
             name="VLAN 301",
             site=cls.sites[2],
-            group=groups[2],
+            vlan_group=groups[2],
             role=roles[2],
             tenant=tenants[2],
             status=status_map["reserved"],
@@ -888,7 +876,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vid=302,
             name="VLAN 302",
             site=cls.sites[2],
-            group=groups[2],
+            vlan_group=groups[2],
             role=roles[2],
             tenant=tenants[2],
             status=status_map["reserved"],
@@ -922,19 +910,19 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
-    def test_group(self):
+    def test_vlan_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
-        params = {"group": [groups[0].slug, groups[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
+        params = {"vlan_group": [groups[0].pk, groups[1].pk]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups))
+        params = {"vlan_group": [groups[0].slug, groups[1].slug]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups))
 
     def test_role(self):
-        roles = list(Role.objects.filter(vlans__isnull=False).distinct())[:2]
-        params = {"role_id": [roles[0].pk, roles[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles))
-        params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles))
+        roles = Role.objects.get_for_model(VLAN)[:2]
+        params = {"role": [roles[0].pk, roles[1].slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
+        )
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(ipam_vlan_related__isnull=False).distinct())[:2]
@@ -950,8 +938,8 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         site = self.sites[0]
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        devicerole = Role.objects.get_for_model(Device).first()
+        device = Device.objects.create(device_type=devicetype, role=devicerole, name="Device 1", site=site)
         params = {"available_on_device": device.pk}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(Q(site=device.site) | Q(site__isnull=True))
@@ -968,31 +956,31 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_role = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 device_type=device_type,
                 name="Device 1",
                 site=site,
-                device_role=device_role,
+                role=device_role,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 2",
                 site=site,
-                device_role=device_role,
+                role=device_role,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 3",
                 site=site,
-                device_role=device_role,
+                role=device_role,
             ),
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(type=clustertype, name="Cluster 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster),

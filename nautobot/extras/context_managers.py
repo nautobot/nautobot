@@ -7,7 +7,6 @@ from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
-from nautobot.utilities.utils import curry
 
 
 class ChangeContext:
@@ -76,6 +75,14 @@ class WebChangeContext(ChangeContext):
     context = ObjectChangeEventContextChoices.CONTEXT_WEB
 
 
+# Taken from django.utils.functional (<3.0)
+def curry(_curried_func, *args, **kwargs):
+    def _curried(*moreargs, **morekwargs):
+        return _curried_func(*args, *moreargs, **{**kwargs, **morekwargs})
+
+    return _curried
+
+
 @contextmanager
 def change_logging(change_context):
     """
@@ -107,9 +114,10 @@ def web_request_context(user, context_detail="", change_id=None):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
-    nbshell management command. By default, when working with the Django ORM, neither change logging nor webhook
-    processing occur unless manually invoked and this context manager handles those functions. A valid User object
-    must be provided.
+    'nautobot-server nbshell' management command.
+
+    By default, when working with the Django ORM, neither change logging nor webhook processing occur
+    unless manually invoked and this context manager handles those functions. A valid User object must be provided.
 
     Example usage:
 

@@ -11,9 +11,10 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Location,
     LocationType,
@@ -35,6 +36,7 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -46,8 +48,6 @@ from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -113,20 +113,20 @@ class ConfigContextTest(TestCase):
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        self.devicerole = Role.objects.get_for_model(Device).first()
         self.site = Site.objects.filter(region__isnull=False).first()
         self.region = self.site.region
         location_type = LocationType.objects.create(name="Location Type 1")
         self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
-        self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
+        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=self.devicetype,
-            device_role=self.devicerole,
+            role=self.devicerole,
             site=self.site,
             location=self.location,
         )
@@ -204,7 +204,7 @@ class ConfigContextTest(TestCase):
             location=self.location,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -239,8 +239,8 @@ class ConfigContextTest(TestCase):
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(
             name="Cluster",
-            group=cluster_group,
-            type=cluster_type,
+            cluster_group=cluster_group,
+            cluster_type=cluster_type,
             site=self.site,
             location=self.location,
         )
@@ -290,7 +290,7 @@ class ConfigContextTest(TestCase):
             site=self.site,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -321,7 +321,7 @@ class ConfigContextTest(TestCase):
             site=self.site,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -384,21 +384,21 @@ class ConfigContextSchemaTestCase(TestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
+        device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             name="device",
             site=site,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=status,
-            local_context_data=context_data,
+            local_config_context_data=context_data,
         )
 
         # Virtual Machine
         cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
-        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
+        cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
-            name="virtual_machine", cluster=cluster, status=status, local_context_data=context_data
+            name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data
         )
 
     def test_existing_config_context_valid_schema_applied(self):
@@ -441,12 +441,12 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_device_valid_schema_applied(self):
         """
-        Given an existing device object with local_context_data
+        Given an existing device object with local_config_context_data
         And a config context schema object with a json schema
-        And the device local_context_data is valid for the schema
+        And the device local_config_context_data is valid for the schema
         Assert calling clean on the device object DOES NOT raise a ValidationError
         """
-        self.device.local_context_schema = self.schema_validation_pass
+        self.device.local_config_context_schema = self.schema_validation_pass
 
         try:
             self.device.full_clean()
@@ -455,13 +455,13 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_device_invalid_schema_applied(self):
         """
-        Given an existing device object with local_context_data
+        Given an existing device object with local_config_context_data
         And a config context schema object with a json schema
-        And the device local_context_data is NOT valid for the schema
+        And the device local_config_context_data is NOT valid for the schema
         Assert calling clean on the device object DOES raise a ValidationError
         """
         for schema in self.schemas_validation_fail:
-            self.device.local_context_schema = schema
+            self.device.local_config_context_schema = schema
 
             with self.assertRaises(ValidationError):
                 self.device.full_clean()
@@ -479,12 +479,12 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_virtual_machine_valid_schema_applied(self):
         """
-        Given an existing virtual machine object with local_context_data
+        Given an existing virtual machine object with local_config_context_data
         And a config context schema object with a json schema
-        And the virtual machine local_context_data is valid for the schema
+        And the virtual machine local_config_context_data is valid for the schema
         Assert calling clean on the virtual machine object DOES NOT raise a ValidationError
         """
-        self.virtual_machine.local_context_schema = self.schema_validation_pass
+        self.virtual_machine.local_config_context_schema = self.schema_validation_pass
 
         try:
             self.virtual_machine.full_clean()
@@ -493,13 +493,13 @@ class ConfigContextSchemaTestCase(TestCase):
 
     def test_existing_virtual_machine_invalid_schema_applied(self):
         """
-        Given an existing virtual machine object with local_context_data
+        Given an existing virtual machine object with local_config_context_data
         And a config context schema object with a json schema
-        And the virtual machine local_context_data is NOT valid for the schema
+        And the virtual machine local_config_context_data is NOT valid for the schema
         Assert calling clean on the virtual machine object DOES raise a ValidationError
         """
         for schema in self.schemas_validation_fail:
-            self.virtual_machine.local_context_schema = schema
+            self.virtual_machine.local_config_context_schema = schema
 
             with self.assertRaises(ValidationError):
                 self.virtual_machine.full_clean()
@@ -847,7 +847,7 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name=job_class.class_path,
             obj_type=get_job_content_type(),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
@@ -873,7 +873,7 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name=repo.name,
             obj_type=ContentType.objects.get_for_model(repo),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         self.assertEqual(job_result.related_object, repo)
@@ -886,13 +886,26 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name="irrelevant",
             obj_type=ContentType.objects.get_for_model(ip_address),
-            job_id=ip_address.pk,
+            task_id=ip_address.pk,
         )
 
         self.assertEqual(job_result.related_object, ip_address)
 
-        job_result.job_id = uuid.uuid4()
+        job_result.task_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
+
+
+class RoleTest(TestCase):
+    """Tests for `Role` model class."""
+
+    def test_get_for_models(self):
+        """Test get_for_models returns a Roles for those models."""
+
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+
+        roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
+        self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
 class SecretTest(TestCase):
@@ -1295,13 +1308,13 @@ class StatusTest(TestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             site=site,
             status=self.status,
         )
@@ -1369,7 +1382,7 @@ class JobLogEntryTest(TestCase):
             name=job_class.class_path,
             obj_type=get_job_content_type(),
             user=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
     def test_log_entry_creation(self):

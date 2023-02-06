@@ -1,8 +1,10 @@
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 
-from nautobot.utilities.utils import hex_to_rgb, lighten_color, rgb_to_hex
+from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
+from nautobot.dcim.choices import InterfaceModeChoices
 
 
 def compile_path_node(ct_id, object_id):
@@ -45,3 +47,34 @@ def cable_status_color_css(record):
     base_color = record.cable.get_status_color().strip("#")
     lighter_color = rgb_to_hex(*lighten_color(*hex_to_rgb(base_color), 0.75))
     return f"background-color: #{lighter_color}"
+
+
+def validate_interface_tagged_vlans(instance, model, pk_set):
+    """
+    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same site
+    as the parent device or are global and that the mode of the Interface is set to `InterfaceModeChoices.MODE_TAGGED`.
+
+    Args:
+        instance (Interface): The instance of the Interface model that the VLANs are being added to.
+        model (Model): The model of the related VLAN objects.
+        pk_set (set): The primary keys of the VLAN objects being added to the 'tagged_vlans' field.
+    """
+
+    if instance.mode != InterfaceModeChoices.MODE_TAGGED:
+        raise ValidationError(
+            {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"}
+        )
+
+    # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
+    # a site that is not the parent's site or None
+    tagged_vlans = model.objects.filter(pk__in=pk_set).exclude(site__isnull=True).exclude(site=instance.parent.site)
+
+    if tagged_vlans.count():
+        raise ValidationError(
+            {
+                "tagged_vlans": (
+                    f"Tagged VLAN with names {list(tagged_vlans.values_list('name', flat=True))} must all belong to the "
+                    f"same site as the interface's parent device, or it must be global."
+                )
+            }
+        )

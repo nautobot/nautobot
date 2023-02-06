@@ -5,6 +5,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
+from nautobot.core.forms import (
+    BulkEditForm,
+    CommentField,
+    CSVModelChoiceField,
+    CSVModelForm,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+)
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     RelationshipSideChoices,
@@ -15,17 +24,9 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
     Tag,
-)
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
-    BulkEditForm,
-    CommentField,
-    CSVModelChoiceField,
-    CSVModelForm,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,10 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldModelForm",
     "RelationshipModelForm",
+    "RoleModelBulkEditFormMixin",
+    "RoleModelCSVFormMixin",
+    "RoleModelFilterFormMixin",
+    "RoleRequiredRoleModelCSVFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -685,6 +690,56 @@ class RelationshipModelFilterFormMixin(forms.Form):
             self.fields[field_name] = relationship.to_form_field(side=side)
             self.fields[field_name].empty_label = None
             self.relationships.append(field_name)
+
+
+#
+# Role
+#
+
+
+class RoleModelBulkEditFormMixin(forms.Form):
+    """Mixin to add non-required `role` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleModelFilterFormMixin(forms.Form):
+    """
+    Mixin to add non-required `role` multiple-choice field to filter forms.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelMultipleChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            to_field_name="slug",
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleModelCSVFormMixin(CSVModelForm):
+    """Mixin to add a non-required `role` choice field to CSV import forms."""
+
+    role = CSVModelChoiceField(
+        queryset=Role.objects.all(), to_field_name="name", required=False, help_text="Assigned role"
+    )
+
+
+class RoleRequiredRoleModelCSVFormMixin(CSVModelForm):
+    """Mixin to add a required `role` choice field to CSV import forms."""
+
+    role = CSVModelChoiceField(
+        queryset=Role.objects.all(), to_field_name="name", required=True, help_text="Assigned role"
+    )
 
 
 class StatusModelBulkEditFormMixin(forms.Form):

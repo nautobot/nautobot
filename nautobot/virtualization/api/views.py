@@ -1,15 +1,15 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
+from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
     ModelViewSet,
     NotesViewSetMixin,
-    StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,
@@ -36,22 +36,25 @@ class VirtualizationRootView(APIRootView):
 
 
 class ClusterTypeViewSet(NautobotModelViewSet):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     serializer_class = serializers.ClusterTypeSerializer
     filterset_class = filters.ClusterTypeFilterSet
 
 
 class ClusterGroupViewSet(NautobotModelViewSet):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     serializer_class = serializers.ClusterGroupSerializer
     filterset_class = filters.ClusterGroupFilterSet
 
 
 class ClusterViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Cluster.objects.prefetch_related("type", "group", "tenant", "site", "tags").annotate(
-        device_count=count_related(Device, "cluster"),
-        virtualmachine_count=count_related(VirtualMachine, "cluster"),
+    queryset = (
+        Cluster.objects.select_related("cluster_type", "cluster_group", "tenant", "site")
+        .prefetch_related("tags")
+        .annotate(
+            device_count=count_related(Device, "cluster"),
+            virtualmachine_count=count_related(VirtualMachine, "cluster"),
+        )
     )
     serializer_class = serializers.ClusterSerializer
     filterset_class = filters.ClusterFilterSet
@@ -62,9 +65,8 @@ class ClusterViewSet(NautobotModelViewSet):
 #
 
 
-class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VirtualMachine.objects.prefetch_related(
+class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
+    queryset = VirtualMachine.objects.select_related(
         "cluster__site",
         "platform",
         "primary_ip4",
@@ -72,8 +74,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
         "status",
         "role",
         "tenant",
-        "tags",
-    )
+    ).prefetch_related("tags")
     filterset_class = filters.VirtualMachineFilterSet
 
     def get_serializer_class(self):
@@ -114,11 +115,13 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
     retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
-class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VMInterface.objects.prefetch_related(
-        "virtual_machine", "parent_interface", "bridge", "status", "tags", "tagged_vlans"
-    )
+class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
+    queryset = VMInterface.objects.select_related(
+        "virtual_machine",
+        "parent_interface",
+        "bridge",
+        "status",
+    ).prefetch_related("tags", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
     # v2 TODO(jathan): Replace prefetch_related with select_related

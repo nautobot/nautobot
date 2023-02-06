@@ -30,17 +30,13 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        {{ object.status| hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>
                     <td>Role</td>
                     <td>
-                        {% if object.role %}
-                            <a href="{% url 'ipam:ipaddress_list' %}?role={{ object.role }}">{{ object.get_role_display }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
+                        {{ object.role | hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>
@@ -74,8 +70,8 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant and object.tenant.group %}
-                            {{ object.tenant.group|hyperlinked_object }} /
+                        {% if object.tenant and object.tenant.tenant_group %}
+                            {{ object.tenant.tenant_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.tenant|hyperlinked_object }}
                     </td>

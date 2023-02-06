@@ -4,6 +4,19 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
+from nautobot.core.filters import (
+    BaseFilterSet,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueCharFilter,
+    MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
+    NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+    TreeNodeMultipleChoiceFilter,
+)
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -31,7 +44,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -51,7 +63,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -61,6 +72,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.filters import (
     NautobotFilterSet,
     LocalContextModelFilterSetMixin,
+    RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
@@ -68,19 +80,6 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueCharFilter,
-    MultiValueMACAddressFilter,
-    MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    RelatedMembershipBooleanFilter,
-    SearchFilter,
-    TreeNodeMultipleChoiceFilter,
-)
 from nautobot.virtualization.models import Cluster
 
 
@@ -97,7 +96,6 @@ __all__ = (
     "DeviceBayTemplateFilterSet",
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
-    "DeviceRoleFilterSet",
     "DeviceTypeFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
@@ -121,7 +119,6 @@ __all__ = (
     "RackFilterSet",
     "RackGroupFilterSet",
     "RackReservationFilterSet",
-    "RackRoleFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
     "RegionFilterSet",
@@ -525,22 +522,12 @@ class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSl
         fields = ["id", "name", "slug", "description", "racks"]
 
 
-class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    has_racks = RelatedMembershipBooleanFilter(
-        field_name="racks",
-        label="Has racks",
-    )
-
-    class Meta:
-        model = RackRole
-        fields = ["id", "name", "slug", "color", "description", "racks"]
-
-
 class RackFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -564,7 +551,6 @@ class RackFilterSet(
     )
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
     width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
-    role = NaturalKeyOrPKMultipleChoiceFilter(queryset=RackRole.objects.all(), label="Role (slug or ID)")
     serial = MultiValueCharFilter(lookup_expr="iexact", label="Serial Number")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -940,21 +926,6 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
         fields = []
 
 
-class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    has_devices = RelatedMembershipBooleanFilter(
-        field_name="devices",
-        label="Has devices",
-    )
-    has_virtual_machines = RelatedMembershipBooleanFilter(
-        field_name="virtual_machines",
-        label="Has virtual machines",
-    )
-
-    class Meta:
-        model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role", "description", "devices", "virtual_machines"]
-
-
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
@@ -988,6 +959,7 @@ class DeviceFilterSet(
     TenancyModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -1013,9 +985,6 @@ class DeviceFilterSet(
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
-    )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device_role", queryset=DeviceRole.objects.all(), label="Device Role (slug or ID)"
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(queryset=Platform.objects.all(), label="Platform (slug or ID)")
     rack_group = TreeNodeMultipleChoiceFilter(

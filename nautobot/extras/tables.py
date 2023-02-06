@@ -5,7 +5,8 @@ from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.utilities.tables import (
+from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -16,7 +17,6 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
 from .choices import LogLevelChoices
 from .models import (
     ComputedField,
@@ -37,6 +37,7 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -475,7 +476,7 @@ class GitRepositoryTable(BaseTable):
 
     def render_last_sync_time(self, record):
         if record.name in self.context["job_results"]:
-            return self.context["job_results"][record.name].completed
+            return self.context["job_results"][record.name].date_done
         return self.default
 
     def render_last_sync_user(self, record):
@@ -662,7 +663,7 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     linked_record = tables.Column(verbose_name="Job / Git Repository", linkify=True)
     name = tables.Column()
-    created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -676,7 +677,7 @@ class JobResultTable(BaseTable):
         template_code="""
             {% load helpers %}
             {% if perms.extras.run_job %}
-                {% if record.job_model and record.job_kwargs %}
+                {% if record.job_model and record.task_kwargs %}
                     <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
                        class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                         <i class="mdi mdi-repeat"></i>
@@ -732,17 +733,17 @@ class JobResultTable(BaseTable):
         model = JobResult
         fields = (
             "pk",
-            "created",
+            "date_created",
             "name",
             "linked_record",
             "duration",
-            "completed",
+            "date_done",
             "user",
             "status",
             "summary",
             "actions",
         )
-        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary", "actions")
+        default_columns = ("pk", "date_created", "name", "linked_record", "user", "status", "summary", "actions")
 
 
 #
@@ -851,6 +852,31 @@ class RelationshipAssociationTable(BaseTable):
         model = RelationshipAssociation
         fields = ("pk", "relationship", "source_type", "source", "destination_type", "destination", "actions")
         default_columns = ("pk", "relationship", "source", "destination", "actions")
+
+
+#
+# Role
+#
+
+
+class RoleTable(BaseTable):
+    """Table for list view of `Role` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn(viewname="extras:role", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Role, pk_field="slug")
+    content_types = ContentTypesColumn(truncate_words=15)
+
+    class Meta(BaseTable.Meta):
+        model = Role
+        fields = ["pk", "name", "slug", "color", "weight", "content_types", "description"]
+
+
+class RoleTableMixin(BaseTable):
+    """Mixin to add a `role` field to a table."""
+
+    role = ColoredLabelColumn()
 
 
 #

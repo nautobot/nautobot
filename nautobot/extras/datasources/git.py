@@ -15,7 +15,9 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.requests import copy_safe_request
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -31,13 +33,12 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Role,
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.utilities.git import GitRepo
-from nautobot.utilities.utils import copy_safe_request
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
@@ -98,24 +99,26 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
             level_choice=LogLevelChoices.LOG_FAILURE,
             logger=logger,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
         job_result.save()
         return GitJobResult(job_result=job_result, repository_record=None)
 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
 
 
+# TODO(jathan): This should likely be deleted since it's coercing state and this
+# should be managed by the database backend.
 def log_job_result_final_status(job_result, job_type):
     """Check Job status and save log to DB
     Args:
         job_result (JobResult): JobResult Instance
         job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
     """
-    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+    if job_result.status not in JobResultStatusChoices.READY_STATES:
         if JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE).exists():
-            job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
         else:
-            job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+            job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.log(
         f"Repository {job_type} completed in {job_result.duration}",
         level_choice=LogLevelChoices.LOG_INFO,
@@ -124,6 +127,8 @@ def log_job_result_final_status(job_result, job_type):
     job_result.save()
 
 
+# TODO(jathan): The state transition stuff here should be deleted in exchange
+# for trusting the database backend.
 @nautobot_task
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
@@ -139,7 +144,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         return
 
     job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(JobResultStatusChoices.STATUS_STARTED)
     job_result.save()
 
     try:
@@ -165,12 +170,14 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
             f"Error while refreshing {repository_record.name}: {exc}",
             level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
 
     finally:
         log_job_result_final_status(job_result, "synchronization")
 
 
+# TODO(jathan): The state transition stuff here should be deleted in exchange
+# for trusting the database backend.
 @nautobot_task
 def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, **kwargs):
     """
@@ -185,7 +192,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         return
 
     job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(JobResultStatusChoices.STATUS_STARTED)
     job_result.save()
     try:
         if not os.path.exists(settings.GIT_ROOT):
@@ -198,7 +205,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
             f"Error while running a dry run on {repository_record.name}: {exc}",
             level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
 
     finally:
         log_job_result_final_status(job_result, "dry run")
@@ -284,7 +291,7 @@ def ensure_git_repository(
 
     except Exception as exc:
         if job_result:
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
             job_result.save()
         elif logger:
@@ -325,7 +332,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
 
     except Exception as exc:
         if job_result:
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
             job_result.save()
         elif logger:
@@ -399,6 +406,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "locations",
         "device_types",
         "roles",
         "platforms",
@@ -510,7 +518,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     (name, weight, description, etc.), while all other keys in the dictionary will go into the record's "data" field.
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
-    the reason is that the serializer only allows us to identify related objects (Region, Site, DeviceRole, etc.)
+    the reason is that the serializer only allows us to identify related objects (Region, Site, Role, etc.)
     by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
@@ -534,8 +542,9 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("locations", Location),
         ("device_types", DeviceType),
-        ("roles", DeviceRole),
+        ("roles", Role),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
         ("clusters", Cluster),
@@ -678,9 +687,12 @@ def import_local_config_context(
     except ObjectDoesNotExist:
         raise RuntimeError("record not found!")
 
-    if record.local_context_data_owner is not None and record.local_context_data_owner != repository_record:
+    if (
+        record.local_config_context_data_owner is not None
+        and record.local_config_context_data_owner != repository_record
+    ):
         job_result.log(
-            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_context_data_owner}",
+            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_config_context_data_owner}",
             obj=record,
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="local config contexts",
@@ -688,7 +700,7 @@ def import_local_config_context(
         )
         return
 
-    if record.local_context_data == context_data and record.local_context_data_owner == repository_record:
+    if record.local_config_context_data == context_data and record.local_config_context_data_owner == repository_record:
         job_result.log(
             "No change to local config context",
             obj=record,
@@ -698,8 +710,8 @@ def import_local_config_context(
         )
         return
 
-    record.local_context_data = context_data
-    record.local_context_data_owner = repository_record
+    record.local_config_context_data = context_data
+    record.local_config_context_data_owner = repository_record
     record.clean()
     record.save()
     job_result.log(
@@ -735,12 +747,12 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
         ("virtual_machines", VirtualMachine),
     ):
         for record in model.objects.filter(
-            local_context_data_owner_content_type=git_repository_content_type,
-            local_context_data_owner_object_id=repository_record.pk,
+            local_config_context_data_owner_content_type=git_repository_content_type,
+            local_config_context_data_owner_object_id=repository_record.pk,
         ):
             if record.name not in preserve_local[grouping]:
-                record.local_context_data = None
-                record.local_context_data_owner = None
+                record.local_config_context_data = None
+                record.local_config_context_data_owner = None
                 record.clean()
                 record.save()
                 job_result.log(

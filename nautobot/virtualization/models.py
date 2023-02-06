@@ -5,6 +5,12 @@ from django.db import models
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.ordering import naturalize_interface
+from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
@@ -14,15 +20,9 @@ from nautobot.extras.models import (
     TaggedItem,
 )
 from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.roles import RoleModelMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 
 __all__ = (
@@ -134,8 +134,8 @@ class Cluster(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
-    group = models.ForeignKey(
+    cluster_type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
+    cluster_group = models.ForeignKey(
         to=ClusterGroup,
         on_delete=models.PROTECT,
         related_name="clusters",
@@ -165,10 +165,10 @@ class Cluster(PrimaryModel):
     )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "type", "group", "site", "location", "tenant", "comments"]
+    csv_headers = ["name", "cluster_type", "cluster_group", "site", "location", "tenant", "comments"]
     clone_fields = [
-        "type",
-        "group",
+        "cluster_type",
+        "cluster_group",
         "tenant",
         "site",
         "location",
@@ -227,8 +227,8 @@ class Cluster(PrimaryModel):
     def to_csv(self):
         return (
             self.name,
-            self.type.name,
-            self.group.name if self.group else None,
+            self.cluster_type.name,
+            self.cluster_group.name if self.cluster_group else None,
             self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,
@@ -252,7 +252,7 @@ class Cluster(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
+class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
     """
     A virtual machine which runs inside a Cluster.
     """
@@ -277,14 +277,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         null=True,
     )
     name = models.CharField(max_length=64, db_index=True)
-    role = models.ForeignKey(
-        to="dcim.DeviceRole",
-        on_delete=models.PROTECT,
-        related_name="virtual_machines",
-        limit_choices_to={"vm_role": True},
-        blank=True,
-        null=True,
-    )
     primary_ip4 = models.OneToOneField(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,

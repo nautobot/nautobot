@@ -4,10 +4,10 @@ from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
 from nautobot.circuits import choices as circuit_choices
+from nautobot.core.choices import ColorChoices
 from nautobot.dcim import choices as dcim_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
-from nautobot.utilities.choices import ColorChoices
 
 
 # List of 2-tuples of (model_path, choiceset)
@@ -141,12 +141,14 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
+
+    # Only print a newline if we have verbosity!
+    if verbosity > 0:
+        print("\n", end="")
+
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
-
-    if verbosity >= 0:
-        print("\n", end="")
 
     if not models:
         models = CHOICESET_MAP.keys()

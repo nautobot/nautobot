@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     LinkedCountColumn,
@@ -55,7 +55,7 @@ class TenantGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
-        url_params={"group": "slug"},
+        url_params={"tenant_group": "slug"},
         verbose_name="Tenants",
     )
     actions = ButtonsColumn(TenantGroup, pk_field="slug")
@@ -74,10 +74,10 @@ class TenantGroupTable(BaseTable):
 class TenantTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    group = tables.Column(linkify=True)
+    tenant_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="tenancy:tenant_list")
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "slug", "group", "description", "tags")
-        default_columns = ("pk", "name", "group", "description")
+        fields = ("pk", "name", "slug", "tenant_group", "description", "tags")
+        default_columns = ("pk", "name", "tenant_group", "description")

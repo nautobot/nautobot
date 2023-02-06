@@ -4,16 +4,17 @@ from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Manufacturer, Site
+from nautobot.core.testing import ViewTestCases
+from nautobot.core.testing.utils import extract_page_body
+from nautobot.dcim.models import Device, DeviceType, Location, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, Status, Tag
-from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.extras.models import CustomField, Role, Status, Tag
+from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -21,8 +22,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import ViewTestCases
-from nautobot.utilities.testing.utils import extract_page_body
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -139,29 +138,6 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
-    model = Role
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.form_data = {
-            "name": "Role X",
-            "slug": "role-x",
-            "weight": 200,
-            "description": "A new role",
-        }
-
-        cls.csv_data = (
-            "name,slug,weight",
-            "Role 4,role-4,1000",
-            "Role 5,role-5,1000",
-            "Role 6,role-6,1000",
-            "Role 7,,1000",
-        )
-        cls.slug_source = "name"
-        cls.slug_test_object = Role.objects.first().name
-
-
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
 
@@ -171,7 +147,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         sites = Site.objects.all()[:2]
         vrfs = VRF.objects.all()[:2]
 
-        roles = Role.objects.all()[:2]
+        roles = Role.objects.get_for_model(Prefix)[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
         status_reserved = statuses.get(slug="reserved")
@@ -240,12 +216,14 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(IPAddress)
         status_reserved = statuses.get(slug="reserved")
 
+        roles = Role.objects.get_for_model(IPAddress)
+
         cls.form_data = {
             "vrf": vrfs[1].pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": status_reserved.pk,
-            "role": IPAddressRoleChoices.ROLE_ANYCAST,
+            "role": roles[0].pk,
             "nat_inside": None,
             "dns_name": "example",
             "description": "A new IP address",
@@ -263,7 +241,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "vrf": vrfs[1].pk,
             "tenant": None,
             "status": status_reserved.pk,
-            "role": IPAddressRoleChoices.ROLE_ANYCAST,
+            "role": roles[1].pk,
             "dns_name": "example",
             "description": "New description",
         }
@@ -311,17 +289,14 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites.last()),
         )
 
-        roles = (
-            Role.objects.create(name="Role 1", slug="role-1"),
-            Role.objects.create(name="Role 2", slug="role-2"),
-        )
+        roles = Role.objects.get_for_model(VLAN)[:2]
 
         statuses = Status.objects.get_for_model(VLAN)
         status_active = statuses.get(slug="active")
         status_reserved = statuses.get(slug="reserved")
 
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=101,
             name="VLAN101",
             site=site_1,
@@ -330,7 +305,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=102,
             name="VLAN102",
             site=site_1,
@@ -339,7 +314,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=103,
             name="VLAN103",
             site=site_1,
@@ -354,9 +329,9 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
             "site": vlangroups[1].site.pk,
-            "group": vlangroups[1].pk,
+            "vlan_group": vlangroups[1].pk,
             "vid": 999,
-            "name": "VLAN999",
+            "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,
@@ -374,7 +349,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "location": Location.objects.filter(site=site_1).first().pk,
             "site": site_1.pk,
-            "group": vlangroups[0].pk,
+            "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
             "role": roles[0].pk,
@@ -402,8 +377,8 @@ class ServiceTestCase(
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        device = Device.objects.create(name="Device 1", site=site, device_type=devicetype, device_role=devicerole)
+        devicerole = Role.objects.get_for_model(Device).first()
+        device = Device.objects.create(name="Device 1", site=site, device_type=devicetype, role=devicerole)
 
         Service.objects.bulk_create(
             [
@@ -434,7 +409,7 @@ class ServiceTestCase(
             "name": "Service X",
             "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
             "ports": "104,105",
-            "ipaddresses": [],
+            "ip_addresses": [],
             "description": "A new service",
             "tags": [t.pk for t in Tag.objects.get_for_model(Service)],
         }

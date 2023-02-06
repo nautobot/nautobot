@@ -8,25 +8,21 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
+from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
     VRF,
-)
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
-    count_related,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
 )
 from . import serializers
 
@@ -46,9 +42,8 @@ class IPAMRootView(APIRootView):
 
 
 class VRFViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = (
-        VRF.objects.prefetch_related("tenant")
+        VRF.objects.select_related("tenant")
         .prefetch_related("import_targets", "export_targets", "tags")
         .annotate(
             ipaddress_count=count_related(IPAddress, "vrf"),
@@ -65,8 +60,7 @@ class VRFViewSet(NautobotModelViewSet):
 
 
 class RouteTargetViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
-    queryset = RouteTarget.objects.prefetch_related("tenant").prefetch_related("tags")
+    queryset = RouteTarget.objects.select_related("tenant").prefetch_related("tags")
     serializer_class = serializers.RouteTargetSerializer
     filterset_class = filters.RouteTargetFilterSet
 
@@ -88,24 +82,9 @@ class RIRViewSet(NautobotModelViewSet):
 
 
 class AggregateViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
-    queryset = Aggregate.objects.prefetch_related("rir").prefetch_related("tags")
+    queryset = Aggregate.objects.select_related("rir").prefetch_related("tags")
     serializer_class = serializers.AggregateSerializer
     filterset_class = filters.AggregateFilterSet
-
-
-#
-# Roles
-#
-
-
-class RoleViewSet(NautobotModelViewSet):
-    queryset = Role.objects.annotate(
-        prefix_count=count_related(Prefix, "role"),
-        vlan_count=count_related(VLAN, "role"),
-    )
-    serializer_class = serializers.RoleSerializer
-    filterset_class = filters.RoleFilterSet
 
 
 #
@@ -113,17 +92,15 @@ class RoleViewSet(NautobotModelViewSet):
 #
 
 
-class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tgs: m2m)
-    queryset = Prefix.objects.prefetch_related(
+class PrefixViewSet(NautobotModelViewSet):
+    queryset = Prefix.objects.select_related(
         "role",
         "site",
         "status",
-        "tags",
         "tenant",
         "vlan",
         "vrf__tenant",
-    )
+    ).prefetch_related("tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
 
@@ -312,17 +289,14 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
     retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
     update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
 )
-class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
-    queryset = IPAddress.objects.prefetch_related(
-        "assigned_object",
+class IPAddressViewSet(NautobotModelViewSet):
+    queryset = IPAddress.objects.select_related(
         "nat_inside",
-        "nat_outside_list",
         "status",
-        "tags",
+        "role",
         "tenant",
         "vrf__tenant",
-    )
+    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 
@@ -364,8 +338,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -375,16 +348,18 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
-class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
-    queryset = VLAN.objects.prefetch_related(
-        "group",
-        "site",
-        "status",
-        "role",
-        "tags",
-        "tenant",
-    ).annotate(prefix_count=count_related(Prefix, "vlan"))
+class VLANViewSet(NautobotModelViewSet):
+    queryset = (
+        VLAN.objects.select_related(
+            "vlan_group",
+            "site",
+            "status",
+            "role",
+            "tenant",
+        )
+        .prefetch_related("tags")
+        .annotate(prefix_count=count_related(Prefix, "vlan"))
+    )
     serializer_class = serializers.VLANSerializer
     filterset_class = filters.VLANFilterSet
 
@@ -395,7 +370,6 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
-    queryset = Service.objects.prefetch_related("device", "virtual_machine", "tags", "ipaddresses")
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ip_addresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

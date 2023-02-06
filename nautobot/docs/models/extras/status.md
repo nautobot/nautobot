@@ -33,7 +33,7 @@ For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be cust
     data models of their own that implement a `status` field. Proceed at your
     own risk!
 
-Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `devices`).
+Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `dcim_device_related`).
 
 ### `StatusField` model field
 
@@ -59,11 +59,12 @@ Any model form that is intended to have a `status` field must inherit from one o
 
 - FIXME: CSV import forms
 
-### `StatusSerializerField` serializer field
+### `StatusModelSerializerMixin` serializer mixin
 
 Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
 
-The `StatusSerializerField` is a writable slug-related choice field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be converted to lowercase.
++/- 2.0.0
+    The `StatusSerializerField` was changed to use a `NestedStatusSerializer` instead of presenting choices as a list of enums.
 
 ### Table field
 

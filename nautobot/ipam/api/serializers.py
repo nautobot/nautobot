@@ -10,6 +10,7 @@ from nautobot.core.api import (
     ContentTypeField,
     SerializedPKRelatedField,
 )
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
@@ -17,17 +18,17 @@ from nautobot.dcim.api.nested_serializers import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressFamilyChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -35,7 +36,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.utilities.api import get_serializer_for_model
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )
@@ -48,7 +48,6 @@ from .nested_serializers import (  # noqa: F401
     NestedIPAddressSerializer,
     NestedPrefixSerializer,
     NestedRIRSerializer,
-    NestedRoleSerializer,
     NestedRouteTargetSerializer,
     NestedServiceSerializer,
     NestedVLANGroupSerializer,
@@ -165,25 +164,6 @@ class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 #
 
 
-class RoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:role-detail")
-    prefix_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Role
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "weight",
-            "description",
-            "prefix_count",
-            "vlan_count",
-            "web_url",
-        ]
-
-
 class VLANGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
@@ -220,13 +200,14 @@ class VLANGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class VLANSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
-    group = NestedVLANGroupSerializer(required=False, allow_null=True)
+    vlan_group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = NestedRoleSerializer(required=False, allow_null=True)
     prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -235,7 +216,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
             "url",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "vid",
             "name",
             "tenant",
@@ -250,9 +231,9 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
     def validate(self, data):
 
         # Validate uniqueness of vid and name if a group has been assigned.
-        if data.get("group", None):
+        if data.get("vlan_group", None):
             for field in ["vid", "name"]:
-                validator = UniqueTogetherValidator(queryset=VLAN.objects.all(), fields=("group", field))
+                validator = UniqueTogetherValidator(queryset=VLAN.objects.all(), fields=("vlan_group", field))
                 validator(data, self)
 
         # Enforce model validation
@@ -266,7 +247,9 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
 #
 
 
-class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class PrefixSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -275,7 +258,6 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
-    role = NestedRoleSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Prefix
@@ -344,13 +326,14 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class IPAddressSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = ChoiceField(choices=IPAddressRoleChoices, allow_blank=True, required=False)
     assigned_object_type = ContentTypeField(
         queryset=ContentType.objects.filter(constants.IPADDRESS_ASSIGNMENT_MODELS),
         required=False,
@@ -428,7 +411,7 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     device = NestedDeviceSerializer(required=False, allow_null=True)
     virtual_machine = NestedVirtualMachineSerializer(required=False, allow_null=True)
     protocol = ChoiceField(choices=ServiceProtocolChoices, required=False)
-    ipaddresses = SerializedPKRelatedField(
+    ip_addresses = SerializedPKRelatedField(
         queryset=IPAddress.objects.all(),
         serializer=NestedIPAddressSerializer,
         required=False,
@@ -450,7 +433,7 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "name",
             "ports",
             "protocol",
-            "ipaddresses",
+            "ip_addresses",
             "description",
             "web_url",
         ]

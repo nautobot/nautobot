@@ -8,8 +8,7 @@ import os
 from nautobot.core.settings import *  # noqa: F401,F403
 from nautobot.core.settings_funcs import parse_redis_connection
 
-# No host checks required during tests
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["nautobot.example.com"]
 
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
@@ -47,3 +46,8 @@ TEST_USE_FACTORIES = True
 TEST_FACTORY_SEED = "Nautobot"
 # File in which all performance-specifc test baselines are stored
 TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+
+# Make Celery run synchronously (eager), to always store eager results, and run the broker in-memory.
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_STORE_EAGER_RESULT = True
+CELERY_BROKER_URL = "memory://"

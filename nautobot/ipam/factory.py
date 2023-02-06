@@ -4,13 +4,17 @@ import factory
 import faker
 import math
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import (
+    OrganizationalModelFactory,
+    PrimaryModelFactory,
+    UniqueFaker,
+    get_random_instances,
+    random_instance,
+)
 from nautobot.dcim.models import Location, Site
-from nautobot.extras.models import Status
-from nautobot.ipam.choices import IPAddressRoleChoices
-from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, Role, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.extras.models import Role, Status
+from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
 
 
 logger = logging.getLogger(__name__)
@@ -72,8 +76,8 @@ class AggregateFactory(PrimaryModelFactory):
     has_tenant_group = factory.Faker("pybool")
     tenant = factory.Maybe(
         "has_tenant_group",
-        random_instance(Tenant.objects.filter(group__isnull=False), allow_null=False),
-        factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(group__isnull=True)), None),
+        random_instance(Tenant.objects.filter(tenant_group__isnull=False), allow_null=False),
+        factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(tenant_group__isnull=True)), None),
     )
 
     has_date_added = factory.Faker("pybool")
@@ -269,22 +273,6 @@ class VRFFactory(PrimaryModelFactory):
                 self.export_targets.set(get_random_instances(RouteTarget))
 
 
-class RoleFactory(OrganizationalModelFactory):
-    class Meta:
-        model = Role
-        exclude = ("has_description",)
-
-    class Params:
-        unique_name = UniqueFaker("word", part_of_speech="adjective")
-
-    name = factory.LazyAttribute(lambda o: o.unique_name.title())
-
-    weight = factory.Faker("pyint", min_value=100, step=100)
-
-    has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-
-
 class VLANGroupFactory(OrganizationalModelFactory):
     class Meta:
         model = VLANGroup
@@ -328,7 +316,7 @@ class VLANFactory(PrimaryModelFactory):
         model = VLAN
         exclude = (
             "has_description",
-            "has_group",
+            "has_vlan_group",
             "has_location",
             "has_role",
             "has_site",
@@ -339,35 +327,54 @@ class VLANFactory(PrimaryModelFactory):
     # As with VLANGroup, with fully random names and vids, non-uniqueness is unlikely but possible,
     # and we might want to consider intentionally reusing non-unique values for test purposes?
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
-    name = factory.LazyFunction(
-        lambda: (
-            faker.Faker().word(part_of_speech="adjective").capitalize()
-            + faker.Faker().word(part_of_speech="noun").capitalize()
-        )
+    # Generate names like "vlan__0001__purple__GROUP__Floor-1__242_Vasquez_Freeway" or "vlan__1234__easy",
+    # depending on which of (group, location, site) are defined, if any.
+    name = factory.LazyAttribute(
+        lambda o: "__".join(
+            [
+                str(x)
+                for x in filter(  # Filter out Nones from the tuple so name isn't "vlan__1234__easy__None__None__None"
+                    None,
+                    (
+                        "vlan",
+                        f"{o.vid:04d}",  # "0001" rather than "1", for more consistent names
+                        faker.Faker().word(part_of_speech="adjective"),
+                        o.vlan_group,  # may be None
+                        o.location,  # may be None
+                        str(o.site).replace(" ", "_") if o.site else None,  # may be None
+                    ),
+                )
+            ]
+        )[
+            :255
+        ]  # truncate to max VLAN.name length just to be safe
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
+    has_role = factory.Faker("pybool")
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(VLAN), allow_null=False),
+        None,
+    )
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(VLANGroup, allow_null=False), None)
+    has_vlan_group = factory.Faker("pybool")
+    vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
-        "has_group",
-        factory.LazyAttribute(lambda l: l.group.location),
+        "has_vlan_group",
+        factory.LazyAttribute(lambda l: l.vlan_group.location),
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
-    has_role = factory.Faker("pybool")
-    role = factory.Maybe("has_role", random_instance(Role), None)
-
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
-        "has_group",
-        factory.LazyAttribute(lambda l: l.group.site),
+        "has_vlan_group",
+        factory.LazyAttribute(lambda l: l.vlan_group.site),
         factory.Maybe(
             "has_location",
             factory.LazyAttribute(lambda l: l.location.site),
@@ -381,7 +388,7 @@ class VLANFactory(PrimaryModelFactory):
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("group", "location", "site", "tenant")
+        django_get_or_create = ("vlan_group", "location", "site", "tenant")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -439,12 +446,16 @@ class PrefixFactory(PrimaryModelFactory):
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
     )
-    role = factory.Maybe("has_role", random_instance(Role), None)
     # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
     site = factory.Maybe(
         "has_location",
         factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
         factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
+    )
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=False),
+        None,
     )
     status = factory.Maybe(
         "is_container",
@@ -458,7 +469,7 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            group=None,
+            vlan_group=None,
             location=factory.SelfAttribute("..location"),
             site=factory.SelfAttribute("..site"),
             tenant=factory.SelfAttribute("..tenant"),
@@ -577,7 +588,6 @@ class IPAddressFactory(PrimaryModelFactory):
         has_dns_name = factory.Faker("pybool")
         has_nat_inside = factory.Faker("pybool")
         has_role = factory.Faker("pybool")
-        role_choice = factory.Faker("random_element", elements=IPAddressRoleChoices)
         has_tenant = factory.Faker("pybool")
         has_vrf = factory.Faker("pybool")
         is_ipv6 = factory.Faker("pybool")
@@ -596,7 +606,11 @@ class IPAddressFactory(PrimaryModelFactory):
         nat_inside=None,
         is_ipv6=factory.SelfAttribute("..is_ipv6"),
     )
-    role = factory.Maybe("has_role", factory.LazyAttribute(lambda obj: obj.role_choice[0]), "")
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(IPAddress), allow_null=False),
+        None,
+    )
     status = factory.Maybe(
         "is_ipv6",
         random_instance(lambda: Status.objects.get_for_model(IPAddress), allow_null=False),

@@ -11,44 +11,46 @@ from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import TemplateDoesNotExist, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
-from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.views import generic
+from nautobot.core.forms import restrict_form_fields
+from nautobot.core.models.querysets import count_related
+from nautobot.core.models.utils import pretty_print_query
+from nautobot.core.tables import ButtonsColumn
+from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.core.utils.requests import copy_safe_request, normalize_querydict
+from nautobot.core.views import generic, viewsets
+from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import csv_format, prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.forms import restrict_form_fields
-from nautobot.utilities.utils import (
-    copy_safe_request,
-    count_related,
-    csv_format,
-    get_table_for_model,
-    prepare_cloned_fields,
-    pretty_print_query,
-)
-from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ObjectPermissionRequiredMixin
-from nautobot.utilities.utils import normalize_querydict
+from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
+
 from . import filters, forms, tables
+from .api.serializers import RoleSerializer
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .jobs import get_job, run_job, Job as JobClass
+from .filters import RoleFilterSet
+from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
+from .jobs import Job as JobClass
+from .jobs import get_job, run_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -60,13 +62,16 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    Job as JobModel,
+)
+from .models import (
     JobHook,
     JobLogEntry,
-    ObjectChange,
     JobResult,
+    Note,
+    ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -75,10 +80,10 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
-    Note,
 )
+from .models import Job as JobModel
 from .registry import registry
-
+from .tables import RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -270,15 +275,20 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.device_set.prefetch_related(
-                "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
-            ),
+            data=instance.dcim_device_related.select_related(
+                "tenant",
+                "site",
+                "rack",
+                "device_type",
+                "role",
+            ).prefetch_related("primary_ip"),
             orderable=False,
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
             ],
@@ -291,13 +301,18 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
+            data=instance.virtualization_virtualmachine_related.select_related(
+                "cluster",
+                "role",
+                "tenant",
+            ).prefetch_related("primary_ip"),
             orderable=False,
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
             ],
@@ -791,9 +806,9 @@ class GitRepositoryListView(generic.ObjectListView):
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=git_repository_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
-            .order_by("completed")
+            .order_by("date_done")
             .defer("data")
         }
         return {
@@ -846,8 +861,7 @@ class GitRepositoryBulkImportView(generic.BulkImportView):
 
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = GitRepository.objects.prefetch_related("secrets_group")
+    queryset = GitRepository.objects.select_related("secrets_group")
     filterset = filters.GitRepositoryFilterSet
     table = tables.GitRepositoryBulkTable
     form = forms.GitRepositoryBulkEditForm
@@ -920,7 +934,7 @@ class GitRepositoryResultView(generic.ObjectView):
         git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         job_result = (
             JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
-            .order_by("-created")
+            .order_by("-date_created")
             .first()
         )
 
@@ -1033,7 +1047,6 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         if "is_job_hook_receiver" not in request.GET:
             queryset = queryset.filter(is_job_hook_receiver=False)
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1074,14 +1087,14 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_result_pk = initial.pop("kwargs_from_job_result")
             try:
                 job_result = job_model.results.get(pk=job_result_pk)
-                # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
+                # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
                 # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                 explicit_initial = initial
-                initial = job_result.job_kwargs.get("data", {}).copy()
-                commit = job_result.job_kwargs.get("commit")
+                initial = job_result.task_kwargs.get("data", {}).copy()
+                commit = job_result.task_kwargs.get("commit")
                 if commit is not None:
                     initial.setdefault("_commit", commit)
-                task_queue = job_result.job_kwargs.get("task_queue")
+                task_queue = job_result.task_kwargs.get("task_queue")
                 if task_queue is not None:
                     initial.setdefault("_task_queue", task_queue)
                 initial.update(explicit_initial)
@@ -1170,7 +1183,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
-                job_kwargs = {
+                task_kwargs = {
                     "data": job_model.job_class.serialize_data(job_form.cleaned_data),
                     "request": copy_safe_request(request),
                     "user": request.user.pk,
@@ -1179,7 +1192,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "task_queue": job_form.cleaned_data.get("_task_queue", None),
                 }
                 if task_queue:
-                    job_kwargs["celery_kwargs"] = {"queue": task_queue}
+                    task_kwargs["celery_kwargs"] = {"queue": task_queue}
 
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
@@ -1188,7 +1201,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=job_kwargs,
+                    kwargs=task_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     queue=task_queue,
@@ -1477,8 +1490,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = JobResult.objects.prefetch_related("job_model", "logs", "obj_type", "user")
+    queryset = JobResult.objects.select_related("job_model", "obj_type", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1523,7 +1535,7 @@ class JobResultView(generic.ObjectView):
         if "export" in request.GET:
             response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
             underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
-            formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
+            formated_completion_time = instance.date_done.strftime("%Y-%m-%d_%H_%M")
             filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
             response["Content-Disposition"] = f"attachment; filename={filename}"
             return response
@@ -1634,10 +1646,9 @@ class ObjectChangeLogView(View):
 
         # Gather all changes for this object (and its related objects)
         content_type = ContentType.objects.get_for_model(model)
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         objectchanges = (
             ObjectChange.objects.restrict(request.user, "view")
-            .prefetch_related("user", "changed_object_type")
+            .select_related("user", "changed_object_type")
             .filter(
                 Q(changed_object_type=content_type, changed_object_id=obj.pk)
                 | Q(related_object_type=content_type, related_object_id=obj.pk)
@@ -1785,6 +1796,95 @@ class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
+
+
+#
+# Roles
+#
+
+
+class RoleUIViewSet(viewsets.NautobotUIViewSet):
+    """`Roles` UIViewSet."""
+
+    queryset = Role.objects.all()
+    bulk_create_form_class = RoleCSVForm
+    bulk_update_form_class = RoleBulkEditForm
+    filterset_class = RoleFilterSet
+    form_class = RoleForm
+    serializer_class = RoleSerializer
+    table_class = RoleTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["content_types"] = instance.content_types.order_by("app_label", "model")
+
+            devices = instance.dcim_device_related.select_related(
+                "status",
+                "site",
+                "tenant",
+                "role",
+                "rack",
+                "device_type",
+            )
+            ipaddress = instance.ipam_ipaddress_related.select_related(
+                "vrf",
+                "tenant",
+                "assigned_object_type",
+            )
+            prefixes = instance.ipam_prefix_related.select_related(
+                "site",
+                "status",
+                "tenant",
+                "vlan",
+                "vrf",
+            )
+            virtual_machines = instance.virtualization_virtualmachine_related.select_related(
+                "cluster",
+                "role",
+                "status",
+                "tenant",
+            )
+            vlans = instance.ipam_vlan_related.select_related(
+                "vlan_group",
+                "site",
+                "status",
+                "tenant",
+            )
+
+            device_table = DeviceTable(devices)
+            device_table.columns.hide("role")
+            ipaddress_table = IPAddressTable(ipaddress)
+            ipaddress_table.columns.hide("role")
+            prefix_table = PrefixTable(prefixes)
+            prefix_table.columns.hide("role")
+            virtual_machine_table = VirtualMachineTable(virtual_machines)
+            virtual_machine_table.columns.hide("role")
+            vlan_table = VLANTable(vlans)
+            vlan_table.columns.hide("role")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+
+            RequestConfig(request, paginate).configure(device_table)
+            RequestConfig(request, paginate).configure(ipaddress_table)
+            RequestConfig(request, paginate).configure(prefix_table)
+            RequestConfig(request, paginate).configure(virtual_machine_table)
+            RequestConfig(request, paginate).configure(vlan_table)
+
+            context.update(
+                {
+                    "device_table": device_table,
+                    "ipaddress_table": ipaddress_table,
+                    "prefix_table": prefix_table,
+                    "virtual_machine_table": virtual_machine_table,
+                    "vlan_table": vlan_table,
+                }
+            )
+
+        return context
 
 
 #
@@ -2059,8 +2159,9 @@ class TagView(generic.ObjectView):
     queryset = Tag.objects.all()
 
     def get_extra_context(self, request, instance):
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        tagged_items = TaggedItem.objects.filter(tag=instance).prefetch_related("content_type", "content_object")
+        tagged_items = (
+            TaggedItem.objects.filter(tag=instance).select_related("content_type").prefetch_related("content_object")
+        )
 
         # Generate a table of all items tagged with this Tag
         items_table = tables.TaggedItemTable(tagged_items)

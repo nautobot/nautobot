@@ -60,28 +60,6 @@ menu_items = (
                             ),
                         ),
                     ),
-                    NavMenuItem(
-                        link="ipam:role_list",
-                        name="Prefix/VLAN Roles",
-                        weight=200,
-                        permissions=[
-                            "ipam.view_role",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="ipam:role_add",
-                                permissions=[
-                                    "ipam.add_role",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:role_import",
-                                permissions=[
-                                    "ipam.add_role",
-                                ],
-                            ),
-                        ),
-                    ),
                 ),
             ),
             NavMenuGroup(

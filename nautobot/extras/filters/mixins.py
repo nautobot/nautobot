@@ -3,6 +3,12 @@ from django.db.models import Q
 import django_filters
 from django_filters.utils import verbose_lookup_expr
 
+from nautobot.core.constants import (
+    FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NUMERIC_BASED_LOOKUP_MAP,
+)
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -24,12 +30,21 @@ from nautobot.extras.models import (
     CustomField,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
 )
-from nautobot.utilities.constants import (
-    FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NUMERIC_BASED_LOOKUP_MAP,
-)
+from nautobot.virtualization.models import VirtualMachine
+
+
+class ConfigContextRoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for Device and VM"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("field_name", "roles")
+        kwargs.setdefault("queryset", Role.objects.get_for_models([Device, VirtualMachine]))
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
@@ -78,13 +93,13 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
         return lookup_map
 
-    # TODO 2.0: Transition CustomField filters to nautobot.utilities.filters.MultiValue* filters and
+    # TODO 2.0: Transition CustomField filters to nautobot.core.filters.MultiValue* filters and
     # leverage BaseFilterSet to add dynamic lookup expression filters. Remove CustomField.filter_logic field
     @classmethod
     def _generate_custom_field_lookup_expression_filters(cls, filter_name, custom_field):
         """
         For specific filter types, new filters are created based on defined lookup expressions in
-        the form `<field_name>__<lookup_expr>`. Copied from nautobot.utilities.filters.BaseFilterSet
+        the form `<field_name>__<lookup_expr>`. Copied from nautobot.core.filters.BaseFilterSet
         and updated to work with custom fields.
         """
         magic_filters = {}
@@ -130,23 +145,23 @@ class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
 
 
 class LocalContextModelFilterSetMixin(django_filters.FilterSet):
-    local_context_data = django_filters.BooleanFilter(
-        method="_local_context_data",
+    local_config_context_data = django_filters.BooleanFilter(
+        method="_local_config_context_data",
         label="Has local config context data",
     )
-    local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+    local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID)",
     )
-    local_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_context_schema__slug",
+    local_config_context_schema = django_filters.ModelMultipleChoiceFilter(
+        field_name="local_config_context_schema__slug",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug)",
     )
 
-    def _local_context_data(self, queryset, name, value):
-        return queryset.exclude(local_context_data__isnull=value)
+    def _local_config_context_data(self, queryset, name, value):
+        return queryset.exclude(local_config_context_data__isnull=value)
 
 
 class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
@@ -193,8 +208,16 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
                 ).values_list("source_id", flat=True)
 
                 values = list(destinations) + list(sources)
-            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
-            return qs
+
+            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
+            # unioned queryset is also distinct. We also need to conditionally check if the incoming
+            # `qs` is distinct in the case that a caller is manually passing in a queryset that may
+            # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
+            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
+            if qs.query.distinct:
+                union_qs = union_qs.distinct()
+
+            return qs & union_qs
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):
@@ -255,6 +278,34 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
                     qs=model.objects.all(),
                 )
             self.relationships.append(field_name)
+
+
+#
+# Role
+#
+
+
+class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for self.model"""
+
+    def __init__(self, *args, **kwargs):
+
+        kwargs.setdefault("field_name", "role")
+        kwargs.setdefault("queryset", Role.objects.all())
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return self.queryset.get_for_model(self.model)
+
+
+class RoleModelFilterSetMixin(django_filters.FilterSet):
+    """
+    Mixin to add a `role` filter field to a FilterSet.
+    """
+
+    role = RoleFilter()
 
 
 class StatusFilter(django_filters.ModelMultipleChoiceFilter):

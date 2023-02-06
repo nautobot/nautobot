@@ -15,9 +15,9 @@ from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 from prometheus_client import Counter
 
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
@@ -197,8 +197,8 @@ def git_repository_pre_delete(instance, **kwargs):
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        job_id=uuid.uuid4(),
-        status=JobResultStatusChoices.STATUS_RUNNING,
+        task_id=uuid.uuid4(),
+        status=JobResultStatusChoices.STATUS_STARTED,
     )
 
     # This isn't running in the context of a Job execution transaction,
@@ -208,8 +208,8 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-        job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+    if job_result.status not in JobResultStatusChoices.READY_STATES:
+        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.save()
 
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone

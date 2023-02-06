@@ -11,14 +11,17 @@ from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing.utils import disable_warnings
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Manufacturer,
     Rack,
     RackGroup,
-    RackRole,
     Site,
 )
 from nautobot.dcim.tests import test_views
@@ -50,6 +53,7 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -64,10 +68,6 @@ from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
-from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -95,6 +95,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "label",
         "url",
     ]
+    choices_fields = ["content_type"]
     create_data = [
         {
             "content_type": "dcim.site",
@@ -197,6 +198,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["owner_content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -210,9 +212,9 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         """
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.create(name="Site-1", slug="site-1")
-        device = Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site)
+        device = Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site)
 
         # Test default config contexts (created at test setup)
         rendered_context = device.get_config_context()
@@ -326,7 +328,7 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = []
+    choices_fields = ["owner_content_type"]
     slug_source = "name"
 
     @classmethod
@@ -365,7 +367,7 @@ class CreatedUpdatedFilterTest(APITestCase):
 
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
         self.rackgroup1 = RackGroup.objects.create(site=self.site1, name="Test Rack Group 1", slug="test-rack-group-1")
-        self.rackrole1 = RackRole.objects.create(name="Test Rack Role 1", slug="test-rack-role-1", color="ff0000")
+        self.rackrole1 = Role.objects.get_for_model(Rack).first()
         self.rack1 = Rack.objects.create(
             site=self.site1,
             group=self.rackgroup1,
@@ -602,7 +604,7 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             "new_window": False,
         },
     ]
-    choices_fields = ["button_class"]
+    choices_fields = ["button_class", "content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -652,27 +654,27 @@ class DynamicGroupTestMixin:
             model="device Type 1",
             slug="device-type-1",
         )
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
         status_active = Status.objects.get(slug="active")
         status_planned = Status.objects.get(slug="planned")
         Device.objects.create(
             name="device-site-1",
             status=status_active,
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=sites[0],
         )
         Device.objects.create(
             name="device-site-2",
             status=status_active,
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=sites[1],
         )
         Device.objects.create(
             name="device-site-3",
             status=status_planned,
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=sites[2],
         )
@@ -704,6 +706,7 @@ class DynamicGroupTestMixin:
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
     brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    choices_fields = ["content_type"]
     create_data = [
         {
             "name": "API DynamicGroup 4",
@@ -980,11 +983,11 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "graphql-query-5",
             "slug": "graphql-query-5",
-            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
         {
             "name": "Graphql Query 6",
-            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
     ]
     slug_source = "name"
@@ -1000,7 +1003,7 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             GraphQLQuery(
                 name="graphql-query-2",
                 slug="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, role { name slug } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
@@ -1026,7 +1029,7 @@ query ($device: [String!]) {
       name
       slug
     }
-    device_role {
+    role {
       name
     }
     platform {
@@ -1167,7 +1170,8 @@ class JobAPIRunTestMixin:
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.default_job_name = "local/api_test_job/APITestJob"
+        self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
         self.job_model.validated_save()
 
@@ -1231,7 +1235,7 @@ class JobAPIRunTestMixin:
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path(self.default_job_name)
         job_model.enabled = False
         job_model.save()
 
@@ -1269,7 +1273,7 @@ class JobAPIRunTestMixin:
         """Job run cannot be requested if Celery is not running."""
         mock_get_worker_count.return_value = 0
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1295,7 +1299,7 @@ class JobAPIRunTestMixin:
         """Job run requests can reference objects by their primary keys."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1337,7 +1341,7 @@ class JobAPIRunTestMixin:
         # Do the stuff.
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1355,8 +1359,8 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        # Assert that a JobResult was NOT created.
-        self.assertFalse(JobResult.objects.exists())
+        # Assert that a JobResult for this job was NOT created.
+        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
         # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
@@ -1373,17 +1377,17 @@ class JobAPIRunTestMixin:
         """Job run requests can reference objects by their attributes."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
             "var3": False,
-            "var4": {"name": "role"},
+            "var4": {"name": device_role.name},
         }
 
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
-        deserialized_data = get_job("local/api_test_job/APITestJob").deserialize_data(job_data)
+        deserialized_data = get_job(self.default_job_name).deserialize_data(job_data)
 
         self.assertEqual(
             deserialized_data,
@@ -1394,12 +1398,12 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.last()
-        self.assertIn("data", job_result.job_kwargs)
+        job_result = JobResult.objects.get(name=self.default_job_name)
+        self.assertIn("data", job_result.task_kwargs)
 
-        # Ensure the stored job_kwargs deserialize to the same as originally inputted
+        # Ensure the stored task_kwargs deserialize to the same as originally inputted
         self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.job_kwargs["data"]), deserialized_data
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
         return (response, job_result)  # so subclasses can do additional testing
@@ -1492,7 +1496,7 @@ class JobAPIRunTestMixin:
     def test_run_job_future(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1576,7 +1580,7 @@ class JobAPIRunTestMixin:
     def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1585,7 +1589,7 @@ class JobAPIRunTestMixin:
                 "name": "test",
             },
         }
-        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job = Job.objects.get_for_class_path(self.default_job_name)
         job.has_sensitive_variables = True
         job.has_sensitive_variables_override = True
         job.validated_save()
@@ -1594,15 +1598,15 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.last()
-        self.assertEqual(job_result.job_kwargs, None)
+        job_result = JobResult.objects.get(name=self.default_job_name)
+        self.assertEqual(job_result.task_kwargs, None)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future_past(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1622,7 +1626,7 @@ class JobAPIRunTestMixin:
     def test_run_job_interval(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1699,7 +1703,7 @@ class JobAPIRunTestMixin:
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_invalid_task_queue(self):
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1718,7 +1722,7 @@ class JobAPIRunTestMixin:
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_job_with_valid_task_queue(self, _):
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1764,7 +1768,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         "type_update": True,
         "type_delete": False,
     }
-    validation_excluded_fields = []
     api_version = "1.3"
 
     @classmethod
@@ -1903,7 +1906,6 @@ class JobTestVersion13(
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
     }
-    validation_excluded_fields = []
 
     run_success_response_status = status.HTTP_201_CREATED
     api_version = "1.3"
@@ -1923,7 +1925,7 @@ class JobTestVersion13(
         self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
         self.assertEqual(
             response.data[3],
-            {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.devicerole"},
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1980,7 +1982,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2014,7 +2016,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2038,7 +2040,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2133,7 +2135,7 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["completed", "created", "display", "id", "name", "status", "url", "user"]
+    brief_fields = ["date_created", "date_done", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2145,37 +2147,37 @@ class JobResultTest(
             job_model=jobs[0],
             name=jobs[0].class_path,
             obj_type=job_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
-            status=JobResultStatusChoices.STATUS_COMPLETED,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
             data={"output": "\nRan for 3 seconds"},
-            job_kwargs=None,
+            task_kwargs=None,
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=None,
             name="Git Repository",
             obj_type=git_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
-            status=JobResultStatusChoices.STATUS_COMPLETED,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
             data=None,
-            job_kwargs={"repository_pk": uuid.uuid4()},
+            task_kwargs={"repository_pk": uuid.uuid4()},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=jobs[1],
             name=jobs[1].class_path,
             obj_type=job_ct,
-            completed=None,
+            date_done=None,
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
-            job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
+            task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
 
@@ -2202,7 +2204,7 @@ class JobLogEntryTest(
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 
@@ -2578,7 +2580,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[0].slug: {
                     "id": str(self.relationships[0].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
                     ),
                     "name": self.relationships[0].name,
@@ -2592,7 +2594,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[1].slug: {
                     "id": str(self.relationships[1].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
                     ),
                     "name": self.relationships[1].name,
@@ -2611,7 +2613,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[2].slug: {
                     "id": str(self.relationships[2].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
                     ),
                     "name": self.relationships[2].name,
@@ -2636,18 +2638,18 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             model="device Type 1",
             slug="device-type-1",
         )
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
         existing_device_1 = Device.objects.create(
             name="existing-device-site-1",
             status=Status.objects.get(slug="active"),
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=existing_site_1,
         )
         existing_device_2 = Device.objects.create(
             name="existing-device-site-2",
             status=Status.objects.get(slug="active"),
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=existing_site_2,
         )
@@ -2657,7 +2659,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:site-list"),
             data={
                 "name": "New Site",
-                "status": "active",
+                "status": Status.objects.get(slug="active").pk,
                 "relationships": {
                     self.relationships[0].slug: {
                         "peer": {
@@ -2746,10 +2748,16 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 **self.header,
             )
 
+        status_active = Status.objects.get(slug="active")
+
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
-            "post", data=[{"vid": "1", "name": "1", "status": "active"}, {"vid": "2", "name": "2", "status": "active"}]
+            "post",
+            data=[
+                {"vid": "1", "name": "1", "status": status_active.pk},
+                {"vid": "2", "name": "2", "status": status_active.pk},
+            ],
         )
         self.assertHttpStatus(response, 400)
         self.assertEqual(
@@ -2782,21 +2790,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 vlan1_json_data = {
                     "vid": "1",
                     "name": "1",
-                    "status": "active",
+                    "status": status_active.pk,
                 }
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": "active",
+                    "status": status_active.pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": "active", "id": str(vlan1.id)}
+                vlan1_json_data = {"status": status_active.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
 
-                vlan2_json_data = {"status": "active", "id": str(vlan2.id)}
+                vlan2_json_data = {"status": status_active.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
@@ -2855,37 +2863,17 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         )
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        cls.devices = (
+        devicerole = Role.objects.get_for_model(Device).first()
+        cls.devices = [
             Device.objects.create(
-                name="Device 1",
+                name=f"Device {num}",
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
                 site=cls.sites[1],
                 status=cls.status_active,
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=devicetype,
-                device_role=devicerole,
-                site=cls.sites[1],
-                status=cls.status_active,
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=devicetype,
-                device_role=devicerole,
-                site=cls.sites[1],
-                status=cls.status_active,
-            ),
-            Device.objects.create(
-                name="Device 4",
-                device_type=devicetype,
-                device_role=devicerole,
-                site=cls.sites[1],
-                status=cls.status_active,
-            ),
-        )
+            )
+            for num in range(1, 5)
+        ]
 
         cls.associations = (
             RelationshipAssociation(
@@ -3024,7 +3012,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 self.relationship.slug: {
                     "id": str(self.relationship.pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
                     ),
                     "name": self.relationship.name,
@@ -3036,7 +3024,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[0].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[0].pk})
                                 ),
                                 "display": self.devices[0].display,
@@ -3045,7 +3033,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[1].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[1].pk})
                                 ),
                                 "display": self.devices[1].display,
@@ -3054,7 +3042,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[2].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[2].pk})
                                 ),
                                 "display": self.devices[2].display,
@@ -3752,3 +3740,33 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             response.data["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )
+
+
+class RoleTest(APIViewTestCases.APIViewTestCase):
+    model = Role
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    bulk_update_data = {
+        "color": "000000",
+    }
+
+    create_data = [
+        {
+            "name": "Role 1",
+            "slug": "role-1",
+            "color": "0000ff",
+            "content_types": ["dcim.device", "dcim.rack"],
+        },
+        {
+            "name": "Role 2",
+            "slug": "role-2",
+            "color": "0000ff",
+            "content_types": ["dcim.rack"],
+        },
+        {
+            "name": "Role 3",
+            "slug": "role-3",
+            "color": "0000ff",
+            "content_types": ["ipam.ipaddress", "ipam.vlan"],
+        },
+    ]
+    slug_source = "name"

@@ -1,13 +1,21 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from nautobot.core.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    ColoredLabelColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
-    DeviceRole,
     FrontPort,
     Interface,
     InventoryItem,
@@ -18,18 +26,8 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
-    BaseTable,
-    BooleanColumn,
-    ButtonsColumn,
-    ColorColumn,
-    ColoredLabelColumn,
-    LinkedCountColumn,
-    TagColumn,
-    ToggleColumn,
-)
 from .template_code import (
     CABLETERMINATION,
     CONSOLEPORT_BUTTONS,
@@ -62,7 +60,6 @@ __all__ = (
     "DevicePowerOutletTable",
     "DeviceRearPortTable",
     "DeviceRedundancyGroupTable",
-    "DeviceRoleTable",
     "DeviceTable",
     "FrontPortTable",
     "InterfaceTable",
@@ -73,49 +70,6 @@ __all__ = (
     "RearPortTable",
     "VirtualChassisTable",
 )
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    device_count = LinkedCountColumn(viewname="dcim:device_list", url_params={"role": "slug"}, verbose_name="Devices")
-    vm_count = LinkedCountColumn(
-        viewname="virtualization:virtualmachine_list",
-        url_params={"role": "slug"},
-        verbose_name="VMs",
-    )
-    color = ColorColumn()
-    vm_role = BooleanColumn()
-    actions = ButtonsColumn(DeviceRole, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = DeviceRole
-        fields = (
-            "pk",
-            "name",
-            "device_count",
-            "vm_count",
-            "color",
-            "vm_role",
-            "description",
-            "slug",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "device_count",
-            "vm_count",
-            "color",
-            "vm_role",
-            "description",
-            "actions",
-        )
 
 
 #
@@ -169,14 +123,13 @@ class PlatformTable(BaseTable):
 #
 
 
-class DeviceTable(StatusTableMixin, BaseTable):
+class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    device_role = ColoredLabelColumn(verbose_name="Role")
     device_type = tables.LinkColumn(
         viewname="dcim:devicetype",
         args=[Accessor("device_type__pk")],
@@ -204,7 +157,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "name",
             "status",
             "tenant",
-            "device_role",
+            "role",
             "device_type",
             "platform",
             "serial",
@@ -234,7 +187,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "site",
             "location",
             "rack",
-            "device_role",
+            "role",
             "device_type",
             "primary_ip",
         )
@@ -246,7 +199,7 @@ class DeviceImportTable(BaseTable):
     tenant = TenantColumn()
     site = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    device_role = tables.Column(verbose_name="Role")
+    role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
@@ -258,7 +211,7 @@ class DeviceImportTable(BaseTable):
             "site",
             "rack",
             "position",
-            "device_role",
+            "role",
             "device_type",
         )
         empty_text = False

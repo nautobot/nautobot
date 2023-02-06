@@ -4,9 +4,9 @@ from rest_framework import serializers
 
 from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model
 
 __all__ = [
     "NestedComputedFieldSerializer",
@@ -25,7 +25,9 @@ __all__ = [
     "NestedNoteSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
+    "NestedRoleSerializer",
     "NestedScheduledJobSerializer",
+    "NestedSecretsGroupAssociationSerializer",
     "NestedSecretSerializer",
     "NestedSecretsGroupSerializer",
     "NestedStatusSerializer",
@@ -172,7 +174,7 @@ class NestedJobResultSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.JobResult
-        fields = ["id", "url", "name", "created", "completed", "user", "status"]
+        fields = ["id", "url", "name", "date_created", "date_done", "user", "status"]
 
 
 class NestedNoteSerializer(BaseModelSerializer):
@@ -210,6 +212,14 @@ class NestedRelationshipAssociationSerializer(WritableNestedSerializer):
     class Meta:
         model = models.RelationshipAssociation
         fields = ["id", "url", "relationship", "source_id", "destination_id"]
+
+
+class NestedRoleSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
+
+    class Meta:
+        model = models.Role
+        fields = ["id", "url", "name", "slug"]
 
 
 class NestedScheduledJobSerializer(BaseModelSerializer):

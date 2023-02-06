@@ -9,7 +9,6 @@ from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
@@ -23,7 +22,7 @@ from nautobot.dcim.models import (
 )
 
 from nautobot.dcim.utils import object_to_path_node
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 
 
 class CablePathTestCase(TestCase):
@@ -44,12 +43,12 @@ class CablePathTestCase(TestCase):
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
+        device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         cls.device = Device.objects.create(
             site=cls.site,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="Test Device",
             status=device_status,
         )
@@ -58,7 +57,7 @@ class CablePathTestCase(TestCase):
 
         provider = Provider.objects.create(name="Provider", slug="provider")
         circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
-        cls.circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Circuit 1")
+        cls.circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Circuit 1")
 
         cls.statuses = Status.objects.get_for_model(Cable)
         cls.status = cls.statuses.get(slug="connected")
