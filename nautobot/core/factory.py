@@ -7,8 +7,22 @@ import itertools
 from nautobot.extras.models import Tag
 
 
+class UniqueFaker(factory.Faker):
+    """https://github.com/FactoryBoy/factory_boy/pull/820#issuecomment-1004802669"""
+
+    @classmethod
+    def _get_faker(cls, locale=None):
+        return super()._get_faker(locale=locale).unique
+
+    def clear(self, locale=None):
+        subfaker = self._get_faker(locale)
+        subfaker.clear()
+
+
 class BaseModelFactory(DjangoModelFactory):
     """Base class for all Nautobot model factories."""
+
+    id = UniqueFaker("uuid4")
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
@@ -146,18 +160,6 @@ def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
         population=list(queryset),
         k=factory.random.randgen.randint(max(2, minimum), min(maximum, count)),
     )
-
-
-class UniqueFaker(factory.Faker):
-    """https://github.com/FactoryBoy/factory_boy/pull/820#issuecomment-1004802669"""
-
-    @classmethod
-    def _get_faker(cls, locale=None):
-        return super()._get_faker(locale=locale).unique
-
-    def clear(self, locale=None):
-        subfaker = self._get_faker(locale)
-        subfaker.clear()
 
 
 class NautobotBoolIterator(factory.Iterator):

@@ -104,7 +104,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         RegionFactory.create_batch(15, has_parent=False)
         RegionFactory.create_batch(5, has_parent=True)
         self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(15)
+        SiteFactory.create_batch(25)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
