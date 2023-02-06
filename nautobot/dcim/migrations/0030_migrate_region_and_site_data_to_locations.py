@@ -4,6 +4,7 @@ import logging
 
 from django.db import migrations
 from django.db.utils import IntegrityError
+from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +176,21 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             exclude_lt="Site",
         )
 
+    # Reassign Region Models to Locations of Region LocationType
+    if Region.objects.exists():
+        ConfigContext = apps.get_model("extras", "configcontext")
+        ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", "regions")
+        for cc in ccs:
+            region_name_list = list(cc.regions.all().values_list("name", flat=True))
+            region_locs = list(Location.objects.filter(name__in=region_name_list, location_type=region_lt))
+            if len(region_locs) < len(region_name_list):
+                logger.warning(
+                    f'There is a mismatch between the number of Regions ({len(region_name_list)}) and the number of "Region" LocationType locations ({len(region_locs)})'
+                    f" found in this ConfigContext {cc.name}"
+                )
+            cc.locations.add(*region_locs)
+            cc.save()
+
     # Reassign Site Models to Locations of Site LocationType
     if Site.objects.exists():  # Iff Site instances exist
         CircuitTermination = apps.get_model("circuits", "circuittermination")
@@ -182,15 +198,31 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         PowerPanel = apps.get_model("dcim", "powerpanel")
         RackGroup = apps.get_model("dcim", "rackgroup")
         Rack = apps.get_model("dcim", "rack")
+        ConfigContext = apps.get_model("extras", "configcontext")
         Prefix = apps.get_model("ipam", "prefix")
         VLANGroup = apps.get_model("ipam", "vlangroup")
         VLAN = apps.get_model("ipam", "vlan")
         Cluster = apps.get_model("virtualization", "cluster")
 
+        ContentType = apps.get_model("contenttypes", "ContentType")
+        site_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
+
         cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
         for ct in cts:
             ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
+
+        ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", "sites")
+        for cc in ccs:
+            site_name_list = list(cc.sites.all().values_list("name", flat=True))
+            site_locs = list(Location.objects.filter(name__in=site_name_list, location_type=site_lt))
+            if len(site_locs) < len(site_name_list):
+                logger.warning(
+                    f'There is a mismatch between the number of Sites ({len(site_name_list)}) and the number of "Site" LocationType locations ({len(site_locs)})'
+                    f" found in this ConfigContext {cc.name}"
+                )
+            cc.locations.add(*site_locs)
+            cc.save()
 
         devices = Device.objects.filter(location__isnull=True).select_related("site")
         for device in devices:

@@ -3,7 +3,6 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
-from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -31,7 +30,6 @@ from nautobot.dcim.api.nested_serializers import (
     NestedSiteSerializer,
 )
 from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
-from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -84,7 +82,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
-from .fields import MultipleChoiceJSONField
+from .fields import MultipleChoiceJSONField, RoleSerializerField, StatusSerializerField
 from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -168,25 +166,13 @@ class NautobotModelSerializer(
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
-    status = StatusSerializerField(queryset=Status.objects.all())
+    status = StatusSerializerField(required=True)
 
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "status")
         return fields
-
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def status_choices(cls):  # pylint: disable=no-self-argument
-        """
-        Get the list of valid status values for this serializer.
-
-        In the case where multiple serializers have the same set of status choices, it's necessary to set
-        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] for at least one of the matching serializers,
-        or else drf-spectacular will report:
-        'enum naming encountered a non-optimally resolvable collision for fields named "status"'
-        """
-        return list(cls().fields["status"].get_choices().keys())
 
 
 class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
@@ -844,16 +830,16 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
         model = JobResult
         fields = [
             "url",
-            "created",
-            "completed",
+            "date_created",
+            "date_done",
             "name",
             "job_model",
             "obj_type",
             "status",
             "user",
             "data",
-            "job_id",
-            "job_kwargs",
+            "task_id",
+            "task_kwargs",
             "schedule",
         ]
 
@@ -1187,10 +1173,6 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 #
 # Roles
 #
-
-
-class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
-    """NestedSerializer field for `Role` object fields."""
 
 
 class RoleModelSerializerMixin(BaseModelSerializer):

@@ -1,1 +1,0 @@
-Renamed `tag` filter on TenantFilterSet to `tags` same as elsewhere.

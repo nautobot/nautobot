@@ -6,7 +6,6 @@ import os
 import uuid
 
 from celery import schedules
-
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -16,7 +15,6 @@ from django.db import models, transaction
 from django.db.models import signals
 from django.urls import reverse
 from django.utils import timezone
-
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
 
@@ -37,6 +35,7 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.managers import JobResultManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -503,6 +502,8 @@ class JobLogEntry(BaseModel):
 #
 # Job results
 #
+
+
 @extras_features(
     "custom_fields",
     "custom_links",
@@ -519,8 +520,13 @@ class JobResult(BaseModel, CustomFieldModel):
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
     )
-
     name = models.CharField(max_length=255, db_index=True)
+    task_name = models.CharField(
+        max_length=255,
+        null=True,
+        db_index=True,
+        help_text="Registered name of the Celery task for this job. Internal use only.",
+    )
     obj_type = models.ForeignKey(
         to=ContentType,
         related_name="job_results",
@@ -528,21 +534,22 @@ class JobResult(BaseModel, CustomFieldModel):
         limit_choices_to=FeatureQuery("job_results"),
         help_text="The object type to which this job result applies",
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
-    created = models.DateTimeField(auto_now_add=True)
-    completed = models.DateTimeField(null=True, blank=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_done = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
-    # todoindex:
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
         default=JobResultStatusChoices.STATUS_PENDING,
+        help_text="Current state of the Job being run",
+        db_index=True,
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
-    job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
 
@@ -554,33 +561,72 @@ class JobResult(BaseModel, CustomFieldModel):
         "output": <optional string, such as captured stdout/stderr>,
     }
     """
+    periodic_task_name = models.CharField(
+        null=True,
+        max_length=255,
+        help_text="Registered name of the Celery periodic task for this job. Internal use only.",
+    )
+    worker = models.CharField(max_length=100, default=None, null=True)
+    task_args = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    task_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
+    # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
+    # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
+    # eliminated for our implmentation
+    result = models.TextField(
+        null=True,
+        default=None,
+        editable=False,
+        verbose_name="Result Data",
+        help_text="The data returned by the task",
+    )
+    traceback = models.TextField(blank=True, null=True)
+    meta = models.JSONField(null=True, default=None, editable=False)
+    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
-    job_id = models.UUIDField(unique=True)
+    task_id = models.UUIDField(unique=True)
+
+    objects = JobResultManager()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.use_job_logs_db = True
 
     class Meta:
-        ordering = ["-created"]
-        get_latest_by = "created"
+        ordering = ["-date_created"]
+        get_latest_by = "date_created"
 
     def __str__(self):
-        return str(self.job_id)
+        return str(self.task_id)
+
+    def as_dict(self):
+        """This is required by the django-celery-results DB backend."""
+        return {
+            "task_id": self.task_id,
+            "task_name": self.task_name,
+            "task_args": self.task_args,
+            "task_kwargs": self.task_kwargs,
+            "status": self.status,
+            "result": self.result,
+            "date_done": self.date_done,
+            "traceback": self.traceback,
+            "meta": self.meta,
+            "worker": self.worker,
+        }
 
     @property
     def duration(self):
-        if not self.completed:
+        if not self.date_done:
             return None
 
-        duration = self.completed - self.created
+        duration = self.date_done - self.date_created
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
     @property
     def related_object(self):
-        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `job_id` fields.
+        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `task_id` fields.
 
         If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
         `class_path` of the Job subclass.
@@ -591,8 +637,8 @@ class JobResult(BaseModel, CustomFieldModel):
         more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
         relationship between JobResults and model instances.
 
-        Else, the `obj_type` and `job_id` will be used together as a quasi-GenericForeignKey to look up a model
-        instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
+        Else, the `obj_type` and `task_id` will be used together as a quasi-GenericForeignKey to look up a model
+        instance whose PK corresponds to the `task_id`. This behavior is currently unused in the Nautobot core,
         but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
         to plugin model instances.
 
@@ -605,7 +651,10 @@ class JobResult(BaseModel, CustomFieldModel):
             # Related object is an extras.Job subclass, our `name` matches its `class_path`
             return get_job(self.name)
 
-        model_class = self.obj_type.model_class()
+        if self.obj_type:
+            model_class = self.obj_type.model_class()
+        else:
+            model_class = None
 
         if model_class is not None:
             if hasattr(model_class, "name"):
@@ -615,9 +664,9 @@ class JobResult(BaseModel, CustomFieldModel):
                 except model_class.DoesNotExist:
                     pass
 
-            # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
+            # See if we have a one-to-one relationship from JobResult to model_class record based on `task_id`
             try:
-                return model_class.objects.get(id=self.job_id)
+                return model_class.objects.get(id=self.task_id)
             except model_class.DoesNotExist:
                 pass
 
@@ -667,8 +716,8 @@ class JobResult(BaseModel, CustomFieldModel):
         time is also set.
         """
         self.status = status
-        if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            self.completed = timezone.now()
+        if status in JobResultStatusChoices.READY_STATES:
+            self.date_done = timezone.now()
 
     @classmethod
     def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
@@ -692,7 +741,7 @@ class JobResult(BaseModel, CustomFieldModel):
             name=name,
             obj_type=obj_type,
             user=user,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             schedule=schedule,
         )
 
@@ -710,7 +759,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 if job_model.time_limit > 0:
                     celery_kwargs["time_limit"] = job_model.time_limit
                 if not job_model.has_sensitive_variables:
-                    job_result.job_kwargs = job_result_kwargs
+                    job_result.task_kwargs = job_result_kwargs
                 job_result.job_model = job_model
                 job_result.save()
             except Job.DoesNotExist:
@@ -725,14 +774,14 @@ class JobResult(BaseModel, CustomFieldModel):
                     if hasattr(job_class.Meta, "time_limit"):
                         celery_kwargs["time_limit"] = job_class.Meta.time_limit
                     if not job_class.has_sensitive_variables:
-                        job_result.job_kwargs = job_result_kwargs
+                        job_result.task_kwargs = job_result_kwargs
                         job_result.save()
                 else:
                     logger.error("Neither a Job database record nor a Job source class were found for %s", name)
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
         transaction.on_commit(
-            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
+            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.task_id), **celery_kwargs)
         )
 
         return job_result

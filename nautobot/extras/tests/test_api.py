@@ -95,6 +95,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "label",
         "url",
     ]
+    choices_fields = ["content_type"]
     create_data = [
         {
             "content_type": "dcim.site",
@@ -197,6 +198,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    choices_fields = ["owner_content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -326,7 +328,7 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = []
+    choices_fields = ["owner_content_type"]
     slug_source = "name"
 
     @classmethod
@@ -602,7 +604,7 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
             "new_window": False,
         },
     ]
-    choices_fields = ["button_class"]
+    choices_fields = ["button_class", "content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -704,6 +706,7 @@ class DynamicGroupTestMixin:
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
     brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    choices_fields = ["content_type"]
     create_data = [
         {
             "name": "API DynamicGroup 4",
@@ -1167,7 +1170,8 @@ class JobAPIRunTestMixin:
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        self.default_job_name = "local/api_test_job/APITestJob"
+        self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
         self.job_model.validated_save()
 
@@ -1231,7 +1235,7 @@ class JobAPIRunTestMixin:
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path(self.default_job_name)
         job_model.enabled = False
         job_model.save()
 
@@ -1355,8 +1359,8 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        # Assert that a JobResult was NOT created.
-        self.assertFalse(JobResult.objects.exists())
+        # Assert that a JobResult for this job was NOT created.
+        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
         # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
@@ -1383,7 +1387,7 @@ class JobAPIRunTestMixin:
 
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
-        deserialized_data = get_job("local/api_test_job/APITestJob").deserialize_data(job_data)
+        deserialized_data = get_job(self.default_job_name).deserialize_data(job_data)
 
         self.assertEqual(
             deserialized_data,
@@ -1394,12 +1398,12 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.last()
-        self.assertIn("data", job_result.job_kwargs)
+        job_result = JobResult.objects.get(name=self.default_job_name)
+        self.assertIn("data", job_result.task_kwargs)
 
-        # Ensure the stored job_kwargs deserialize to the same as originally inputted
+        # Ensure the stored task_kwargs deserialize to the same as originally inputted
         self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.job_kwargs["data"]), deserialized_data
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
         return (response, job_result)  # so subclasses can do additional testing
@@ -1585,7 +1589,7 @@ class JobAPIRunTestMixin:
                 "name": "test",
             },
         }
-        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job = Job.objects.get_for_class_path(self.default_job_name)
         job.has_sensitive_variables = True
         job.has_sensitive_variables_override = True
         job.validated_save()
@@ -1594,8 +1598,8 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.last()
-        self.assertEqual(job_result.job_kwargs, None)
+        job_result = JobResult.objects.get(name=self.default_job_name)
+        self.assertEqual(job_result.task_kwargs, None)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1764,7 +1768,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         "type_update": True,
         "type_delete": False,
     }
-    validation_excluded_fields = []
     api_version = "1.3"
 
     @classmethod
@@ -1903,7 +1906,6 @@ class JobTestVersion13(
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
     }
-    validation_excluded_fields = []
 
     run_success_response_status = status.HTTP_201_CREATED
     api_version = "1.3"
@@ -2133,7 +2135,7 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["completed", "created", "display", "id", "name", "status", "url", "user"]
+    brief_fields = ["date_created", "date_done", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2145,37 +2147,37 @@ class JobResultTest(
             job_model=jobs[0],
             name=jobs[0].class_path,
             obj_type=job_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
-            status=JobResultStatusChoices.STATUS_COMPLETED,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
             data={"output": "\nRan for 3 seconds"},
-            job_kwargs=None,
+            task_kwargs=None,
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=None,
             name="Git Repository",
             obj_type=git_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
-            status=JobResultStatusChoices.STATUS_COMPLETED,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
             data=None,
-            job_kwargs={"repository_pk": uuid.uuid4()},
+            task_kwargs={"repository_pk": uuid.uuid4()},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=jobs[1],
             name=jobs[1].class_path,
             obj_type=job_ct,
-            completed=None,
+            date_done=None,
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
-            job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
+            task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
 
@@ -2202,7 +2204,7 @@ class JobLogEntryTest(
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 
@@ -2657,7 +2659,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:site-list"),
             data={
                 "name": "New Site",
-                "status": "active",
+                "status": Status.objects.get(slug="active").pk,
                 "relationships": {
                     self.relationships[0].slug: {
                         "peer": {
@@ -2746,10 +2748,16 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 **self.header,
             )
 
+        status_active = Status.objects.get(slug="active")
+
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
-            "post", data=[{"vid": "1", "name": "1", "status": "active"}, {"vid": "2", "name": "2", "status": "active"}]
+            "post",
+            data=[
+                {"vid": "1", "name": "1", "status": status_active.pk},
+                {"vid": "2", "name": "2", "status": status_active.pk},
+            ],
         )
         self.assertHttpStatus(response, 400)
         self.assertEqual(
@@ -2782,21 +2790,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 vlan1_json_data = {
                     "vid": "1",
                     "name": "1",
-                    "status": "active",
+                    "status": status_active.pk,
                 }
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": "active",
+                    "status": status_active.pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": "active", "id": str(vlan1.id)}
+                vlan1_json_data = {"status": status_active.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
 
-                vlan2_json_data = {"status": "active", "id": str(vlan2.id)}
+                vlan2_json_data = {"status": status_active.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})

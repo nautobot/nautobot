@@ -197,8 +197,8 @@ def git_repository_pre_delete(instance, **kwargs):
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        job_id=uuid.uuid4(),
-        status=JobResultStatusChoices.STATUS_RUNNING,
+        task_id=uuid.uuid4(),
+        status=JobResultStatusChoices.STATUS_STARTED,
     )
 
     # This isn't running in the context of a Job execution transaction,
@@ -208,8 +208,8 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-        job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+    if job_result.status not in JobResultStatusChoices.READY_STATES:
+        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.save()
 
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone

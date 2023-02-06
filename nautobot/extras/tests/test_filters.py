@@ -789,7 +789,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 

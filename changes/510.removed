@@ -1,1 +1,0 @@
-Removed dependency on `django-mptt`. Models (`Region`, `RackGroup`, `TenantGroup`, `InventoryItem`) that previously were based on MPTT are now implemented using `django-tree-queries` instead.

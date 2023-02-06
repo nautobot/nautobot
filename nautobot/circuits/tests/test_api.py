@@ -123,10 +123,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 class CircuitTest(APIViewTestCases.APIViewTestCase):
     model = Circuit
     brief_fields = ["cid", "display", "id", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -162,34 +158,30 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "cid": "Circuit 4",
                 "provider": providers[1].pk,
                 "circuit_type": circuit_types[1].pk,
-                "status": "offline",
+                "status": statuses[1].pk,
             },
             {
                 "cid": "Circuit 5",
                 "provider": providers[1].pk,
                 "circuit_type": circuit_types[1].pk,
-                "status": "offline",
+                "status": statuses[1].pk,
             },
             {
                 "cid": "Circuit 6",
                 "provider": providers[1].pk,
                 "circuit_type": circuit_types[1].pk,
-                "status": "offline",
+                "status": statuses[1].pk,
             },
         ]
+
+        cls.bulk_update_data = {
+            "status": statuses[2].pk,
+        }
 
 
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
