@@ -5,7 +5,7 @@ import factory
 import faker
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.factory import OrganizationalModelFactory, get_random_instances
+from nautobot.core.factory import OrganizationalModelFactory, get_random_instances, NautobotBoolIterator
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 
@@ -25,10 +25,10 @@ class RoleFactory(OrganizationalModelFactory):
     )
     slug = factory.LazyAttribute(lambda role: slugify(role.name))
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
-    has_weight = factory.Faker("pybool")
+    has_weight = NautobotBoolIterator()
     weight = factory.Maybe("has_weight", factory.Faker("pyint"), None)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     @factory.post_generation
@@ -53,7 +53,7 @@ class StatusFactory(OrganizationalModelFactory):
     slug = factory.LazyAttribute(lambda status: slugify(status.name))
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     @factory.post_generation
@@ -80,7 +80,7 @@ class TagFactory(OrganizationalModelFactory):
     slug = factory.LazyAttribute(lambda tag: slugify(tag.name))
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     @factory.post_generation

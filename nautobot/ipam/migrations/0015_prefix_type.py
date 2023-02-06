@@ -1,3 +1,5 @@
+import sys
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import migrations, models
 
@@ -18,14 +20,16 @@ def set_prefix_type(apps, schema_editor):
         prefix_default_status = Status.objects.filter(content_types=prefix_ct).exclude(slug="container").first()
 
     # Set Prefix.type to container for prefixes with status of container
-    print(f"Converting Prefixes with status=container to type=container and status={prefix_default_status.slug}")
+    if "test" not in sys.argv:
+        print(f"Converting Prefixes with status=container to type=container and status={prefix_default_status.slug}")
     Prefix.objects.filter(status__slug="container").update(
         status=prefix_default_status,
         type=choices.PrefixTypeChoices.TYPE_CONTAINER,
     )
 
     # Set Prefix.type to pool for prefixes with `is_pool=True`
-    print("Converting Prefixes with is_pool=True to type=pool")
+    if "test" not in sys.argv:
+        print("Converting Prefixes with is_pool=True to type=pool")
     Prefix.objects.filter(is_pool=True).update(type=choices.PrefixTypeChoices.TYPE_POOL)
 
     # Remove Prefix from container status and delete the status object if no other models are related
@@ -33,7 +37,8 @@ def set_prefix_type(apps, schema_editor):
         status_container = Status.objects.get(slug="container")
         status_container.content_types.remove(prefix_ct)
         if not status_container.content_types.exists():
-            print("Removing unused Status: 'container'")
+            if "test" not in sys.argv:
+                print("Removing unused Status: 'container'")
             status_container.delete()
 
 
@@ -51,10 +56,12 @@ def revert_prefix_type(apps, schema_editor):
     )
     status_container.content_types.add(prefix_ct)
 
-    print("Converting Prefixes with type=pool to is_pool=True")
+    if "test" not in sys.argv:
+        print("Converting Prefixes with type=pool to is_pool=True")
     Prefix.objects.filter(type=choices.PrefixTypeChoices.TYPE_POOL).update(is_pool=True)
 
-    print("Converting Prefixes with type=container to status=container")
+    if "test" not in sys.argv:
+        print("Converting Prefixes with type=container to status=container")
     Prefix.objects.filter(type=choices.PrefixTypeChoices.TYPE_CONTAINER).update(status=status_container)
 
 

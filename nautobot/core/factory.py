@@ -2,6 +2,7 @@ from django.db.models import Model
 import factory
 from factory.django import DjangoModelFactory
 import factory.random
+import itertools
 
 from nautobot.extras.models import Tag
 
@@ -90,7 +91,7 @@ def random_instance(model_or_queryset_or_lambda, allow_null=True):
             user = random_instance(User, allow_null=False)
 
             # Optional foreign key
-            has_group = factory.Faker("pybool")
+            has_group = NautobotBoolIterator()
             group = factory.Maybe("has_group", random_instance(Group), None)
 
             # Foreign key selected from a filtered queryset
@@ -153,3 +154,31 @@ class UniqueFaker(factory.Faker):
     @classmethod
     def _get_faker(cls, locale=None):
         return super()._get_faker(locale=locale).unique
+
+    def clear(self, locale=None):
+        subfaker = self._get_faker(locale)
+        subfaker.clear()
+
+
+class NautobotBoolIterator(factory.Iterator):
+    """Factory iterator that returns a semi-random sampling of boolean values
+
+    Iterator that returns a random sampling of 4 True and 4 False values to guarantee a
+    50/50 distribution of values. Used in factories when a data set must contain both
+    True and False values.
+    """
+
+    def _nautobot_boolean_iterator_sample(self):
+        iterator = [True, True, True, True, False, False, False, False]
+        factory.random.randgen.shuffle(iterator)
+        return iterator
+
+    def __init__(self, *args, cycle=True, getter=None):
+        super().__init__(None, cycle=cycle, getter=getter)
+
+        if cycle:
+            self.iterator_builder = lambda: factory.utils.ResetableIterator(
+                itertools.cycle(self._nautobot_boolean_iterator_sample())
+            )
+        else:
+            self.iterator_builder = lambda: factory.utils.ResetableIterator(self._nautobot_boolean_iterator_sample())

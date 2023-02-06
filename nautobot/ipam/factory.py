@@ -9,6 +9,7 @@ from nautobot.core.factory import (
     PrimaryModelFactory,
     UniqueFaker,
     get_random_instances,
+    NautobotBoolIterator,
     random_instance,
 )
 from nautobot.dcim.models import Location, Site
@@ -33,7 +34,7 @@ class RIRFactory(OrganizationalModelFactory):
     )
     is_private = factory.LazyAttribute(lambda rir: rir.name.startswith("RFC"))
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
 
@@ -73,21 +74,21 @@ class AggregateFactory(PrimaryModelFactory):
 
     rir = random_instance(RIR, allow_null=False)
 
-    has_tenant = factory.Faker("pybool")
-    has_tenant_group = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
+    has_tenant_group = NautobotBoolIterator()
     tenant = factory.Maybe(
         "has_tenant_group",
         random_instance(Tenant.objects.filter(tenant_group__isnull=False), allow_null=False),
         factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(tenant_group__isnull=True)), None),
     )
 
-    has_date_added = factory.Faker("pybool")
+    has_date_added = NautobotBoolIterator()
     date_added = factory.Maybe("has_date_added", factory.Faker("date"), None)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    is_ipv6 = factory.Faker("pybool")
+    is_ipv6 = NautobotBoolIterator()
 
     @factory.post_generation
     def child_prefixes(self, create, extracted, **kwargs):
@@ -225,7 +226,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     # we'll deal with collisions as and when they occur.
     name = factory.LazyFunction(random_route_distinguisher)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
@@ -246,15 +247,15 @@ class VRFFactory(PrimaryModelFactory):
 
     # RD needs to be globally unique, but the random route-distinguisher generation space is large enough that
     # we'll deal with collisions as and when they occur.
-    has_rd = factory.Faker("pybool")
+    has_rd = NautobotBoolIterator()
     rd = factory.Maybe("has_rd", factory.LazyFunction(random_route_distinguisher), None)
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    enforce_unique = factory.Faker("pybool")
+    enforce_unique = NautobotBoolIterator()
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     @factory.post_generation
@@ -291,15 +292,15 @@ class VLANGroupFactory(OrganizationalModelFactory):
     # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
     name = factory.LazyAttribute(lambda o: o.unique_name.upper())
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_location = factory.Faker("pybool")
+    has_location = NautobotBoolIterator()
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
     )
 
-    has_site = factory.Faker("pybool")
+    has_site = NautobotBoolIterator()
 
     site = factory.Maybe(
         "has_location",
@@ -352,27 +353,27 @@ class VLANFactory(PrimaryModelFactory):
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
-    has_role = factory.Faker("pybool")
+    has_role = NautobotBoolIterator()
     role = factory.Maybe(
         "has_role",
         random_instance(lambda: Role.objects.get_for_model(VLAN), allow_null=False),
         None,
     )
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_vlan_group = factory.Faker("pybool")
+    has_vlan_group = NautobotBoolIterator()
     vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
 
-    has_location = factory.Faker("pybool")
+    has_location = NautobotBoolIterator()
     location = factory.Maybe(
         "has_vlan_group",
         factory.LazyAttribute(lambda l: l.vlan_group.location),
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
-    has_site = factory.Faker("pybool")
+    has_site = NautobotBoolIterator()
     site = factory.Maybe(
         "has_vlan_group",
         factory.LazyAttribute(lambda l: l.vlan_group.site),
@@ -383,7 +384,7 @@ class VLANFactory(PrimaryModelFactory):
         ),
     )
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
 
@@ -421,15 +422,15 @@ class PrefixFactory(PrimaryModelFactory):
         model = Prefix
 
     class Params:
-        has_description = factory.Faker("pybool")
-        has_location = factory.Faker("pybool")
-        has_role = factory.Faker("pybool")
-        has_site = factory.Faker("pybool")
-        has_tenant = factory.Faker("pybool")
-        has_vlan = factory.Faker("pybool")
-        has_vrf = factory.Faker("pybool")
-        is_container = factory.Faker("pybool")
-        is_ipv6 = factory.Faker("pybool")
+        has_description = NautobotBoolIterator()
+        has_location = NautobotBoolIterator()
+        has_role = NautobotBoolIterator()
+        has_site = NautobotBoolIterator()
+        has_tenant = NautobotBoolIterator()
+        has_vlan = NautobotBoolIterator()
+        has_vrf = NautobotBoolIterator()
+        is_container = NautobotBoolIterator()
+        is_ipv6 = NautobotBoolIterator()
         ipv6_cidr = factory.Faker("ipv6", network=True)
         # faker ipv6 provider generates networks with /0 cidr, change to anything but /0
         ipv6_fixed = factory.LazyAttribute(
@@ -584,14 +585,14 @@ class IPAddressFactory(PrimaryModelFactory):
         model = IPAddress
 
     class Params:
-        has_assigned_object = factory.Faker("pybool")
-        has_description = factory.Faker("pybool")
-        has_dns_name = factory.Faker("pybool")
-        has_nat_inside = factory.Faker("pybool")
-        has_role = factory.Faker("pybool")
-        has_tenant = factory.Faker("pybool")
-        has_vrf = factory.Faker("pybool")
-        is_ipv6 = factory.Faker("pybool")
+        has_assigned_object = NautobotBoolIterator()
+        has_description = NautobotBoolIterator()
+        has_dns_name = NautobotBoolIterator()
+        has_nat_inside = NautobotBoolIterator()
+        has_role = NautobotBoolIterator()
+        has_tenant = NautobotBoolIterator()
+        has_vrf = NautobotBoolIterator()
+        is_ipv6 = NautobotBoolIterator()
 
     address = factory.Maybe(
         "is_ipv6",

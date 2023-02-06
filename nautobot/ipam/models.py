@@ -638,10 +638,12 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
-        if (
-            self.family == 6
-            or self.type == choices.PrefixTypeChoices.TYPE_POOL
-            or (self.family == 4 and self.prefix.prefixlen >= 31)
+        if any(
+            [
+                self.family == 6,
+                self.type == choices.PrefixTypeChoices.TYPE_POOL,
+                self.family == 4 and self.prefix.prefixlen >= 31,
+            ]
         ):
             return available_ips
 
@@ -688,10 +690,12 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         else:
             prefix_size = self.prefix.size
-            if (
-                self.prefix.version == 4
-                and self.prefix.prefixlen < 31
-                and self.type != choices.PrefixTypeChoices.TYPE_POOL
+            if all(
+                [
+                    self.prefix.version == 4,
+                    self.prefix.prefixlen < 31,
+                    self.type != choices.PrefixTypeChoices.TYPE_POOL,
+                ]
             ):
                 prefix_size -= 2
             child_count = prefix_size - self.get_available_ips().size

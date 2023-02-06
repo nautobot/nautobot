@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 
 import factory
 
-from nautobot.core.factory import BaseModelFactory
+from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator
 
 
 User = get_user_model()
@@ -15,10 +15,10 @@ class UserFactory(BaseModelFactory):
         model = User
         exclude = ("has_first_name", "has_last_name", "has_email")
 
-    has_first_name = factory.Faker("pybool")
+    has_first_name = NautobotBoolIterator()
     first_name = factory.Maybe("has_first_name", factory.Faker("first_name"), "")
 
-    has_last_name = factory.Faker("pybool")
+    has_last_name = NautobotBoolIterator()
     last_name = factory.Maybe("has_last_name", factory.Faker("last_name"), "")
 
     username = factory.Maybe(
@@ -35,14 +35,14 @@ class UserFactory(BaseModelFactory):
         ),
     )
 
-    has_email = factory.Faker("pybool")
+    has_email = NautobotBoolIterator()
     email = factory.Maybe("has_email", factory.LazyAttribute(lambda u: f"{u.username}@example.com"), "")
 
     password = factory.Faker("password")
 
-    is_staff = factory.Faker("pybool")
-    is_active = factory.Faker("pybool")
-    is_superuser = factory.Faker("pybool")
+    is_staff = NautobotBoolIterator()
+    is_active = NautobotBoolIterator()
+    is_superuser = NautobotBoolIterator()
 
     last_login = factory.Faker("date_time", tzinfo=timezone.utc)
 
