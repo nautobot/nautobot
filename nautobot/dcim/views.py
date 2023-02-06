@@ -138,7 +138,9 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
 class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
     def get_selected_objects_parents_name(self, selected_objects):
-        return selected_objects.first().parent.name
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device:
+            return selected_object.device.name
 
 
 #
