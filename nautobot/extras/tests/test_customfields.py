@@ -468,12 +468,12 @@ class CustomFieldDataAPITest(APITestCase):
         if "example_plugin" in settings.PLUGINS:
             cls.cf_plugin_field = CustomField.objects.get(name="example_plugin_auto_custom_field")
 
-        statuses = Status.objects.get_for_model(Site)
+        cls.statuses = Status.objects.get_for_model(Site)
 
         # Create some sites
         cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1", status=statuses.get(slug="active")),
-            Site.objects.create(name="Site 2", slug="site-2", status=statuses.get(slug="active")),
+            Site.objects.create(name="Site 1", slug="site-1", status=cls.statuses.get(slug="active")),
+            Site.objects.create(name="Site 2", slug="site-2", status=cls.statuses.get(slug="active")),
         )
 
         # Assign custom field values for site 2
@@ -580,7 +580,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Site 3",
             "slug": "site-3",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         url = reverse("dcim-api:site-list")
         self.add_permissions("dcim.add_site")
@@ -619,7 +619,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Site 3",
             "slug": "site-3",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "text_field": "bar",
                 "number_field": 456,
@@ -673,7 +673,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Site 3",
             "slug": "site-3",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "text_cf": "bar",
                 "number_cf": 456,
@@ -720,17 +720,17 @@ class CustomFieldDataAPITest(APITestCase):
             {
                 "name": "Site 3",
                 "slug": "site-3",
-                "status": "active",
+                "status": self.statuses.first().pk,
             },
             {
                 "name": "Site 4",
                 "slug": "site-4",
-                "status": "active",
+                "status": self.statuses.first().pk,
             },
             {
                 "name": "Site 5",
                 "slug": "site-5",
-                "status": "active",
+                "status": self.statuses.first().pk,
             },
         )
         url = reverse("dcim-api:site-list")
@@ -785,19 +785,19 @@ class CustomFieldDataAPITest(APITestCase):
             {
                 "name": "Site 3",
                 "slug": "site-3",
-                "status": "active",
+                "status": self.statuses.first().pk,
                 "custom_fields": custom_field_data,
             },
             {
                 "name": "Site 4",
                 "slug": "site-4",
-                "status": "active",
+                "status": self.statuses.first().pk,
                 "custom_fields": custom_field_data,
             },
             {
                 "name": "Site 5",
                 "slug": "site-5",
-                "status": "active",
+                "status": self.statuses.first().pk,
                 "custom_fields": custom_field_data,
             },
         )
@@ -1042,7 +1042,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Site 4",
             "slug": "site-4",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "text_field": ["I", "am", "a", "disallowed", "type"],
             },

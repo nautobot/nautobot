@@ -6,10 +6,9 @@ from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
 from nautobot.core.api import ContentTypeField
-from nautobot.extras.api.fields import StatusSerializerField
 
 
-class BulkOperationMetadata(SimpleMetadata):
+class NautobotMetadata(SimpleMetadata):
     def determine_actions(self, request, view):
         """
         Replace the stock determine_actions() method to assess object permissions only
@@ -40,19 +39,14 @@ class BulkOperationMetadata(SimpleMetadata):
 
     def get_field_info(self, field):
         """
-        Replace DRF choices `display_name` to `display` to match new pattern.
+        Fixup field information:
 
-        See `ContentTypeMetadata` and `StatusFieldMetadata` classes below.
+        - Set choices for ContentTypeField.
+        - Replace DRF choices `display_name` to `display` to match new pattern.
         """
         field_info = super().get_field_info(field)
         for choice in field_info.get("choices", []):
             choice["display"] = choice.pop("display_name")
-        return field_info
-
-
-class ContentTypeMetadata(BulkOperationMetadata):
-    def get_field_info(self, field):
-        field_info = super().get_field_info(field)
         if hasattr(field, "queryset") and not field_info.get("read_only") and isinstance(field, ContentTypeField):
             field_info["choices"] = [
                 {
@@ -62,24 +56,4 @@ class ContentTypeMetadata(BulkOperationMetadata):
                 for choice_value, choice_name in field.choices.items()
             ]
             field_info["choices"].sort(key=lambda item: item["display"])
-        return field_info
-
-
-class StatusFieldMetadata(ContentTypeMetadata):
-    """Emit `Status` serializer fields as a choice enum."""
-
-    def get_field_info(self, field):
-        # Gather field_info and determine if we need to add `Status` choices
-        field_info = super().get_field_info(field)
-        if (
-            not field_info.get("read_only")
-            and isinstance(field, StatusSerializerField)
-            and hasattr(field, "choices")
-            and getattr(field, "show_choices", False)
-        ):
-            field_info["choices"] = [
-                {"value": choice_value, "display": str(choice_name)}
-                for choice_value, choice_name in field.choices.items()
-            ]
-
         return field_info

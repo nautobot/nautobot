@@ -60,7 +60,6 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
-    StatusViewSetMixin,
 )
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.secrets.exceptions import SecretError
@@ -83,6 +82,8 @@ class DCIMRootView(APIRootView):
 
 
 class PathEndpointMixin:
+
+    # TODO: the OpenAPI schema for this endpoint is wrong since it defaults to the same as "retrieve".
     @action(detail=True, url_path="trace")
     def trace(self, request, pk):
         """
@@ -145,7 +146,7 @@ class RegionViewSet(NautobotModelViewSet):
 #
 
 
-class SiteViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class SiteViewSet(NautobotModelViewSet):
     queryset = (
         Site.objects.select_related("region", "status", "tenant")
         .prefetch_related("tags")
@@ -178,7 +179,7 @@ class LocationTypeViewSet(NautobotModelViewSet):
 #
 
 
-class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class LocationViewSet(NautobotModelViewSet):
     queryset = (
         Location.objects.select_related("location_type", "parent", "site", "status", "tenant")
         .prefetch_related("tags")
@@ -211,7 +212,7 @@ class RackGroupViewSet(NautobotModelViewSet):
 #
 
 
-class RackViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class RackViewSet(NautobotModelViewSet):
     queryset = (
         Rack.objects.select_related("site", "group__site", "status", "role", "tenant")
         .prefetch_related("tags")
@@ -393,7 +394,7 @@ class PlatformViewSet(NautobotModelViewSet):
 #
 
 
-class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
+class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     queryset = Device.objects.select_related(
         "device_type__manufacturer",
         "role",
@@ -639,7 +640,7 @@ class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
     retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
     update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
-class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet, StatusViewSetMixin):
+class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
     queryset = Interface.objects.select_related(
         "device",
         "parent_interface",
@@ -730,7 +731,7 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 #
 
 
-class CableViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class CableViewSet(NautobotModelViewSet):
     queryset = Cable.objects.select_related("status").prefetch_related("termination_a", "termination_b")
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
@@ -769,7 +770,7 @@ class PowerPanelViewSet(NautobotModelViewSet):
 #
 
 
-class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewSet):
+class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
     queryset = PowerFeed.objects.select_related(
         "power_panel",
         "rack",
@@ -785,7 +786,7 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
 #
 
 
-class DeviceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class DeviceRedundancyGroupViewSet(NautobotModelViewSet):
     queryset = DeviceRedundancyGroup.objects.select_related("status").prefetch_related("members")
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     filterset_class = filters.DeviceRedundancyGroupFilterSet
