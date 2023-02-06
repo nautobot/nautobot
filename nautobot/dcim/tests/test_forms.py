@@ -8,6 +8,7 @@ from nautobot.dcim.models import (
     DeviceType,
     Interface,
     Location,
+    LocationType,
     Platform,
     Rack,
     VirtualChassis,
@@ -27,7 +28,7 @@ class DeviceTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
 
         # Platforms that have a manufacturer.
@@ -155,7 +156,7 @@ class DeviceTestCase(TestCase):
 class LabelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
@@ -196,7 +197,7 @@ class LabelTestCase(TestCase):
 class TestCableCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         cls.device_1 = Device.objects.create(
@@ -251,7 +252,7 @@ class TestCableCSVForm(TestCase):
 class TestInterfaceCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
 

@@ -16,7 +16,7 @@ class TaggedItemORMTest(TestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
     def test_tags_set_taggit_1(self):
         """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
@@ -65,7 +65,7 @@ class TaggedItemTest(APITestCase):
         self.assertListEqual(sorted([t.name for t in location.tags.all()]), sorted([t.name for t in self.tags]))
 
     def test_update_tagged_item(self):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         location.tags.add(*self.tags[:3])
         data = {
             "tags": [
@@ -90,7 +90,7 @@ class TaggedItemTest(APITestCase):
         )
 
     def test_clear_tagged_item(self):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         location.tags.add(*self.tags[:3])
         data = {"tags": []}
         self.add_permissions("dcim.change_location")

@@ -4045,7 +4045,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = Role.objects.get_for_model(Device).first()
 
-        cls.locations = Location.objects.filter(parent__isnull=True)[:3]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
         devices = (
             Device.objects.create(
                 name="Device 1",
@@ -4148,7 +4148,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
         tenants = Tenant.objects.all()[:3]
 
-        cls.locations = Location.objects.filter(parent__isnull=True)[:3]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
         racks = (
             Rack.objects.get(name="Rack 1"),
             Rack.objects.get(name="Rack 2"),

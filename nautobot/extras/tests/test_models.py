@@ -84,7 +84,7 @@ class ComputedFieldTest(TestCase):
             template="{{ obj.location }}",
             weight=50,
         )
-        self.location1 = Location.objects.filter(parent__isnull=True).first()
+        self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
@@ -365,7 +365,7 @@ class ConfigContextSchemaTestCase(TestCase):
 
         # Device
         status = Status.objects.get(slug="active")
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = Role.objects.get_for_model(Device).first()
@@ -923,7 +923,7 @@ class SecretTest(TestCase):
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
 
-        self.location = Location.objects.filter(parent__isnull=True).first()
+        self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.location.slug = "nyc"
 
     def test_environment_variable_value_not_found(self):
@@ -1293,7 +1293,7 @@ class StatusTest(TestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         self.device = Device.objects.create(
             name="Device 1",

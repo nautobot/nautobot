@@ -146,7 +146,7 @@ class ConfigContextTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         # Create three ConfigContexts
         for i in range(1, 4):
@@ -610,7 +610,7 @@ class NoteTestCase(
     def setUpTestData(cls):
 
         content_type = ContentType.objects.get_for_model(Location)
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         user = User.objects.first()
 
         # Notes Objects to test

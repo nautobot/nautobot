@@ -12,6 +12,7 @@ from nautobot.dcim.models import (
     DeviceType,
     Interface,
     Location,
+    LocationType,
     Manufacturer,
     Platform,
     Rack,
@@ -163,7 +164,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.locations = Location.objects.filter(parent__isnull=True)[:3]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
 
         device_roles = Role.objects.get_for_model(Device)
         cls.device_roles = device_roles
@@ -601,7 +602,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        locations = Location.objects.filter(parent__isnull=True)[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", location=locations[0]),
@@ -992,7 +993,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
             Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),
@@ -1110,7 +1111,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
             Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),

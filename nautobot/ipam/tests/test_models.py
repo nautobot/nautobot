@@ -469,7 +469,7 @@ class TestIPAddress(TestCase):
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,

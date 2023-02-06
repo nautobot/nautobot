@@ -191,7 +191,7 @@ class NoteModelBulkEditFormMixinTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.locations = dcim_models.Location.objects.filter(parent__isnull=True)[:2]
+        cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         cls.user = User.objects.create(username="formuser1")
 
     def test_note_bulk_edit(self):
@@ -221,7 +221,9 @@ class RelationshipModelFormTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.location = dcim_models.Location.objects.filter(parent__isnull=True).first()
+        cls.location = dcim_models.Location.objects.filter(
+            location_type=LocationType.objects.get(name="Campus")
+        ).first()
         cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
         cls.device_role = Role.objects.get_for_model(Device).first()
@@ -676,7 +678,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
-        cls.locations = dcim_models.Location.objects.filter(parent__isnull=True)[:2]
+        cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         cls.ipaddresses = [
             ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
             ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),

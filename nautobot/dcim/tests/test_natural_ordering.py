@@ -5,6 +5,7 @@ from nautobot.dcim.models import (
     DeviceType,
     Interface,
     Location,
+    LocationType,
     Manufacturer,
 )
 from nautobot.extras.models import Role
@@ -13,7 +14,7 @@ from nautobot.extras.models import Role
 class NaturalOrderingTestCase(TestCase):
     def setUp(self):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,

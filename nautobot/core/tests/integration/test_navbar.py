@@ -15,10 +15,6 @@ class NavBarTestCase(SeleniumTestCase):
                     "permission": "dcim.view_location",
                     "buttons": ["Add", "Import"],
                 },
-                "Regions": {
-                    "permission": "dcim.view_region",
-                    "buttons": ["Add", "Import"],
-                },
             },
             "Tags": {
                 "Tags": {

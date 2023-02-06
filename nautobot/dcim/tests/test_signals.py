@@ -6,6 +6,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     Location,
+    LocationType,
     Manufacturer,
     VirtualChassis,
 )
@@ -17,7 +18,7 @@ class VirtualChassisTest(TestCase):
 
     def setUp(self):
         """Setup Test Data for VirtualChassis Signal tests."""
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = Role.objects.get_for_model(Device).first()

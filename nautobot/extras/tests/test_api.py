@@ -161,7 +161,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             content_type=location_ct,
         )
 
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
     def test_computed_field_include(self):
         """Test that explicitly including a computed field behaves as expected."""
@@ -212,7 +212,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device = Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location)
 
         # Test default config contexts (created at test setup)
@@ -252,7 +252,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["config_context"]["foo"], 999, response.data["config_context"])
 
         # Add a context which does NOT match our device and ensure it does not apply
-        location2 = Location.objects.filter(parent__isnull=True).last()
+        location2 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).last()
         configcontext6 = ConfigContext(name="Config Context 6", weight=2000, data={"bar": 999})
         configcontext6.save()
         configcontext6.locations.add(location2)
@@ -364,7 +364,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.location1 = Location.objects.filter(parent__isnull=True).first()
+        self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.rackgroup1 = RackGroup.objects.create(
             location=self.location1, name="Test Rack Group 1", slug="test-rack-group-1"
         )
@@ -1136,7 +1136,7 @@ class ImageAttachmentTest(
     def setUpTestData(cls):
         ct = ContentType.objects.get_for_model(Location)
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         ImageAttachment.objects.create(
             content_type=ct,
@@ -2441,8 +2441,8 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location1 = Location.objects.filter(parent__isnull=True).first()
-        location2 = Location.objects.filter(parent__isnull=True).last()
+        location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        location2 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).last()
         ct = ContentType.objects.get_for_model(Location)
         user1 = User.objects.create(username="user1", is_active=True)
         user2 = User.objects.create(username="user2", is_active=True)
@@ -3495,7 +3495,7 @@ class TagTestVersion13(
         self.add_permissions("extras.change_tag")
 
         tag_1 = Tag.objects.filter(content_types=ContentType.objects.get_for_model(Location)).first()
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         location.tags.add(tag_1)
 
         tag_content_types = list(tag_1.content_types.all())

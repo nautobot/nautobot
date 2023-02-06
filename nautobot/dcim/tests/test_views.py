@@ -361,7 +361,7 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
         RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=location)
@@ -395,7 +395,7 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         user2 = User.objects.create_user(username="testuser2")
         user3 = User.objects.create_user(username="testuser3")
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
 
@@ -434,7 +434,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.locations = Location.objects.filter(parent__isnull=True)[:2]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         powerpanels = (
             PowerPanel.objects.create(location=cls.locations[0], name="Power Panel 1"),
@@ -1308,7 +1308,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        locations = Location.objects.filter(parent__isnull=True)[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1")
 
@@ -2132,7 +2132,7 @@ class CableTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
@@ -2423,7 +2423,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
@@ -2577,7 +2577,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
@@ -2660,7 +2660,7 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        locations = Location.objects.filter(parent__isnull=True)[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         rackgroups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=locations[0]),
             RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=locations[1]),
@@ -2696,7 +2696,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         # Assign location generated to the class object for use later.
         cls.location = location

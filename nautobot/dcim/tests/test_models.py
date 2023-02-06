@@ -50,7 +50,7 @@ from nautobot.tenancy.models import Tenant
 
 class CableLengthTestCase(TestCase):
     def setUp(self):
-        self.location = Location.objects.filter(parent__isnull=True).first()
+        self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=self.manufacturer,
@@ -106,7 +106,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
         """
         statuses = Status.objects.get_for_model(Device)
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
@@ -155,7 +155,7 @@ class InterfaceTemplateTestCase(TestCase):
         assert interface templates sets the interface status.
         """
         statuses = Status.objects.get_for_model(Device)
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = Role.objects.get_for_model(Device).first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
@@ -624,6 +624,7 @@ class DeviceTestCase(TestCase):
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")
         self.location_type_2.content_types.add(ContentType.objects.get_for_model(Device))
+        self.location_type_3.content_types.add(ContentType.objects.get_for_model(Device))
         self.location_1 = Location.objects.create(
             name="Root", status=self.device_status, location_type=self.location_type_1
         )
@@ -1141,7 +1142,7 @@ class InterfaceTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)
         status = Status.objects.get_for_model(Device)[0]
         self.device = Device.objects.create(

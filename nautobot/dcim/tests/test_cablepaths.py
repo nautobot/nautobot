@@ -13,6 +13,7 @@ from nautobot.dcim.models import (
     FrontPort,
     Interface,
     Location,
+    LocationType,
     Manufacturer,
     PowerFeed,
     PowerOutlet,
@@ -39,7 +40,7 @@ class CablePathTestCase(TestCase):
     def setUpTestData(cls):
 
         # Create a single device that will hold all components
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")

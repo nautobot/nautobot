@@ -67,7 +67,8 @@ def handle_rackgroup_location_change(instance, created, **kwargs):
 
     Note that this is non-trivial for Location changes, since a LocationType that can contain RackGroups
     may or may not be permitted to contain Racks or PowerPanels. If it's not permitted, rather than trying to search
-    through child locations to find the "right" one, the best we can do is to raise to raise a ValidationError and roll back the changes we made.
+    through child locations to find the "right" one, the best we can do is to raise to raise a ValidationError
+    and roll back the changes we made.
     """
     with transaction.atomic():
         if not created:
@@ -78,56 +79,39 @@ def handle_rackgroup_location_change(instance, created, **kwargs):
             power_panels_permitted = ContentType.objects.get_for_model(PowerPanel) in content_types
 
             for rackgroup in instance.children.all():
-                changed = False
-
                 if rackgroup.location not in descendants:
-                    if rack_groups_permitted:
-                        rackgroup.location = instance.location
-                        changed = True
-                    else:
+                    if not rack_groups_permitted:
                         raise ValidationError(
                             {
                                 f"location {instance.location.name}": "RackGroups may not associate to locations of type "
                                 f'"{instance.location.location_type}"'
                             }
                         )
-
-                if changed:
+                    rackgroup.location = instance.location
                     rackgroup.save()
 
             for rack in Rack.objects.filter(group=instance):
-                changed = False
-
                 if rack.location not in descendants:
-                    if racks_permitted:
-                        rack.location = instance.location
-                        changed = True
-                    else:
+                    if not racks_permitted:
                         raise ValidationError(
                             {
                                 f"location {instance.location.name}": "Racks may not associate to locations of type "
                                 f'"{instance.location.location_type}"'
                             }
                         )
-
-                if changed:
+                    rack.location = instance.location
                     rack.save()
 
             for powerpanel in PowerPanel.objects.filter(rack_group=instance):
-                changed = False
-
                 if powerpanel.location not in descendants:
-                    if power_panels_permitted:
-                        powerpanel.location = instance.location
-                        changed = True
-                    else:
+                    if not power_panels_permitted:
                         raise ValidationError(
                             {
                                 f"location {instance.location.name}": "PowerPanels may not associate to locations of type "
                                 f'"{instance.location.location_type}"'
                             }
                         )
-                if changed:
+                    powerpanel.location = instance.location
                     powerpanel.save()
 
 
@@ -138,7 +122,8 @@ def handle_rack_location_change(instance, created, **kwargs):
 
     Note that this is non-trivial for Location changes, since a LocationType that can contain Racks
     may or may not be permitted to contain Devices. If it's not permitted, rather than trying to search
-    through child locations to find the "right" one, the best we can do is to raise a ValidationError and roll back the changes we made.
+    through child locations to find the "right" one, the best we can do is to raise a ValidationError
+    and roll back the changes we made.
     """
     with transaction.atomic():
         if not created:
@@ -147,20 +132,15 @@ def handle_rack_location_change(instance, created, **kwargs):
             )
 
             for device in Device.objects.filter(rack=instance):
-                changed = False
                 if device.location != instance.location:
-                    if devices_permitted:
-                        device.location = instance.location
-                        changed = True
-                    else:
+                    if not devices_permitted:
                         raise ValidationError(
                             {
                                 f"location {instance.location.name}": "Devices may not associate to locations of type "
                                 f'"{instance.location.location_type}"'
                             }
                         )
-
-                if changed:
+                    device.location = instance.location
                     device.save()
 
 

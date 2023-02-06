@@ -84,7 +84,7 @@ class Mixins:
             """
             obj = self.model.objects.first()
             peer_device = Device.objects.create(
-                location=Location.objects.filter(parent__isnull=True).first(),
+                location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
                 role=Role.objects.get_for_model(Device).first(),
                 name="Peer Device",
@@ -793,7 +793,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         cls.racks = (
             Rack.objects.create(location=location, name="Rack 1"),
@@ -1240,7 +1240,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        locations = Location.objects.filter(parent__isnull=True)[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", location=locations[0]),
@@ -1601,7 +1601,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         cls.devices = (
             Device.objects.create(
@@ -1991,7 +1991,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_types = (
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
@@ -2094,7 +2094,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.location = Location.objects.filter(parent__isnull=True).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         devices = (
             Device.objects.create(
                 device_type=cls.device_type,
@@ -2183,7 +2183,7 @@ class ConnectedDeviceTest(APITestCase):
 
         super().setUp()
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -2221,7 +2221,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -2411,7 +2411,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        locations = Location.objects.filter(parent__isnull=True)[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         rack_groups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=locations[0]),
             RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=locations[0]),
@@ -2454,7 +2454,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         rackgroup = RackGroup.objects.create(location=location, name="Rack Group 1", slug="rack-group-1")
         rackrole = Role.objects.get_for_model(Rack).first()
 

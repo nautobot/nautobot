@@ -96,7 +96,7 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
         status_active = Status.objects.get_for_model(Device).get(slug="active")
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device = Device.objects.create(
             name="Device 1",
             location=location,

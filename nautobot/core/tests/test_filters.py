@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
@@ -15,6 +16,7 @@ from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras import models as extras_models
+from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam import factory as ipam_factory
 from nautobot.ipam import models as ipam_models
 
@@ -198,8 +200,10 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
     def setUp(self):
 
         super().setUp()
-
-        self.locations = Location.objects.filter(parent__isnull=True)[:3]
+        self.location_types = LocationType.objects.filter(
+            content_types__in=ContentType.objects.filter(FeatureQuery("locations").get_query())
+        )
+        self.locations = Location.objects.filter(location_type__in=self.location_types)[:3]
 
         self.power_panel1 = dcim_models.PowerPanel.objects.create(location=self.locations[0], name="test-power-panel1")
         self.power_panel2 = dcim_models.PowerPanel.objects.create(location=self.locations[1], name="test-power-panel2")
@@ -780,8 +784,11 @@ class DynamicFilterLookupExpressionTest(TestCase):
             dcim_models.Platform(name="Platform 3", slug="platform-3"),
         )
         dcim_models.Platform.objects.bulk_create(platforms)
-
-        cls.locations = dcim_models.Location.objects.filter(parent__isnull=False)[:3]
+        cls.location_type = LocationType.objects.filter(parent__isnull=False).first()
+        cls.location_type.content_types.add(
+            ContentType.objects.get_for_model(dcim_models.Rack), ContentType.objects.get_for_model(dcim_models.Device)
+        )
+        cls.locations = dcim_models.Location.objects.filter(location_type=cls.location_type)[:3]
         cls.locations[0].asn = 65001
         cls.locations[1].asn = 65101
         cls.locations[2].asn = 65201
@@ -895,9 +902,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
 
     def test_location_slug_endswith(self):
-        endswith = dcim_models.Location.objects.first().slug[
-            len(dcim_models.Location.objects.first().slug) - 2 : len(dcim_models.Location.objects.first().slug)
-        ]
+        endswith = dcim_models.Location.objects.first().slug[-2:]
         params = {"slug__iew": [endswith]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
@@ -905,9 +910,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
 
     def test_location_slug_endswith_negation(self):
-        endswith = dcim_models.Location.objects.first().slug[
-            len(dcim_models.Location.objects.first().slug) - 2 : len(dcim_models.Location.objects.first().slug)
-        ]
+        endswith = dcim_models.Location.objects.first().slug[-2:]
         params = {"slug__niew": [endswith]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,

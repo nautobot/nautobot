@@ -144,7 +144,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
 
-        locations = Location.objects.filter(parent__isnull=True)[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
 
         roles = Role.objects.get_for_model(Prefix)[:2]
@@ -252,7 +252,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -278,7 +278,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.locations = Location.objects.filter(parent__isnull=True)
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
         location_1 = cls.locations.first()
 
         vlangroups = (
@@ -369,7 +369,7 @@ class ServiceTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        location = Location.objects.filter(parent__isnull=True).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
