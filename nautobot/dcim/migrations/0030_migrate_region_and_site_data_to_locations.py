@@ -276,7 +276,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             src_loc = Location.objects.get(name=src_region.name, location_type=region_lt)
             relationship_association.source = src_loc
             relationship_association.source_id = src_loc.id
-            relationship_association.save()
+        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_type", "source_id"], 1000)
         src_relationships = Relationship.objects.filter(source_type=region_ct)
         src_relationships.update(source_type=location_ct)
 
@@ -287,7 +287,9 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             dst_loc = Location.objects.get(name=dst_region.name, location_type=region_lt)
             relationship_association.destination = dst_loc
             relationship_association.destination_id = dst_loc.pk
-            relationship_association.save()
+        RelationshipAssociation.objects.bulk_update(
+            dst_relationship_associations, ["destination_type", "destination_id"], 1000
+        )
         dst_relationships = Relationship.objects.filter(destination_type=region_ct)
         dst_relationships.update(destination_type=location_ct)
 
@@ -389,7 +391,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             src_loc = Location.objects.get(name=src_site.name, location_type=site_lt)
             relationship_association.source = src_loc
             relationship_association.source_id = src_loc.id
-            relationship_association.save()
+        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_type", "source_id"], 1000)
         src_relationships = Relationship.objects.filter(source_type=site_ct)
         src_relationships.update(source_type=location_ct)
 
@@ -400,7 +402,9 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             dst_loc = Location.objects.get(name=dst_site.name, location_type=site_lt)
             relationship_association.destination = dst_loc
             relationship_association.destination_id = dst_loc.pk
-            relationship_association.save()
+        RelationshipAssociation.objects.bulk_update(
+            dst_relationship_associations, ["destination_type", "destination_id"], 1000
+        )
         dst_relationships = Relationship.objects.filter(destination_type=site_ct)
         dst_relationships.update(destination_type=location_ct)
 
