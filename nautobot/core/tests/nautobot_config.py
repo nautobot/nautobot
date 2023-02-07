@@ -46,6 +46,8 @@ TEST_USE_FACTORIES = True
 TEST_FACTORY_SEED = "Nautobot"
 # File in which all performance-specifc test baselines are stored
 TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+# File to store factory dump data to speed up testing
+TEST_FACTORY_FIXTURE_FILE = "development/factory_dump.json"
 
 # Make Celery run synchronously (eager), to always store eager results, and run the broker in-memory.
 CELERY_TASK_ALWAYS_EAGER = True

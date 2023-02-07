@@ -47,6 +47,8 @@ class NautobotTestRunner(DiscoverRunner):
             command = ["generate_test_data", "--flush", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:
                 command += ["--seed", settings.TEST_FACTORY_SEED]
+            if settings.TEST_FACTORY_FIXTURE_FILE is not None:
+                command += ["--fixture-file", settings.TEST_FACTORY_FIXTURE_FILE]
             call_command(*command)
 
         return result

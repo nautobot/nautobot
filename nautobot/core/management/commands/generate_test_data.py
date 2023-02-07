@@ -25,6 +25,10 @@ class Command(BaseCommand):
             dest="interactive",
             help="Do NOT prompt the user for input or confirmation of any kind.",
         )
+        parser.add_argument(
+            "--fixture-file",
+            help="Dump database to fixture file after generating factory data and re-use on subsequent test runs.",
+        )
 
     def handle(self, *args, **options):
         try:
@@ -82,8 +86,8 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
             call_command("flush", "--no-input")
 
-        if os.path.exists("factory_dump.json"):
-            call_command("loaddata", "factory_dump.json")
+        if options["fixture_file"] and os.path.exists(options["fixture_file"]):
+            call_command("loaddata", options["fixture_file"])
         else:
             seed = options["seed"] or get_random_string(16)
             self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
@@ -175,5 +179,18 @@ Type 'yes' to continue, or 'no' to cancel: """
             # ClusterFactory.create_batch(10)
             # VirtualMachineFactory.create_batch(10)
             # We need to remove them from there and enable them here instead, but that will require many test updates.
+
+            if options["fixture_file"]:
+                call_command(
+                    "dumpdata",
+                    "--natural-foreign",
+                    "--natural-primary",
+                    indent=2,
+                    format="json",
+                    exclude=["contenttypes", "auth.permission", "extras.job", "extras.customfield"],
+                    output=options["fixture_file"],
+                )
+
+                self.stdout.write(self.style.SUCCESS(f"Dumped factory data to {options['fixture_file']}"))
 
         self.stdout.write(self.style.SUCCESS("Database populated successfully!"))
