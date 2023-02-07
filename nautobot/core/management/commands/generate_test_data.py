@@ -108,7 +108,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
+        LocationFactory.create_batch(40)  # we need more locations with sites since it can be nested now.
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
