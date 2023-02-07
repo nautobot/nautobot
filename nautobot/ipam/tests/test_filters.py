@@ -185,7 +185,9 @@ class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         for value in test_values:
             with self.subTest(value=value):
                 params = {"q": value}
-                self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs, self.queryset.string_search(value)
+                )
 
     def test_family(self):
         params = {"family": "4"}
