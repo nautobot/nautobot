@@ -1156,7 +1156,9 @@ class InterfaceTestCase(TestCase):
         self.other_location_vlan = VLAN.objects.create(
             name="Other Location VLAN",
             vid=100,
-            location=Location.objects.create(name="Other Location", location_type=LocationType.objects.get(name="Campus")),
+            location=Location.objects.create(
+                name="Other Location", location_type=LocationType.objects.get(name="Campus")
+            ),
         )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
@@ -1171,7 +1173,7 @@ class InterfaceTestCase(TestCase):
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
 
-    def test_error_raised_when_adding_tagged_vlan_with_different_location_from_interface_parent_site(self):
+    def test_error_raised_when_adding_tagged_vlan_with_different_location_from_interface_parent_location(self):
         with self.assertRaises(ValidationError) as err:
             interface = Interface.objects.create(
                 name="Test Interface",
