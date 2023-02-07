@@ -532,6 +532,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         err = StringIO()
         call_command(
             "runjob",
+            "--no-color",
             *args,
             stdout=out,
             stderr=err,

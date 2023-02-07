@@ -1,7 +1,7 @@
 import logging
 
 from django.conf import settings
-from django.db.utils import ProgrammingError
+from django.db.utils import OperationalError, ProgrammingError
 
 import graphene
 from health_check.plugins import plugin_dir
@@ -37,7 +37,7 @@ class ExtrasConfig(NautobotConfig):
         try:
             # Wrap plugin model validator registered clean methods
             wrap_model_clean_methods()
-        except ProgrammingError:
+        except (OperationalError, ProgrammingError):
             # The ContentType table might not exist yet (if migrations have not been run)
             logger.warning(
                 "Wrapping model clean methods for custom validators failed because "

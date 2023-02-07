@@ -16,6 +16,7 @@ class CollateAsChar(Func):
         func_map = {
             "postgresql": '"C"',
             "mysql": "utf8mb4_bin",
+            "sqlite": "BINARY",
         }
 
         if vendor not in func_map:
