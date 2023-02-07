@@ -115,12 +115,10 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
         model = DeviceRedundancyGroup
         exclude = ("has_description", "has_comments")
 
-    class Params:
-        unique_name = UniqueFaker("word", part_of_speech="adjective")
-
     # Slug isn't defined here since it will always inherit from name.
-    name = factory.LazyAttribute(lambda o: o.unique_name.title())
-
+    name = factory.LazyFunction(
+        lambda: "".join(word.title() for word in Faker().words(nb=2, part_of_speech="adjective", unique=True))
+    )
     status = random_instance(lambda: Status.objects.get_for_model(DeviceRedundancyGroup), allow_null=False)
 
     failover_strategy = factory.Iterator(
