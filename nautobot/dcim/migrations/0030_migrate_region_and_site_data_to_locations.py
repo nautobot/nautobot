@@ -9,6 +9,30 @@ from nautobot.extras.utils import FeatureQuery
 logger = logging.getLogger(__name__)
 
 
+def add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct):
+    """
+    Ensure that the Statuses and Tags assigned to Site can also be assigned to Locations
+    before creating Site LocationType locations.
+
+    Args:
+        apps: Installed apps
+        site_ct: ContentType for Site Model Class
+        location_ct: ContentType for Location Model Class
+    """
+    # Status
+    Status = apps.get_model("extras", "status")
+    statuses = Status.objects.filter(content_types__in=[site_ct])
+    for status in statuses:
+        status.content_types.add(location_ct)
+        status.save()
+    # Tags
+    Tag = apps.get_model("extras", "tag")
+    tags = Tag.objects.filter(content_types__in=[site_ct])
+    for tag in tags:
+        tag.content_types.add(location_ct)
+        tag.save()
+
+
 def create_region_location_type_locations(region_class, location_class, region_lt):
     """
     Create location objects for each region instance in the region_class model.
@@ -162,6 +186,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
                     description="Parent Location of Region LocationType for all sites that "
                     "did not have a region attribute set before the migration",
                 )
+            add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
             create_site_location_type_locations(
                 site_class=Site,
                 location_type_class=LocationType,
@@ -172,6 +197,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             )
     elif Site.objects.exists():  # Only Site instances exist, we make Site the top level LocationType
         site_lt = LocationType.objects.create(name="Site")
+        add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
         create_site_location_type_locations(
             site_class=Site,
             location_type_class=LocationType,
@@ -196,6 +222,13 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             cc.locations.add(*region_locs)
             cc.save()
 
+        # Computed Field
+        ComputedField = apps.get_model("extras", "computedfield")
+        computed_fields = ComputedField.objects.filter(content_type=region_ct)
+        for cf in computed_fields:
+            cf.content_type = location_ct
+        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
         # Custom Field
         CustomField = apps.get_model("extras", "customfield")
         custom_fields = CustomField.objects.filter(content_types__in=[region_ct])
@@ -208,6 +241,29 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             region = Region.objects.get(name=location.name)
             location._custom_field_data = region._custom_field_data
         Location.objects.bulk_update(region_locs, ["_custom_field_data"], 1000)
+
+        # Custom Links do not have Region ContentType as one of its ContentType options
+
+        # Export Template
+        ExportTemplate = apps.get_model("extras", "exporttemplate")
+        export_templates = ExportTemplate.objects.filter(content_type=region_ct)
+        for et in export_templates:
+            et.content_type = location_ct
+        ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
+
+        # Image Attachment
+        ImageAttachment = apps.get_model("extras", "imageattachment")
+        image_attachments = ImageAttachment.objects.filter(content_type=region_ct)
+        for ia in image_attachments:
+            ia.content_type = location_ct
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
+
+        # JobHooks
+        JobHook = apps.get_model("extras", "jobhook")
+        job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
+        for jh in job_hooks:
+            jh.content_types.add(location_ct)
+            jh.save()
 
         # Relationship
         Relationship = apps.get_model("extras", "relationship")
@@ -234,6 +290,13 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             relationship_association.save()
         dst_relationships = Relationship.objects.filter(destination_type=region_ct)
         dst_relationships.update(destination_type=location_ct)
+
+        # WebHooks
+        WebHook = apps.get_model("extras", "webhook")
+        web_hooks = WebHook.objects.filter(content_types__in=[region_ct])
+        for wh in web_hooks:
+            wh.content_types.add(location_ct)
+            wh.save()
 
     # Reassign Site Models to Locations of Site LocationType
     if Site.objects.exists():  # Iff Site instances exist
@@ -270,6 +333,13 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             cc.locations.add(*site_locs)
             cc.save()
 
+        # Computed Field
+        ComputedField = apps.get_model("extras", "computedfield")
+        computed_fields = ComputedField.objects.filter(content_type=site_ct)
+        for cf in computed_fields:
+            cf.content_type = location_ct
+        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
         # Custom Field
         CustomField = apps.get_model("extras", "customfield")
         custom_fields = CustomField.objects.filter(content_types__in=[site_ct])
@@ -282,6 +352,34 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             site = Site.objects.get(name=location.name)
             location._custom_field_data = site._custom_field_data
         Location.objects.bulk_update(site_locs, ["_custom_field_data"], 1000)
+
+        # Custom Link
+        CustomLink = apps.get_model("extras", "customlink")
+        custom_links = CustomLink.objects.filter(content_type=site_ct)
+        for cf in custom_links:
+            cf.content_type = location_ct
+        CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
+
+        # Export Template
+        ExportTemplate = apps.get_model("extras", "exporttemplate")
+        export_templates = ExportTemplate.objects.filter(content_type=site_ct)
+        for et in export_templates:
+            et.content_type = location_ct
+        ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
+
+        # Image Attachment
+        ImageAttachment = apps.get_model("extras", "imageattachment")
+        image_attachments = ImageAttachment.objects.filter(content_type=site_ct)
+        for ia in image_attachments:
+            ia.content_type = location_ct
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
+
+        # JobHooks
+        JobHook = apps.get_model("extras", "jobhook")
+        job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
+        for jh in job_hooks:
+            jh.content_types.add(location_ct)
+            jh.save()
 
         # Relationship
         src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=site_ct)
@@ -305,6 +403,13 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             relationship_association.save()
         dst_relationships = Relationship.objects.filter(destination_type=site_ct)
         dst_relationships.update(destination_type=location_ct)
+
+        # WebHooks
+        WebHook = apps.get_model("extras", "webhook")
+        web_hooks = WebHook.objects.filter(content_types__in=[site_ct])
+        for wh in web_hooks:
+            wh.content_types.add(location_ct)
+            wh.save()
 
         devices = Device.objects.filter(location__isnull=True).select_related("site")
         for device in devices:
