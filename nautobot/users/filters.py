@@ -58,17 +58,6 @@ class UserFilterSet(BaseFilterSet):
         queryset=ObjectChange.objects.all(),
         label="Object Changes (ID or user_name)",
     )
-    has_logentry = RelatedMembershipBooleanFilter(
-        field_name="logentry_set",
-        label="Has Changes",
-    )
-    # TODO(timizuo): Dont know what the `to_field_name` attribute value should be yet
-    logentry = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="logentry_set",
-        # to_field_name="...",
-        queryset=LogEntry.objects.all(),
-        label="Log Entry (ID)",
-    )
     has_object_permissions = RelatedMembershipBooleanFilter(
         field_name="object_permissions",
         label="Has Changes",
@@ -82,30 +71,11 @@ class UserFilterSet(BaseFilterSet):
         field_name="rackreservation_set",
         label="Has Changes",
     )
-    # TODO(timizuo): Dont know what the `to_field_name` attribute value should be yet
-    rack_reservations = NaturalKeyOrPKMultipleChoiceFilter(
+    # TODO(timizuo): Since RackReservation has no pk field yet, NaturalKeyOrPKMultipleChoiceFilter cant be used here
+    rack_reservations_id = django_filters.ModelMultipleChoiceFilter(
         field_name="rackreservation_set",
-        # to_field_name="name",
         queryset=RackReservation.objects.all(),
-        label="Rack Reservation (ID )",
-    )
-    has_social_auth = RelatedMembershipBooleanFilter(
-        field_name="social_auth",
-        label="Has Changes",
-    )
-    social_auth = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="uid",
-        queryset=UserSocialAuth.objects.all(),
-        label="Social Auth (ID or uid)",
-    )
-    has_tokens = RelatedMembershipBooleanFilter(
-        field_name="tokens",
-        label="Has Changes",
-    )
-    tokens = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="key",
-        queryset=Token.objects.all(),
-        label="Token (ID or key)",
+        label="Rack Reservation (ID)",
     )
 
     class Meta:
@@ -135,11 +105,11 @@ class ObjectPermissionFilterSet(BaseFilterSet):
         queryset=get_user_model().objects.all(),
         label="User",
     )
-    users = django_filters.ModelMultipleChoiceFilter(
-        field_name="users__username",
+    users = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="users",
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User (name)",
+        label="User (ID or username)",
     )
     groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
