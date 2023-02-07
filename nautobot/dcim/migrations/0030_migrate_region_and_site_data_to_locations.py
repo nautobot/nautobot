@@ -252,13 +252,26 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         image_attachments = ImageAttachment.objects.filter(content_type=region_ct)
         for ia in image_attachments:
             ia.content_type = location_ct
-        ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
+            region = Region.objects.get(id=ia.object_id)
+            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
+            ia.object_id = region_loc.id
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
 
         JobHook = apps.get_model("extras", "jobhook")
         job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
             jh.save()
+
+        # Notes
+        Note = apps.get_model("extras", "note")
+        notes = Note.objects.filter(assigned_object_type=region_ct)
+        for note in notes:
+            note.assigned_object_type = location_ct
+            region = Region.objects.get(id=note.assigned_object_id)
+            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
+            note.assigned_object_id = region_loc.id
+        Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
 
         Relationship = apps.get_model("extras", "relationship")
         RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
@@ -270,7 +283,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             src_loc = Location.objects.get(name=src_region.name, location_type=region_lt)
             relationship_association.source = src_loc
             relationship_association.source_id = src_loc.id
-        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_type", "source_id"], 1000)
+        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
         src_relationships = Relationship.objects.filter(source_type=region_ct)
         src_relationships.update(source_type=location_ct)
 
@@ -281,9 +294,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             dst_loc = Location.objects.get(name=dst_region.name, location_type=region_lt)
             relationship_association.destination = dst_loc
             relationship_association.destination_id = dst_loc.pk
-        RelationshipAssociation.objects.bulk_update(
-            dst_relationship_associations, ["destination_type", "destination_id"], 1000
-        )
+        RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
         dst_relationships = Relationship.objects.filter(destination_type=region_ct)
         dst_relationships.update(destination_type=location_ct)
 
@@ -307,6 +318,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         ExportTemplate = apps.get_model("extras", "exporttemplate")
         ImageAttachment = apps.get_model("extras", "imageattachment")
         JobHook = apps.get_model("extras", "jobhook")
+        Note = apps.get_model("extras", "note")
         WebHook = apps.get_model("extras", "webhook")
         Relationship = apps.get_model("extras", "relationship")
         RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
@@ -387,12 +399,23 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         image_attachments = ImageAttachment.objects.filter(content_type=site_ct)
         for ia in image_attachments:
             ia.content_type = location_ct
-        ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
+            site = Site.objects.get(id=ia.object_id)
+            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
+            ia.object_id = site_loc.id
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
 
         job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
             jh.save()
+
+        notes = Note.objects.filter(assigned_object_type=site_ct)
+        for note in notes:
+            note.assigned_object_type = location_ct
+            site = Site.objects.get(id=note.assigned_object_id)
+            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
+            note.assigned_object_id = site_loc.id
+        Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
 
         src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=site_ct)
         src_relationship_associations.update(source_type=location_ct)
@@ -401,7 +424,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             src_loc = Location.objects.get(name=src_site.name, location_type=site_lt)
             relationship_association.source = src_loc
             relationship_association.source_id = src_loc.id
-        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_type", "source_id"], 1000)
+        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
         src_relationships = Relationship.objects.filter(source_type=site_ct)
         src_relationships.update(source_type=location_ct)
 
@@ -412,9 +435,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             dst_loc = Location.objects.get(name=dst_site.name, location_type=site_lt)
             relationship_association.destination = dst_loc
             relationship_association.destination_id = dst_loc.pk
-        RelationshipAssociation.objects.bulk_update(
-            dst_relationship_associations, ["destination_type", "destination_id"], 1000
-        )
+        RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
         dst_relationships = Relationship.objects.filter(destination_type=site_ct)
         dst_relationships.update(destination_type=location_ct)
 
