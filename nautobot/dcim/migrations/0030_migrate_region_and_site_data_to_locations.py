@@ -344,12 +344,12 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
         Rack.objects.bulk_update(racks, ["location"], 1000)
 
+        # Extras App
         computed_fields = ComputedField.objects.filter(content_type=site_ct)
         for cf in computed_fields:
             cf.content_type = location_ct
         ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
 
-        # Extras App
         ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", "sites")
         for cc in ccs:
             site_name_list = list(cc.sites.all().values_list("name", flat=True))
