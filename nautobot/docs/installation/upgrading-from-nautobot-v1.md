@@ -133,6 +133,21 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 |----------------|----------------------|--------------------------------------|
 | `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
 
+### Removed Versioned Endpoints and Serializers
+
+Nautobot 2.0 removes support for 1.X versioned REST APIs and their Serializers. Requesting [older API versions](../rest-api/overview.md#versioning) will result in a `400 Bad Request` error.
+
+**Endpoints Affected:**
+
+- `/api/dcim/interfaces`
+- `/api/ipam/ip-addresses`
+- `/api/extras/custom-fields`
+- `/api/extras/jobs`
+- `/api/extras/tags`
+- `/api/virtualization/interfaces`
+
+Please ensure you are using the latest representations of request/response representations as seen in the API docs or Swagger.
+
 ### Replaced Endpoints
 
 These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` are no longer available. Instead,  use the `/extras/roles/` endpoint to retrieve and manipulate `role` data.
