@@ -107,6 +107,27 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
+    def test_has_changes(self):
+        with self.subTest():
+            params = {"has_changes": True}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(children__isnull=False).distinct(),
+            )
+        with self.subTest():
+            params = {"has_changes": False}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(children__isnull=True).distinct(),
+            )
+
+    def test_changes(self):
+        params = {"changes": []}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changes=False).distinct(),
+        )
+
 
 class GroupTestCase(FilterTestCases.FilterTestCase):
     queryset = Group.objects.all()
