@@ -252,8 +252,12 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         )
 
         permissions = (
-            ObjectPermission.objects.create(name="Permission 1", actions=["view", "add", "change", "delete"]),
-            ObjectPermission.objects.create(name="Permission 2", actions=["view", "add", "change", "delete"]),
+            ObjectPermission.objects.create(
+                name="Permission 1", actions=["view", "add", "change", "delete"], description="Description 1"
+            ),
+            ObjectPermission.objects.create(
+                name="Permission 2", actions=["view", "add", "change", "delete"], description="Description 2"
+            ),
             ObjectPermission.objects.create(name="Permission 3", actions=["view", "add", "change", "delete"]),
             ObjectPermission.objects.create(name="Permission 4", actions=["view"], enabled=False),
             ObjectPermission.objects.create(name="Permission 5", actions=["add"], enabled=False),
@@ -275,22 +279,31 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
 
     def test_group(self):
         groups = Group.objects.filter(name__in=["Group 1", "Group 2"])
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
+        params = {"groups_id": [groups[0].pk, groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [groups[0].name, groups[1].name]}
+        params = {"groups": [groups[0].name, groups[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
         users = User.objects.filter(username__in=["User1", "User2"])
-        params = {"user_id": [users[0].pk, users[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"user": [users[0].username, users[1].username]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        filter_params = [{"users_id": [users[0].pk, users[1].pk]}, {"users": [users[0].id, users[1].username]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(users__in=users),
+            )
 
     def test_object_types(self):
         object_types = ContentType.objects.filter(model__in=["site", "rack"])
         params = {"object_types": [object_types[0].pk, object_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_description(self):
+        descriptions = ["Description 1", "Description 2"]
+        params = {"description": descriptions}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(description__in=descriptions)
+        )
 
 
 class TokenTestCase(FilterTestCases.FilterTestCase):
@@ -310,8 +323,20 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         future_date = make_aware(datetime.datetime(3000, 1, 1))
         past_date = make_aware(datetime.datetime(2000, 1, 1))
         tokens = (
-            Token(user=users[0], key=Token.generate_key(), expires=future_date, write_enabled=True),
-            Token(user=users[1], key=Token.generate_key(), expires=future_date, write_enabled=True),
+            Token(
+                user=users[0],
+                key=Token.generate_key(),
+                expires=future_date,
+                write_enabled=True,
+                description="Description 1",
+            ),
+            Token(
+                user=users[1],
+                key=Token.generate_key(),
+                expires=future_date,
+                write_enabled=True,
+                description="Description 2",
+            ),
             Token(user=users[2], key=Token.generate_key(), expires=past_date, write_enabled=False),
         )
         Token.objects.bulk_create(tokens)
@@ -339,3 +364,10 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_description(self):
+        descriptions = ["Description 1", "Description 2"]
+        params = {"description": descriptions}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(description__in=descriptions)
+        )

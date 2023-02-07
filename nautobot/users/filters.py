@@ -103,7 +103,7 @@ class ObjectPermissionFilterSet(BaseFilterSet):
     users_id = django_filters.ModelMultipleChoiceFilter(
         field_name="users",
         queryset=get_user_model().objects.all(),
-        label="User",
+        label="User (ID)- Deprecated (use users filter)",
     )
     users = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="users",
