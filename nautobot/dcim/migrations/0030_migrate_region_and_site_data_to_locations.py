@@ -208,7 +208,13 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 
     # Reassign Region Models to Locations of Region LocationType
     if Region.objects.exists():
-        # Config Context
+        # Extras App
+        ComputedField = apps.get_model("extras", "computedfield")
+        computed_fields = ComputedField.objects.filter(content_type=region_ct)
+        for cf in computed_fields:
+            cf.content_type = location_ct
+        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
         ConfigContext = apps.get_model("extras", "configcontext")
         ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", "regions")
         for cc in ccs:
@@ -222,14 +228,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             cc.locations.add(*region_locs)
             cc.save()
 
-        # Computed Field
-        ComputedField = apps.get_model("extras", "computedfield")
-        computed_fields = ComputedField.objects.filter(content_type=region_ct)
-        for cf in computed_fields:
-            cf.content_type = location_ct
-        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
-
-        # Custom Field
         CustomField = apps.get_model("extras", "customfield")
         custom_fields = CustomField.objects.filter(content_types__in=[region_ct])
         for cf in custom_fields:
@@ -244,28 +242,24 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 
         # Custom Links do not have Region ContentType as one of its ContentType options
 
-        # Export Template
         ExportTemplate = apps.get_model("extras", "exporttemplate")
         export_templates = ExportTemplate.objects.filter(content_type=region_ct)
         for et in export_templates:
             et.content_type = location_ct
         ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
 
-        # Image Attachment
         ImageAttachment = apps.get_model("extras", "imageattachment")
         image_attachments = ImageAttachment.objects.filter(content_type=region_ct)
         for ia in image_attachments:
             ia.content_type = location_ct
         ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
 
-        # JobHooks
         JobHook = apps.get_model("extras", "jobhook")
         job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
             jh.save()
 
-        # Relationship
         Relationship = apps.get_model("extras", "relationship")
         RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
 
@@ -293,7 +287,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         dst_relationships = Relationship.objects.filter(destination_type=region_ct)
         dst_relationships.update(destination_type=location_ct)
 
-        # WebHooks
         WebHook = apps.get_model("extras", "webhook")
         web_hooks = WebHook.objects.filter(content_types__in=[region_ct])
         for wh in web_hooks:
@@ -307,8 +300,14 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         PowerPanel = apps.get_model("dcim", "powerpanel")
         RackGroup = apps.get_model("dcim", "rackgroup")
         Rack = apps.get_model("dcim", "rack")
+        ComputedField = apps.get_model("extras", "computedfield")
         ConfigContext = apps.get_model("extras", "configcontext")
         CustomField = apps.get_model("extras", "customfield")
+        CustomLink = apps.get_model("extras", "customlink")
+        ExportTemplate = apps.get_model("extras", "exporttemplate")
+        ImageAttachment = apps.get_model("extras", "imageattachment")
+        JobHook = apps.get_model("extras", "jobhook")
+        WebHook = apps.get_model("extras", "webhook")
         Relationship = apps.get_model("extras", "relationship")
         RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
         Prefix = apps.get_model("ipam", "prefix")
@@ -318,11 +317,39 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 
         site_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
 
+        # Circuits App
         cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
         for ct in cts:
             ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
 
+        # DCIM App
+        devices = Device.objects.filter(location__isnull=True).select_related("site")
+        for device in devices:
+            device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
+        Device.objects.bulk_update(devices, ["location"], 1000)
+
+        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
+        for powerpanel in powerpanels:
+            powerpanel.location = Location.objects.get(name=powerpanel.site.name, location_type=site_lt)
+        PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
+
+        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
+        for rackgroup in rackgroups:
+            rackgroup.location = Location.objects.get(name=rackgroup.site.name, location_type=site_lt)
+        RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
+
+        racks = Rack.objects.filter(location__isnull=True).select_related("site")
+        for rack in racks:
+            rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
+        Rack.objects.bulk_update(racks, ["location"], 1000)
+
+        computed_fields = ComputedField.objects.filter(content_type=site_ct)
+        for cf in computed_fields:
+            cf.content_type = location_ct
+        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
+        # Extras App
         ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", "sites")
         for cc in ccs:
             site_name_list = list(cc.sites.all().values_list("name", flat=True))
@@ -335,14 +362,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             cc.locations.add(*site_locs)
             cc.save()
 
-        # Computed Field
-        ComputedField = apps.get_model("extras", "computedfield")
-        computed_fields = ComputedField.objects.filter(content_type=site_ct)
-        for cf in computed_fields:
-            cf.content_type = location_ct
-        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
-
-        # Custom Field
         CustomField = apps.get_model("extras", "customfield")
         custom_fields = CustomField.objects.filter(content_types__in=[site_ct])
         for cf in custom_fields:
@@ -355,35 +374,26 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             location._custom_field_data = site._custom_field_data
         Location.objects.bulk_update(site_locs, ["_custom_field_data"], 1000)
 
-        # Custom Link
-        CustomLink = apps.get_model("extras", "customlink")
         custom_links = CustomLink.objects.filter(content_type=site_ct)
         for cf in custom_links:
             cf.content_type = location_ct
         CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
 
-        # Export Template
-        ExportTemplate = apps.get_model("extras", "exporttemplate")
         export_templates = ExportTemplate.objects.filter(content_type=site_ct)
         for et in export_templates:
             et.content_type = location_ct
         ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
 
-        # Image Attachment
-        ImageAttachment = apps.get_model("extras", "imageattachment")
         image_attachments = ImageAttachment.objects.filter(content_type=site_ct)
         for ia in image_attachments:
             ia.content_type = location_ct
         ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
 
-        # JobHooks
-        JobHook = apps.get_model("extras", "jobhook")
         job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
             jh.save()
 
-        # Relationship
         src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=site_ct)
         src_relationship_associations.update(source_type=location_ct)
         for relationship_association in src_relationship_associations:
@@ -408,36 +418,15 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         dst_relationships = Relationship.objects.filter(destination_type=site_ct)
         dst_relationships.update(destination_type=location_ct)
 
-        # WebHooks
-        WebHook = apps.get_model("extras", "webhook")
         web_hooks = WebHook.objects.filter(content_types__in=[site_ct])
         for wh in web_hooks:
             wh.content_types.add(location_ct)
             wh.save()
 
-        devices = Device.objects.filter(location__isnull=True).select_related("site")
-        for device in devices:
-            device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
-        Device.objects.bulk_update(devices, ["location"], 1000)
-
-        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
-        for powerpanel in powerpanels:
-            powerpanel.location = Location.objects.get(name=powerpanel.site.name, location_type=site_lt)
-        PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
-
-        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
-        for rackgroup in rackgroups:
-            rackgroup.location = Location.objects.get(name=rackgroup.site.name, location_type=site_lt)
-        RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
-
-        racks = Rack.objects.filter(location__isnull=True).select_related("site")
-        for rack in racks:
-            rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
-        Rack.objects.bulk_update(racks, ["location"], 1000)
-
         # Below models' site attribute is not required, so we need to check each instance if the site field is not null
         # if so we reassign it to Site Location and if not we leave it alone
 
+        # IPAM App
         prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for prefix in prefixes:
             prefix.location = Location.objects.get(name=prefix.site.name, location_type=site_lt)
@@ -453,6 +442,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             vlan.location = Location.objects.get(name=vlan.site.name, location_type=site_lt)
         VLAN.objects.bulk_update(vlans, ["location"], 1000)
 
+        # Virtualization App
         clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for cluster in clusters:
             cluster.location = Location.objects.get(name=cluster.site.name, location_type=site_lt)
