@@ -1,8 +1,6 @@
 import django_filters
-from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from social_django.models import UserSocialAuth
 
 from nautobot.dcim.models import RackReservation
 from nautobot.extras.models import ObjectChange
