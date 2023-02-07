@@ -459,6 +459,7 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object:
             return selected_object.virtual_machine.name
+        return None
 
 
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
