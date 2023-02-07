@@ -13,6 +13,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
+        factory.LocationTypeFactory.create_batch(7)
         factory.LocationFactory.create_batch(15, has_parent=True, has_tenant=False)
 
     def tearDown(self):
