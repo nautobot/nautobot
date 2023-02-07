@@ -68,12 +68,12 @@ class UserFilterSet(BaseFilterSet):
         label="Object Permission (ID or name)",
     )
     has_rack_reservations = RelatedMembershipBooleanFilter(
-        field_name="rackreservation_set",
+        field_name="rackreservation",
         label="Has Changes",
     )
     # TODO(timizuo): Since RackReservation has no pk field yet, NaturalKeyOrPKMultipleChoiceFilter cant be used here
     rack_reservations_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="rackreservation_set",
+        field_name="rackreservation",
         queryset=RackReservation.objects.all(),
         label="Rack Reservation (ID)",
     )

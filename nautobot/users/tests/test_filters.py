@@ -1,4 +1,5 @@
 import datetime
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -6,6 +7,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import make_aware
 
 from nautobot.core.testing import FilterTestCases
+from nautobot.dcim.models import Rack, RackReservation, Site
+from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ObjectChange
 from nautobot.users.filters import (
     GroupFilterSet,
     ObjectPermissionFilterSet,
@@ -32,7 +36,7 @@ class UserTestCase(FilterTestCases.FilterTestCase):
             Group.objects.create(name="Group 3"),
         )
 
-        users = (
+        cls.users = (
             User.objects.create(
                 username="User1",
                 first_name="Hank",
@@ -66,9 +70,36 @@ class UserTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        users[0].groups.set([groups[0]])
-        users[1].groups.set([groups[1]])
-        users[2].groups.set([groups[2]])
+        cls.users[0].groups.set([groups[0]])
+        cls.users[1].groups.set([groups[1]])
+        cls.users[2].groups.set([groups[2]])
+
+        site = Site.objects.first()
+        cls.object_changes = [
+            ObjectChange.objects.create(
+                user=cls.users[num],
+                user_name=cls.users[num].username,
+                request_id=uuid.uuid4(),
+                action=ObjectChangeActionChoices.ACTION_CREATE,
+                changed_object=site,
+                object_repr=str(site),
+                object_data={"name": site.name, "slug": site.slug},
+            )
+            for num in range(3)
+        ]
+
+        cls.permissions = [
+            ObjectPermission.objects.create(name=f"Permission {num}", actions=["change"], enabled=False)
+            for num in range(3)
+        ]
+        cls.permissions[0].users.add(cls.users[0])
+        cls.permissions[1].users.add(cls.users[1])
+
+        # TODO(timizuo): Use RackReservation.objects.all() since records should be available to use from.
+        rack = Rack.objects.create(name="Rack", site=site)
+        cls.rack_reservations = [
+            RackReservation.objects.create(rack=rack, units=[1, 2, 3], user=cls.users[num]) for num in range(3)
+        ]
 
     def test_username(self):
         params = {"username": ["User1", "User2"]}
@@ -112,20 +143,65 @@ class UserTestCase(FilterTestCases.FilterTestCase):
             params = {"has_changes": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=False).distinct(),
+                self.queryset.filter(changes__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_changes": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=True).distinct(),
+                self.queryset.filter(changes__isnull=True).distinct(),
             )
 
     def test_changes(self):
-        params = {"changes": []}
+        changes = self.object_changes[:2]
+        params = {"changes": [changes[0].pk, changes[1].user.username]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(changes=False).distinct(),
+            self.queryset.filter(changes__in=changes).distinct(),
+        )
+
+    def test_has_object_permissions(self):
+        with self.subTest():
+            params = {"has_object_permissions": True}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(object_permissions__isnull=False).distinct(),
+            )
+        with self.subTest():
+            params = {"has_object_permissions": False}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(object_permissions__isnull=True).distinct(),
+            )
+
+    def test_object_permissions(self):
+        permissions = self.permissions[:2]
+        params = {"object_permissions": [permissions[0].pk, permissions[1].name]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(object_permissions__in=permissions).distinct(),
+        )
+
+    def test_has_rack_reservations(self):
+        with self.subTest():
+            params = {"has_rack_reservations": True}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(rackreservation__isnull=False).distinct(),
+            )
+        with self.subTest():
+            params = {"has_rack_reservations": False}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(rackreservation__isnull=True).distinct(),
+            )
+
+    def test_rack_reservations_id(self):
+        rack_reservations = self.rack_reservations[:2]
+        params = {"rack_reservations_id": [rack_reservations[0].pk, rack_reservations[1].pk]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(rackreservation__in=rack_reservations).distinct(),
         )
 
 
