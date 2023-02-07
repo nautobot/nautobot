@@ -141,6 +141,7 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
             return selected_object.device.name
+        return None
 
 
 #
