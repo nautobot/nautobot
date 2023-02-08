@@ -1121,7 +1121,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             request,
             template_name,  # 2.0 TODO: extras/job_submission.html
             {
-                "job_model": job_model,
+                "job": job_model,
                 "job_form": job_form,
                 "schedule_form": schedule_form,
             },
@@ -1247,7 +1247,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             request,
             template_name,
             {
-                "job_model": job_model,
+                "job": job_model,
                 "job_form": job_form,
                 "schedule_form": schedule_form,
             },
@@ -1288,7 +1288,7 @@ class JobApprovalRequestView(generic.ObjectView):
         We don't care to actually get any data back from the form as we will not ever change it.
         Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
         """
-        job_model = instance.job_model
+        job_model = instance.job
         if job_model is not None:
             job_class = job_model.job_class
         else:
@@ -1324,7 +1324,7 @@ class JobApprovalRequestView(generic.ObjectView):
         force_approve = "_force_approve" in post_data
         dry_run = "_dry_run" in post_data
 
-        job_model = scheduled_job.job_model
+        job_model = scheduled_job.job
 
         if dry_run:
             # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
@@ -1490,7 +1490,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user").prefetch_related("logs")
+    queryset = JobResult.objects.select_related("job", "obj_type", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1511,7 +1511,7 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.prefetch_related("job", "obj_type", "user")
     template_name = "extras/jobresult.html"
 
     def instance_to_csv(self, instance):
@@ -1534,7 +1534,7 @@ class JobResultView(generic.ObjectView):
 
         if "export" in request.GET:
             response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
-            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
+            underscore_filename = f"{instance.job.slug.replace('-', '_')}"
             formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
             filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
             response["Content-Disposition"] = f"attachment; filename={filename}"
@@ -1545,8 +1545,8 @@ class JobResultView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         associated_record = None
         job_class = None
-        if instance.job_model is not None:
-            job_class = instance.job_model.job_class
+        if instance.job is not None:
+            job_class = instance.job.job_class
         # 2.0 TODO: remove JobResult.related_object entirely
         related_object = instance.related_object
         if inspect.isclass(related_object) and issubclass(related_object, JobClass):

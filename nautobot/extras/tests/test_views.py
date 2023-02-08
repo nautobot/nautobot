@@ -1189,8 +1189,8 @@ class ApprovalQueueTestCase(
         """A user without run_job permission cannot dry-run a job."""
         self.add_permissions("extras.view_scheduledjob")
         instance = self._get_queryset().first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
+        instance.job.enabled = True
+        instance.job.save()
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
@@ -1206,14 +1206,14 @@ class ApprovalQueueTestCase(
         self.add_permissions("extras.view_scheduledjob")
         instance1, instance2 = self._get_queryset().all()[:2]
         data = {"_dry_run": True}
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance1.job_model.pk}, actions=["run"])
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance1.job.pk}, actions=["run"])
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        instance1.job_model.enabled = True
-        instance1.job_model.save()
-        instance2.job_model.enabled = True
-        instance2.job_model.save()
+        instance1.job.enabled = True
+        instance1.job.save()
+        instance2.job.enabled = True
+        instance2.job.save()
 
         response = self.client.post(self._get_url("view", instance2), data)
         self.assertHttpStatus(response, 200)
@@ -1228,9 +1228,9 @@ class ApprovalQueueTestCase(
         """Successfully request a dry run based on object-based run_job permissions."""
         self.add_permissions("extras.view_scheduledjob")
         instance = self._get_queryset().first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
+        instance.job.enabled = True
+        instance.job.save()
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job.pk}, actions=["run"])
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
@@ -1242,7 +1242,7 @@ class ApprovalQueueTestCase(
             1, len(JobResult.objects.all()), msg=extract_page_body(response.content.decode(response.charset))
         )
         job_result = JobResult.objects.first()
-        self.assertEqual(job_result.job_model, instance.job_model)
+        self.assertEqual(job_result.job, instance.job)
         self.assertEqual(job_result.user, self.user)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
@@ -1295,7 +1295,7 @@ class ApprovalQueueTestCase(
         obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
 
         # Give user approve_job permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
+        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job.pk})
         obj_perm.save()
         obj_perm.users.add(user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
@@ -1382,7 +1382,7 @@ class ApprovalQueueTestCase(
         obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
 
         # Give user approve_job permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
+        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job.pk})
         obj_perm.save()
         obj_perm.users.add(user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))

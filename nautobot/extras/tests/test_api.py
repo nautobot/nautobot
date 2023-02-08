@@ -1358,7 +1358,7 @@ class JobAPIRunTestMixin:
         # Assert that a JobResult was NOT created.
         self.assertFalse(JobResult.objects.exists())
 
-        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
+        # Assert that we have an immediate ScheduledJob and that it matches the job.
         schedule = ScheduledJob.objects.last()
         self.assertIsNotNone(schedule)
         self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)

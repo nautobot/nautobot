@@ -480,7 +480,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
-    # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
+    # We pass in job_class and job here partly for forward/backward compatibility logic, and
     # part fallback safety. It's mildly useful to store both the class_path string and the JobModel
     # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
     # null) you still have a bit of context on the ScheduledJob as to what it was originally
@@ -905,7 +905,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.select_related("job", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -969,7 +969,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     def approve(self, request, pk):
         scheduled_job = get_object_or_404(self.queryset, pk=pk)
 
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job, action="approve"):
             raise PermissionDenied("You do not have permission to approve this request.")
 
         # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
@@ -1011,7 +1011,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     def deny(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
 
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job, action="approve"):
             raise PermissionDenied("You do not have permission to deny this request.")
 
         scheduled_job.delete()
@@ -1035,7 +1035,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     @action(detail=True, url_path="dry-run", methods=["post"], permission_classes=[ScheduledJobViewPermissions])
     def dry_run(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-        job_model = scheduled_job.job_model
+        job_model = scheduled_job.job
         if job_model is None or not job_model.runnable:
             raise MethodNotAllowed("This job cannot be dry-run at this time.")
         if not Job.objects.check_perms(request.user, instance=job_model, action="run"):

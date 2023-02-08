@@ -677,13 +677,13 @@ class JobResultTable(BaseTable):
         template_code="""
             {% load helpers %}
             {% if perms.extras.run_job %}
-                {% if record.job_model and record.job_kwargs %}
-                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
+                {% if record.job and record.job_kwargs %}
+                    <a href="{% url 'extras:job_run' slug=record.job.slug %}?kwargs_from_job_result={{ record.pk }}"
                        class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                         <i class="mdi mdi-repeat"></i>
                     </a>
-                {% elif record.job_model is not None %}
-                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}" class="btn btn-primary btn-xs"
+                {% elif record.job is not None %}
+                    <a href="{% url 'extras:job_run' slug=record.job.slug %}" class="btn btn-primary btn-xs"
                        title="Run job">
                         <i class="mdi mdi-play"></i>
                     </a>
@@ -778,7 +778,7 @@ class ScheduledJobTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
+        fields = ("pk", "name", "job", "interval", "start_time", "last_run_at")
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
@@ -791,7 +791,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("name", "job_model", "interval", "user", "start_time", "actions")
+        fields = ("name", "job", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):

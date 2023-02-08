@@ -513,10 +513,10 @@ class JobResult(BaseModel, CustomFieldModel):
     This model stores the results from running a Job.
     """
 
-    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # Note that we allow job to be null and use models.SET_NULL here.
     # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
-    job_model = models.ForeignKey(
+    job = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
 
@@ -644,8 +644,8 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         A newer alternative to self.related_object that looks up an extras.models.Job instead of an extras.jobs.Job.
         """
-        if self.job_model is not None:
-            return self.job_model
+        if self.job is not None:
+            return self.job
         model_class = self.obj_type.model_class()
         if model_class is not None:
             if hasattr(model_class, "name"):
@@ -713,7 +713,7 @@ class JobResult(BaseModel, CustomFieldModel):
                     celery_kwargs["time_limit"] = job_model.time_limit
                 if not job_model.has_sensitive_variables:
                     job_result.job_kwargs = job_result_kwargs
-                job_result.job_model = job_model
+                job_result.job = job_model
                 job_result.save()
             except Job.DoesNotExist:
                 # 2.0 TODO: remove this fallback logic, database records should always exist
@@ -837,10 +837,10 @@ class ScheduledJob(BaseModel):
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
         db_index=True,
     )
-    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # Note that we allow job to be null and use models.SET_NULL here.
     # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
-    job_model = models.ForeignKey(
+    job = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
     )
     job_class = models.CharField(
