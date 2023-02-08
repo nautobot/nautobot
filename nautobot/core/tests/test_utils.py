@@ -454,7 +454,7 @@ class LookupRelatedFunctionTest(TestCase):
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
         with self.subTest("Test ChoiceField"):
-            location_fields = ["has_devices"]
+            location_fields = ["has_circuit_terminations", "has_devices"]
             for field_name in location_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
                 self.assertIsInstance(form_field, django_forms.ChoiceField)

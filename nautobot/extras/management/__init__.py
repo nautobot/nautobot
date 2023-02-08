@@ -74,10 +74,10 @@ DESCRIPTION_MAP = {
     "planned": "Unit has been planned",
     "provisioning": "Circuit is being provisioned",
     "reserved": "Unit is reserved",
-    "retired": "Site or Location has been retired",
+    "retired": "Location has been retired",
     "slaac": "Dynamically assigned IPv6 address",
     "staged": "Unit has been staged",
-    "staging": "Site or Location is in the process of being staged",
+    "staging": "Location is in the process of being staged",
 }
 
 

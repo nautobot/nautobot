@@ -70,49 +70,50 @@ def handle_rackgroup_location_change(instance, created, **kwargs):
     through child locations to find the "right" one, the best we can do is to raise to raise a ValidationError
     and roll back the changes we made.
     """
+    if created:
+        return
     with transaction.atomic():
-        if not created:
-            descendants = instance.location.descendants(include_self=True)
-            content_types = instance.location.location_type.content_types.all()
-            rack_groups_permitted = ContentType.objects.get_for_model(RackGroup) in content_types
-            racks_permitted = ContentType.objects.get_for_model(Rack) in content_types
-            power_panels_permitted = ContentType.objects.get_for_model(PowerPanel) in content_types
+        descendants = instance.location.descendants(include_self=True)
+        content_types = instance.location.location_type.content_types.all()
+        rack_groups_permitted = ContentType.objects.get_for_model(RackGroup) in content_types
+        racks_permitted = ContentType.objects.get_for_model(Rack) in content_types
+        power_panels_permitted = ContentType.objects.get_for_model(PowerPanel) in content_types
 
-            for rackgroup in instance.children.all():
-                if rackgroup.location not in descendants:
-                    if not rack_groups_permitted:
-                        raise ValidationError(
-                            {
-                                f"location {instance.location.name}": "RackGroups may not associate to locations of type "
-                                f'"{instance.location.location_type}"'
-                            }
-                        )
-                    rackgroup.location = instance.location
-                    rackgroup.save()
+        for rackgroup in instance.children.all():
+            if rackgroup.location not in descendants:
+                if not rack_groups_permitted:
+                    raise ValidationError(
+                        {
+                            f"location {instance.location.name}": "RackGroups may not associate to locations of type "
+                            f'"{instance.location.location_type}"'
+                        }
+                    )
+                rackgroup.location = instance.location
+                rackgroup.save()
 
-            for rack in Rack.objects.filter(group=instance):
-                if rack.location not in descendants:
-                    if not racks_permitted:
-                        raise ValidationError(
-                            {
-                                f"location {instance.location.name}": "Racks may not associate to locations of type "
-                                f'"{instance.location.location_type}"'
-                            }
-                        )
-                    rack.location = instance.location
-                    rack.save()
+        for rack in Rack.objects.filter(group=instance):
+            if rack.location not in descendants:
+                if not racks_permitted:
+                    raise ValidationError(
+                        {
+                            f"location {instance.location.name}": "Racks may not associate to locations of type "
+                            f'"{instance.location.location_type}"'
+                        }
+                    )
+                rack.location = instance.location
+                rack.save()
 
-            for powerpanel in PowerPanel.objects.filter(rack_group=instance):
-                if powerpanel.location not in descendants:
-                    if not power_panels_permitted:
-                        raise ValidationError(
-                            {
-                                f"location {instance.location.name}": "PowerPanels may not associate to locations of type "
-                                f'"{instance.location.location_type}"'
-                            }
-                        )
-                    powerpanel.location = instance.location
-                    powerpanel.save()
+        for powerpanel in PowerPanel.objects.filter(rack_group=instance):
+            if powerpanel.location not in descendants:
+                if not power_panels_permitted:
+                    raise ValidationError(
+                        {
+                            f"location {instance.location.name}": "PowerPanels may not associate to locations of type "
+                            f'"{instance.location.location_type}"'
+                        }
+                    )
+                powerpanel.location = instance.location
+                powerpanel.save()
 
 
 @receiver(post_save, sender=Rack)
@@ -125,23 +126,24 @@ def handle_rack_location_change(instance, created, **kwargs):
     through child locations to find the "right" one, the best we can do is to raise a ValidationError
     and roll back the changes we made.
     """
+    if created:
+        return
     with transaction.atomic():
-        if not created:
-            devices_permitted = (
-                ContentType.objects.get_for_model(Device) in instance.location.location_type.content_types.all()
-            )
+        devices_permitted = (
+            ContentType.objects.get_for_model(Device) in instance.location.location_type.content_types.all()
+        )
 
-            for device in Device.objects.filter(rack=instance):
-                if device.location != instance.location:
-                    if not devices_permitted:
-                        raise ValidationError(
-                            {
-                                f"location {instance.location.name}": "Devices may not associate to locations of type "
-                                f'"{instance.location.location_type}"'
-                            }
-                        )
-                    device.location = instance.location
-                    device.save()
+        for device in Device.objects.filter(rack=instance):
+            if device.location != instance.location:
+                if not devices_permitted:
+                    raise ValidationError(
+                        {
+                            f"location {instance.location.name}": "Devices may not associate to locations of type "
+                            f'"{instance.location.location_type}"'
+                        }
+                    )
+                device.location = instance.location
+                device.save()
 
 
 #

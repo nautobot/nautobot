@@ -269,6 +269,10 @@ class RackGroupTestCase(TestCase):
         with self.assertRaises(ValidationError) as cm:
             self.rackgroup_a1.save()
         self.assertIn(f'Racks may not associate to locations of type "{location_type_c}"', str(cm.exception))
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, self.location_a)
+        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, self.location_a)
+        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, self.location_a)
+        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, self.location_a)
 
 
 class RackTestCase(TestCase):

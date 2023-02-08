@@ -271,6 +271,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         field_name="devices",
         label="Has devices",
     )
+    has_circuit_terminations = RelatedMembershipBooleanFilter(
+        field_name="circuit_terminations",
+        label="Has circuit terminations",
+    )
     # The reverse relation here is misnamed as `powerpanel`, but fixing it would be a breaking API change.
     # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
     power_panels = NaturalKeyOrPKMultipleChoiceFilter(
