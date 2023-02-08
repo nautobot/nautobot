@@ -125,10 +125,11 @@ With this schedule you can expect a few things per major/minor release:
 * `x.0.0`
     * Introduce breaking changes.
     * Changing default behavior for user interfaces, APIs, and functions.
+    * Removal of deprecated REST API versions and possibly functions and classes.
 * `x.1.z`
     * Typical minor release, adding features, bug fixes, potential deprecations.
 * `x.2.z`
-    * Removal of deprecated functions, classes introduced in the previous major release (ex: only if deprecated in `1.y`, removed in `2.2`).
+    * Removal of the remainder of deprecated functions, classes introduced in the previous major release (ex: only if deprecated in `1.y`, removed in `2.2`).
 * `x.3.z`
     * Maintenance release candidate.
     * Features may be added in `x.3.0` but nothing further in this cycle.
@@ -152,19 +153,21 @@ If for any reason the next maintenance release is delayed, we will continue to s
 
 ### Deprecation Policy
 
-Functionality, features, or Python primitives that have been deprecated will be removed in the following major train's `x.2` release (ex: if deprecated in `1.y`, removed in `2.2`).
+Functionality, features, or Python primitives that have been deprecated will be planned to be removed in the following major train's `x.2` release (ex: if deprecated in `1.y`, removed in `2.2`).
 
 To provide assistance for knowing what features and functionality have been deprecated, additional transition features are as follows:
 
 * Python primitives that have been deprecated will emit a `DeprecationWarning`, along with a message to which objects will be replacing them. The new objects may not be a direct replacement so please check the release notes and documentation for more migration information.
-* Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+* Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions will be removed. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
 * We will drop support for Python versions on a case-by-case basis: A patch release may drop support for a Python version if a security update of a critical dependency would require split or conditional support. For example, if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and will tend to occur on minor release boundaries.
 * Any deprecation notice (announcement or removal) will be available in our release notes.
 
 !!! warning "Backwards-Incompatible Changes and Deprecations"
-    Breaking changes in a `x.0.0` release may have an effect on deprecated APIs. While we do our best to keep the deprecated APIs intact to simplify migrations to newer releases, breaking changes are inherently breaking and will cause some changes to current and previous API versions. Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
+    Deprecated APIs will be removed in a `x.0.0` release. Deprecated APIs are kept intact during the same major release to simplify migrations to newer minor releases, however even subtle breaking changes are inherently breaking and will cause some changes to previous API versions. Therefor it is preferred to prevent accidental errors when fields in previous versions cannot be kept intact.  Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
 
     For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there would no longer be a `site` property on objects such as `Device` as well as no `/api/dcim/sites` or `/api/dcim/regions` API endpoints.
+
+    Previously deprecated Python APIs may still be kept around on a case-by-case basis if adapting those changes are minimal, but in the example above, `.site` will no longer be available property on `Device`.
 
     We will document in major releases how breaking changes will affect existing APIs and Python primitives. Backwards-compatible changes would still be kept around following the normal deprecation policy.
 
