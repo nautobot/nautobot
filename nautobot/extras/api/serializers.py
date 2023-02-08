@@ -500,11 +500,11 @@ class CustomFieldSerializerVersion12(CustomFieldSerializer):
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
-    field = NestedCustomFieldSerializer()
+    custom_field = NestedCustomFieldSerializer()
 
     class Meta:
         model = CustomFieldChoice
-        fields = ["url", "field", "value", "weight"]
+        fields = ["url", "custom_field", "value", "weight"]
 
 
 #

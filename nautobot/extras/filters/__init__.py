@@ -366,7 +366,7 @@ class CustomFieldFilterSet(BaseFilterSet):
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
     field_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="field",
+        field_name="custom_field",
         queryset=CustomField.objects.all(),
         label="Field",
     )

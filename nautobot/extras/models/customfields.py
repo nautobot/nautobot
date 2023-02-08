@@ -673,7 +673,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     The custom field choice is used to store the possible set of values for a selection type custom field
     """
 
-    field = models.ForeignKey(
+    custom_field = models.ForeignKey(
         to="extras.CustomField",
         on_delete=models.CASCADE,
         related_name="custom_field_choices",
@@ -685,18 +685,18 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     class Meta:
-        ordering = ["field", "weight", "value"]
-        unique_together = ["field", "value"]
+        ordering = ["custom_field", "weight", "value"]
+        unique_together = ["custom_field", "value"]
 
     def __str__(self):
         return self.value
 
     def clean(self):
-        if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
+        if self.custom_field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
 
-        if not re.search(self.field.validation_regex, self.value):
-            raise ValidationError(f"Value must match regex {self.field.validation_regex} got {self.value}.")
+        if not re.search(self.custom_field.validation_regex, self.value):
+            raise ValidationError(f"Value must match regex {self.custom_field.validation_regex} got {self.value}.")
 
     def save(self, *args, **kwargs):
         """
@@ -711,32 +711,32 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         if self.value != database_object.value:
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+                lambda: update_custom_field_choice_data.delay(self.custom_field.pk, database_object.value, self.value)
             )
 
     def delete(self, *args, **kwargs):
         """
         When a custom field choice is deleted, remove references to in custom field data
         """
-        if self.field.default:
+        if self.custom_field.default:
             # Cannot delete the choice if it is the default value.
-            if self.field.type == CustomFieldTypeChoices.TYPE_SELECT and self.field.default == self.value:
+            if self.custom_field.type == CustomFieldTypeChoices.TYPE_SELECT and self.custom_field.default == self.value:
                 raise models.ProtectedError(
                     msg="Cannot delete this choice because it is the default value for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
-            elif self.value in self.field.default:
+            elif self.value in self.custom_field.default:
                 raise models.ProtectedError(
                     msg="Cannot delete this choice because it is one of the default values for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
 
-        if self.field.type == CustomFieldTypeChoices.TYPE_SELECT:
+        if self.custom_field.type == CustomFieldTypeChoices.TYPE_SELECT:
             # Check if this value is in active use in a select field
-            for ct in self.field.content_types.all():
+            for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
                 # 2.0 TODO: #824 self.field.slug instead of self.field.name
-                if model.objects.filter(**{f"_custom_field_data__{self.field.name}": self.value}).exists():
+                if model.objects.filter(**{f"_custom_field_data__{self.custom_field.name}": self.value}).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
@@ -744,10 +744,10 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         else:
             # Check if this value is in active use in a multi-select field
-            for ct in self.field.content_types.all():
+            for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
                 # 2.0 TODO: #824 self.field.slug instead of self.field.name
-                if model.objects.filter(**{f"_custom_field_data__{self.field.name}__contains": self.value}).exists():
+                if model.objects.filter(**{f"_custom_field_data__{self.custom_field.name}__contains": self.value}).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
@@ -758,7 +758,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the parent field
         try:
-            field = self.field
+            field = self.custom_field
         except ObjectDoesNotExist:
             # The parent field has already been deleted
             field = None

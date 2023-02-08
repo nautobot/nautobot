@@ -1030,15 +1030,15 @@ class CustomFieldDataAPITest(APITestCase):
         self.cf_select.validation_regex = r"^[A-Z]{3}$"  # Three uppercase letters
         self.cf_select.save()
 
-        data = {"field": self.cf_select.id, "value": "1234", "weight": 100}
+        data = {"custom_field": self.cf_select.id, "value": "1234", "weight": 100}
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-        data = {"field": self.cf_select.id, "value": "abc", "weight": 100}
+        data = {"custom_field": self.cf_select.id, "value": "abc", "weight": 100}
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-        data = {"field": self.cf_select.id, "value": "ABC", "weight": 100}
+        data = {"custom_field": self.cf_select.id, "value": "ABC", "weight": 100}
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
