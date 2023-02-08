@@ -1,5 +1,6 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
+import copy
 import inspect
 import json
 import logging
@@ -1182,6 +1183,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # moved as we get closer to eliminating `run_job()` entirely. Hint: Probably inside of
         # `NautobotTask` class.
         finally:
+            _data = copy.deepcopy(job_result.data)
+            job_result.refresh_from_db()
+            job_result.data = _data
             try:
                 job_result.save()
             except IntegrityError:
