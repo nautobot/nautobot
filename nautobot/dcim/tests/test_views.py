@@ -95,8 +95,8 @@ def create_test_device(name):
     """
     Convenience method for creating a Device (e.g. for component testing).
     """
-    location_type = LocationType.objects.get(name="Campus")
-    location, _ = Location.objects.get_or_create(name="Location 1", slug="location-1", location_type=location_type)
+    location_type, _ = LocationType.objects.get_or_create(name="Campus")
+    location, _ = Location.objects.get_or_create(name="Test Location 1", slug="test-location-1", location_type=location_type)
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")

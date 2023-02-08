@@ -23,6 +23,7 @@ def create_test_device():
     location = Location.objects.create(
         name=f"Test Location {test_uuid}",
         status=Status.objects.get_for_model(Location).get(slug="active"),
+        location_type=location_type,
     )
     device = Device.objects.create(
         name=f"Test Device {test_uuid}",
