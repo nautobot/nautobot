@@ -1258,7 +1258,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
     # a `through` table, that appears very non-trivial to implement. For now we have this as a
     # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
     # api/extras/secrets-group-associations/ REST endpoint as appropriate.
-    secrets = NestedSecretsGroupAssociationSerializer(source="secretsgroupassociation_set", many=True, read_only=True)
+    secrets = NestedSecretsGroupAssociationSerializer(source="secrets_group_associations", many=True, read_only=True)
 
     class Meta:
         model = SecretsGroup

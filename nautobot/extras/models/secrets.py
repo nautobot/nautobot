@@ -123,7 +123,7 @@ class SecretsGroup(OrganizationalModel):
     slug = AutoSlugField(populate_from="name", unique=True)
     description = models.CharField(max_length=200, blank=True)
     secrets = models.ManyToManyField(
-        to=Secret, related_name="groups", through="extras.SecretsGroupAssociation", blank=True
+        to=Secret, related_name="secrets_groups", through="extras.SecretsGroupAssociation", blank=True
     )
 
     csv_headers = ["name", "slug", "description"]
@@ -152,8 +152,8 @@ class SecretsGroup(OrganizationalModel):
 class SecretsGroupAssociation(BaseModel):
     """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
 
-    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
-    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
+    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE, related_name="secrets_group_associations")
+    secret = models.ForeignKey(Secret, on_delete=models.CASCADE, related_name="secrets_group_associations")
 
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)

@@ -691,7 +691,9 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
 @extras_features("custom_validators")
 class RelationshipAssociation(BaseModel):
-    relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
+    relationship = models.ForeignKey(
+        to="extras.Relationship", on_delete=models.CASCADE, related_name="relationship_associations"
+    )
 
     source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     source_id = models.UUIDField(db_index=True)

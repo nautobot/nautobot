@@ -79,6 +79,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         default=None,
         null=True,
         blank=True,
+        related_name="config_contexts",
     )
     owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
@@ -97,6 +98,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",
+        related_name="config_contexts",
     )
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
@@ -260,6 +262,7 @@ class ConfigContextSchema(OrganizationalModel):
         default=None,
         null=True,
         blank=True,
+        related_name="config_context_schemas",
     )
     owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
@@ -320,6 +323,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_links"),
+        related_name="custom_links",
     )
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
@@ -366,6 +370,8 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 )
 class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    # FIXME(timizuo): Related_name cannot be updated to `export_templates` as it collides with
+    #  ExportTemplate.owner_content_type related name
     owner_content_type = models.ForeignKey(
         to=ContentType,
         related_name="export_template_owners",
@@ -384,6 +390,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("export_templates"),
+        related_name="export_templates",
     )
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200, blank=True)
@@ -602,7 +609,7 @@ class ImageAttachment(BaseModel):
     An uploaded image which is associated with an object.
     """
 
-    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="image_attachments")
     object_id = models.UUIDField(db_index=True)
     parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
@@ -665,13 +672,13 @@ class Note(BaseModel, ChangeLoggedModel):
     Notes allow anyone with proper permissions to add a note to an object.
     """
 
-    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="notes")
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="note",
+        related_name="notes",
         blank=True,
         null=True,
     )

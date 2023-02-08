@@ -414,10 +414,10 @@ class CustomFieldTestCase(
             "filter_logic": "loose",
             "weight": 100,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
-            "choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
-            "choices-INITIAL_FORMS": "1",
-            "choices-MIN_NUM_FORMS": "0",
-            "choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
         }
 
     def test_create_object_without_permission(self):
@@ -766,10 +766,10 @@ class SecretsGroupTestCase(
             "slug": "group-4",
             "description": "Some description",
             # Management form fields required for the dynamic Secret formset
-            "secretsgroupassociation_set-TOTAL_FORMS": "0",
-            "secretsgroupassociation_set-INITIAL_FORMS": "1",
-            "secretsgroupassociation_set-MIN_NUM_FORMS": "0",
-            "secretsgroupassociation_set-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-TOTAL_FORMS": "0",
+            "secrets_group_associations-INITIAL_FORMS": "1",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
 
         cls.slug_source = "name"

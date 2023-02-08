@@ -320,7 +320,7 @@ class Job(PrimaryModel):
     @property
     def latest_result(self):
         if self._latest_result is None:
-            self._latest_result = self.results.first()
+            self._latest_result = self.job_results.first()
         return self._latest_result
 
     @property
@@ -387,7 +387,7 @@ class JobHook(OrganizationalModel):
     enabled = models.BooleanField(default=True)
     job = models.ForeignKey(
         to=Job,
-        related_name="job_hook",
+        related_name="job_hooks",
         verbose_name="Job",
         help_text="The job that this job hook will initiate",
         on_delete=models.CASCADE,
@@ -471,7 +471,7 @@ class JobHook(OrganizationalModel):
 class JobLogEntry(BaseModel):
     """Stores each log entry for the JobResult."""
 
-    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="logs")
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_log_entries")
     log_level = models.CharField(
         max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT, db_index=True
     )
@@ -517,7 +517,7 @@ class JobResult(BaseModel, CustomFieldModel):
     # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
     job_model = models.ForeignKey(
-        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
 
     name = models.CharField(max_length=255, db_index=True)
@@ -542,7 +542,9 @@ class JobResult(BaseModel, CustomFieldModel):
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
     job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
+    schedule = models.ForeignKey(
+        to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True, related_name="job_results"
+    )
     """
     Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
 

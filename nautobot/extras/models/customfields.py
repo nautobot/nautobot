@@ -61,6 +61,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
+        related_name="computed_fields",
     )
     slug = AutoSlugField(
         populate_from="label",
@@ -463,7 +464,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             )
 
         # Choices can be set only on selection fields
-        if self.choices.exists() and self.type not in (
+        if self.custom_field_choices.exists() and self.type not in (
             CustomFieldTypeChoices.TYPE_SELECT,
             CustomFieldTypeChoices.TYPE_MULTISELECT,
         ):
@@ -473,7 +474,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         if (
             self.type == CustomFieldTypeChoices.TYPE_SELECT
             and self.default
-            and self.default not in self.choices.values_list("value", flat=True)
+            and self.default not in self.custom_field_choices.values_list("value", flat=True)
         ):
             raise ValidationError(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
@@ -555,8 +556,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         # Select or Multi-select
         else:
-            choices = [(cfc.value, cfc.value) for cfc in self.choices.all()]
-            default_choice = self.choices.filter(value=self.default).first()
+            choices = [(cfc.value, cfc.value) for cfc in self.custom_field_choices.all()]
+            default_choice = self.custom_field_choices.filter(value=self.default).first()
 
             if not required or default_choice is None:
                 choices = add_blank_choice(choices)
@@ -634,15 +635,15 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
             # Validate selected choice
             if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if value not in self.choices.values_list("value", flat=True):
+                if value not in self.custom_field_choices.values_list("value", flat=True):
                     raise ValidationError(
-                        f"Invalid choice ({value}). Available choices are: {', '.join(self.choices.values_list('value', flat=True))}"
+                        f"Invalid choice ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
                     )
 
             if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                if not set(value).issubset(self.choices.values_list("value", flat=True)):
+                if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
                     raise ValidationError(
-                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices.values_list('value', flat=True))}"
+                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
                     )
 
         elif self.required:
@@ -675,7 +676,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     field = models.ForeignKey(
         to="extras.CustomField",
         on_delete=models.CASCADE,
-        related_name="choices",
+        related_name="custom_field_choices",
         limit_choices_to=models.Q(
             type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
         ),

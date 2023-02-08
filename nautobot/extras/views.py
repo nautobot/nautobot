@@ -1086,7 +1086,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         if "kwargs_from_job_result" in initial:
             job_result_pk = initial.pop("kwargs_from_job_result")
             try:
-                job_result = job_model.results.get(pk=job_result_pk)
+                job_result = job_model.job_results.get(pk=job_result_pk)
                 # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
                 # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                 explicit_initial = initial
@@ -1915,7 +1915,7 @@ class SecretView(generic.ObjectView):
 
         provider = registry["secrets_providers"].get(instance.provider)
 
-        groups = instance.groups.distinct()
+        groups = instance.secrets_groups.distinct()
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {

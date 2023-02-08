@@ -713,7 +713,7 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
-        log_objects = record.logs.all()
+        log_objects = record.job_log_entries.all()
         success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
