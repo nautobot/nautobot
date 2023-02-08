@@ -677,13 +677,13 @@ class JobResultTable(BaseTable):
         template_code="""
             {% load helpers %}
             {% if perms.extras.run_job %}
-                {% if record.job and record.job_kwargs %}
-                    <a href="{% url 'extras:job_run' slug=record.job.slug %}?kwargs_from_job_result={{ record.pk }}"
+                {% if record.job_model and record.job_kwargs %}
+                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
                        class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                         <i class="mdi mdi-repeat"></i>
                     </a>
-                {% elif record.job is not None %}
-                    <a href="{% url 'extras:job_run' slug=record.job.slug %}" class="btn btn-primary btn-xs"
+                {% elif record.job_model is not None %}
+                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}" class="btn btn-primary btn-xs"
                        title="Run job">
                         <i class="mdi mdi-play"></i>
                     </a>

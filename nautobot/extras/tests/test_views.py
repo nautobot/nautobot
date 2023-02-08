@@ -1244,7 +1244,7 @@ class ApprovalQueueTestCase(
             1, len(JobResult.objects.all()), msg=extract_page_body(response.content.decode(response.charset))
         )
         job_result = JobResult.objects.first()
-        self.assertEqual(job_result.job, instance.job)
+        self.assertEqual(job_result.job_model, instance.job_model)
         self.assertEqual(job_result.user, self.user)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 

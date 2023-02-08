@@ -836,7 +836,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
-    job = NestedJobSerializer(read_only=True)
+    job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
     scheduled_job = NestedScheduledJobSerializer(read_only=True)
 
@@ -847,7 +847,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
             "created",
             "completed",
             "name",
-            "job",
+            "job_model",
             "obj_type",
             "status",
             "user",

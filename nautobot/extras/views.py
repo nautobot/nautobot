@@ -1121,7 +1121,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             request,
             template_name,  # 2.0 TODO: extras/job_submission.html
             {
-                "job": job_model,
+                "job_model": job_model,
                 "job_form": job_form,
                 "schedule_form": schedule_form,
             },
@@ -1247,7 +1247,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             request,
             template_name,
             {
-                "job": job_model,
+                "job_model": job_model,
                 "job_form": job_form,
                 "schedule_form": schedule_form,
             },
@@ -1511,7 +1511,7 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.prefetch_related("job", "obj_type", "user")
+    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
 
     def instance_to_csv(self, instance):
@@ -1534,7 +1534,7 @@ class JobResultView(generic.ObjectView):
 
         if "export" in request.GET:
             response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
-            underscore_filename = f"{instance.job.slug.replace('-', '_')}"
+            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
             formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
             filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
             response["Content-Disposition"] = f"attachment; filename={filename}"
@@ -1545,7 +1545,7 @@ class JobResultView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         associated_record = None
         job_class = None
-        if instance.job is not None:
+        if instance.job_model is not None:
             job_class = instance.job.job_class
         # 2.0 TODO: remove JobResult.related_object entirely
         related_object = instance.related_object
