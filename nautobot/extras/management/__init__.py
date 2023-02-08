@@ -140,12 +140,14 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
+
+    # Only print a newline if we have verbosity!
+    if verbosity > 0:
+        print("\n", end="")
+
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
-
-    if verbosity >= 0:
-        print("\n", end="")
 
     if not models:
         models = CHOICESET_MAP.keys()

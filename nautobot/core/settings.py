@@ -187,7 +187,7 @@ REST_FRAMEWORK = {
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
     "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
-    "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
+    "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
@@ -247,21 +247,6 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
-        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
-        #   enum naming encountered a non-optimally resolvable collision for fields named "status"
-        # By explicitly naming the enums ourselves we avoid this warning.
-        "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
-        "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
-        "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
-        "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
-        "IPAddressStatusChoices": "nautobot.ipam.api.serializers.IPAddressSerializer.status_choices",
-        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
-        "PowerFeedStatusChoices": "nautobot.dcim.api.serializers.PowerFeedSerializer.status_choices",
-        "PrefixStatusChoices": "nautobot.ipam.api.serializers.PrefixSerializer.status_choices",
-        "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
-        "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
-        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
         # result in this error:
         #   encountered multiple names for the same choice set
@@ -726,6 +711,18 @@ CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "def
 # while exceeding the hard limit will result in a SIGKILL.
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
+
+# Ports for prometheus metric HTTP server running on the celery worker.
+# Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
+# sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
+# highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then
+# use the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in
+# that case. Set this to an empty string to disable it.
+CELERY_WORKER_PROMETHEUS_PORTS = []
+if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
+    CELERY_WORKER_PROMETHEUS_PORTS = [
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
+    ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization

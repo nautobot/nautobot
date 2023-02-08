@@ -243,18 +243,18 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
         cls.sites = Site.objects.all()[:3]
 
-        statuses = Status.objects.get_for_model(Prefix)
+        cls.statuses = Status.objects.get_for_model(Prefix)
 
         cls.prefixes = [
-            Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), site=cls.sites[0], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.1.0/24"), site=cls.sites[0], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.2.0/24"), site=cls.sites[0], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.3.0/24"), site=cls.sites[1], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.4.0/24"), site=cls.sites[1], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.5.0/24"), site=cls.sites[1], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.6.0/24"), site=cls.sites[2], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.7.0/24"), site=cls.sites[2], status=statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.8.0/24"), site=cls.sites[2], status=statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), site=cls.sites[0], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.1.0/24"), site=cls.sites[0], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.2.0/24"), site=cls.sites[0], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.3.0/24"), site=cls.sites[1], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.4.0/24"), site=cls.sites[1], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.5.0/24"), site=cls.sites[1], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.6.0/24"), site=cls.sites[2], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.7.0/24"), site=cls.sites[2], status=cls.statuses[0]),
+            Prefix.objects.create(prefix=IPNetwork("10.0.8.0/24"), site=cls.sites[2], status=cls.statuses[0]),
         ]
 
     def setUp(self):
@@ -320,7 +320,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         data = {
             "prefix": "10.0.9.0/24",
             "site": self.sites[1].pk,
-            "status": "active",
+            "status": self.statuses[1].pk,
         }
         initial_count = Prefix.objects.count()
 
@@ -373,7 +373,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 404)
 
         # Edit a permitted object
-        data["status"] = "reserved"
+        data["status"] = self.statuses[1].pk
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 200)

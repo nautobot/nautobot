@@ -745,14 +745,14 @@ graph = ["objgraph (>=1.7.2)"]
 
 [[package]]
 name = "django"
-version = "3.2.16"
+version = "3.2.17"
 description = "A high-level Python Web framework that encourages rapid development and clean, pragmatic design."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "Django-3.2.16-py3-none-any.whl", hash = "sha256:18ba8efa36b69cfcd4b670d0fa187c6fe7506596f0ababe580e16909bcdec121"},
-    {file = "Django-3.2.16.tar.gz", hash = "sha256:3adc285124244724a394fa9b9839cc8cd116faf7d159554c43ecdaa8cdf0b94d"},
+    {file = "Django-3.2.17-py3-none-any.whl", hash = "sha256:59c39fc342b242fb42b6b040ad8b1b4c15df438706c1d970d416d63cdd73e7fd"},
+    {file = "Django-3.2.17.tar.gz", hash = "sha256:644288341f06ebe4938eec6801b6bd59a6534a78e4aedde2a153075d11143894"},
 ]
 
 [package.dependencies]
@@ -4124,4 +4124,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "ade938e883eaf9dc6c6126eabf7ab7e642272857c3692e996cd01e90e71a9052"
+content-hash = "6c952c3c8bcbea22e8c79e3e28e9d9352c539863ad60d6d561430e72752bb7be"

@@ -233,7 +233,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "my_field": "ABC",
                 "my_field_select": "Bar",
@@ -269,7 +269,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Site X",
             "slug": "test-site-x",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "custom_fields": {
                 "my_field": "DEF",
                 "my_field_select": "Foo",
@@ -360,7 +360,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.add_permissions("dcim.add_site")
 
@@ -378,7 +378,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 2",
             "slug": "test-site-2",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.add_permissions("dcim.add_site")
 
@@ -398,7 +398,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.add_permissions("dcim.add_site")
 
@@ -417,7 +417,7 @@ class ChangeLogAPITest(APITestCase):
         site_payload = {
             "name": "Test Site 1",
             "slug": "test-site-1",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.add_site")

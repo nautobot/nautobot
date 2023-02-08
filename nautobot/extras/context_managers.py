@@ -114,9 +114,10 @@ def web_request_context(user, context_detail="", change_id=None):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
-    nbshell management command. By default, when working with the Django ORM, neither change logging nor webhook
-    processing occur unless manually invoked and this context manager handles those functions. A valid User object
-    must be provided.
+    'nautobot-server nbshell' management command.
+
+    By default, when working with the Django ORM, neither change logging nor webhook processing occur
+    unless manually invoked and this context manager handles those functions. A valid User object must be provided.
 
     Example usage:
 

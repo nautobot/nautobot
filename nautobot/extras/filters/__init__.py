@@ -633,13 +633,13 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Job (ID)",
     )
     obj_type = ContentTypeFilter()
-    created = django_filters.DateTimeFilter()
-    completed = django_filters.DateTimeFilter()
+    date_created = django_filters.DateTimeFilter()
+    date_done = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
-        fields = ["id", "created", "completed", "status", "user", "obj_type", "name"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user", "obj_type"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

@@ -190,8 +190,9 @@ Available tasks:
   black                  Check Python code style with Black.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
+  build-dependencies
   buildx                 Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
-                         capablility).
+                         capability).
   check-migrations       Check for missing migrations.
   check-schema           Render the REST API schema and check for problems.
   cli                    Launch a bash shell inside the running Nautobot (or other) Docker container.
@@ -207,11 +208,12 @@ Available tasks:
   makemigrations         Perform makemigrations operation in Django.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
-  nbshell                Launch an interactive nbshell session.
-  performance-test       Run Nautobot performance specific unit tests.
+  nbshell                Launch an interactive Nautobot shell.
+  performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
+  serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
@@ -513,9 +515,17 @@ nautobot-server nbshell
 Example output:
 
 ```no-highlight
-### Nautobot interactive shell (localhost)
-### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
-### lsmodels() will show available models. Use help(<model>) for more info.
+# Shell Plus Model Imports
+...
+# Shell Plus Django Imports
+...
+# Django version 3.2.16
+# Nautobot version 2.0.0a0
+# Example Nautobot App version 1.0.0
+Python 3.7.13 (default, May 11 2022, 08:57:12)
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
 >>>
 ```
 

@@ -9,7 +9,6 @@ from nautobot.extras.api.views import (
     NautobotModelViewSet,
     ModelViewSet,
     NotesViewSetMixin,
-    StatusViewSetMixin,
 )
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
@@ -66,7 +65,7 @@ class ClusterViewSet(NautobotModelViewSet):
 #
 
 
-class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
+class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     queryset = VirtualMachine.objects.select_related(
         "cluster__location",
         "platform",
@@ -116,7 +115,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
     retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
-class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
+class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = VMInterface.objects.select_related(
         "virtual_machine",
         "parent_interface",

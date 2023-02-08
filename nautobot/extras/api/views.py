@@ -19,7 +19,6 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.utils import (
     get_serializer_for_model,
     SerializerForAPIVersions,
@@ -254,7 +253,6 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     ),
 )
 class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
@@ -364,7 +362,6 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 
 
 class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
@@ -435,7 +432,6 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
 
 
 class ImageAttachmentViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
@@ -452,7 +448,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
-    job_kwargs = {
+    task_kwargs = {
         "data": data,
         "request": copy_safe_request(request),
         "user": request.user.pk,
@@ -491,7 +487,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
         job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
-        kwargs=job_kwargs,
+        kwargs=task_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
@@ -708,10 +704,10 @@ class JobViewSet(
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
             .defer("data")
-            .order_by("created")
+            .order_by("date_created")
         }
 
         job_models = Job.objects.restrict(request.user, "view")
@@ -757,7 +753,7 @@ class JobViewSet(
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
             name=job.class_path,
-            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+            status__in=JobResultStatusChoices.READY_STATES,
         ).first()
 
         serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
@@ -1064,7 +1060,6 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 
 class NoteViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -1084,7 +1079,6 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     Retrieve a list of recent changes.
     """
 
-    metadata_class = ContentTypeMetadata
     queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
@@ -1096,14 +1090,12 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 
 
 class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
     filterset_class = filters.RelationshipFilterSet
 
 
 class RelationshipAssociationViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
@@ -1168,14 +1160,6 @@ class StatusViewSet(NautobotModelViewSet):
     queryset = Status.objects.all()
     serializer_class = serializers.StatusSerializer
     filterset_class = filters.StatusFilterSet
-
-
-class StatusViewSetMixin(ModelViewSet):
-    """
-    Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
-    """
-
-    metadata_class = StatusFieldMetadata
 
 
 #

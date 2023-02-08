@@ -1,1 +1,0 @@
-Made integration test `CableConnectFormTestCase.test_js_functionality` more resilient and less prone to erroneous failures.
