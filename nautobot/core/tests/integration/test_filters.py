@@ -1,7 +1,7 @@
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
-from nautobot.dcim.factory import LocationFactory, LocationTypeFactory
+from nautobot.dcim.factory import LocationTypeFactory
 from nautobot.dcim.models import Location, LocationType
 
 
