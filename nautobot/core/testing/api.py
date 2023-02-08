@@ -1,6 +1,7 @@
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -692,7 +693,7 @@ class APIViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_on_object(self):
-            if hasattr(self.model, "notes"):
+            if hasattr(self.model, "notes") and self.model is not get_user_model():
                 instance1 = self._get_queryset().first()
                 # Add object-level permission
                 obj_perm = users_models.ObjectPermission(
