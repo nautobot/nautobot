@@ -202,7 +202,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -211,7 +211,9 @@ class ConfigContextTestCase(
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Config Context with schema").schema.pk, schema.pk)
+        self.assertEqual(
+            self._get_queryset().get(name="Config Context with schema").config_context_schema.pk, schema.pk
+        )
 
     def test_schema_validation_fails(self):
         """
@@ -239,7 +241,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission

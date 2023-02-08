@@ -276,7 +276,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         default=None,
     )
     owner = serializers.SerializerMethodField(read_only=True)
-    schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
     regions = SerializedPKRelatedField(
         queryset=Region.objects.all(),
         serializer=NestedRegionSerializer,
@@ -349,7 +349,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "owner",
             "weight",
             "description",
-            "schema",
+            "config_context_schema",
             "is_active",
             "regions",
             "sites",

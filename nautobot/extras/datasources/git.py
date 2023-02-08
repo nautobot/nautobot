@@ -595,23 +595,23 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         data = context_data.copy()
         del data["_metadata"]
 
-        if context_metadata.get("schema"):
-            if getattr(context_record.schema, "name", None) != context_metadata["schema"]:
+        if context_metadata.get("config_context_schema"):
+            if getattr(context_record.config_context_schema, "name", None) != context_metadata["config_context_schema"]:
                 try:
-                    schema = ConfigContextSchema.objects.get(name=context_metadata["schema"])
-                    context_record.schema = schema
+                    schema = ConfigContextSchema.objects.get(name=context_metadata["config_context_schema"])
+                    context_record.config_context_schema = schema
                     modified = True
                 except ConfigContextSchema.DoesNotExist:
                     job_result.log(
-                        f"ConfigContextSchema {context_metadata['schema']} does not exist.",
+                        f"ConfigContextSchema {context_metadata['config_context_schema']} does not exist.",
                         obj=context_record,
                         level_choice=LogLevelChoices.LOG_FAILURE,
                         grouping="config contexts",
                         logger=logger,
                     )
         else:
-            if context_record.schema is not None:
-                context_record.schema = None
+            if context_record.config_context_schema is not None:
+                context_record.config_context_schema = None
                 modified = True
 
         if context_record.data != data:

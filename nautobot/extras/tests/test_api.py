@@ -276,7 +276,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         data = {"name": "Config Context with schema", "weight": 100, "data": {"foo": "bar"}, "schema": str(schema.pk)}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["config_context_schema"]["id"], str(schema.pk))
 
     def test_schema_validation_fails(self):
         """
@@ -293,7 +293,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
             "name": "Config Context with bad schema",
             "weight": 100,
             "data": {"foo": "bar"},
-            "schema": str(schema.pk),
+            "config_context_schema": str(schema.pk),
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)

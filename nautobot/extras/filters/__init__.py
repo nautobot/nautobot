@@ -182,7 +182,7 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
     schema = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="schema",
+        field_name="config_context_schema",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug or PK)",

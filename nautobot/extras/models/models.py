@@ -92,7 +92,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     is_active = models.BooleanField(
         default=True,
     )
-    schema = models.ForeignKey(
+    config_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
@@ -138,7 +138,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
         # Validate data against schema
-        self._validate_with_schema("data", "schema")
+        self._validate_with_schema("data", "config_context_schema")
 
         # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
         # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
