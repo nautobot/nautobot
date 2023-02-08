@@ -1,6 +1,9 @@
 ---
 version: "3.4"
 services:
+  nautobot:
+    depends_on:
+      - db
   db:
     image: postgres:13
     env_file:

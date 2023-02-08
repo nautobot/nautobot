@@ -2,6 +2,8 @@
 version: "3.4"
 services:
   nautobot:
+    depends_on:
+      - db
     environment:
       - "NAUTOBOT_DB_ENGINE=django.db.backends.mysql"
   celery_worker:

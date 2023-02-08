@@ -1,0 +1,23 @@
+---
+version: "3.4"
+services:
+  nautobot:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.sqlite3"
+      - "NAUTOBOT_DB_NAME=/opt/nautobot/db/nautobot.db"
+    volumes:
+      - "sqlite3data_nautobot:/opt/nautobot/db"
+  celery_worker:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.sqlite3"
+      - "NAUTOBOT_DB_NAME=/opt/nautobot/db/nautobot.db"
+    volumes:
+      - "sqlite3data_nautobot:/opt/nautobot/db"
+  celery_beat:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django.db.backends.sqlite3"
+      - "NAUTOBOT_DB_NAME=/opt/nautobot/db/nautobot.db"
+    volumes:
+      - "sqlite3data_nautobot:/opt/nautobot/db"
+volumes:
+  sqlite3data_nautobot:

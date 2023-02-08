@@ -14,7 +14,6 @@ services:
     depends_on:
       - redis
       - selenium
-      - db
     env_file:
       - dev.env
     tty: true
