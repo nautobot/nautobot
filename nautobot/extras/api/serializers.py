@@ -838,7 +838,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     job = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
-    schedule = NestedScheduledJobSerializer(read_only=True)
+    scheduled_job = NestedScheduledJobSerializer(read_only=True)
 
     class Meta:
         model = JobResult
@@ -854,7 +854,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
             "data",
             "job_id",
             "job_kwargs",
-            "schedule",
+            "scheduled_job",
         ]
 
 

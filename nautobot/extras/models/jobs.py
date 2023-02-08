@@ -542,7 +542,7 @@ class JobResult(BaseModel, CustomFieldModel):
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
     job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    schedule = models.ForeignKey(
+    scheduled_job = models.ForeignKey(
         to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True, related_name="job_results"
     )
     """

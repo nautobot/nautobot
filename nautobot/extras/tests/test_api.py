@@ -1306,7 +1306,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": job_data,
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "name": "test",
                 "interval": "future",
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
@@ -1496,7 +1496,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
@@ -1525,7 +1525,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": {},
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
@@ -1536,7 +1536,7 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            response.data["schedule"]["interval"][0],
+            response.data["scheduled_job"]["interval"][0],
             "Unable to schedule job: Job may have sensitive input variables",
         )
 
@@ -1556,7 +1556,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": {},
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "interval": "immediately",
                 "name": "test",
             },
@@ -1580,7 +1580,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "interval": "immediately",
                 "name": "test",
             },
@@ -1606,7 +1606,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "start_time": str(datetime.now() - timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
@@ -1626,7 +1626,7 @@ class JobAPIRunTestMixin:
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "schedule": {
+            "scheduled_job": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "hourly",
                 "name": "test",
@@ -1975,16 +1975,16 @@ class JobTestVersion13(
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_object_var()
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1992,9 +1992,9 @@ class JobTestVersion13(
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, job_result = super().test_run_job_object_var_lookup()
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertIsNone(response.data["schedule"])
+        self.assertIsNone(response.data["scheduled_job"])
         # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
         data_job_result = response.data["job_result"]
         del data_job_result["url"]
@@ -2009,16 +2009,16 @@ class JobTestVersion13(
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_future()
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2033,16 +2033,16 @@ class JobTestVersion13(
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
 

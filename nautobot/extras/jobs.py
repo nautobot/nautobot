@@ -1216,11 +1216,11 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
-        # record data about this jobrun in the schedule
-        if job_result.schedule:
-            job_result.schedule.total_run_count += 1
-            job_result.schedule.last_run_at = started
-            job_result.schedule.save()
+        # record data about this jobrun in the scheduled_job
+        if job_result.scheduled_job:
+            job_result.scheduled_job.total_run_count += 1
+            job_result.scheduled_job.last_run_at = started
+            job_result.scheduled_job.save()
 
         # Perform any post-run tasks
         # 2.0 TODO Remove post_run() method entirely
