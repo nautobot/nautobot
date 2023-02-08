@@ -1,6 +1,7 @@
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.factory import LocationFactory, LocationTypeFactory
 from nautobot.dcim.models import Location, LocationType
 
 
@@ -12,6 +13,10 @@ class ListViewFilterTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
+        LocationTypeFactory.create_batch(7)
+        print(LocationType.objects.all())
+        LocationFactory.create_batch(10, has_tenant=True)
+        print(Location.objects.all())
 
     def tearDown(self):
         self.logout()
