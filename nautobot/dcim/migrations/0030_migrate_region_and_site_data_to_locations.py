@@ -24,13 +24,11 @@ def add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
     statuses = Status.objects.filter(content_types__in=[site_ct])
     for status in statuses:
         status.content_types.add(location_ct)
-        status.save()
     # Tags
     Tag = apps.get_model("extras", "tag")
     tags = Tag.objects.filter(content_types__in=[site_ct])
     for tag in tags:
         tag.content_types.add(location_ct)
-        tag.save()
 
 
 def create_region_location_type_locations(region_class, location_class, region_lt):
@@ -232,7 +230,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         custom_fields = CustomField.objects.filter(content_types__in=[region_ct])
         for cf in custom_fields:
             cf.content_types.add(location_ct)
-            cf.save()
 
         region_locs = Location.objects.filter(location_type=region_lt).exclude(name="Global Region")
         for location in region_locs:
@@ -261,7 +258,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
-            jh.save()
 
         # Notes
         Note = apps.get_model("extras", "note")
@@ -302,7 +298,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         web_hooks = WebHook.objects.filter(content_types__in=[region_ct])
         for wh in web_hooks:
             wh.content_types.add(location_ct)
-            wh.save()
 
     # Reassign Site Models to Locations of Site LocationType
     if Site.objects.exists():  # Iff Site instances exist
@@ -378,7 +373,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         custom_fields = CustomField.objects.filter(content_types__in=[site_ct])
         for cf in custom_fields:
             cf.content_types.add(location_ct)
-            cf.save()
 
         site_locs = Location.objects.filter(location_type=site_lt)
         for location in site_locs:
@@ -407,7 +401,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
-            jh.save()
 
         notes = Note.objects.filter(assigned_object_type=site_ct)
         for note in notes:
@@ -442,7 +435,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         web_hooks = WebHook.objects.filter(content_types__in=[site_ct])
         for wh in web_hooks:
             wh.content_types.add(location_ct)
-            wh.save()
 
         # Below models' site attribute is not required, so we need to check each instance if the site field is not null
         # if so we reassign it to Site Location and if not we leave it alone
