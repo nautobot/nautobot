@@ -27,7 +27,7 @@ class PathContains(Lookup):
         sql_map = {
             "postgresql": "%s::jsonb ? '%s'",
             "mysql": "JSON_CONTAINS(%s, '\"%s\"','$')",
-            "sqlite": "json_extract(%s, '$') LIKE '%%%s%%' ESCAPE '\\'",
+            "sqlite": "json_extract(%s, '$') LIKE '%%%%%s%%%%' ESCAPE '\\'",
         }
 
         if vendor not in sql_map:
