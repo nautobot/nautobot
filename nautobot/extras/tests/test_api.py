@@ -3328,19 +3328,19 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "group": secrets_groups[0].pk,
+                "secrets_group": secrets_groups[0].pk,
                 "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
                 "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 "secret": secrets[0].pk,
             },
             {
-                "group": secrets_groups[1].pk,
+                "secrets_group": secrets_groups[1].pk,
                 "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
                 "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 "secret": secrets[1].pk,
             },
             {
-                "group": secrets_groups[2].pk,
+                "secrets_group": secrets_groups[2].pk,
                 "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
                 "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 "secret": secrets[2].pk,

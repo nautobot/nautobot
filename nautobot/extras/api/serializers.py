@@ -1275,14 +1275,14 @@ class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
     """Serializer for `SecretsGroupAssociation` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
-    group = NestedSecretsGroupSerializer()
+    secrets_group = NestedSecretsGroupSerializer()
     secret = NestedSecretSerializer()
 
     class Meta:
         model = SecretsGroupAssociation
         fields = [
             "url",
-            "group",
+            "secrets_group",
             "access_type",
             "secret_type",
             "secret",

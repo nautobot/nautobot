@@ -323,7 +323,9 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             _custom_field_data={"custom_field": "Value"},
         )
 
-        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="custom_field", default="")
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, name="custom_field", default=""
+        )
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {

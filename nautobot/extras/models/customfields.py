@@ -747,7 +747,9 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
                 # 2.0 TODO: #824 self.field.slug instead of self.field.name
-                if model.objects.filter(**{f"_custom_field_data__{self.custom_field.name}__contains": self.value}).exists():
+                if model.objects.filter(
+                    **{f"_custom_field_data__{self.custom_field.name}__contains": self.value}
+                ).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?

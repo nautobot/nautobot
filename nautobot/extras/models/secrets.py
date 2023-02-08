@@ -152,7 +152,7 @@ class SecretsGroup(OrganizationalModel):
 class SecretsGroupAssociation(BaseModel):
     """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
 
-    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE, related_name="secrets_group_associations")
+    secrets_group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE, related_name="secrets_group_associations")
     secret = models.ForeignKey(Secret, on_delete=models.CASCADE, related_name="secrets_group_associations")
 
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
@@ -161,9 +161,9 @@ class SecretsGroupAssociation(BaseModel):
     class Meta:
         unique_together = (
             # Don't allow the same access-type/secret-type combination to be used more than once in the same group
-            ("group", "access_type", "secret_type"),
+            ("secrets_group", "access_type", "secret_type"),
         )
-        ordering = ("group", "access_type", "secret_type")
+        ordering = ("secrets_group", "access_type", "secret_type")
 
     def __str__(self):
-        return f"{self.group}: {self.access_type} {self.secret_type}: {self.secret}"
+        return f"{self.secrets_group}: {self.access_type} {self.secret_type}: {self.secret}"
