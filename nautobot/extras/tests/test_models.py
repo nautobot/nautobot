@@ -126,12 +126,17 @@ class ConfigContextTest(TestCase):
         self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
             content_type=ContentType.objects.get_for_model(Device),
-            filter={"name": ["Device 1", "Device 2", "VM 1"]},
+            filter={"name": ["Device 1", "Device 2"]},
         )
         self.dynamic_group_2 = DynamicGroup.objects.create(
             name="Dynamic Group 2",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 2"]},
+        )
+        self.vm_dynamic_group = DynamicGroup.objects.create(
+            name="VM Dynamic Group",
+            content_type=ContentType.objects.get_for_model(VirtualMachine),
+            filter={"name": ["VM 1"]},
         )
 
         self.device = Device.objects.create(
@@ -262,9 +267,9 @@ class ConfigContextTest(TestCase):
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
         dynamic_group_context = ConfigContext.objects.create(
-            name="dynamic group", weight=100, data={"dynamic_group": 1}
+            name="vm dynamic group", weight=100, data={"vm_dynamic_group": 1}
         )
-        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        dynamic_group_context.dynamic_groups.add(self.vm_dynamic_group)
 
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
@@ -277,6 +282,7 @@ class ConfigContextTest(TestCase):
 
         annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
+
         self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
         for key in [
             "location",
@@ -288,7 +294,7 @@ class ConfigContextTest(TestCase):
             "tag",
             "cluster_group",
             "cluster",
-            "dynamic_group",
+            "vm_dynamic_group",
         ]:
             self.assertIn(key, vm_context)
 
