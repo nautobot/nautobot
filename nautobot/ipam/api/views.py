@@ -1,14 +1,12 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.api.views import NautobotModelViewSet
@@ -278,17 +276,6 @@ class PrefixViewSet(NautobotModelViewSet):
 #
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]
-    ),
-    create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-)
 class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
         "nat_inside",
@@ -299,37 +286,6 @@ class IPAddressViewSet(NautobotModelViewSet):
     ).prefetch_related("tags", "assigned_object", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
-
-    # 2.0 TODO: Remove exception class and overloaded methods below
-    # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
-    class NATOutsideIncompatibleLegacyBehavior(APIException):
-        status_code = 412
-        default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
-        default_code = "precondition_failed"
-
-    def retrieve(self, request, pk=None, *args, **kwargs):
-        try:
-            return super().retrieve(request, pk)
-        except IPAddress.NATOutsideMultipleObjectsReturned:
-            raise self.NATOutsideIncompatibleLegacyBehavior
-
-    def list(self, request, *args, **kwargs):
-        try:
-            return super().list(request)
-        except IPAddress.NATOutsideMultipleObjectsReturned as e:
-            raise self.NATOutsideIncompatibleLegacyBehavior(
-                f"At least one object in the resulting list does not conform to pre-1.3 behavior. Please use API version 1.3. Item: {e.obj}, PK: {e.obj.pk}"
-            )
 
 
 #

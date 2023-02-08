@@ -447,15 +447,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
-        # Fetch nat inside IP address with default (1.2) API
-        response = self.client.get(
-            self._get_detail_url(nat_inside),
-            **self.header,
-        )
-        self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
-
-        self.set_api_version(api_version="1.3")
-        # Fetch nat inside IP address with 1.3 API
         response = self.client.get(
             self._get_detail_url(nat_inside),
             **self.header,

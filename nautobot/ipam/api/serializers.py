@@ -364,11 +364,6 @@ class IPAddressSerializer(
         return serializer(obj.assigned_object, context=context).data
 
 
-# 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
-class IPAddressSerializerLegacy(IPAddressSerializer):
-    nat_outside = NestedIPAddressSerializer(read_only=True)
-
-
 class AvailableIPSerializer(serializers.Serializer):
     """
     Representation of an IP address which does not exist in the database.
