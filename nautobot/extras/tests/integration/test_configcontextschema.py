@@ -105,7 +105,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
 
         # Device
-        location_type = LocationType.objects.get(name="Campus")
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
         location = Location.objects.create(
             name="location",
             slug="location",

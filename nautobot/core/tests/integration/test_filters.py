@@ -2,7 +2,7 @@ from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim import factory
-from nautobot.dcim.models import Location
+from nautobot.dcim.models import Location, LocationType
 
 
 class ListViewFilterTestCase(SeleniumTestCase):
@@ -14,7 +14,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         super().setUp()
         self.login(self.user.username, self.password)
         factory.LocationTypeFactory.create_batch(7)
-        factory.LocationFactory.create_batch(15, has_parent=True, has_tenant=False)
+        factory.LocationFactory.create_batch(20, has_tenant=False)
 
     def tearDown(self):
         self.logout()
@@ -42,7 +42,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.assertTrue(filter_modal.visible)
 
         # start typing a parent into select2
-        parent = Location.objects.first()
+        location_type = LocationType.objects.filter(parent__isnull=True).first()
+        parent = Location.objects.filter(location_type=location_type).first()
         parent_select = filter_modal.find_by_xpath(
             "//label[@for='id_parent']/..//input[@class='select2-search__field']", wait_time=10
         )

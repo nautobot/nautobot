@@ -23,7 +23,7 @@ class NoteTestCase(SeleniumTestCase):
         """
         Test initial add and then update of a new Note
         """
-        location_type = LocationType.objects.get(name="Campus")
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
         Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
 
         # Navigate to the created location.
