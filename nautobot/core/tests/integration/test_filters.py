@@ -15,6 +15,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.login(self.user.username, self.password)
         LocationTypeFactory.create_batch(7)
         print(LocationType.objects.all())
+        print(LocationType.objects.values_list("pk", flat=True))
         LocationFactory.create_batch(10, has_tenant=True)
         print(Location.objects.all())
 
