@@ -146,7 +146,7 @@ class RegionViewSet(NautobotModelViewSet):
 #
 
 
-class SiteViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class SiteViewSet(NautobotModelViewSet):
     queryset = Site.objects.select_related("region", "status", "tenant").prefetch_related("tags")
     serializer_class = serializers.SiteSerializer
     filterset_class = filters.SiteFilterSet

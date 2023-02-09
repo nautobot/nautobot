@@ -635,7 +635,9 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertEqual(location.cf["choice_field"], data_cf["choice_cf"])
         self.assertEqual(location.cf["multi_choice_field"], data_cf["multi_choice_cf"])
         if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location.cf["example_plugin_auto_custom_field"], data_cf["example_plugin_auto_custom_field"])
+            self.assertEqual(
+                location.cf["example_plugin_auto_custom_field"], data_cf["example_plugin_auto_custom_field"]
+            )
 
     def test_create_multiple_objects_with_defaults(self):
         """

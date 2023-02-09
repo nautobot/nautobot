@@ -51,7 +51,7 @@ class TaggedItemTest(APITestCase):
         data = {
             "name": "Test Location",
             "slug": "test-location",
-            "status": "active",
+            "status": Status.objects.get_for_model(Location).first().pk,
             "tags": [str(t.pk) for t in self.tags],
             "location_type": self.location_type.pk,
         }
@@ -109,7 +109,7 @@ class TaggedItemTest(APITestCase):
         data = {
             "name": "Test Location",
             "slug": "test-location",
-            "status": Status.objects.get_for_model(Site).first().pk,
+            "status": Status.objects.get_for_model(Location).first().pk,
             "tags": [tag.id],
         }
         url = reverse("dcim-api:location-list")

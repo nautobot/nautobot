@@ -27,7 +27,6 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRackSerializer,
 )
 from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack
-from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
