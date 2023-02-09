@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 
 import factory
 
-from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator
+from nautobot.core.factory import NautobotBoolIterator, BaseModelFactory
 
 
 User = get_user_model()

@@ -4,10 +4,10 @@ import faker
 from nautobot.circuits import choices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.factory import (
+    NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
     UniqueFaker,
-    NautobotBoolIterator,
     random_instance,
 )
 from nautobot.dcim import models as dcim_models

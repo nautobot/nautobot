@@ -1,10 +1,10 @@
 import factory
 
 from nautobot.core.factory import (
+    NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
     UniqueFaker,
-    NautobotBoolIterator,
     random_instance,
 )
 from nautobot.tenancy.models import TenantGroup, Tenant

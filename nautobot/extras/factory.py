@@ -5,7 +5,7 @@ import factory
 import faker
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.factory import OrganizationalModelFactory, get_random_instances, NautobotBoolIterator
+from nautobot.core.factory import NautobotBoolIterator, OrganizationalModelFactory, get_random_instances
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 

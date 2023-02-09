@@ -9,10 +9,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.core.factory import (
+    NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
     UniqueFaker,
-    NautobotBoolIterator,
     random_instance,
 )
 from nautobot.circuits.models import CircuitTermination

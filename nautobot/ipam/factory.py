@@ -5,11 +5,11 @@ import faker
 import math
 
 from nautobot.core.factory import (
+    NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
     UniqueFaker,
     get_random_instances,
-    NautobotBoolIterator,
     random_instance,
 )
 from nautobot.dcim.models import Location, Site
