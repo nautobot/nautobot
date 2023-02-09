@@ -51,6 +51,7 @@ class JSONBAgg(Aggregate):
         func_map = {
             "postgresql": "JSONB_AGG",
             "mysql": "JSON_ARRAYAGG",
+            "sqlite": "JSON_GROUP_ARRAY",
         }
 
         if JSONBAgg.function is None and vendor not in func_map:

@@ -21,18 +21,6 @@ PLUGINS = [
     "example_plugin_with_view_override",
 ]
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "/home/gary/.nautobot/nautobot.db",
-        "OPTIONS": {
-            "timeout": 20,  # in seconds
-            # see also
-            # https://docs.python.org/3.7/library/sqlite3.html#sqlite3.connect
-        },
-    }
-}
-
 # Hard-code the SECRET_KEY for simplicity
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
