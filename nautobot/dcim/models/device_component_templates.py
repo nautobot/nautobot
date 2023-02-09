@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField, PositiveSmallIntegerField
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
@@ -148,13 +148,13 @@ class PowerPortTemplate(ComponentTemplateModel):
     """
 
     type = models.CharField(max_length=50, choices=PowerPortTypeChoices, blank=True)
-    maximum_draw = models.PositiveSmallIntegerField(
+    maximum_draw = PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
         help_text="Maximum power draw (watts)",
     )
-    allocated_draw = models.PositiveSmallIntegerField(
+    allocated_draw = PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
@@ -288,7 +288,7 @@ class FrontPortTemplate(ComponentTemplateModel):
         on_delete=models.CASCADE,
         related_name="frontport_templates",
     )
-    rear_port_position = models.PositiveSmallIntegerField(
+    rear_port_position = PositiveSmallIntegerField(
         default=1,
         validators=[
             MinValueValidator(REARPORT_POSITIONS_MIN),
@@ -344,7 +344,7 @@ class RearPortTemplate(ComponentTemplateModel):
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
-    positions = models.PositiveSmallIntegerField(
+    positions = PositiveSmallIntegerField(
         default=1,
         validators=[
             MinValueValidator(REARPORT_POSITIONS_MIN),

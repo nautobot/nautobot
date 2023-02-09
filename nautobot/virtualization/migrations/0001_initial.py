@@ -116,7 +116,7 @@ class Migration(migrations.Migration):
                 ),
                 ("local_context_data_owner_object_id", models.UUIDField(blank=True, default=None, null=True)),
                 ("name", models.CharField(max_length=64)),
-                ("vcpus", models.PositiveSmallIntegerField(blank=True, null=True)),
+                ("vcpus", nautobot.core.models.fields.PositiveSmallIntegerField(blank=True, null=True)),
                 ("memory", models.PositiveIntegerField(blank=True, null=True)),
                 ("disk", models.PositiveIntegerField(blank=True, null=True)),
                 ("comments", models.TextField(blank=True)),

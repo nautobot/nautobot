@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 
-from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField
+from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField, PositiveSmallIntegerField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
@@ -308,13 +308,13 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
         blank=True,
         help_text="Physical port type",
     )
-    maximum_draw = models.PositiveSmallIntegerField(
+    maximum_draw = PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
         help_text="Maximum power draw (watts)",
     )
-    allocated_draw = models.PositiveSmallIntegerField(
+    allocated_draw = PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
@@ -815,7 +815,7 @@ class FrontPort(CableTermination, ComponentModel):
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
     rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="frontports")
-    rear_port_position = models.PositiveSmallIntegerField(
+    rear_port_position = PositiveSmallIntegerField(
         default=1,
         validators=[
             MinValueValidator(REARPORT_POSITIONS_MIN),
@@ -882,7 +882,7 @@ class RearPort(CableTermination, ComponentModel):
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
-    positions = models.PositiveSmallIntegerField(
+    positions = PositiveSmallIntegerField(
         default=1,
         validators=[
             MinValueValidator(REARPORT_POSITIONS_MIN),

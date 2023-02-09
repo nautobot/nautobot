@@ -4,6 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 
+from nautobot.core.models.fields import PositiveSmallIntegerField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
 from nautobot.dcim.choices import PowerFeedPhaseChoices, PowerFeedSupplyChoices, PowerFeedTypeChoices
@@ -142,8 +143,8 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         default=PowerFeedPhaseChoices.PHASE_SINGLE,
     )
     voltage = models.SmallIntegerField(default=POWERFEED_VOLTAGE_DEFAULT, validators=[ExclusionValidator([0])])
-    amperage = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)], default=POWERFEED_AMPERAGE_DEFAULT)
-    max_utilization = models.PositiveSmallIntegerField(
+    amperage = PositiveSmallIntegerField(validators=[MinValueValidator(1)], default=POWERFEED_AMPERAGE_DEFAULT)
+    max_utilization = PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(100)],
         default=POWERFEED_MAX_UTILIZATION_DEFAULT,
         help_text="Maximum permissible draw (percentage)",

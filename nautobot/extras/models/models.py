@@ -22,7 +22,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
@@ -86,7 +86,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         fk_field="owner_object_id",
     )
 
-    weight = models.PositiveSmallIntegerField(default=1000)
+    weight = PositiveSmallIntegerField(default=1000)
     description = models.CharField(max_length=200, blank=True)
     is_active = models.BooleanField(
         default=True,
@@ -331,7 +331,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
         verbose_name="URL",
         help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
     )
-    weight = models.PositiveSmallIntegerField(default=100)
+    weight = PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
         max_length=50,
         blank=True,
@@ -606,8 +606,8 @@ class ImageAttachment(BaseModel):
     object_id = models.UUIDField(db_index=True)
     parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
-    image_height = models.PositiveSmallIntegerField()
-    image_width = models.PositiveSmallIntegerField()
+    image_height = PositiveSmallIntegerField()
+    image_width = PositiveSmallIntegerField()
     name = models.CharField(max_length=50, blank=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
 

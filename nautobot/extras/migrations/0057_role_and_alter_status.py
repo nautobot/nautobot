@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ),
                 ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
-                ("weight", models.PositiveSmallIntegerField(blank=True, null=True)),
+                ("weight", nautobot.core.models.fields.PositiveSmallIntegerField(blank=True, null=True)),
                 (
                     "content_types",
                     models.ManyToManyField(

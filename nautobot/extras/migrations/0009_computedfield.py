@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+import nautobot.core.models.fields
 import nautobot.extras.models.customfields
 import nautobot.extras.utils
 import uuid
@@ -31,7 +32,7 @@ class Migration(migrations.Migration):
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("template", models.TextField(max_length=500)),
                 ("fallback_value", models.CharField(max_length=500)),
-                ("weight", models.PositiveSmallIntegerField(default=100)),
+                ("weight", nautobot.core.models.fields.PositiveSmallIntegerField(default=100)),
                 (
                     "content_type",
                     models.ForeignKey(

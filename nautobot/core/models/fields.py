@@ -2,8 +2,9 @@ import json
 
 from django.contrib.contenttypes.models import ContentType
 from django.core import exceptions
-from django.core.validators import RegexValidator, MaxLengthValidator
+from django.core.validators import RegexValidator, MaxLengthValidator, MinValueValidator
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
@@ -334,3 +335,22 @@ class JSONArrayField(models.JSONField):
                 **kwargs,
             }
         )
+
+
+class PositiveSmallIntegerField(models.PositiveSmallIntegerField):
+    """Extend models.PositiveSmallIntegerField to provide basic validators.
+
+    For some reason, Django's sqlite3 backend explicitly does *not* provide a default MinValueValidator by default,
+    which means that clean() will *not* raise a ValidationError for negative values,
+    but save() *will* raise an IntegrityError. That's inconsistent across backends, so let's fix it.
+    """
+
+    @cached_property
+    def validators(self):
+        validators_ = super().validators
+        if not any([isinstance(validator, MinValueValidator) for validator in validators_]):
+            validators_.append(MinValueValidator(0))
+        return validators_
+
+
+# TODO: we probably need to do the same for PositiveIntegerField as well...

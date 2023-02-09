@@ -11,7 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
@@ -108,7 +108,7 @@ class DeviceType(PrimaryModel):
     slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
-    u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
+    u_height = PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     # todoindex:
     is_full_depth = models.BooleanField(
         default=True,
@@ -458,7 +458,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         null=True,
     )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
-    position = models.PositiveSmallIntegerField(
+    position = PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
@@ -505,7 +505,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         null=True,
         verbose_name="Device Redundancy Group",
     )
-    device_redundancy_group_priority = models.PositiveSmallIntegerField(
+    device_redundancy_group_priority = PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
@@ -513,8 +513,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         help_text="The priority the device has in the device redundancy group.",
     )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
-    vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
-    vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
+    vc_position = PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
+    vc_priority = PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 

@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
 
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, JSONArrayField, PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
@@ -181,13 +181,13 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         help_text="A unique tag used to identify this rack",
     )
     type = models.CharField(choices=RackTypeChoices, max_length=50, blank=True, verbose_name="Type")
-    width = models.PositiveSmallIntegerField(
+    width = PositiveSmallIntegerField(
         choices=RackWidthChoices,
         default=RackWidthChoices.WIDTH_19IN,
         verbose_name="Width",
         help_text="Rail-to-rail width",
     )
-    u_height = models.PositiveSmallIntegerField(
+    u_height = PositiveSmallIntegerField(
         default=RACK_U_HEIGHT_DEFAULT,
         verbose_name="Height (U)",
         validators=[MinValueValidator(1), MaxValueValidator(100)],
@@ -198,8 +198,8 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         verbose_name="Descending units",
         help_text="Units are numbered top-to-bottom",
     )
-    outer_width = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Outer dimension of rack (width)")
-    outer_depth = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Outer dimension of rack (depth)")
+    outer_width = PositiveSmallIntegerField(blank=True, null=True, help_text="Outer dimension of rack (width)")
+    outer_depth = PositiveSmallIntegerField(blank=True, null=True, help_text="Outer dimension of rack (depth)")
     outer_unit = models.CharField(
         max_length=50,
         choices=RackDimensionUnitChoices,
@@ -560,7 +560,7 @@ class RackReservation(PrimaryModel):
     """
 
     rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="reservations")
-    units = JSONArrayField(base_field=models.PositiveSmallIntegerField())
+    units = JSONArrayField(base_field=PositiveSmallIntegerField())
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,

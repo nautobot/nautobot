@@ -9,7 +9,7 @@ from django.db.models import Sum
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.core.models.fields import ColorField
+from nautobot.core.models.fields import ColorField, PositiveSmallIntegerField
 from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
@@ -78,7 +78,7 @@ class Cable(PrimaryModel, StatusModel):
     type = models.CharField(max_length=50, choices=CableTypeChoices, blank=True)
     label = models.CharField(max_length=100, blank=True)
     color = ColorField(blank=True)
-    length = models.PositiveSmallIntegerField(blank=True, null=True)
+    length = PositiveSmallIntegerField(blank=True, null=True)
     length_unit = models.CharField(
         max_length=50,
         choices=CableLengthUnitChoices,

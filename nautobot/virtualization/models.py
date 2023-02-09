@@ -6,7 +6,7 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, PositiveSmallIntegerField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
@@ -293,7 +293,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
         null=True,
         verbose_name="Primary IPv6",
     )
-    vcpus = models.PositiveSmallIntegerField(blank=True, null=True, verbose_name="vCPUs")
+    vcpus = PositiveSmallIntegerField(blank=True, null=True, verbose_name="vCPUs")
     memory = models.PositiveIntegerField(blank=True, null=True, verbose_name="Memory (MB)")
     disk = models.PositiveIntegerField(blank=True, null=True, verbose_name="Disk (GB)")
     comments = models.TextField(blank=True)

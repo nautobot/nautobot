@@ -26,7 +26,7 @@ from nautobot.core.forms import (
     add_blank_choice,
 )
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
+from nautobot.core.models.fields import AutoSlugField, PositiveSmallIntegerField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.templatetags.helpers import render_markdown
@@ -75,7 +75,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         blank=True,
         help_text="Fallback value (if any) to be output for the field in the case of a template rendering error.",
     )
-    weight = models.PositiveSmallIntegerField(default=100)
+    weight = PositiveSmallIntegerField(default=100)
     advanced_ui = models.BooleanField(
         default=False,
         verbose_name="Move to Advanced tab",
@@ -349,9 +349,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             '"Foo").'
         ),
     )
-    weight = models.PositiveSmallIntegerField(
-        default=100, help_text="Fields with higher weights appear lower in a form."
-    )
+    weight = PositiveSmallIntegerField(default=100, help_text="Fields with higher weights appear lower in a form.")
     validation_minimum = models.BigIntegerField(
         blank=True,
         null=True,
@@ -681,7 +679,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         ),
     )
     value = models.CharField(max_length=100)
-    weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
+    weight = PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     class Meta:
         ordering = ["field", "weight", "value"]

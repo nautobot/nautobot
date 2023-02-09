@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
+from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes, PositiveSmallIntegerField
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 
@@ -23,7 +23,7 @@ class Role(NameColorContentTypesModel):
         limit_choices_to=RoleModelsQuery(),
         help_text="The content type(s) to which this role applies.",
     )
-    weight = models.PositiveSmallIntegerField(null=True, blank=True)
+    weight = PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ("weight", "name")

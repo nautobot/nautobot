@@ -164,7 +164,7 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("slug", models.SlugField(max_length=100, unique=True)),
-                ("weight", models.PositiveSmallIntegerField(default=1000)),
+                ("weight", nautobot.core.models.fields.PositiveSmallIntegerField(default=1000)),
                 ("description", models.CharField(blank=True, max_length=200)),
             ],
             options={
@@ -290,7 +290,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "vid",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         validators=[
                             django.core.validators.MinValueValidator(1),
                             django.core.validators.MaxValueValidator(4094),

@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(blank=True, max_length=50)),
                 ("label", models.CharField(blank=True, max_length=100)),
                 ("color", nautobot.core.models.fields.ColorField(blank=True, max_length=6)),
-                ("length", models.PositiveSmallIntegerField(blank=True, null=True)),
+                ("length", nautobot.core.models.fields.PositiveSmallIntegerField(blank=True, null=True)),
                 ("length_unit", models.CharField(blank=True, max_length=50)),
                 ("_abs_length", models.DecimalField(blank=True, decimal_places=4, max_digits=10, null=True)),
             ],
@@ -213,20 +213,20 @@ class Migration(migrations.Migration):
                 ("asset_tag", models.CharField(blank=True, max_length=50, null=True, unique=True)),
                 (
                     "position",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
                     ),
                 ),
                 ("face", models.CharField(blank=True, max_length=50)),
                 (
                     "vc_position",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MaxValueValidator(255)]
                     ),
                 ),
                 (
                     "vc_priority",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MaxValueValidator(255)]
                     ),
                 ),
@@ -333,7 +333,7 @@ class Migration(migrations.Migration):
                 ("model", models.CharField(max_length=100)),
                 ("slug", models.SlugField(max_length=100)),
                 ("part_number", models.CharField(blank=True, max_length=50)),
-                ("u_height", models.PositiveSmallIntegerField(default=1)),
+                ("u_height", nautobot.core.models.fields.PositiveSmallIntegerField(default=1)),
                 ("is_full_depth", models.BooleanField(default=True)),
                 ("subdevice_role", models.CharField(blank=True, max_length=50)),
                 ("front_image", models.ImageField(blank=True, upload_to="devicetype-images")),
@@ -370,7 +370,7 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(max_length=50)),
                 (
                     "rear_port_position",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=1,
                         validators=[
                             django.core.validators.MinValueValidator(1),
@@ -408,7 +408,7 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(max_length=50)),
                 (
                     "rear_port_position",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=1,
                         validators=[
                             django.core.validators.MinValueValidator(1),
@@ -614,13 +614,13 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "amperage",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=20, validators=[django.core.validators.MinValueValidator(1)]
                     ),
                 ),
                 (
                     "max_utilization",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=80,
                         validators=[
                             django.core.validators.MinValueValidator(1),
@@ -741,13 +741,13 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(blank=True, max_length=50)),
                 (
                     "maximum_draw",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
                     ),
                 ),
                 (
                     "allocated_draw",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
                     ),
                 ),
@@ -781,13 +781,13 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(blank=True, max_length=50)),
                 (
                     "maximum_draw",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
                     ),
                 ),
                 (
                     "allocated_draw",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
                     ),
                 ),
@@ -822,10 +822,10 @@ class Migration(migrations.Migration):
                 ("serial", models.CharField(blank=True, max_length=50)),
                 ("asset_tag", models.CharField(blank=True, max_length=50, null=True, unique=True)),
                 ("type", models.CharField(blank=True, max_length=50)),
-                ("width", models.PositiveSmallIntegerField(default=19)),
+                ("width", nautobot.core.models.fields.PositiveSmallIntegerField(default=19)),
                 (
                     "u_height",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=42,
                         validators=[
                             django.core.validators.MinValueValidator(1),
@@ -834,8 +834,8 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("desc_units", models.BooleanField(default=False)),
-                ("outer_width", models.PositiveSmallIntegerField(blank=True, null=True)),
-                ("outer_depth", models.PositiveSmallIntegerField(blank=True, null=True)),
+                ("outer_width", nautobot.core.models.fields.PositiveSmallIntegerField(blank=True, null=True)),
+                ("outer_depth", nautobot.core.models.fields.PositiveSmallIntegerField(blank=True, null=True)),
                 ("outer_unit", models.CharField(blank=True, max_length=50)),
                 ("comments", models.TextField(blank=True)),
             ],
@@ -885,7 +885,12 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("units", nautobot.core.models.fields.JSONArrayField(base_field=models.PositiveSmallIntegerField())),
+                (
+                    "units",
+                    nautobot.core.models.fields.JSONArrayField(
+                        base_field=nautobot.core.models.fields.PositiveSmallIntegerField()
+                    ),
+                ),
                 ("description", models.CharField(max_length=200)),
             ],
             options={
@@ -942,7 +947,7 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(max_length=50)),
                 (
                     "positions",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=1,
                         validators=[
                             django.core.validators.MinValueValidator(1),
@@ -980,7 +985,7 @@ class Migration(migrations.Migration):
                 ("type", models.CharField(max_length=50)),
                 (
                     "positions",
-                    models.PositiveSmallIntegerField(
+                    nautobot.core.models.fields.PositiveSmallIntegerField(
                         default=1,
                         validators=[
                             django.core.validators.MinValueValidator(1),

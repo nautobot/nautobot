@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="device",
             name="device_redundancy_group_priority",
-            field=models.PositiveSmallIntegerField(
+            field=nautobot.core.models.fields.PositiveSmallIntegerField(
                 blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
             ),
         ),

@@ -4,6 +4,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import uuid
 
+import nautobot.core.models.fields
+
 
 class Migration(migrations.Migration):
 
@@ -22,7 +24,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("operator", models.CharField(max_length=12)),
-                ("weight", models.PositiveSmallIntegerField()),
+                ("weight", nautobot.core.models.fields.PositiveSmallIntegerField()),
                 (
                     "group",
                     models.ForeignKey(

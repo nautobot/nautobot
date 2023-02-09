@@ -15,7 +15,7 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
@@ -866,7 +866,7 @@ class DynamicGroupMembership(BaseModel):
         "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
     )
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
-    weight = models.PositiveSmallIntegerField()
+    weight = PositiveSmallIntegerField()
 
     objects = DynamicGroupMembershipQuerySet.as_manager()
 
