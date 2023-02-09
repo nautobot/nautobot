@@ -445,8 +445,13 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
     "tenant": null,
     "vlan": null,
     "status": {
-        "value": "reserved",
-        "label": "Reserved"
+        "display": "Reserved",
+        "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+        "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+        "name": "Reserved",
+        "slug": "reserved",
+        "created": "2019-12-09",
+        "last_updated": "2019-12-09T16:38:50.363404Z"
     },
     "role": {
         "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
@@ -576,8 +581,13 @@ http://nautobot/api/ipam/prefixes/ \
   "tenant": null,
   "vlan": null,
   "status": {
-    "value": "active",
-    "label": "Active"
+      "display": "Active",
+      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "name": "Active",
+      "slug": "active",
+      "created": "2019-12-09",
+      "last_updated": "2019-12-09T16:38:50.363404Z"
   },
   "role": null,
   "type": "network",
@@ -660,8 +670,13 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
   "tenant": null,
   "vlan": null,
   "status": {
-    "value": "reserved",
-    "label": "Reserved"
+      "display": "Reserved",
+      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "name": "Reserved",
+      "slug": "reserved",
+      "created": "2019-12-09",
+      "last_updated": "2019-12-09T16:38:50.363404Z"
   },
   "role": null,
   "type": "network",
