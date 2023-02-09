@@ -237,7 +237,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             location._custom_field_data = region._custom_field_data
         Location.objects.bulk_update(region_locs, ["_custom_field_data"], 1000)
 
-        # Custom Links do not have Region ContentType as one of its ContentType options
+        # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
 
         ExportTemplate = apps.get_model("extras", "exporttemplate")
         export_templates = ExportTemplate.objects.filter(content_type=region_ct)
@@ -245,21 +245,11 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             et.content_type = location_ct
         ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
 
-        ImageAttachment = apps.get_model("extras", "imageattachment")
-        image_attachments = ImageAttachment.objects.filter(content_type=region_ct)
-        for ia in image_attachments:
-            ia.content_type = location_ct
-            region = Region.objects.get(id=ia.object_id)
-            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
-            ia.object_id = region_loc.id
-        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
-
         JobHook = apps.get_model("extras", "jobhook")
         job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
         for jh in job_hooks:
             jh.content_types.add(location_ct)
 
-        # Notes
         Note = apps.get_model("extras", "note")
         notes = Note.objects.filter(assigned_object_type=region_ct)
         for note in notes:
