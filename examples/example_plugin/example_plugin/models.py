@@ -1,7 +1,6 @@
 from django.db import models
 from django.urls import reverse
 
-from example_plugin.choices import FeatureChoices
 from nautobot.apps.models import extras_features, OrganizationalModel
 
 
@@ -55,51 +54,3 @@ class AnotherExampleModel(OrganizationalModel):
 
     def get_absolute_url(self):
         return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})
-
-
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "dynamic_groups",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
-)
-class EasyModel(OrganizationalModel):
-    name = models.CharField(max_length=20)
-    description = models.TextField()
-
-    class Meta:
-        ordering = ["name"]
-
-
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "dynamic_groups",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
-)
-class CustomModel(OrganizationalModel):
-    name = models.CharField(max_length=20)
-    description = models.TextField()
-
-    class Meta:
-        ordering = ["name"]
-
-
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "dynamic_groups",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
-)
-class DynamicModel(OrganizationalModel):
-    has_feature = models.CharField(max_length=20, choices=FeatureChoices)
-    description = models.TextField()
