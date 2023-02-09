@@ -33,6 +33,8 @@ class JSONBAgg(Aggregate):
 
     1. Supports both Postgres (JSONB_AGG) and MySQL (JSON_ARRAYAGG)
     2. Does not support `ordering` as JSON_ARRAYAGG does not guarantee ordering.
+
+    TODO: on sqlite, this will get the value of JSON fields as JSON strings, **NOT** as Python objects!
     """
 
     function = None

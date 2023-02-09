@@ -205,6 +205,9 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             config_context_data = [
                 c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
             ]
+            # TODO: The `data` should be a dict in all cases, but in the case of sqlite, the annotation as currently
+            #       implemented returns a JSON string rather than a Python object
+            config_context_data = [json.loads(data) if isinstance(data, str) else data for data in config_context_data]
 
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
