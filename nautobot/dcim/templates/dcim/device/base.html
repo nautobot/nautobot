@@ -4,7 +4,7 @@
 
 {% block breadcrumbs %}
             <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
-            <li><a href="{% url 'dcim:device_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
+            <li><a href="{% url 'dcim:device_list' %}?location={{ object.location.slug }}">{{ object.location }}</a></li>
             {% if object.parent_bay %}
                 <li>{{ object.parent_bay.device|hyperlinked_object }}</li>
                 <li>{{ object.parent_bay }}</li>

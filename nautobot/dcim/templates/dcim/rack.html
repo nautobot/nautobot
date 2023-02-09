@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:rack_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
+                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.slug }}">{{ object.location }}</a></li>
                 {% if object.group %}
                     {% for group in object.group.ancestors %}
                         <li>{{ group|hyperlinked_object }}</li>
@@ -38,15 +38,6 @@
                 <strong>Rack</strong>
             </div>
             <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Site</td>
-                    <td>
-                        {% if object.site.region %}
-                            {{ object.site.region|hyperlinked_object }} /
-                        {% endif %}
-                        {{ object.site|hyperlinked_object }}
-                    </td>
-                </tr>
                 <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
@@ -320,7 +311,7 @@
             {% endif %}
             {% if perms.dcim.add_device %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:device_add' %}?site={{ object.site.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
+                    <a href="{% url 'dcim:device_add' %}?location={{ object.location.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a non-racked device
                     </a>
