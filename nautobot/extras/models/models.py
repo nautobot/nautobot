@@ -62,8 +62,10 @@ class ConfigContextSchemaValidationMixin:
             except JSONSchemaValidationError as e:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
+def LimitDynamicGroupChoices():
+    return Q(app_label="virtualization", model="virtualmachine") | Q(app_label="dcim", model="device")
 
-@extras_features("graphql", "dynamic_groups")
+@extras_features("graphql")
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
@@ -112,7 +114,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
-    dynamic_groups = models.ManyToManyField(to="extras.DynamicGroup", related_name="+", blank=True)
+    dynamic_groups = models.ManyToManyField(to="extras.DynamicGroup", related_name="+", blank=True, limit_choices_to=LimitDynamicGroupChoices)
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
     objects = ConfigContextQuerySet.as_manager()
