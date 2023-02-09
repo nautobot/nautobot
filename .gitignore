@@ -28,5 +28,3 @@ jobs/*
 htmlcov/*
 /nautobot/project-static/docs/
 /examples/example_plugin/example_plugin/static/example_plugin/docs/
-/frontend/.next/
-/frontend/node_modules/

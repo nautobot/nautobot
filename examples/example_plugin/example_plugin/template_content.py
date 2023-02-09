@@ -45,7 +45,6 @@ class DeviceContent(TemplateExtension):
 
         This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
         """
-
         return [
             {
                 "title": "Example App Tab 1",

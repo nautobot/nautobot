@@ -22,7 +22,7 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
 
     # Banner content greeting the user
     content = format_html(
-        "something different",
+        "<div>Example Plugin says “Hello, <strong>{}</strong>!” 👋</div>",
         context.request.user,
     )
 
