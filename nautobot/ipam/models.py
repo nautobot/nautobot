@@ -18,8 +18,8 @@ from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.ipam import choices
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,
     IPADDRESS_ROLES_NONUNIQUE,
