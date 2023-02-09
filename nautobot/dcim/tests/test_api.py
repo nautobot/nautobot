@@ -1,5 +1,4 @@
 import json
-from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -12,7 +11,6 @@ from constance.test import override_config
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
@@ -1564,7 +1562,7 @@ class PowerOutletTest(Mixins.BasePortTestMixin):
         ]
 
 
-class InterfaceTestVersion12(Mixins.BasePortTestMixin):
+class InterfaceTest(Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
     choices_fields = ["mode", "type"]
@@ -1573,6 +1571,8 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+
+        status_active = Status.objects.get(slug="active")
 
         cls.devices = (
             Device.objects.create(
@@ -1617,6 +1617,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 8",
                 "type": "1000base-t",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
@@ -1625,6 +1626,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 9",
                 "type": "1000base-t",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1634,6 +1636,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 10",
                 "type": "virtual",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1645,6 +1648,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             "device": cls.devices[0].pk,
             "name": "expected-to-fail",
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": status_active.pk,
             "untagged_vlan": cls.vlans[0].pk,
         }
 
@@ -1653,6 +1657,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                "status": status_active.pk,
                 "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
@@ -1660,6 +1665,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "status": status_active.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
         ]
@@ -1671,6 +1677,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "status": status_active.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
@@ -1680,6 +1687,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "status": status_active.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
@@ -1689,35 +1697,11 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "status": status_active.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
         ]
-
-    def test_active_status_not_found(self):
-        self.add_permissions("dcim.add_interface")
-
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-        interface_ct = ContentType.objects.get_for_model(Interface)
-        status_active.content_types.remove(interface_ct)
-
-        data = {
-            "device": self.device.pk,
-            "name": "int-001",
-            "type": "1000base-t",
-            "mode": InterfaceModeChoices.MODE_TAGGED,
-        }
-
-        url = self._get_list_url()
-        response = self.client.post(url, data, format="json", **self.header)
-
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(
-            response.data["status"],
-            [
-                "Interface default status 'active' does not exist, create 'active' status for Interface or use the latest api_version"
-            ],
-        )
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
@@ -1829,31 +1813,6 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
-
-
-class InterfaceTestVersion14(InterfaceTestVersion12):
-    api_version = "1.4"
-
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-
-        # Add status to all payload because status is required in v1.4
-        status_active = Status.objects.get(slug="active")
-        for i, _ in enumerate(cls.create_data):
-            cls.create_data[i]["status"] = status_active.pk
-
-        cls.untagged_vlan_data["status"] = status_active.pk
-
-        for i, _ in enumerate(cls.common_device_or_vc_data):
-            cls.common_device_or_vc_data[i]["status"] = status_active.pk
-
-        for i, _ in enumerate(cls.interfaces_not_belonging_to_same_device_data):
-            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = status_active.pk
-
-    @skip("Test not required in v1.4")
-    def test_active_status_not_found(self):
-        pass
 
 
 class FrontPortTest(Mixins.BasePortTestMixin):

@@ -1,7 +1,5 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
-from nautobot.core.api.utils import SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
@@ -98,23 +96,6 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         return serializers.VirtualMachineWithConfigContextSerializer
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    create=extend_schema(responses={"201": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    list=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]
-    ),
-    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-)
 class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = VMInterface.objects.select_related(
         "virtual_machine",
@@ -126,13 +107,3 @@ class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
     filterset_class = filters.VMInterfaceFilterSet
     # v2 TODO(jathan): Replace prefetch_related with select_related
     brief_prefetch_fields = ["virtual_machine"]
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion12),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
