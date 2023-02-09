@@ -648,7 +648,7 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
-        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -779,7 +779,7 @@ def integration_test(
 
 @task(
     help={
-        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
