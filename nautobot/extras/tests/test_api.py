@@ -2483,7 +2483,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:location-list"),
             data={
                 "name": "New location",
-                "status": "active",
+                "status": Status.objects.get(slug="active").pk,
                 "location_type": location_type.pk,
                 "relationships": {
                     self.relationships[0].slug: {

@@ -349,14 +349,18 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        status_active = Status.objects.get(slug="active")
+        cls.status_active = Status.objects.get(slug="active")
         tenant = Tenant.objects.create(name="Test Tenant")
 
-        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=status_active)
-        cls.loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=status_active, parent=cls.loc1)
-        cls.loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=status_active, parent=cls.loc2)
+        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status_active)
+        cls.loc2 = Location.objects.create(
+            name="RTP4E", location_type=cls.lt2, status=cls.status_active, parent=cls.loc1
+        )
+        cls.loc3 = Location.objects.create(
+            name="RTP4E-3", location_type=cls.lt3, status=cls.status_active, parent=cls.loc2
+        )
         cls.loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=cls.lt4, status=status_active, parent=cls.loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.status_active, parent=cls.loc3, tenant=tenant
         )
         for loc in [cls.loc1, cls.loc2, cls.loc3, cls.loc4]:
             loc.validated_save()
@@ -365,20 +369,20 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Downtown Durham",
                 "location_type": cls.lt1.pk,
-                "status": "active",
+                "status": cls.status_active.pk,
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
                 "location_type": cls.lt2.pk,
                 "parent": cls.loc1.pk,
-                "status": "active",
+                "status": cls.status_active.pk,
             },
             {
                 "name": "RTP4E-2",
                 "location_type": cls.lt3.pk,
                 "parent": cls.loc2.pk,
-                "status": "active",
+                "status": cls.status_active.pk,
                 "description": "Second floor of RTP4E",
                 "tenant": tenant.pk,
             },

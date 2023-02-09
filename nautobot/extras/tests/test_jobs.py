@@ -192,7 +192,7 @@ class JobTest(TransactionTestCase):
         module = "test_read_only_pass"
         name = "TestReadOnlyPass"
         job_result = create_job_result_and_run_job(module, name, commit=False)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
 
     def test_read_only_job_fail(self):
@@ -204,7 +204,7 @@ class JobTest(TransactionTestCase):
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
         logging.disable(logging.NOTSET)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
         run_log = JobLogEntry.objects.filter(grouping="run")
@@ -741,7 +741,6 @@ class JobHookTest(TransactionTestCase):
         with web_request_context(user=self.user):
 
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type)
-            self.wait_on_active_tasks()
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
                 ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),

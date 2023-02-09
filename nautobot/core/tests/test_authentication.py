@@ -321,7 +321,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         data = {
             "prefix": "10.0.9.0/24",
             "location": self.locations[1].pk,
-            "status": "active",
+            "status": self.statuses[1].pk,
         }
         initial_count = Prefix.objects.count()
 

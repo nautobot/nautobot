@@ -364,13 +364,14 @@ class WritableNestedSerializerTest(testing.APITestCase):
             slug="location-3",
             parent=self.location1,
         )
+        self.statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
 
     def test_related_by_pk(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "location": self.location1.pk,
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -379,7 +380,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.status, self.status)
+        self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.location, self.location1)
 
     def test_related_by_pk_no_match(self):
@@ -387,7 +388,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "location": "00000000-0000-0000-0000-0000000009eb",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -402,7 +403,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "location": {"name": "Location 1"},
         }
         url = reverse("ipam-api:vlan-list")
@@ -418,7 +419,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "location": {"name": "Location X"},
         }
         url = reverse("ipam-api:vlan-list")
@@ -434,7 +435,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": "active",
+            "status": self.statuses.first().pk,
             "location": {
                 "parent": {
                     "name": self.location1.name,
@@ -455,7 +456,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "location": "XXX",
-            "status": "active",
+            "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")

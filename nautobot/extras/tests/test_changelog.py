@@ -263,7 +263,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": f"{location_type.pk}",
             "custom_fields": {
                 "my_field": "ABC",
@@ -302,7 +302,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Location X",
             "slug": "test-location-x",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": f"{location_type.pk}",
             "custom_fields": {
                 "my_field": "DEF",
@@ -399,7 +399,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": location_type.pk,
         }
         self.add_permissions("dcim.add_location")
@@ -419,7 +419,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 2",
             "slug": "test-location-2",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": location_type.pk,
         }
         self.add_permissions("dcim.add_location")
@@ -441,7 +441,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": location_type.pk,
         }
         self.add_permissions("dcim.add_location")
@@ -462,7 +462,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": location_type.pk,
         }
         self.assertEqual(ObjectChange.objects.count(), 0)

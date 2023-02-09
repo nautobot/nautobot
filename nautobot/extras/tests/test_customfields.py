@@ -469,16 +469,16 @@ class CustomFieldDataAPITest(APITestCase):
         if "example_plugin" in settings.PLUGINS:
             cls.cf_plugin_field = CustomField.objects.get(name="example_plugin_auto_custom_field")
 
-        statuses = Status.objects.get_for_model(Location)
+        cls.statuses = Status.objects.get_for_model(Location)
 
         # Create some locations
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
             Location.objects.create(
-                name="Location 1", slug="location-1", status=statuses.get(slug="active"), location_type=cls.lt
+                name="Location 1", slug="location-1", status=cls.statuses.get(slug="active"), location_type=cls.lt
             ),
             Location.objects.create(
-                name="Location 2", slug="location-2", status=statuses.get(slug="active"), location_type=cls.lt
+                name="Location 2", slug="location-2", status=cls.statuses.get(slug="active"), location_type=cls.lt
             ),
         )
 
@@ -551,7 +551,7 @@ class CustomFieldDataAPITest(APITestCase):
             "name": "Location 3",
             "slug": "location-3",
             "location_type": self.lt.pk,
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
         }
         url = reverse("dcim-api:location-list")
         self.add_permissions("dcim.add_location")
@@ -590,7 +590,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Location 3",
             "slug": "location-3",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": self.lt.pk,
             "custom_fields": {
                 "text_cf": "bar",
@@ -649,19 +649,19 @@ class CustomFieldDataAPITest(APITestCase):
                 "name": "Location 3",
                 "slug": "location-3",
                 "location_type": self.lt.pk,
-                "status": "active",
+                "status": self.statuses.get(slug="active").pk,
             },
             {
                 "name": "Location 4",
                 "slug": "location-4",
                 "location_type": self.lt.pk,
-                "status": "active",
+                "status": self.statuses.get(slug="active").pk,
             },
             {
                 "name": "Location 5",
                 "slug": "location-5",
                 "location_type": self.lt.pk,
-                "status": "active",
+                "status": self.statuses.get(slug="active").pk,
             },
         )
         url = reverse("dcim-api:location-list")
@@ -716,21 +716,21 @@ class CustomFieldDataAPITest(APITestCase):
             {
                 "name": "Location 3",
                 "slug": "location-3",
-                "status": "active",
+                "status": self.statuses.first().pk,
                 "location_type": self.lt.pk,
                 "custom_fields": custom_field_data,
             },
             {
                 "name": "Location 4",
                 "slug": "location-4",
-                "status": "active",
+                "status": self.statuses.first().pk,
                 "location_type": self.lt.pk,
                 "custom_fields": custom_field_data,
             },
             {
                 "name": "Location 5",
                 "slug": "location-5",
-                "status": "active",
+                "status": self.statuses.first().pk,
                 "location_type": self.lt.pk,
                 "custom_fields": custom_field_data,
             },
@@ -761,28 +761,13 @@ class CustomFieldDataAPITest(APITestCase):
 
             # Validate database data
             location = Location.objects.get(pk=response.data[i]["id"])
-            self.assertEqual(location.cf["text_field"], custom_field_data["text_field"])
-            self.assertEqual(
-                location.cf["number_field"],
-                custom_field_data["number_field"],
-            )
-            self.assertEqual(
-                location.cf["boolean_field"],
-                custom_field_data["boolean_field"],
-            )
-            self.assertEqual(
-                str(location.cf["date_field"]),
-                custom_field_data["date_field"],
-            )
-            self.assertEqual(location.cf["url_field"], custom_field_data["url_field"])
-            self.assertEqual(
-                location.cf["choice_field"],
-                custom_field_data["choice_field"],
-            )
-            self.assertEqual(
-                location.cf["multi_choice_field"],
-                custom_field_data["multi_choice_field"],
-            )
+            self.assertEqual(location.cf["text_field"], custom_field_data["text_cf"])
+            self.assertEqual(location.cf["number_field"], custom_field_data["number_cf"])
+            self.assertEqual(location.cf["boolean_field"], custom_field_data["boolean_cf"])
+            self.assertEqual(str(location.cf["date_field"]), custom_field_data["date_cf"])
+            self.assertEqual(location.cf["url_field"], custom_field_data["url_cf"])
+            self.assertEqual(location.cf["choice_field"], custom_field_data["choice_cf"])
+            self.assertEqual(location.cf["multi_choice_field"], custom_field_data["multi_choice_cf"])
             if "example_plugin" in settings.PLUGINS:
                 self.assertEqual(
                     location.cf["example_plugin_auto_custom_field"],
@@ -934,7 +919,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Location 4",
             "slug": "location-4",
-            "status": "active",
+            "status": self.statuses.get(slug="active").pk,
             "location_type": self.lt.pk,
             "custom_fields": {
                 "text_cf": ["I", "am", "a", "disallowed", "type"],
@@ -1817,7 +1802,6 @@ class CustomFieldChoiceTest(TestCase):
 
 class CustomFieldBackgroundTasks(TransactionTestCase):
     def test_provision_field_task(self):
-        self.clear_worker()
         location_type = LocationType.objects.create(name="Root Type 1")
         location = Location(name="Location 1", slug="location-1", location_type=location_type)
         location.save()
@@ -1826,8 +1810,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
         cf.save()
         cf.content_types.set([obj_type])
-
-        self.wait_on_active_tasks()
 
         location.refresh_from_db()
 
@@ -1854,15 +1836,12 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         cf.delete()
 
-        self.wait_on_active_tasks()
-
         location.refresh_from_db()
 
         self.assertTrue("cf1" not in location.cf)
         logging.disable(logging.NOTSET)
 
     def test_update_custom_field_choice_data_task(self):
-        self.clear_worker()
         obj_type = ContentType.objects.get_for_model(Location)
         cf = CustomField(
             name="cf1",
@@ -1881,8 +1860,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         choice.value = "Bar"
         choice.save()
-
-        self.wait_on_active_tasks()
 
         location.refresh_from_db()
 
