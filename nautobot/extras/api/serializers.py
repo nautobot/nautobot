@@ -17,7 +17,6 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
@@ -463,29 +462,6 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         if self.instance is None:
             if "slug" in data and "name" not in data:
                 data["name"] = data["slug"]
-
-        return super().validate(data)
-
-
-class CustomFieldSerializerVersion12(CustomFieldSerializer):
-    # In older versions of the REST API, neither `label` nor `slug` were required fields. See also validate() below.
-    label = serializers.CharField(max_length=50, required=False)
-    slug = serializers.CharField(max_length=50, required=False)
-
-    class Meta(CustomFieldSerializer.Meta):
-        fields = CustomFieldSerializer.Meta.fields.copy()
-        fields.insert(4, "name")
-
-    def validate(self, data):
-        # Logic copied from CustomField.clean_fields(), since this needs to happen *before* the instance is created
-        if self.instance is None:
-            # 2.0 TODO: this is to fix up existing usage when caller specifies a name but not a label;
-            # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
-            if "name" in data and "label" not in data:
-                data["label"] = data["name"]
-
-            if "label" in data and "slug" not in data:
-                data["slug"] = slugify_dashes_to_underscores(data["label"])
 
         return super().validate(data)
 
@@ -1310,37 +1286,6 @@ class StatusSerializer(NautobotModelSerializer):
 class TagSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Tag
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "tagged_items",
-        ]
-
-    def validate(self, data):
-        data = super().validate(data)
-
-        # All relevant content_types should be assigned to newly created tag for API Version <1.3
-        if (self.instance is None or not self.instance.present_in_database) and "content_types" not in data:
-            data["content_types"] = TaggableClassesQuery().as_queryset()
-
-        # check if tag is assigned to any of the removed content_types
-        if self.instance is not None and self.instance.present_in_database and "content_types" in data:
-            content_types_id = [content_type.id for content_type in data["content_types"]]
-            errors = self.instance.validate_content_types_removal(content_types_id)
-
-            if errors:
-                raise serializers.ValidationError(errors)
-
-        return data
-
-
-class TagSerializerVersion13(TagSerializer):
     content_types = ContentTypeField(
         queryset=TaggableClassesQuery().as_queryset(),
         many=True,
@@ -1358,6 +1303,19 @@ class TagSerializerVersion13(TagSerializer):
             "tagged_items",
             "content_types",
         ]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        # check if tag is assigned to any of the removed content_types
+        if self.instance is not None and self.instance.present_in_database and "content_types" in data:
+            content_types_id = [content_type.id for content_type in data["content_types"]]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+        return data
 
 
 #

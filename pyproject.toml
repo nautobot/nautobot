@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.16"
+Django = "~3.2.17"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -333,6 +333,7 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [tool.towncrier.fragment.added]
 [tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.dependencies]
 [tool.towncrier.fragment.deprecated]
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]

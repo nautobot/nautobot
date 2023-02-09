@@ -8,7 +8,7 @@ from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -18,7 +18,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
-from nautobot.core.api.utils import get_serializer_for_model, SerializerForAPIVersions, versioned_serializer_selector
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
@@ -646,19 +646,6 @@ class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
     brief_prefetch_fields = ["device"]
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(
-        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    create=extend_schema(responses={"201": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    list=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]),
-    partial_update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    retrieve=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    update=extend_schema(responses={"200": serializers.InterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-)
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
     queryset = Interface.objects.select_related(
         "device",
@@ -672,16 +659,6 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
     filterset_class = filters.InterfaceFilterSet
     # v2 TODO(jathan): Replace prefetch_related with select_related
     brief_prefetch_fields = ["device"]
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.InterfaceSerializerVersion12),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
 
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):

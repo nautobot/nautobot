@@ -19,16 +19,27 @@ class IPAddressFamilyChoices(ChoiceSet):
 
 class PrefixStatusChoices(ChoiceSet):
 
-    STATUS_CONTAINER = "container"
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
 
     CHOICES = (
-        (STATUS_CONTAINER, "Container"),
         (STATUS_ACTIVE, "Active"),
         (STATUS_RESERVED, "Reserved"),
         (STATUS_DEPRECATED, "Deprecated"),
+    )
+
+
+class PrefixTypeChoices(ChoiceSet):
+
+    TYPE_CONTAINER = "container"
+    TYPE_NETWORK = "network"
+    TYPE_POOL = "pool"
+
+    CHOICES = (
+        (TYPE_CONTAINER, "Container"),
+        (TYPE_NETWORK, "Network"),
+        (TYPE_POOL, "Pool"),
     )
 
 

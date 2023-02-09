@@ -12,7 +12,7 @@ from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warning
 from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.choices import ServiceProtocolChoices
+from nautobot.ipam import choices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
@@ -169,12 +169,18 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             "description": "New description",
             "status": cls.statuses[0].pk,
         }
+        cls.choices_fields = ["type"]
 
     def test_list_available_prefixes(self):
         """
         Test retrieval of all available prefixes within a parent prefix.
         """
-        prefix = Prefix.objects.ip_family(6).filter(prefix_length__lt=128).exclude(status__slug="container").first()
+        prefix = (
+            Prefix.objects.ip_family(6)
+            .filter(prefix_length__lt=128)
+            .exclude(type=choices.PrefixTypeChoices.TYPE_CONTAINER)
+            .first()
+        )
         if prefix is None:
             self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
@@ -267,19 +273,21 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test retrieval of all available IP addresses within a parent prefix.
         """
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True, status=self.status_active)
+        prefix = Prefix.objects.create(
+            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=self.status_active
+        )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
 
         # Retrieve all available IPs
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.data), 8)  # 8 because prefix.is_pool = True
+        self.assertEqual(len(response.data), 8)  # 8 because prefix.type = pool
 
         # Change the prefix to not be a pool and try again
-        prefix.is_pool = False
+        prefix.type = choices.PrefixTypeChoices.TYPE_NETWORK
         prefix.save()
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.data), 6)  # 8 - 2 because prefix.is_pool = False
+        self.assertEqual(len(response.data), 6)  # 8 - 2 because prefix.type = network
 
     def test_create_single_available_ip(self):
         """
@@ -289,7 +297,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         prefix = Prefix.objects.create(
             prefix=IPNetwork("192.0.2.0/30"),
             vrf=vrf,
-            is_pool=True,
+            type=choices.PrefixTypeChoices.TYPE_POOL,
             status=self.status_active,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
@@ -315,7 +323,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test the creation of available IP addresses within a parent prefix.
         """
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True, status=self.status_active)
+        prefix = Prefix.objects.create(
+            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=self.status_active
+        )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
@@ -338,7 +348,7 @@ class ParallelPrefixTest(APITransactionTestCase):
     """
 
     def test_create_multiple_available_prefixes_parallel(self):
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL)
         status_active = Status.objects.get(slug="active")
 
         # 5 Prefixes
@@ -354,7 +364,7 @@ class ParallelPrefixTest(APITransactionTestCase):
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
 
     def test_create_multiple_available_ips_parallel(self):
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), is_pool=True)
+        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL)
         status_active = Status.objects.get(slug="active")
 
         # 8 IPs
@@ -447,15 +457,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
-        # Fetch nat inside IP address with default (1.2) API
-        response = self.client.get(
-            self._get_detail_url(nat_inside),
-            **self.header,
-        )
-        self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
-
-        self.set_api_version(api_version="1.3")
-        # Fetch nat inside IP address with 1.3 API
         response = self.client.get(
             self._get_detail_url(nat_inside),
             **self.header,
@@ -585,19 +586,19 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         Service.objects.create(
             device=devices[0],
             name="Service 1",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+            protocol=choices.ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1],
         )
         Service.objects.create(
             device=devices[0],
             name="Service 2",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+            protocol=choices.ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2],
         )
         Service.objects.create(
             device=devices[0],
             name="Service 3",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+            protocol=choices.ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[3],
         )
 
@@ -605,19 +606,19 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device": devices[1].pk,
                 "name": "Service 4",
-                "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
+                "protocol": choices.ServiceProtocolChoices.PROTOCOL_TCP,
                 "ports": [4],
             },
             {
                 "device": devices[1].pk,
                 "name": "Service 5",
-                "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
+                "protocol": choices.ServiceProtocolChoices.PROTOCOL_TCP,
                 "ports": [5],
             },
             {
                 "device": devices[1].pk,
                 "name": "Service 6",
-                "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
+                "protocol": choices.ServiceProtocolChoices.PROTOCOL_TCP,
                 "ports": [6],
             },
         ]

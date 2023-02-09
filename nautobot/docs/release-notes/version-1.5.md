@@ -148,6 +148,34 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.10 (2023-02-06)
+
+### Added
+
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added `CELERY_WORKER_PROMETHEUS_PORTS` configuration setting
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added prometheus HTTP server listening on the worker to expose worker metrics
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added `nautobot_job_duration_seconds` counter metric that reports on job execution
+
+### Changed
+
+- [#3177](https://github.com/nautobot/nautobot/issues/3177) - Updated VLANFactory to generate longer and more "realistic" VLAN names.
+- [#3198](https://github.com/nautobot/nautobot/issues/3198) - Added dependencies towncrier section, removed extra newline.
+
+### Dependencies
+
+- [#3227](https://github.com/nautobot/nautobot/issues/3227) - Updated `django` to 3.2.17.
+
+### Fixed
+
+- [#3126](https://github.com/nautobot/nautobot/issues/3126) - Fixed interface not raising exception when adding a VLAN from a different site in tagged_vlans.
+- [#3153](https://github.com/nautobot/nautobot/issues/3153) - Made integration test `CableConnectFormTestCase.test_js_functionality` more resilient and less prone to erroneous failures.
+- [#3177](https://github.com/nautobot/nautobot/issues/3177) - Fixed a spurious failure in BulkEditObjectsViewTestCase.test_bulk_edit_objects_with_constrained_permission.
+- [#3200](https://github.com/nautobot/nautobot/issues/3200) - Added `dependencies` to the list of valid change fragment types in the documentation.
+
+### Security
+
+- [#3227](https://github.com/nautobot/nautobot/issues/3227) - Updated `django` to 3.2.17 due to CVE-2023-23969.
+
 ## v1.5.9 (2023-01-26)
 
 ### Changed

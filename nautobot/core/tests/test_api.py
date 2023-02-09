@@ -242,10 +242,11 @@ class APIVersioningTestCase(testing.APITestCase):
         self.assertIn("API-Version", response)
         self.assertEqual(response["API-Version"], max_version)
 
-        # Specify different versions in Accept header and query parameter (invalid)
-        response = self.client.get(f"{url}?api_version={min_version}", **self.header)
-        self.assertHttpStatus(response, 400)
-        self.assertIn("Version mismatch", response.data["detail"])
+        if min_version != max_version:
+            # Specify different versions in Accept header and query parameter (invalid)
+            response = self.client.get(f"{url}?api_version={min_version}", **self.header)
+            self.assertHttpStatus(response, 400)
+            self.assertIn("Version mismatch", response.data["detail"])
 
 
 class LookupTypeChoicesTestCase(testing.APITestCase):

@@ -63,7 +63,7 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(slug="active")}
+        self.extra_data = {"status": Status.objects.get(slug="active"), "type": "network"}
 
 
 class IPAddressFormTest(BaseNetworkFormTest, TestCase):

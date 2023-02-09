@@ -160,7 +160,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "vlan": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,
-            "is_pool": True,
+            "type": "pool",
             "description": "A new prefix",
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
@@ -179,7 +179,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "tenant": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,
-            "is_pool": False,
+            "type": "network",
             "description": "New description",
         }
 

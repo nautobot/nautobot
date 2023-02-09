@@ -173,12 +173,10 @@ STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
 current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
-# We support all major.minor API versions from 1.2 to the present latest version.
+# We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
 assert current_major == "2", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
-REST_FRAMEWORK_ALLOWED_VERSIONS = ["1.2", "1.3", "1.4", "1.5"] + [
-    f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)
-]
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -198,7 +196,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
-    "DEFAULT_VERSION": "1.2",
+    "DEFAULT_VERSION": "2.0",
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
@@ -245,6 +243,7 @@ SPECTACULAR_SETTINGS = {
         "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
         "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "PrefixTypeChoices": "nautobot.ipam.choices.PrefixTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
@@ -714,6 +713,18 @@ CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "def
 # while exceeding the hard limit will result in a SIGKILL.
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
+
+# Ports for prometheus metric HTTP server running on the celery worker.
+# Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
+# sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
+# highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then
+# use the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in
+# that case. Set this to an empty string to disable it.
+CELERY_WORKER_PROMETHEUS_PORTS = []
+if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
+    CELERY_WORKER_PROMETHEUS_PORTS = [
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
+    ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization

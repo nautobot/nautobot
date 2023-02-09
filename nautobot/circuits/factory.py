@@ -3,7 +3,13 @@ import faker
 
 from nautobot.circuits import choices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
+from nautobot.core.factory import (
+    NautobotBoolIterator,
+    OrganizationalModelFactory,
+    PrimaryModelFactory,
+    UniqueFaker,
+    random_instance,
+)
 from nautobot.dcim import models as dcim_models
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
@@ -17,7 +23,7 @@ class CircuitTypeFactory(OrganizationalModelFactory):
     name = UniqueFaker("color")
     # Slug isn't defined here since it inherits from name.
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
@@ -29,22 +35,22 @@ class ProviderFactory(PrimaryModelFactory):
     name = UniqueFaker("company")
     # Slug isn't defined here since it inherits from name.
 
-    has_asn = factory.Faker("pybool")
+    has_asn = NautobotBoolIterator()
     asn = factory.Maybe("has_asn", factory.Faker("pyint", min_value=4200000000, max_value=4294967294), None)
 
-    has_account = factory.Faker("pybool")
+    has_account = NautobotBoolIterator()
     account = factory.Maybe("has_account", factory.Faker("uuid4"), "")
 
-    has_portal_url = factory.Faker("pybool")
+    has_portal_url = NautobotBoolIterator()
     portal_url = factory.Maybe("has_portal_url", factory.Faker("url"), "")
 
-    has_noc_contact = factory.Faker("pybool")
+    has_noc_contact = NautobotBoolIterator()
     noc_contact = factory.Maybe("has_noc_contact", factory.Faker("address"), "")
 
-    has_admin_contact = factory.Faker("pybool")
+    has_admin_contact = NautobotBoolIterator()
     admin_contact = factory.Maybe("has_admin_contact", factory.Faker("address"), "")
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
@@ -58,19 +64,19 @@ class CircuitFactory(PrimaryModelFactory):
     cid = factory.LazyAttributeSequence(lambda o, n: f"{o.provider} {o.circuit_type} - {n:04}")
     status = random_instance(lambda: Status.objects.get_for_model(Circuit), allow_null=False)
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    has_install_date = factory.Faker("pybool")
+    has_install_date = NautobotBoolIterator()
     install_date = factory.Maybe("has_install_date", factory.Faker("date"), None)
 
-    has_commit_rate = factory.Faker("pybool")
+    has_commit_rate = NautobotBoolIterator()
     commit_rate = factory.Maybe("has_commit_rate", factory.Faker("pyint"), None)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
@@ -84,10 +90,10 @@ class ProviderNetworkFactory(PrimaryModelFactory):
     )
     provider = random_instance(Provider, allow_null=False)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
@@ -114,7 +120,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
     term_side = factory.Faker("random_element", elements=choices.CircuitTerminationSideChoices.values())
 
     has_region = None  # overridable attribute to force site that has a region
-    has_site = factory.Maybe("has_region", True, factory.Faker("pybool"))
+    has_site = factory.Maybe("has_region", True, NautobotBoolIterator())
 
     @factory.lazy_attribute
     def site(self):
@@ -124,7 +130,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             return faker.Faker().random_element(elements=dcim_models.Site.objects.all())
         return None
 
-    has_location = factory.Maybe("has_site", factory.Faker("pybool"), False)
+    has_location = factory.Maybe("has_site", NautobotBoolIterator(), False)
     location = factory.Maybe(
         "has_location",
         factory.LazyAttribute(
@@ -142,17 +148,17 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))
         return ProviderNetworkFactory(provider=self.circuit.provider)
 
-    has_port_speed = factory.Faker("pybool")
+    has_port_speed = NautobotBoolIterator()
     port_speed = factory.Maybe("has_port_speed", factory.Faker("pyint", max_value=100000000), None)
 
-    has_upstream_speed = factory.Faker("pybool")
+    has_upstream_speed = NautobotBoolIterator()
     upstream_speed = factory.Maybe("has_upstream_speed", factory.Faker("pyint", max_value=100000000), None)
 
-    has_xconnect_id = factory.Faker("pybool")
+    has_xconnect_id = NautobotBoolIterator()
     xconnect_id = factory.Maybe("has_xconnect_id", factory.Faker("word"), "")
 
-    has_pp_info = factory.Faker("pybool")
+    has_pp_info = NautobotBoolIterator()
     pp_info = factory.Maybe("has_pp_info", factory.Faker("word"), "")
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
