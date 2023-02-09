@@ -196,8 +196,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         )
         cls.platforms = platforms
 
-        locations = Location.objects.all()[:3]
-        cls.locations = locations
+        cls.locations = Location.objects.all()[:3]
 
         cluster_groups = (
             ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
@@ -245,7 +244,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = list(Region.objects.all()[:2])
         filter_params = [
             {"region_id": [regions[0].pk, regions[1].pk]},
             {"region": [regions[0].slug, regions[1].pk]},
@@ -256,7 +255,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = list(Site.objects.all()[:2])
         filter_params = [
             {"site_id": [sites[0].pk, sites[1].pk]},
             {"site": [sites[0].pk, sites[1].slug]},
@@ -274,7 +273,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_location(self):
-        locations = self.locations[:2]
+        locations = list(self.locations[:2])
         filter_params = [
             {"location_id": [locations[0].pk, locations[1].pk]},
             {"location": [locations[0].pk, locations[1].slug]},
@@ -285,7 +284,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_type(self):
-        device_types = self.device_types[:2]
+        device_types = list(self.device_types[:2])
         filter_params = [
             {"device_type_id": [device_types[0].pk, device_types[1].pk]},
             {"device_type": [device_types[0].pk, device_types[1].slug]},
@@ -296,7 +295,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_platform(self):
-        platforms = self.platforms[:2]
+        platforms = list(self.platforms[:2])
         filter_params = [
             {"platform_id": [platforms[0].pk, platforms[1].pk]},
             {"platform": [platforms[0].pk, platforms[1].slug]},
@@ -307,7 +306,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_cluster_group(self):
-        cluster_groups = ClusterGroup.objects.all()[:2]
+        cluster_groups = list(ClusterGroup.objects.all()[:2])
         filter_params = [
             {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
             {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].slug]},
@@ -324,7 +323,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant_group(self):
-        tenant_groups = self.tenant_groups[:2]
+        tenant_groups = list(self.tenant_groups[:2])
         filter_params = [
             {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]},
             {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].pk]},
@@ -336,7 +335,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_tenant(self):
-        tenants = self.tenants[:2]
+        tenants = list(self.tenants[:2])
         filter_params = [
             {"tenant_id": [tenants[0].pk, tenants[1].pk]},
             {"tenant": [tenants[0].slug, tenants[1].pk]},
@@ -446,7 +445,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
             CustomFieldChoice.objects.create(field=fields[num], value=f"Custom Field Choice {num}")
 
     def test_field(self):
-        fields = self.fields[:2]
+        fields = list(self.fields[:2])
         filter_params = [
             {"field_id": [fields[0].pk, fields[1].pk]},
             {"field": [fields[0].name, fields[1].pk]},
@@ -828,7 +827,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_job_model(self):
-        jobs = self.jobs[:2]
+        jobs = list(self.jobs[:2])
         filter_params = [
             {"job_model_id": [jobs[0].pk, jobs[1].pk]},
             {"job_model": [jobs[0].pk, jobs[1].slug]},
@@ -1024,7 +1023,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_user(self):
-        users = User.objects.filter(username__in=["user1", "user2"])
+        users = list(User.objects.filter(username__in=["user1", "user2"]))
         filter_params = [
             {"user_id": [users[0].pk, users[1].pk]},
             {"user": [users[0].pk, users[1].username]},

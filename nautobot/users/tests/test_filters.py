@@ -96,7 +96,7 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_group(self):
-        groups = Group.objects.all()[:2]
+        groups = list(Group.objects.all()[:2])
         filter_params = [
             {"group_id": [groups[0].pk, groups[1].pk]},
             {"group": [groups[0].name, groups[1].name]},
@@ -183,7 +183,7 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_group(self):
-        groups = Group.objects.filter(name__in=["Group 1", "Group 2"])[:2]
+        groups = list(Group.objects.filter(name__in=["Group 1", "Group 2"])[:2])
         filter_params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].name, groups[1].name]}]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -191,7 +191,7 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_user(self):
-        users = User.objects.filter(username__in=["User1", "User2"])[:2]
+        users = list(User.objects.filter(username__in=["User1", "User2"])[:2])
         filter_params = [{"user_id": [users[0].pk, users[1].pk]}, {"user": [users[0].pk, users[1].username]}]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(

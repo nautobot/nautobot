@@ -229,7 +229,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
     def test_group(self):
-        groups = ClusterGroup.objects.all()[:2]
+        groups = list(ClusterGroup.objects.all()[:2])
         filter_params = [
             {"group_id": [groups[0].pk, groups[1].pk]},
             {"group": [groups[0].pk, groups[1].slug]},
@@ -241,7 +241,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             )
 
     def test_type(self):
-        types = ClusterType.objects.all()[:2]
+        types = list(ClusterType.objects.all()[:2])
         filter_params = [
             {"type_id": [types[0].pk, types[1].pk]},
             {"type": [types[0].pk, types[1].slug]},
@@ -473,7 +473,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_cluster_group(self):
-        groups = ClusterGroup.objects.all()[:2]
+        groups = list(ClusterGroup.objects.all()[:2])
         filter_params = [
             {"cluster_group_id": [groups[0].pk, groups[1].pk]},
             {"cluster_group": [groups[0].pk, groups[1].slug]},
@@ -485,7 +485,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             )
 
     def test_cluster_type(self):
-        types = ClusterType.objects.all()[:2]
+        types = list(ClusterType.objects.all()[:2])
         filter_params = [
             {"cluster_type_id": [types[0].pk, types[1].pk]},
             {"cluster_type": [types[0].pk, types[1].slug]},

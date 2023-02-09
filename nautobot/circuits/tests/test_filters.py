@@ -33,7 +33,7 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             ),
         )
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)
+        cls.regions = list(Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:2])
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -99,7 +99,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     @classmethod
     def setUpTestData(cls):
 
-        cls.regions = Region.objects.filter(sites__isnull=False).distinct()
+        cls.regions = list(Region.objects.filter(sites__isnull=False).distinct()[:3])
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -206,7 +206,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_provider(self):
-        providers = Provider.objects.all()
+        providers = list(Provider.objects.all()[:2])
         filter_params = [
             {"provider_id": [providers[0].id, providers[1].id]},
             {"provider": [providers[0].id, providers[1].slug]},
@@ -218,12 +218,12 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             )
 
     def test_provider_network(self):
-        provider_network = ProviderNetwork.objects.all()
+        provider_network = ProviderNetwork.objects.all()[:2]
         params = {"provider_network_id": [provider_network[0].pk, provider_network[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
-        circuit_types = CircuitType.objects.all()
+        circuit_types = list(CircuitType.objects.all()[:2])
         filter_params = [
             {"type_id": [circuit_types[0].pk, circuit_types[1].pk]},
             {"type": [circuit_types[0].slug, circuit_types[1].pk]},
@@ -418,12 +418,12 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_circuit_id(self):
-        circuits = Circuit.objects.all()
+        circuits = Circuit.objects.all()[:2]
         params = {"circuit_id": [circuits[0].pk, circuits[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_provider_network(self):
-        provider_networks = ProviderNetwork.objects.all()
+        provider_networks = ProviderNetwork.objects.all()[:2]
         params = {"provider_network_id": [provider_networks[0].pk, provider_networks[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
@@ -467,7 +467,7 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
         ProviderNetwork.objects.bulk_create(provider_networks)
 
     def test_provider(self):
-        providers = Provider.objects.all()
+        providers = list(Provider.objects.all()[:2])
         filter_params = [
             {"provider_id": [providers[0].pk, providers[1].pk]},
             {"provider": [providers[0].slug, providers[1].id]},
