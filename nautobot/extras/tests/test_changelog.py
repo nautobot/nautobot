@@ -39,8 +39,8 @@ class ChangeLogViewTest(ModelViewTestCase):
         cf_select.validated_save()
         cf_select.content_types.set([ct])
 
-        CustomFieldChoice.objects.create(field=cf_select, value="Bar")
-        CustomFieldChoice.objects.create(field=cf_select, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Foo")
 
         cls.tags = Tag.objects.get_for_model(Site)
 
@@ -223,8 +223,8 @@ class ChangeLogAPITest(APITestCase):
         cf_select.save()
         cf_select.content_types.set([ct])
 
-        CustomFieldChoice.objects.create(field=cf_select, value="Bar")
-        CustomFieldChoice.objects.create(field=cf_select, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Foo")
 
         self.tags = Tag.objects.get_for_model(Site)
         self.statuses = Status.objects.get_for_model(Site)

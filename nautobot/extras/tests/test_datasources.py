@@ -154,7 +154,7 @@ class GitTest(TransactionTestCase):
         with open(os.path.join(path, "config_contexts", "devices", f"{self.device.name}.json"), "w") as fd:
             json.dump({"dns-servers": ["8.8.8.8"]}, fd)
 
-        with open(os.path.join(path, "config_context_schemas", "config_context_schema-1.yaml"), "w") as fd:
+        with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
             yaml.dump(self.config_context_schema, fd)
 
         with open(os.path.join(path, "export_templates", "dcim", "device", "template.j2"), "w") as fd:
@@ -406,13 +406,13 @@ class GitTest(TransactionTestCase):
                 secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
                 SecretsGroupAssociation.objects.create(
                     secret=username_secret,
-                    group=secrets_group,
+                    secrets_group=secrets_group,
                     access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
                     secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 )
                 SecretsGroupAssociation.objects.create(
                     secret=token_secret,
-                    group=secrets_group,
+                    secrets_group=secrets_group,
                     access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
                     secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
                 )

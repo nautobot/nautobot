@@ -162,9 +162,9 @@ class CustomFieldTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(field=cf, value="Option A")
-        CustomFieldChoice.objects.create(field=cf, value="Option B")
-        CustomFieldChoice.objects.create(field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
 
         # Assign a value to the first Site
         site = Site.objects.get(slug="site-a")
@@ -200,9 +200,9 @@ class CustomFieldTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(field=cf, value="Option A")
-        CustomFieldChoice.objects.create(field=cf, value="Option B")
-        CustomFieldChoice.objects.create(field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
 
         # Assign a value to the first Site
         site = Site.objects.get(slug="site-a")
@@ -237,9 +237,9 @@ class CustomFieldTest(TestCase):
         )
         cf.save()
         cf.content_types.set([obj_type])
-        CustomFieldChoice.objects.create(field=cf, value="Option A")
-        CustomFieldChoice.objects.create(field=cf, value="Option B")
-        CustomFieldChoice.objects.create(field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
         cf.validated_save()
 
         # Assign values to all sites
@@ -452,9 +452,9 @@ class CustomFieldDataAPITest(APITestCase):
         )
         cls.cf_select.save()
         cls.cf_select.content_types.set([content_type])
-        CustomFieldChoice.objects.create(field=cls.cf_select, value="Foo")
-        CustomFieldChoice.objects.create(field=cls.cf_select, value="Bar")
-        CustomFieldChoice.objects.create(field=cls.cf_select, value="Baz")
+        CustomFieldChoice.objects.create(custom_field=cls.cf_select, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cls.cf_select, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cls.cf_select, value="Baz")
         cls.cf_select.default = "Foo"
         cls.cf_select.save()
 
@@ -466,9 +466,9 @@ class CustomFieldDataAPITest(APITestCase):
         )
         cls.cf_multi_select.save()
         cls.cf_multi_select.content_types.set([content_type])
-        CustomFieldChoice.objects.create(field=cls.cf_multi_select, value="Foo")
-        CustomFieldChoice.objects.create(field=cls.cf_multi_select, value="Bar")
-        CustomFieldChoice.objects.create(field=cls.cf_multi_select, value="Baz")
+        CustomFieldChoice.objects.create(custom_field=cls.cf_multi_select, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cls.cf_multi_select, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cls.cf_multi_select, value="Baz")
         cls.cf_multi_select.default = ["Foo", "Bar"]
         cls.cf_multi_select.save()
 
@@ -1105,12 +1105,12 @@ class CustomFieldImportTest(TestCase):
             cf.validated_save()
             cf.content_types.set([ContentType.objects.get_for_model(Site)])
 
-        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice A")
-        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice B")
-        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="select"), value="Choice C")
-        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="multiselect"), value="Choice A")
-        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="multiselect"), value="Choice B")
-        CustomFieldChoice.objects.create(field=CustomField.objects.get(name="multiselect"), value="Choice C")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="select"), value="Choice A")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="select"), value="Choice B")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="select"), value="Choice C")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="multiselect"), value="Choice A")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="multiselect"), value="Choice B")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="multiselect"), value="Choice C")
 
     def test_import(self):
         """
@@ -1445,8 +1445,8 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(field=cf, value="Foo")
-        CustomFieldChoice.objects.create(field=cf, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
 
         # Multi-select filtering
         cf = CustomField(
@@ -1456,8 +1456,8 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(field=cf, value="Foo")
-        CustomFieldChoice.objects.create(field=cf, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
 
         Site.objects.create(
             name="Site 1",
@@ -1834,7 +1834,7 @@ class CustomFieldChoiceTest(TestCase):
         self.cf.save()
         self.cf.content_types.set([obj_type])
 
-        self.choice = CustomFieldChoice(field=self.cf, value="Foo")
+        self.choice = CustomFieldChoice(custom_field=self.cf, value="Foo")
         self.choice.save()
 
         active_status = Status.objects.get_for_model(Site).get(slug="active")
@@ -1901,7 +1901,7 @@ class CustomFieldChoiceTest(TestCase):
                 error_message = f"Value must match regex {cf.validation_regex} got {value}."
                 with self.subTest(cf_type=cf_type, value=value):
                     with self.assertRaisesMessage(ValidationError, error_message):
-                        cfc = CustomFieldChoice.objects.create(field=cf, value=value)
+                        cfc = CustomFieldChoice.objects.create(custom_field=cf, value=value)
                         cfc.validated_save()
 
             CustomFieldChoice.objects.all().delete()
@@ -1909,7 +1909,7 @@ class CustomFieldChoiceTest(TestCase):
             matching_values = ["ABC1", "00AbC0", "00ABC0x00"]
             for value in matching_values:
                 with self.subTest(cf_type=cf_type, value=value):
-                    cfc = CustomFieldChoice.objects.create(field=cf, value=value)
+                    cfc = CustomFieldChoice.objects.create(custom_field=cf, value=value)
                     cfc.validated_save()
 
             # Delete the custom field
@@ -1974,7 +1974,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
         self.wait_on_active_tasks()
 
-        choice = CustomFieldChoice(field=cf, value="Foo")
+        choice = CustomFieldChoice(custom_field=cf, value="Foo")
         choice.save()
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"})
@@ -2042,9 +2042,9 @@ class CustomFieldTableTest(TestCase):
         )
         cf_select.validated_save()
         cf_select.content_types.set([content_type])
-        CustomFieldChoice.objects.create(field=cf_select, value="Foo")
-        CustomFieldChoice.objects.create(field=cf_select, value="Bar")
-        CustomFieldChoice.objects.create(field=cf_select, value="Baz")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cf_select, value="Baz")
         cf_select.default = "Foo"
         cf_select.validated_save()
 
@@ -2055,9 +2055,9 @@ class CustomFieldTableTest(TestCase):
         )
         cf_multi_select.validated_save()
         cf_multi_select.content_types.set([content_type])
-        CustomFieldChoice.objects.create(field=cf_multi_select, value="Foo")
-        CustomFieldChoice.objects.create(field=cf_multi_select, value="Bar")
-        CustomFieldChoice.objects.create(field=cf_multi_select, value="Baz")
+        CustomFieldChoice.objects.create(custom_field=cf_multi_select, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=cf_multi_select, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=cf_multi_select, value="Baz")
         cf_multi_select.default = ["Foo", "Bar"]
         cf_multi_select.validated_save()
 

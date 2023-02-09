@@ -880,15 +880,15 @@ class SecretsGroupFilterSet(
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
 
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Group (ID)",
+        label="Secrets Group (ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
+    secrets_group = django_filters.ModelMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        field_name="group__slug",
+        field_name="secrets_group__slug",
         to_field_name="slug",
-        label="Group (slug)",
+        label="Secrets Group (slug)",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),

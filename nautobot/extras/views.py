@@ -1198,7 +1198,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     name=schedule_name,
                     task="nautobot.extras.jobs.scheduled_job_handler",
                     job_class=job_model.class_path,
-                    job_model=job_model,
+                    job=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
                     kwargs=job_kwargs,
@@ -1490,7 +1490,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.select_related("job", "obj_type", "user").prefetch_related("logs")
+    queryset = JobResult.objects.select_related("job_model", "obj_type", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1546,7 +1546,7 @@ class JobResultView(generic.ObjectView):
         associated_record = None
         job_class = None
         if instance.job_model is not None:
-            job_class = instance.job.job_class
+            job_class = instance.job_model.job_class
         # 2.0 TODO: remove JobResult.related_object entirely
         related_object = instance.related_object
         if inspect.isclass(related_object) and issubclass(related_object, JobClass):
@@ -1975,7 +1975,7 @@ class SecretsGroupView(generic.ObjectView):
     queryset = SecretsGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(group=instance)}
+        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(secrets_group=instance)}
 
 
 class SecretsGroupEditView(generic.ObjectEditView):

@@ -1059,7 +1059,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         logger.error(e)
         return False
 
-    job_model = job_result.job
+    job_model = job_result.job_model
     initialization_failure = None
     if not job_model:
         # 2.0 TODO: remove this fallback logic
@@ -1211,7 +1211,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
                 job_result.save()
             except IntegrityError:
                 # handle job deleted while job was running
-                job_result.job = None
+                job_result.job_model = None
                 job_result.save()
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects

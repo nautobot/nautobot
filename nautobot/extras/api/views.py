@@ -489,7 +489,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
         name=name,
         task="nautobot.extras.jobs.scheduled_job_handler",
         job_class=job.class_path,
-        job_model=job_model,
+        job=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
         kwargs=job_kwargs,
@@ -518,7 +518,7 @@ def _run_job(request, job_model, legacy_response=False):
             and request.data["scheduled_job"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
         ):
             raise ValidationError(
-                {"scheduled_job": {"interval": ["Unable to scheduled_job job: Job may have sensitive input variables"]}}
+                {"scheduled_job": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
         if job_model.approval_required:
             raise ValidationError(

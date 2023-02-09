@@ -696,7 +696,7 @@ class JobResult(BaseModel, CustomFieldModel):
             obj_type=obj_type,
             user=user,
             job_id=uuid.uuid4(),
-            schedule=schedule,
+            scheduled_job=schedule,
         )
 
         kwargs["job_result_pk"] = job_result.pk

@@ -142,7 +142,9 @@ class SecretsGroup(OrganizationalModel):
 
         May raise SecretError and/or Django ObjectDoesNotExist exceptions; it's up to the caller to handle those.
         """
-        secret = self.secrets.through.objects.get(group=self, access_type=access_type, secret_type=secret_type).secret
+        secret = self.secrets.through.objects.get(
+            secrets_group=self, access_type=access_type, secret_type=secret_type
+        ).secret
         return secret.get_value(obj=obj, **kwargs)
 
 

@@ -461,9 +461,9 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
         )
 
-        CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="red")
-        CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="green")
-        CustomFieldChoice.objects.create(field=cls.custom_fields[0], value="blue")
+        CustomFieldChoice.objects.create(custom_field=cls.custom_fields[0], value="red")
+        CustomFieldChoice.objects.create(custom_field=cls.custom_fields[0], value="green")
+        CustomFieldChoice.objects.create(custom_field=cls.custom_fields[0], value="blue")
         for custom_field in cls.custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Rack)])
 

@@ -974,7 +974,7 @@ class JobHookSerializer(NautobotModelSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
-    schedule = NestedScheduledJobSerializer(required=False)
+    scheduled_job = NestedScheduledJobSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
 

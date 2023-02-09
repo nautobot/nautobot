@@ -1242,7 +1242,7 @@ class SecretsGroupTest(TestCase):
         )
 
         SecretsGroupAssociation.objects.create(
-            group=self.secrets_group,
+            secrets_group=self.secrets_group,
             secret=self.environment_secret,
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,

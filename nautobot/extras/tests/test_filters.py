@@ -1374,28 +1374,28 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         )
 
         SecretsGroupAssociation.objects.create(
-            group=cls.groups[0],
+            secrets_group=cls.groups[0],
             secret=cls.secrets[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
         )
         SecretsGroupAssociation.objects.create(
-            group=cls.groups[1],
+            secrets_group=cls.groups[1],
             secret=cls.secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
         SecretsGroupAssociation.objects.create(
-            group=cls.groups[2],
+            secrets_group=cls.groups[2],
             secret=cls.secrets[2],
             access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
 
     def test_group(self):
-        params = {"group_id": [self.groups[0].pk, self.groups[1].pk]}
+        params = {"secrets_group_id": [self.groups[0].pk, self.groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [self.groups[0].slug, self.groups[1].slug]}
+        params = {"secrets_group": [self.groups[0].slug, self.groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_secret(self):

@@ -273,7 +273,12 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         )
         self.add_permissions("extras.add_configcontext")
 
-        data = {"name": "Config Context with schema", "weight": 100, "data": {"foo": "bar"}, "schema": str(schema.pk)}
+        data = {
+            "name": "Config Context with schema",
+            "weight": 100,
+            "data": {"foo": "bar"},
+            "config_context_schema": str(schema.pk),
+        }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.data["config_context_schema"]["id"], str(schema.pk))
@@ -2150,7 +2155,7 @@ class JobResultTest(
             status=JobResultStatusChoices.STATUS_COMPLETED,
             data={"output": "\nRan for 3 seconds"},
             job_kwargs=None,
-            schedule=None,
+            scheduled_job=None,
             job_id=uuid.uuid4(),
         )
         JobResult.objects.create(
@@ -2162,7 +2167,7 @@ class JobResultTest(
             status=JobResultStatusChoices.STATUS_COMPLETED,
             data=None,
             job_kwargs={"repository_pk": uuid.uuid4()},
-            schedule=None,
+            scheduled_job=None,
             job_id=uuid.uuid4(),
         )
         JobResult.objects.create(
@@ -2174,7 +2179,7 @@ class JobResultTest(
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
             job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
-            schedule=None,
+            scheduled_job=None,
             job_id=uuid.uuid4(),
         )
 
@@ -2238,7 +2243,7 @@ class ScheduledJobTest(
             name="test1",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job_model.class_path,
-            job_model=job_model,
+            job=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -2248,7 +2253,7 @@ class ScheduledJobTest(
             name="test2",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job_model.class_path,
-            job_model=job_model,
+            job=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -2258,7 +2263,7 @@ class ScheduledJobTest(
             name="test3",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job_model.class_path,
-            job_model=job_model,
+            job=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -2277,7 +2282,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=cls.job_model.class_path,
-            job_model=cls.job_model,
+            job=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
             approval_required=True,
@@ -2318,7 +2323,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=self.job_model.class_path,
-            job_model=self.job_model,
+            job=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -2342,7 +2347,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=self.job_model.class_path,
-            job_model=self.job_model,
+            job=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
             user=self.additional_user,
@@ -2360,7 +2365,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=self.job_model.class_path,
-            job_model=self.job_model,
+            job=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
             user=self.additional_user,
@@ -3253,13 +3258,13 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
         SecretsGroupAssociation.objects.create(
             secret=secrets[0],
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
         SecretsGroupAssociation.objects.create(
             secret=secrets[1],
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
@@ -3309,19 +3314,19 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
         SecretsGroupAssociation.objects.create(
             secret=secrets[0],
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
         SecretsGroupAssociation.objects.create(
             secret=secrets[1],
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
         SecretsGroupAssociation.objects.create(
             secret=secrets[2],
-            group=secrets_groups[2],
+            secrets_group=secrets_groups[2],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )

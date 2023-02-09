@@ -745,19 +745,19 @@ class SecretsGroupTestCase(
         )
 
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
@@ -1050,7 +1050,7 @@ class ApprovalQueueTestCase(
         ScheduledJob.objects.create(
             name="test1",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model,
+            job=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1060,7 +1060,7 @@ class ApprovalQueueTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model_2,
+            job=self.job_model_2,
             job_class=self.job_model_2.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1070,7 +1070,7 @@ class ApprovalQueueTestCase(
         ScheduledJob.objects.create(
             name="test3",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model_3,
+            job=self.job_model_3,
             job_class=self.job_model_3.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1084,7 +1084,7 @@ class ApprovalQueueTestCase(
         ScheduledJob.objects.create(
             name="test4",
             task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model,
+            job=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1244,7 +1244,7 @@ class ApprovalQueueTestCase(
             1, len(JobResult.objects.all()), msg=extract_page_body(response.content.decode(response.charset))
         )
         job_result = JobResult.objects.first()
-        self.assertEqual(job_result.job_model, instance.job_model)
+        self.assertEqual(job_result.job_model, instance.job)
         self.assertEqual(job_result.user, self.user)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
