@@ -59,7 +59,7 @@ To create a prefix:
     * This will take you to the `Add a new prefix` form
 3. Populate the `Prefix` in CIDR notation
 4. Select a `Status` from the drop-down selector
-5. If all addresses in the Prefix are usable, check the `Is a pool` flag
+5. If all addresses in the Prefix are usable, change the type to "Pool"
 6. Click on the `Create` button (not shown)
 
 ![Add prefix](../images/getting-started-nautobot-ui/30-add-prefix.png)

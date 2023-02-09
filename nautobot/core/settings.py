@@ -243,6 +243,7 @@ SPECTACULAR_SETTINGS = {
         "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
         "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "PrefixTypeChoices": "nautobot.ipam.choices.PrefixTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and

@@ -13,6 +13,8 @@
 |--------------|----------------|---------------------------------------------------|
 | JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
 |              | `log_object`   | No longer accepts `null` values, use `""` instead |
+| Prefix       | `is_pool`      | Replaced by new field `type`, valid choices are "Container", "Network" and "Pool" |
+|              | `status`       | Container status has been replaced by new field `type` |
 | ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead |
 | Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead |
 
@@ -63,6 +65,7 @@
 | RackGroup     | `lft`         |
 |               | `rght`        |
 |               | `tree_id`     |
+| Prefix        | `is_pool`     |
 | Region        | `lft`         |
 |               | `rght`        |
 |               | `tree_id`     |
@@ -129,9 +132,10 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 ### Removed Serializer Fields
 
-| Model/Endpoint | Removed Field        | Comments                             |
-|----------------|----------------------|--------------------------------------|
-| `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
+| Model/Endpoint    | Removed Field        | Comments                               |
+|-------------------|----------------------|----------------------------------------|
+| `/api/status/`    | `rq-workers-running` | Removed as RQ is no longer supported   |
+| `/ipam/prefixes/` | `is_pool`            | Functionality replaced by `type` field |
 
 ### Removed 1.X Version Endpoints and Serializer Representations
 
@@ -184,6 +188,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | PowerOutlet           | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
 | PowerPanel            | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<slug>`                                         |
 | PowerPort             | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
+| Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container|network|pool>`                           |
 | Provider              | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
 | ProviderNetwork       | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
 | Rack                  | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
