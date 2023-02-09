@@ -125,7 +125,7 @@ With this schedule you can expect a few things per major/minor release:
 * `x.0.0`
     * Introduce breaking changes.
     * Changing default behavior for user interfaces, APIs, and functions.
-    * Removal of deprecated REST API versions and possibly functions and classes.
+    * Removal of previous REST API versions and possibly some functions and classes.
 * `x.1.z`
     * Typical minor release, adding features, bug fixes, potential deprecations.
 * `x.2.z`
@@ -163,11 +163,11 @@ To provide assistance for knowing what features and functionality have been depr
 * Any deprecation notice (announcement or removal) will be available in our release notes.
 
 !!! warning "Backwards-Incompatible Changes and Deprecations"
-    Deprecated APIs will be removed in a `x.0.0` release. Deprecated APIs are kept intact during the same major release to simplify migrations to newer minor releases, however even subtle breaking changes are inherently breaking and will cause some changes to previous API versions. Therefor it is preferred to prevent accidental errors when fields in previous versions cannot be kept intact.  Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
+    Deprecated APIs will be removed in a `x.0.0` release. Deprecated APIs are kept intact during the same major release to simplify migrations to newer minor releases, however even subtle breaking changes in an `x.0.0` release can cause breaking changes to previous API versions. Therefore it is preferred to remove these API versions entirely to prevent accidental errors when their exact behavior cannot be kept intact.  Types of breaking API changes include, but are not limited to, renaming of fields or filters, removing or collapsing of data models, and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
 
     For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there would no longer be a `site` property on objects such as `Device` as well as no `/api/dcim/sites` or `/api/dcim/regions` API endpoints.
 
-    Previously deprecated Python APIs may still be kept around on a case-by-case basis if adapting those changes are minimal, but in the example above, `.site` will no longer be available property on `Device`.
+    Previously deprecated Python APIs may still be kept around on a case-by-case basis if adapting those changes are minimal, but in the example above, `.site` will no longer be an available property on `Device`.
 
     We will document in major releases how breaking changes will affect existing APIs and Python primitives. Backwards-compatible changes would still be kept around following the normal deprecation policy.
 
