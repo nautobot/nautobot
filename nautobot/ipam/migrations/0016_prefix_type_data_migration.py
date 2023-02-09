@@ -1,7 +1,7 @@
 import sys
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import migrations, models
+from django.db import migrations
 
 from nautobot.core.choices import ColorChoices
 from nautobot.ipam import choices
@@ -68,18 +68,9 @@ def revert_prefix_type(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0014_rename_foreign_keys_and_related_names"),
+        ("ipam", "0015_prefix_add_type"),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="prefix",
-            name="type",
-            field=models.CharField(default="network", max_length=50),
-        ),
         migrations.RunPython(set_prefix_type, reverse_code=revert_prefix_type),
-        migrations.RemoveField(
-            model_name="prefix",
-            name="is_pool",
-        ),
     ]
