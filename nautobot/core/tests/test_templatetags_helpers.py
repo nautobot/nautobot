@@ -21,24 +21,26 @@ class NautobotTemplatetagsHelperTest(TestCase):
         # An object without get_absolute_url gives a string
         self.assertEqual(helpers.hyperlinked_object("hello"), "hello")
         # An object with get_absolute_url gives a hyperlink
-        site = models.Site.objects.first()
-        self.assertEqual(helpers.hyperlinked_object(site), f'<a href="/dcim/sites/{site.slug}/">{site.name}</a>')
-        # An object with get_absolute_url and a description gives a titled hyperlink
-        site.description = "An important site"
-        site.save()
+        location = models.Location.objects.first()
         self.assertEqual(
-            helpers.hyperlinked_object(site),
-            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.name}</a>',
+            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.slug}/">{location.name}</a>'
+        )
+        # An object with get_absolute_url and a description gives a titled hyperlink
+        location.description = "An important location"
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object(location),
+            f'<a href="/dcim/locations/{location.slug}/" title="An important location">{location.name}</a>',
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
-            helpers.hyperlinked_object(site, "slug"),
-            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.slug}</a>',
+            helpers.hyperlinked_object(location, "slug"),
+            f'<a href="/dcim/locations/{location.slug}/" title="An important location">{location.slug}</a>',
         )
         # If you request a nonexistent field, it defaults to the string representation
         self.assertEqual(
-            helpers.hyperlinked_object(site, "foo"),
-            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site!s}</a>',
+            helpers.hyperlinked_object(location, "foo"),
+            f'<a href="/dcim/locations/{location.slug}/" title="An important location">{location!s}</a>',
         )
 
     def test_placeholder(self):
@@ -87,27 +89,27 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual("utf8:\n- 😀😀\n- 😀\n", helpers.render_yaml({"utf8": ["😀😀", "😀"]}))
 
     def test_meta(self):
-        site = models.Site.objects.first()
+        location = models.Location.objects.first()
 
-        self.assertEqual(helpers.meta(site, "app_label"), "dcim")
-        self.assertEqual(helpers.meta(models.Site, "app_label"), "dcim")
-        self.assertEqual(helpers.meta(site, "not_present"), "")
+        self.assertEqual(helpers.meta(location, "app_label"), "dcim")
+        self.assertEqual(helpers.meta(models.Location, "app_label"), "dcim")
+        self.assertEqual(helpers.meta(location, "not_present"), "")
 
         self.assertEqual(helpers.meta(ExampleModel, "app_label"), "example_plugin")
 
     def test_viewname(self):
-        site = models.Site.objects.first()
+        location = models.Location.objects.first()
 
-        self.assertEqual(helpers.viewname(site, "edit"), "dcim:site_edit")
-        self.assertEqual(helpers.viewname(models.Site, "test"), "dcim:site_test")
+        self.assertEqual(helpers.viewname(location, "edit"), "dcim:location_edit")
+        self.assertEqual(helpers.viewname(models.Location, "test"), "dcim:location_test")
 
         self.assertEqual(helpers.viewname(ExampleModel, "edit"), "plugins:example_plugin:examplemodel_edit")
 
     def test_validated_viewname(self):
-        site = models.Site.objects.first()
+        location = models.Location.objects.first()
 
-        self.assertEqual(helpers.validated_viewname(site, "list"), "dcim:site_list")
-        self.assertIsNone(helpers.validated_viewname(models.Site, "notvalid"))
+        self.assertEqual(helpers.validated_viewname(location, "list"), "dcim:location_list")
+        self.assertIsNone(helpers.validated_viewname(models.Location, "notvalid"))
 
         self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
         self.assertIsNone(helpers.validated_viewname(ExampleModel, "notvalid"))
@@ -143,8 +145,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_get_docs_url(self):
         self.assertTrue(callable(helpers.get_docs_url))
-        site = models.Site.objects.first()
-        self.assertEqual(helpers.get_docs_url(site), static("docs/models/dcim/site.html"))
+        location = models.Location.objects.first()
+        self.assertEqual(helpers.get_docs_url(location), static("docs/models/dcim/location.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
         self.assertEqual(helpers.get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))
         # AnotherExampleModel does not have documentation.

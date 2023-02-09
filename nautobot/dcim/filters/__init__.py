@@ -271,6 +271,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         field_name="devices",
         label="Has devices",
     )
+    has_circuit_terminations = RelatedMembershipBooleanFilter(
+        field_name="circuit_terminations",
+        label="Has circuit terminations",
+    )
     # The reverse relation here is misnamed as `powerpanel`, but fixing it would be a breaking API change.
     # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
     power_panels = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1431,10 +1435,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     location_id = MultiValueUUIDFilter(method="filter_device", field_name="device__location_id", label="Location (ID)")
     location = MultiValueCharFilter(
         method="filter_device", field_name="device__location__slug", label="Location (name)"
-    )
-    region_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site__region_id", label="Region (ID)")
-    region = MultiValueCharFilter(
-        method="filter_device", field_name="device__site__region__slug", label="Region (name)"
     )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")

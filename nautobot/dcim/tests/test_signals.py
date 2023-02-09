@@ -5,8 +5,9 @@ from django.test import TestCase
 from nautobot.dcim.models import (
     Device,
     DeviceType,
+    Location,
+    LocationType,
     Manufacturer,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.models import Role
@@ -17,7 +18,7 @@ class VirtualChassisTest(TestCase):
 
     def setUp(self):
         """Setup Test Data for VirtualChassis Signal tests."""
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = Role.objects.get_for_model(Device).first()
@@ -26,7 +27,7 @@ class VirtualChassisTest(TestCase):
             name="Device 1",
             device_type=devicetype,
             role=devicerole,
-            site=site,
+            location=location,
         )
 
     def test_master_device_vc_assignment(self):

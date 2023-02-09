@@ -3,19 +3,19 @@ from django.test import override_settings
 
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import DynamicGroup, Role
 
 
 class GraphQLTestCase(TestCase):
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
-        self.site = Site.objects.first()
+        self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.device_role = Role.objects.get_for_model(Device).first()
         self.manufacturer = Manufacturer.objects.create(name="Brand")
         self.device_type = DeviceType.objects.create(model="Model", manufacturer=self.manufacturer)
         self.device = Device.objects.create(
-            site=self.site, role=self.device_role, device_type=self.device_type, name="Device"
+            location=self.location, role=self.device_role, device_type=self.device_type, name="Device"
         )
         self.dynamic_group = DynamicGroup.objects.create(
             name="Dynamic_Group", content_type=ContentType.objects.get_for_model(Device)

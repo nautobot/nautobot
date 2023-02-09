@@ -589,7 +589,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         # Validate location
         if self.location is not None:
 
-            if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
+            if self.rack is not None and self.rack.location != self.location:
                 raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
 
             # self.cluster is validated somewhat later, see below

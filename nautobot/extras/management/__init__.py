@@ -16,6 +16,7 @@ CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
+    "dcim.Site": dcim_choices.SiteStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
