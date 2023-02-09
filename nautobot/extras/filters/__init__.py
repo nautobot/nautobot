@@ -194,6 +194,7 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     location = django_filters.ModelMultipleChoiceFilter(
         field_name="locations__slug",
+        to_field_name="slug",
         queryset=Location.objects.all(),
         label="Location (slug)",
     )

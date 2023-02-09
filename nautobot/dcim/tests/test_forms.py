@@ -7,9 +7,10 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
     Platform,
     Rack,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status
@@ -27,8 +28,8 @@ class DeviceTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.site = Site.objects.first()
-        cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
 
         # Platforms that have a manufacturer.
         mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
@@ -48,7 +49,7 @@ class DeviceTestCase(TestCase):
             status=Status.objects.get_for_model(Device).get(slug="active"),
             device_type=cls.device_type,
             role=cls.device_role,
-            site=cls.site,
+            location=cls.location,
             rack=cls.rack,
             position=1,
         )
@@ -65,7 +66,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1 + self.device_type.u_height,
@@ -84,7 +85,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1,
@@ -103,7 +104,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": None,
                 "position": None,
@@ -123,7 +124,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": DeviceFaceChoices.FACE_REAR,
                 "platform": None,
@@ -141,7 +142,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "position": 10,
                 "platform": None,
@@ -155,14 +156,14 @@ class DeviceTestCase(TestCase):
 class LabelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
         )
 
     def test_interface_label_count_valid(self):
@@ -196,20 +197,20 @@ class LabelTestCase(TestCase):
 class TestCableCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         cls.device_1 = Device.objects.create(
             name="Device 1",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
         )
         cls.device_2 = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
         )
         cls.interface_1 = Interface.objects.create(
             device=cls.device_1,
@@ -251,7 +252,7 @@ class TestCableCSVForm(TestCase):
 class TestInterfaceCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -260,19 +261,19 @@ class TestInterfaceCSVForm(TestCase):
                 name="Device 1",
                 device_type=device_type,
                 role=device_role,
-                site=site,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
                 role=device_role,
-                site=site,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
                 role=device_role,
-                site=site,
+                location=location,
             ),
         )
 

@@ -11,7 +11,7 @@ import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
@@ -69,17 +69,17 @@ class PluginTest(TestCase):
         """
         Check that plugin TemplateExtensions are registered.
         """
-        from example_plugin.template_content import SiteContent
+        from example_plugin.template_content import LocationContent
 
-        self.assertIn(SiteContent, registry["plugin_template_extensions"]["dcim.site"])
+        self.assertIn(LocationContent, registry["plugin_template_extensions"]["dcim.location"])
 
     def test_custom_validators_registration(self):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
+        from example_plugin.custom_validators import LocationCustomValidator, RelationshipAssociationCustomValidator
 
-        self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+        self.assertIn(LocationCustomValidator, registry["plugin_custom_validators"]["dcim.location"])
         self.assertIn(
             RelationshipAssociationCustomValidator,
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
@@ -300,7 +300,7 @@ class PluginTest(TestCase):
         cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
-        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
+        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])
 
     def test_secrets_provider(self):
         """
@@ -491,10 +491,11 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-        site = Site(name="this site has a matching name", slug="site1")
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location(name="this location has a matching name", slug="location1", location_type=location_type)
 
         with self.assertRaises(ValidationError):
-            site.clean()
+            location.clean()
 
     def test_relationship_association_validator_raises_exception(self):
         status = Status.objects.get_for_model(IPAddress).first()
@@ -537,10 +538,25 @@ class FilterExtensionTest(TestCase):
         Tenant.objects.create(
             name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
         )
-
-        Site.objects.create(name="Site 1", slug="site-1", tenant=Tenant.objects.get(slug="tenant-1"))
-        Site.objects.create(name="Site 2", slug="site-2", tenant=Tenant.objects.get(slug="tenant-2"))
-        Site.objects.create(name="Site 3", slug="site-3", tenant=Tenant.objects.get(slug="tenant-3"))
+        location_type = LocationType.objects.get(name="Campus")
+        Location.objects.create(
+            name="Location 1",
+            slug="location-1",
+            tenant=Tenant.objects.get(slug="tenant-1"),
+            location_type=location_type,
+        )
+        Location.objects.create(
+            name="Location 2",
+            slug="location-2",
+            tenant=Tenant.objects.get(slug="tenant-2"),
+            location_type=location_type,
+        )
+        Location.objects.create(
+            name="Location 3",
+            slug="location-3",
+            tenant=Tenant.objects.get(slug="tenant-3"),
+            location_type=location_type,
+        )
 
         Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
@@ -578,21 +594,21 @@ class FilterExtensionTest(TestCase):
             device_type=DeviceType.objects.get(slug="model-1"),
             role=roles[0],
             tenant=Tenant.objects.get(slug="tenant-1"),
-            site=Site.objects.get(slug="site-1"),
+            location=Location.objects.get(slug="location-1"),
         )
         Device.objects.create(
             name="Device 2",
             device_type=DeviceType.objects.get(slug="model-2"),
             role=roles[1],
             tenant=Tenant.objects.get(slug="tenant-2"),
-            site=Site.objects.get(slug="site-2"),
+            location=Location.objects.get(slug="location-2"),
         )
         Device.objects.create(
             name="Device 3",
             device_type=DeviceType.objects.get(slug="model-2"),
             role=roles[3],
             tenant=Tenant.objects.get(slug="tenant-3"),
-            site=Site.objects.get(slug="site-3"),
+            location=Location.objects.get(slug="location-3"),
         )
 
     def test_basic_custom_filter(self):

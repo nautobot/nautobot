@@ -11,9 +11,8 @@ from requests import Session
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.testing import APITestCase
 from nautobot.core.utils.lookup import get_changes_for_model
-from nautobot.dcim.api.serializers import SiteSerializer
-from nautobot.dcim.models import Site
-from nautobot.dcim.models.sites import Region
+from nautobot.dcim.api.serializers import LocationSerializer
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
@@ -29,13 +28,13 @@ class WebhookTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site_ct = ContentType.objects.get_for_model(Site)
+        location_ct = ContentType.objects.get_for_model(Location)
         MOCK_URL = "http://localhost/"
         MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
 
         webhooks = (
             Webhook.objects.create(
-                name="Site Create Webhook",
+                name="Location Create Webhook",
                 type_create=True,
                 payload_url=MOCK_URL,
                 secret=MOCK_SECRET,
@@ -43,12 +42,10 @@ class WebhookTest(APITestCase):
             ),
         )
         for webhook in webhooks:
-            webhook.content_types.set([site_ct])
+            webhook.content_types.set([location_ct])
 
-        cls.active_status = Status.objects.get_for_model(Site).get(slug="active")
-        cls.planned_status = Status.objects.get_for_model(Site).get(slug="planned")
-        cls.region_one = Region.objects.create(name="Region One", slug="region-one")
-        cls.region_two = Region.objects.create(name="Region Two", slug="region-two")
+        cls.active_status = Status.objects.get_for_model(Location).get(slug="active")
+        cls.planned_status = Status.objects.get_for_model(Location).get(slug="planned")
 
     def test_webhooks_process_webhook_on_update(self):
         """
@@ -76,20 +73,17 @@ class WebhookTest(APITestCase):
             body = json.loads(request.body)
             self.assertEqual(body["event"], "created")
             self.assertEqual(body["timestamp"], timestamp)
-            self.assertEqual(body["model"], "site")
+            self.assertEqual(body["model"], "location")
             self.assertEqual(body["username"], "nautobotuser")
             self.assertEqual(body["request_id"], str(request_id))
-            self.assertEqual(body["data"]["name"], "Site Update")
-            self.assertEqual(body["data"]["status"]["slug"], self.planned_status.slug)
-            self.assertEqual(body["data"]["region"]["slug"], self.region_two.slug)
-            self.assertEqual(body["snapshots"]["prechange"]["name"], "Site 1")
-            self.assertEqual(body["snapshots"]["prechange"]["status"]["slug"], self.active_status.slug)
-            self.assertEqual(body["snapshots"]["prechange"]["region"]["slug"], self.region_one.slug)
-            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site Update")
-            self.assertEqual(body["snapshots"]["postchange"]["status"]["slug"], self.planned_status.slug)
-            self.assertEqual(body["snapshots"]["postchange"]["region"]["slug"], self.region_two.slug)
-            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
-            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site Update")
+            self.assertEqual(body["data"]["name"], "Location Update")
+            self.assertEqual(body["data"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["snapshots"]["prechange"]["name"], "Location 1")
+            self.assertEqual(body["snapshots"]["prechange"]["status"]["value"], self.active_status.slug)
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Location Update")
+            self.assertEqual(body["snapshots"]["postchange"]["status"]["value"], self.planned_status.slug)
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Location Update")
 
             class FakeResponse:
                 ok = True
@@ -102,22 +96,24 @@ class WebhookTest(APITestCase):
             self.client.force_login(self.user)
 
             with web_request_context(self.user, change_id=request_id):
-                site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
-                site.save()
+                location_type = LocationType.objects.get(name="Campus")
+                location = Location(
+                    name="Location 1", slug="location-1", status=self.active_status, location_type=location_type
+                )
+                location.save()
 
-                site.name = "Site Update"
-                site.status = self.planned_status
-                site.region = self.region_two
-                site.save()
+                location.name = "Location Update"
+                location.status = self.planned_status
+                location.save()
 
-                serializer = SiteSerializer(site, context={"request": None})
-                oc = get_changes_for_model(site).first()
+                serializer = LocationSerializer(location, context={"request": None})
+                oc = get_changes_for_model(location).first()
                 snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
                     serializer.data,
-                    Site._meta.model_name,
+                    Location._meta.model_name,
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
@@ -133,11 +129,11 @@ class WebhookTest(APITestCase):
         def mock_send(_, request, **kwargs):
             # Validate the outgoing request body
             body = json.loads(request.body)
-            self.assertEqual(body["data"]["name"], "Site 1")
+            self.assertEqual(body["data"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["prechange"], None)
-            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["differences"]["removed"], None)
-            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Location 1")
 
             class FakeResponse:
                 ok = True
@@ -148,17 +144,18 @@ class WebhookTest(APITestCase):
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
             with web_request_context(self.user, change_id=request_id):
-                site = Site(name="Site 1", slug="site-1")
-                site.save()
+                location_type = LocationType.objects.get(name="Campus")
+                location = Location(name="Location 1", slug="location-1", location_type=location_type)
+                location.save()
 
-                serializer = SiteSerializer(site, context={"request": None})
-                oc = get_changes_for_model(site).first()
+                serializer = LocationSerializer(location, context={"request": None})
+                oc = get_changes_for_model(location).first()
                 snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
                     serializer.data,
-                    Site._meta.model_name,
+                    Location._meta.model_name,
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
@@ -174,10 +171,10 @@ class WebhookTest(APITestCase):
         def mock_send(_, request, **kwargs):
             # Validate the outgoing request body
             body = json.loads(request.body)
-            self.assertEqual(body["data"]["name"], "Site 1")
-            self.assertEqual(body["snapshots"]["prechange"]["name"], "Site 1")
+            self.assertEqual(body["data"]["name"], "Location 1")
+            self.assertEqual(body["snapshots"]["prechange"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["postchange"], None)
-            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["differences"]["added"], None)
 
             class FakeResponse:
@@ -189,21 +186,22 @@ class WebhookTest(APITestCase):
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
             with web_request_context(self.user, change_id=request_id):
-                site = Site(name="Site 1", slug="site-1")
-                site.save()
+                location_type = LocationType.objects.get(name="Campus")
+                location = Location(name="Location 1", slug="location-1", location_type=location_type)
+                location.save()
 
-                # deepcopy instance state to be used by SiteSerializer and get_snapshots
-                temp_site = deepcopy(site)
-                site.delete()
+                # deepcopy instance state to be used by LocationSerializer and get_snapshots
+                temp_location = deepcopy(location)
+                location.delete()
 
-                serializer = SiteSerializer(temp_site, context={"request": None})
-                oc = get_changes_for_model(temp_site).first()
+                serializer = LocationSerializer(temp_location, context={"request": None})
+                oc = get_changes_for_model(temp_location).first()
                 snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
                     serializer.data,
-                    Site._meta.model_name,
+                    Location._meta.model_name,
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
@@ -228,12 +226,10 @@ class WebhookTest(APITestCase):
             body = json.loads(request.body)
 
             self.assertEqual(body["snapshots"]["prechange"]["status"], str(self.active_status.id))
-            self.assertEqual(body["snapshots"]["prechange"]["region"], str(self.region_one.id))
-            self.assertEqual(body["snapshots"]["postchange"]["name"], "Site Update")
+            self.assertEqual(body["snapshots"]["postchange"]["name"], "Location Update")
             self.assertEqual(body["snapshots"]["postchange"]["status"], str(self.planned_status.id))
-            self.assertEqual(body["snapshots"]["postchange"]["region"], str(self.region_two.id))
-            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Site 1")
-            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Site Update")
+            self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
+            self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Location Update")
 
             class FakeResponse:
                 ok = True
@@ -245,22 +241,24 @@ class WebhookTest(APITestCase):
             self.client.force_login(self.user)
 
             with web_request_context(self.user, change_id=request_id):
-                site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
-                site.save()
+                location_type = LocationType.objects.get(name="Campus")
+                location = Location(
+                    name="Location 1", slug="location-1", status=self.active_status, location_type=location_type
+                )
+                location.save()
 
-                site.name = "Site Update"
-                site.status = self.planned_status
-                site.region = self.region_two
-                site.save()
+                location.name = "Location Update"
+                location.status = self.planned_status
+                location.save()
 
-                serializer = SiteSerializer(site, context={"request": None})
-                oc = get_changes_for_model(site).first()
+                serializer = LocationSerializer(location, context={"request": None})
+                oc = get_changes_for_model(location).first()
                 snapshots = oc.get_snapshots()
 
                 process_webhook(
                     webhook.pk,
                     serializer.data,
-                    Site._meta.model_name,
+                    Location._meta.model_name,
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,

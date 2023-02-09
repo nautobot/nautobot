@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models.query import QuerySet
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Note
 
 
@@ -14,32 +14,32 @@ class NoteModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site_ct = ContentType.objects.get_for_model(Site)
+        location_ct = ContentType.objects.get_for_model(Location)
 
         user = User.objects.first()
 
-        cls.sites = Site.objects.all()[:2]
+        cls.locations = Location.objects.all()[:2]
 
         Note.objects.create(
-            note="Site has been placed on **maintenance**.",
+            note="Location has been placed on **maintenance**.",
             user=user,
-            assigned_object_type=site_ct,
-            assigned_object_id=cls.sites[0].pk,
+            assigned_object_type=location_ct,
+            assigned_object_id=cls.locations[0].pk,
         )
         Note.objects.create(
-            note="Site maintenance has ended.",
+            note="Location maintenance has ended.",
             user=user,
-            assigned_object_type=site_ct,
-            assigned_object_id=cls.sites[0].pk,
+            assigned_object_type=location_ct,
+            assigned_object_id=cls.locations[0].pk,
         )
         Note.objects.create(
-            note="Site is under duress.",
+            note="Location is under duress.",
             user=user,
-            assigned_object_type=site_ct,
-            assigned_object_id=cls.sites[1].pk,
+            assigned_object_type=location_ct,
+            assigned_object_id=cls.locations[1].pk,
         )
 
     def test_notes_queryset(self):
-        self.assertIsInstance(self.sites[0].notes, QuerySet)
-        self.assertEqual(self.sites[0].notes.count(), 2)
-        self.assertEqual(self.sites[1].notes.count(), 1)
+        self.assertIsInstance(self.locations[0].notes, QuerySet)
+        self.assertEqual(self.locations[0].notes.count(), 2)
+        self.assertEqual(self.locations[1].notes.count(), 1)

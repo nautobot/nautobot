@@ -182,7 +182,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
             "location",
             "rack",
             "role",

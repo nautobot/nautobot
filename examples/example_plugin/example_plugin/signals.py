@@ -22,7 +22,7 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
     """
     # Ensure that a desired custom field exists on the Site model
     ContentType = apps.get_model("contenttypes", "ContentType")
-    Site = apps.get_model("dcim", "Site")
+    Location = apps.get_model("dcim", "Location")
     CustomField = apps.get_model("extras", "CustomField")
 
     from nautobot.extras.choices import CustomFieldTypeChoices
@@ -36,4 +36,4 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
             "default": "Default value",
         },
     )
-    field.content_types.set([ContentType.objects.get_for_model(Site)])
+    field.content_types.set([ContentType.objects.get_for_model(Location)])

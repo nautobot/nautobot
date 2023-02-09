@@ -51,7 +51,7 @@ def cable_status_color_css(record):
 
 def validate_interface_tagged_vlans(instance, model, pk_set):
     """
-    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same site
+    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same location
     as the parent device or are global and that the mode of the Interface is set to `InterfaceModeChoices.MODE_TAGGED`.
 
     Args:
@@ -66,15 +66,17 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
     # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
-    # a site that is not the parent's site or None
-    tagged_vlans = model.objects.filter(pk__in=pk_set).exclude(site__isnull=True).exclude(site=instance.parent.site)
+    # a location that is not the parent's location or None
+    tagged_vlans = (
+        model.objects.filter(pk__in=pk_set).exclude(location__isnull=True).exclude(location=instance.parent.location)
+    )
 
     if tagged_vlans.count():
         raise ValidationError(
             {
                 "tagged_vlans": (
                     f"Tagged VLAN with names {list(tagged_vlans.values_list('name', flat=True))} must all belong to the "
-                    f"same site as the interface's parent device, or it must be global."
+                    f"same location as the interface's parent device, or it must be global."
                 )
             }
         )

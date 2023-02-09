@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
 from nautobot.core.testing import TransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -56,10 +56,9 @@ class GitTest(TransactionTestCase):
         # Needed for use with the change_logging decorator
         self.mock_request.id = uuid.uuid4()
 
-        self.site = Site.objects.create(name="Test Site", slug="test-site")
         self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
-        self.location = Location.objects.create(location_type=self.location_type, name="Test Location", site=self.site)
+        self.location = Location.objects.create(location_type=self.location_type, name="Test Location")
         self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
@@ -70,7 +69,6 @@ class GitTest(TransactionTestCase):
             name="test-device",
             role=self.role,
             device_type=self.device_type,
-            site=self.site,
             location=self.location,
             status=self.device_status,
         )
