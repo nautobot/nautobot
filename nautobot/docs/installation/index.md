@@ -18,7 +18,7 @@ The following minimum versions are required for Nautobot to operate:
 | PostgreSQL | Database     | 9.6             |
 | MySQL      | Database     | 8.0             |
 | Redis      | Cache, Queue | 4.0             |
-| Git        | Additional   | 2.19            |
+| Git        | Additional   | 2.0            |
 
 !!! note
     Either PostgreSQL or MySQL must be selected, but not both.
