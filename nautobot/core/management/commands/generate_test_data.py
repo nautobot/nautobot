@@ -26,11 +26,18 @@ class Command(BaseCommand):
             help="Do NOT prompt the user for input or confirmation of any kind.",
         )
         parser.add_argument(
+            "--cache-test-fixtures",
+            action="store_true",
+            help="Save test database to a json fixture file to re-use on subsequent tests.",
+        )
+        parser.add_argument(
             "--fixture-file",
-            help="Dump database to fixture file after generating factory data and re-use on subsequent test runs.",
+            default="development/factory_dump.json",
+            help="Fixture file to use with --cache-test-fixtures.",
         )
 
-    def handle(self, *args, **options):
+    def _generate_factory_data(self, seed):
+
         try:
             import factory.random
 
@@ -68,6 +75,99 @@ class Command(BaseCommand):
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
+        if not seed:
+            seed = get_random_string(16)
+        self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
+        factory.random.reseed_random(seed)
+
+        self.stdout.write("Creating Roles...")
+        RoleFactory.create_batch(20)
+        self.stdout.write("Creating Statuses...")
+        populate_status_choices(verbosity=0)
+        StatusFactory.create_batch(10)
+        self.stdout.write("Creating Tags...")
+        # Ensure that we have some tags that are applicable to all relevant content-types
+        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset())
+        # ...and some tags that apply to a random subset of content-types
+        TagFactory.create_batch(15)
+        self.stdout.write("Creating TenantGroups...")
+        TenantGroupFactory.create_batch(10, has_parent=False)
+        TenantGroupFactory.create_batch(10, has_parent=True)
+        self.stdout.write("Creating Tenants...")
+        TenantFactory.create_batch(10, has_tenant_group=False)
+        TenantFactory.create_batch(10, has_tenant_group=True)
+        self.stdout.write("Creating Regions...")
+        RegionFactory.create_batch(15, has_parent=False)
+        RegionFactory.create_batch(5, has_parent=True)
+        self.stdout.write("Creating Sites...")
+        SiteFactory.create_batch(15)
+        self.stdout.write("Creating LocationTypes...")
+        LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
+        self.stdout.write("Creating Locations...")
+        LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
+        self.stdout.write("Creating RIRs...")
+        RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
+        self.stdout.write("Creating RouteTargets...")
+        RouteTargetFactory.create_batch(20)
+        self.stdout.write("Creating VRFs...")
+        VRFFactory.create_batch(20)
+        self.stdout.write("Creating VLANGroups...")
+        VLANGroupFactory.create_batch(20)
+        self.stdout.write("Creating VLANs...")
+        VLANFactory.create_batch(20)
+        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
+        AggregateFactory.create_batch(5, has_tenant_group=True)
+        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
+        AggregateFactory.create_batch(10)
+        self.stdout.write("Creating Manufacturers...")
+        ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
+        self.stdout.write("Creating Platforms (with manufacturers)...")
+        PlatformFactory.create_batch(20, has_manufacturer=True)
+        self.stdout.write("Creating Platforms (without manufacturers)...")
+        PlatformFactory.create_batch(5, has_manufacturer=False)
+        self.stdout.write("Creating Manufacturers without platforms...")
+        ManufacturerFactory.create_batch(4)  # Remaining 4 hard-coded Manufacturers
+        self.stdout.write("Creating DeviceTypes...")
+        DeviceTypeFactory.create_batch(20)
+        self.stdout.write("Creating DeviceRedundancyGroups...")
+        DeviceRedundancyGroupFactory.create_batch(10)
+        self.stdout.write("Creating CircuitTypes...")
+        CircuitTypeFactory.create_batch(10)
+        self.stdout.write("Creating Providers...")
+        ProviderFactory.create_batch(10)
+        self.stdout.write("Creating ProviderNetworks...")
+        ProviderNetworkFactory.create_batch(10)
+        self.stdout.write("Creating Circuits...")
+        CircuitFactory.create_batch(20)
+        self.stdout.write("Creating Providers without Circuits...")
+        ProviderFactory.create_batch(10)
+        self.stdout.write("Creating CircuitTerminations...")
+        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
+        CircuitTerminationFactory.create_batch(
+            size=2,
+            has_site=True,
+            has_location=True,
+            has_port_speed=True,
+            has_upstream_speed=True,
+            has_xconnect_id=True,
+            has_pp_info=True,
+            has_description=True,
+        )
+        # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
+        # UserFactory.create_batch(10)
+        # RackFactory.create_batch(10)
+        # RackReservationFactory.create_batch(10)
+        # ClusterTypeFactory.create_batch(10)
+        # ClusterGroupFactory.create_batch(10)
+        # ClusterFactory.create_batch(10)
+        # VirtualMachineFactory.create_batch(10)
+        # We need to remove them from there and enable them here instead, but that will require many test updates.
+
+    def handle(self, *args, **options):
         if options["flush"]:
             if options["interactive"]:
                 confirm = input(
@@ -86,101 +186,12 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
             call_command("flush", "--no-input")
 
-        if options["fixture_file"] and os.path.exists(options["fixture_file"]):
+        if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             call_command("loaddata", options["fixture_file"])
         else:
-            seed = options["seed"] or get_random_string(16)
-            self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
-            factory.random.reseed_random(seed)
+            self._generate_factory_data(options["seed"])
 
-            self.stdout.write("Creating Roles...")
-            RoleFactory.create_batch(20)
-            self.stdout.write("Creating Statuses...")
-            populate_status_choices(verbosity=0)
-            StatusFactory.create_batch(10)
-            self.stdout.write("Creating Tags...")
-            # Ensure that we have some tags that are applicable to all relevant content-types
-            TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset())
-            # ...and some tags that apply to a random subset of content-types
-            TagFactory.create_batch(15)
-            self.stdout.write("Creating TenantGroups...")
-            TenantGroupFactory.create_batch(10, has_parent=False)
-            TenantGroupFactory.create_batch(10, has_parent=True)
-            self.stdout.write("Creating Tenants...")
-            TenantFactory.create_batch(10, has_tenant_group=False)
-            TenantFactory.create_batch(10, has_tenant_group=True)
-            self.stdout.write("Creating Regions...")
-            RegionFactory.create_batch(15, has_parent=False)
-            RegionFactory.create_batch(5, has_parent=True)
-            self.stdout.write("Creating Sites...")
-            SiteFactory.create_batch(15)
-            self.stdout.write("Creating LocationTypes...")
-            LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
-            self.stdout.write("Creating Locations...")
-            LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
-            self.stdout.write("Creating RIRs...")
-            RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
-            self.stdout.write("Creating RouteTargets...")
-            RouteTargetFactory.create_batch(20)
-            self.stdout.write("Creating VRFs...")
-            VRFFactory.create_batch(20)
-            self.stdout.write("Creating VLANGroups...")
-            VLANGroupFactory.create_batch(20)
-            self.stdout.write("Creating VLANs...")
-            VLANFactory.create_batch(20)
-            self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
-            AggregateFactory.create_batch(5, has_tenant_group=True)
-            AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
-            AggregateFactory.create_batch(10)
-            self.stdout.write("Creating Manufacturers...")
-            ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
-            self.stdout.write("Creating Platforms (with manufacturers)...")
-            PlatformFactory.create_batch(20, has_manufacturer=True)
-            self.stdout.write("Creating Platforms (without manufacturers)...")
-            PlatformFactory.create_batch(5, has_manufacturer=False)
-            self.stdout.write("Creating Manufacturers without platforms...")
-            ManufacturerFactory.create_batch(4)  # Remaining 4 hard-coded Manufacturers
-            self.stdout.write("Creating DeviceTypes...")
-            DeviceTypeFactory.create_batch(20)
-            self.stdout.write("Creating DeviceRedundancyGroups...")
-            DeviceRedundancyGroupFactory.create_batch(10)
-            self.stdout.write("Creating CircuitTypes...")
-            CircuitTypeFactory.create_batch(10)
-            self.stdout.write("Creating Providers...")
-            ProviderFactory.create_batch(10)
-            self.stdout.write("Creating ProviderNetworks...")
-            ProviderNetworkFactory.create_batch(10)
-            self.stdout.write("Creating Circuits...")
-            CircuitFactory.create_batch(20)
-            self.stdout.write("Creating Providers without Circuits...")
-            ProviderFactory.create_batch(10)
-            self.stdout.write("Creating CircuitTerminations...")
-            CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
-            CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
-            CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
-            CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
-            CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
-            CircuitTerminationFactory.create_batch(
-                size=2,
-                has_site=True,
-                has_location=True,
-                has_port_speed=True,
-                has_upstream_speed=True,
-                has_xconnect_id=True,
-                has_pp_info=True,
-                has_description=True,
-            )
-            # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
-            # UserFactory.create_batch(10)
-            # RackFactory.create_batch(10)
-            # RackReservationFactory.create_batch(10)
-            # ClusterTypeFactory.create_batch(10)
-            # ClusterGroupFactory.create_batch(10)
-            # ClusterFactory.create_batch(10)
-            # VirtualMachineFactory.create_batch(10)
-            # We need to remove them from there and enable them here instead, but that will require many test updates.
-
-            if options["fixture_file"]:
+            if options["cache_test_fixtures"]:
                 call_command(
                     "dumpdata",
                     "--natural-foreign",

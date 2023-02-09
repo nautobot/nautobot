@@ -21,7 +21,10 @@ class NautobotTestRunner(DiscoverRunner):
 
     exclude_tags = ["integration"]
 
-    def __init__(self, **kwargs):
+    def __init__(self, cache_test_fixtures=False, **kwargs):
+
+        self.cache_test_fixtures = cache_test_fixtures
+
         # Assert "integration" hasn't been provided w/ --tag
         incoming_tags = kwargs.get("tags") or []
         # Assert "exclude_tags" hasn't been provided w/ --exclude-tag; else default to our own.
@@ -33,6 +36,15 @@ class NautobotTestRunner(DiscoverRunner):
             kwargs["exclude_tags"] = incoming_exclude_tags
 
         super().__init__(**kwargs)
+
+    @classmethod
+    def add_arguments(cls, parser):
+        super().add_arguments(parser)
+        parser.add_argument(
+            "--cache-test-fixtures",
+            action="store_true",
+            help="Save test database to a json fixture file to re-use on subsequent tests.",
+        )
 
     def setup_test_environment(self, **kwargs):
         super().setup_test_environment(**kwargs)
@@ -47,8 +59,8 @@ class NautobotTestRunner(DiscoverRunner):
             command = ["generate_test_data", "--flush", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:
                 command += ["--seed", settings.TEST_FACTORY_SEED]
-            if settings.TEST_FACTORY_FIXTURE_FILE is not None:
-                command += ["--fixture-file", settings.TEST_FACTORY_FIXTURE_FILE]
+            if self.cache_test_fixtures:
+                command += ["--cache-test-fixtures"]
             call_command(*command)
 
         return result
