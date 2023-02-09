@@ -450,19 +450,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.queryset.filter(vrfs__in=vrfs).distinct(),
         )
 
-    def test_has_vrfs(self):
-        """Test the `has_vrfs` filter."""
-        params = {"has_vrfs": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vrfs__isnull=False).distinct(),
-        )
-        params = {"has_vrfs": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vrfs__isnull=True).distinct(),
-        )
-
     def test_search(self):
         params = {"q": self.queryset.first().name}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)

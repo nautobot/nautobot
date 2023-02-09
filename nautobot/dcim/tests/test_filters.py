@@ -932,10 +932,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_subtree(self):
         params = {"subtree": [self.loc1.slug, self.nested_loc.pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            Location.objects.get(name=self.loc1.name).descendants(include_self=True),
-        )
+        expected = Location.objects.get(name=self.loc1.name).descendants(include_self=True)
+        expected |= Location.objects.get(name=self.nested_loc.name).descendants(include_self=True)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected.distinct())
 
     def test_child_location_type(self):
         params = {"child_location_type": ["room", LocationType.objects.get(name="Floor").pk]}

@@ -44,7 +44,7 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import IPAddressFamilyChoices, ServiceProtocolChoices
+from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -356,7 +356,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "vlan",
             "status",
             "role",
-            "is_pool",
+            "type",
             "description",
             "tenant_group",
             "tenant",
@@ -401,6 +401,7 @@ class PrefixCSVForm(
         to_field_name="vid",
         help_text="Assigned VLAN",
     )
+    type = CSVChoiceField(choices=PrefixTypeChoices, required=False)
 
     class Meta:
         model = Prefix
@@ -427,6 +428,10 @@ class PrefixBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
+    type = forms.ChoiceField(
+        choices=add_blank_choice(PrefixTypeChoices),
+        required=False,
+    )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -434,7 +439,6 @@ class PrefixBulkEditForm(
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    is_pool = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is a pool")
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
@@ -467,7 +471,6 @@ class PrefixFilterForm(
         "role",
         "tenant_group",
         "tenant",
-        "is_pool",
         "expand",
     ]
     mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
@@ -500,11 +503,6 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    is_pool = forms.NullBooleanField(
-        required=False,
-        label="Is a pool",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
     tag = TagFilterField(model)
 
 

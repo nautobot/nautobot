@@ -21,7 +21,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
@@ -241,6 +241,7 @@ class PrefixSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
+    type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -252,13 +253,13 @@ class PrefixSerializer(
             "url",
             "family",
             "prefix",
+            "type",
             "location",
             "vrf",
             "tenant",
             "vlan",
             "status",
             "role",
-            "is_pool",
             "description",
         ]
         read_only_fields = ["family"]

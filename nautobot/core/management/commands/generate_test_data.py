@@ -104,17 +104,18 @@ Type 'yes' to continue, or 'no' to cancel: """
         RegionFactory.create_batch(15, has_parent=False)
         RegionFactory.create_batch(5, has_parent=True)
         self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(15)
+        SiteFactory.create_batch(25)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
+        LocationFactory.create_batch(40)  # we need more locations with sites since it can be nested now.
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
         RouteTargetFactory.create_batch(20)
         self.stdout.write("Creating VRFs...")
-        VRFFactory.create_batch(20)
+        VRFFactory.create_batch(10, has_tenant=True)
+        VRFFactory.create_batch(10, has_tenant=False)
         self.stdout.write("Creating VLANGroups...")
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")

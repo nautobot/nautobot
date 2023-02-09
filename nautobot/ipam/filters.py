@@ -16,6 +16,7 @@ from nautobot.core.filters import (
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.ipam import choices
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
@@ -235,11 +236,12 @@ class PrefixFilterSet(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )
+    type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
     tag = TagFilter()
 
     class Meta:
         model = Prefix
-        fields = ["id", "is_pool", "prefix"]
+        fields = ["id", "type", "prefix"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()

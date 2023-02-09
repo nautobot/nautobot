@@ -11,7 +11,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Interface
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
-from .choices import IPAddressRoleChoices
+from nautobot.ipam import choices
 from .models import (
     Aggregate,
     IPAddress,
@@ -456,7 +456,9 @@ class PrefixIPAddressesView(generic.ObjectView):
 
         # Add available IP addresses to the table if requested
         if request.GET.get("show_available", "true") == "true":
-            ipaddresses = add_available_ipaddresses(instance.prefix, ipaddresses, instance.is_pool)
+            ipaddresses = add_available_ipaddresses(
+                instance.prefix, ipaddresses, instance.type == choices.PrefixTypeChoices.TYPE_POOL
+            )
 
         ip_table = tables.IPAddressTable(ipaddresses)
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
@@ -551,8 +553,8 @@ class IPAddressView(generic.ObjectView):
             .select_related("nat_inside")
         )
         # Exclude anycast IPs if this IP is anycast
-        if instance.role == IPAddressRoleChoices.ROLE_ANYCAST:
-            duplicate_ips = duplicate_ips.exclude(role=IPAddressRoleChoices.ROLE_ANYCAST)
+        if instance.role == choices.IPAddressRoleChoices.ROLE_ANYCAST:
+            duplicate_ips = duplicate_ips.exclude(role=choices.IPAddressRoleChoices.ROLE_ANYCAST)
         # Limit to a maximum of 10 duplicates displayed here
         duplicate_ips_table = tables.IPAddressTable(duplicate_ips[:10], orderable=False)
 

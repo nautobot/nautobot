@@ -219,6 +219,12 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
     tenancy_related_name = "prefixes"
+    generic_filter_tests = (
+        ["role", "role__id"],
+        ["role", "role__slug"],
+        ["status", "status__slug"],
+        ["type"],
+    )
 
     def test_search(self):
         prefixes = Prefix.objects.all()[:2]
@@ -236,16 +242,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"family": "6"}
         ipv6_prefixes = self.queryset.ip_family(6)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
-
-    def test_is_pool(self):
-        params = {"is_pool": "true"}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(is_pool=True)
-        )
-        params = {"is_pool": "false"}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.exclude(is_pool=True)
-        )
 
     def test_within(self):
         unique_description = f"test_{__name__}"
@@ -375,20 +371,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"vlan_vid": vlans[0].vid}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vlan__vid=vlans[0].vid)
-        )
-
-    def test_role(self):
-        roles = Role.objects.get_for_model(Prefix).filter(ipam_prefix_related__isnull=False)[:2]
-        params = {"role": [roles[0].pk, roles[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
-        )
-
-    def test_status(self):
-        statuses = list(Status.objects.get_for_model(Prefix).filter(ipam_prefix_related__isnull=False)[:2])
-        params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses)
         )
 
 

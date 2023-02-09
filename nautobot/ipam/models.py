@@ -18,8 +18,8 @@ from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
+from nautobot.ipam import choices
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from .choices import ServiceProtocolChoices
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,
     IPADDRESS_ROLES_NONUNIQUE,
@@ -412,6 +412,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
+    type = models.CharField(
+        max_length=50,
+        choices=choices.PrefixTypeChoices,
+        default=choices.PrefixTypeChoices.TYPE_NETWORK,
+    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -442,17 +447,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         null=True,
         verbose_name="VLAN",
     )
-    is_pool = models.BooleanField(
-        verbose_name="Is a pool",
-        default=False,
-        help_text="All IP addresses within this prefix are considered usable",
-    )
     description = models.CharField(max_length=200, blank=True)
 
     objects = PrefixQuerySet.as_manager()
 
     csv_headers = [
         "prefix",
+        "type",
         "vrf",
         "tenant",
         "location",
@@ -460,7 +461,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "vlan",
         "status",
         "role",
-        "is_pool",
         "description",
     ]
     clone_fields = [
@@ -470,8 +470,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "vlan",
         "status",
         "role",
-        "is_pool",
         "description",
+        "type",
     ]
     dynamic_group_filter_fields = {
         "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
@@ -513,13 +513,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def STATUS_CONTAINER(cls):  # pylint: disable=no-self-argument
-        """Return a cached "container" `Status` object for later reference."""
-        if getattr(cls, "__status_container", None) is None:
-            cls.__status_container = Status.objects.get_for_model(Prefix).get(slug="container")
-        return cls.__status_container
-
     def clean(self):
         super().clean()
 
@@ -556,6 +549,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def to_csv(self):
         return (
             self.prefix,
+            self.get_type_display(),
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.location.name if self.location else None,
@@ -563,7 +557,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
             self.role.name if self.role else None,
-            self.is_pool,
             self.description,
         )
 
@@ -597,7 +590,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
         Prefixes belonging to any VRF.
         """
-        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
+        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             return Prefix.objects.net_contained(self.prefix)
         else:
             return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
@@ -607,7 +600,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
         child IPAddresses belonging to any VRF.
         """
-        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
+        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             return IPAddress.objects.net_host_contained(self.prefix)
         else:
             return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
@@ -631,7 +624,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
-        if self.family == 6 or self.is_pool or (self.family == 4 and self.prefix.prefixlen >= 31):
+        if any(
+            [
+                self.family == 6,
+                self.type == choices.PrefixTypeChoices.TYPE_POOL,
+                self.family == 4 and self.prefix.prefixlen >= 31,
+            ]
+        ):
             return available_ips
 
         # Omit first and last IP address from the available set
@@ -665,19 +664,25 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def get_utilization(self):
         """Get the child prefix size and parent size.
 
-        For Prefixes with a status of "container", get the number child prefixes. For all others, count child IP addresses.
+        For Prefixes with a type of "container", get the number child prefixes. For all others, count child IP addresses.
 
         Returns:
             UtilizationData (namedtuple): (numerator, denominator)
         """
-        if self.status == Prefix.STATUS_CONTAINER:
+        if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
             prefix_size = self.prefix.size
-            if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
+            if all(
+                [
+                    self.prefix.version == 4,
+                    self.prefix.prefixlen < 31,
+                    self.type != choices.PrefixTypeChoices.TYPE_POOL,
+                ]
+            ):
                 prefix_size -= 2
             child_count = prefix_size - self.get_available_ips().size
             return UtilizationData(numerator=child_count, denominator=prefix_size)
@@ -1206,7 +1211,7 @@ class Service(PrimaryModel):
         blank=True,
     )
     name = models.CharField(max_length=100, db_index=True)
-    protocol = models.CharField(max_length=50, choices=ServiceProtocolChoices)
+    protocol = models.CharField(max_length=50, choices=choices.ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(
             validators=[
