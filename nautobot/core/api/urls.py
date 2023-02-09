@@ -53,7 +53,7 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-    # Core Apps
+    # Core Apps - TODO, this should probably be moved into `core_api_patterns`, if we even find we need it...
     path("get-menu/", GetMenu.as_view(), name="get-menu"),
     # Core
     path("core/", include((core_api_patterns, "core-api"))),

@@ -186,12 +186,10 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    """
     brief = False
     # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
     # select_related
     brief_prefetch_fields = []
-    """
 
     def get_serializer(self, *args, **kwargs):
 
@@ -201,6 +199,8 @@ class ModelViewSetMixin:
 
         return super().get_serializer(*args, **kwargs)
 
+    # TODO: need to re-enable the below. Are the changes here actually part of the UI work or are these actually
+    # part of the "reworking REST API nested serializers" proof-of-concept?
     """
     def get_serializer_class(self):
         logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
@@ -283,6 +283,8 @@ class ModelViewSetMixin:
             logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
+    # TODO: if this is needed, it needs to be merged into the commented-out `get_serializer_context` above.
+    # TODO: this looks like it's part of the "replace nested serializers with depth option" feature, though...
     def get_serializer_context(self):
         context = super().get_serializer_context()
         try:
@@ -294,6 +296,7 @@ class ModelViewSetMixin:
         return context
 
 
+# TODO: move these imports up
 from drf_react_template.renderers import JSONSerializerRenderer
 from drf_react_template.schema_form_encoder import (ColumnProcessor,
                                                     SchemaProcessor,
@@ -304,6 +307,7 @@ from typing import Any, Dict, List, Tuple, Union
 from rest_framework import fields as drf_fields
 
 
+# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
 class MySchemaProcessor(SchemaProcessor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -375,6 +379,7 @@ class MySchemaProcessor(SchemaProcessor):
         return result
 
 
+# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
 class MyUiSchemaProcessor(UiSchemaProcessor):
     def _get_type_map_value(self, field: SerializerType):
         result = {
@@ -391,6 +396,7 @@ class MyUiSchemaProcessor(UiSchemaProcessor):
         return result
 
 
+# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
 class MySerializerEncoder(SerializerEncoder):
     def default(self, obj: Any) -> Union[Dict, List]:
         if isinstance(obj, drf_serializers.Serializer):
@@ -406,10 +412,12 @@ class MySerializerEncoder(SerializerEncoder):
         return super().default(obj)
 
 
+# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
 class MyJSONSerializerRenderer(JSONSerializerRenderer):
     encoder_class = MySerializerEncoder
 
 
+# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
 class MyFormSchemaViewSetMixin(FormSchemaViewSetMixin):
     renderer_classes = (MyJSONSerializerRenderer,)
 
@@ -849,9 +857,11 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return ExecutionResult(errors=[e], invalid=True)
 
 
+# TODO: document or remove this?
 class GetMenu(NautobotAPIVersionMixin, APIView):
     permission_classes = [AllowAny]
 
+    # TODO: the schema here is clearly wrong
     @extend_schema(
         responses={
             200: {
@@ -869,6 +879,7 @@ class GetMenu(NautobotAPIVersionMixin, APIView):
         }
     )
     def get(self, request):
+        # TODO: do we need this local import or can it be moved globally?
         from nautobot.extras.registry import registry
 
         return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])

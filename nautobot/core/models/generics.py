@@ -82,6 +82,8 @@ class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     tangible or logical resources on the network, or within the organization.
     """
 
+    # TODO: why did we change this?
+    # tags = TaggableManager(through=TaggedItem, manager=_NautobotTaggableManager, ordering=["name"])
     tags = TaggableManager(through=TaggedItem, manager=_NautobotTaggableManager)
 
     class Meta:

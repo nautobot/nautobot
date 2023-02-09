@@ -1,3 +1,4 @@
+# TODO: remove this file or merge it into `runserver.py`.
 import os
 import pathlib
 import json
