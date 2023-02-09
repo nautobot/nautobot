@@ -32,8 +32,6 @@
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane{% if not providernetwork_tab_active %} active{% endif %}" id="location">
-                            {% render_field form.region %}
-                            {% render_field form.location %}
                             {% render_field form.location %}
                         </div>
                         <div class="tab-pane{% if providernetwork_tab_active %} active{% endif %}" id="providernetwork">
