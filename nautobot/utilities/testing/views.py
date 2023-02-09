@@ -1414,3 +1414,39 @@ class ViewTestCases:
                 except AssertionError:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename(self):
+            obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            objects = self.selected_objects
+            pk_list = [obj.pk for obj in objects]
+            # Apply button not yet clicked
+            data = {"pk": pk_list}
+            data.update(self.rename_data)
+            verbose_name_plural = self.model._meta.verbose_name_plural
+
+            with self.subTest("Assert device name in HTML"):
+                response = self.client.post(self._get_url("bulk_rename"), data)
+                message = (
+                    f"Renaming {len(objects)} {bettertitle(verbose_name_plural)} on {self.selected_objects_parent_name}"
+                )
+                self.assertInHTML(message, response.content.decode(response.charset))
+
+            with self.subTest("Assert update successfully"):
+                data["_apply"] = True  # Form Apply button
+                response = self.client.post(self._get_url("bulk_rename"), data)
+                self.assertHttpStatus(response, 302)
+                queryset = self._get_queryset().filter(pk__in=pk_list)
+                for instance in objects:
+                    self.assertEqual(queryset.get(pk=instance.pk).name, f"{instance.name}X")
+
+            with self.subTest("Assert if no valid objects selected return with error"):
+                for values in ([], [str(uuid.uuid4())]):
+                    data["pk"] = values
+                    response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+                    expected_message = f"No valid {verbose_name_plural} were selected."
+                    self.assertIn(expected_message, response.content.decode(response.charset))
