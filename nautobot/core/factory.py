@@ -165,22 +165,33 @@ def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
 class NautobotBoolIterator(factory.Iterator):
     """Factory iterator that returns a semi-random sampling of boolean values
 
-    Iterator that returns a random sampling of 4 True and 4 False values to guarantee a
-    50/50 distribution of values. Used in factories when a data set must contain both
-    True and False values.
+    Iterator that returns a random sampling of True and False values while limiting
+    the number of repeated values in a given number of iterations. Used in factories
+    when a data set must contain both True and False values.
+
+    Args:
+        cycle (boolean): If True, iterator will restart at the beginning when all values are
+            exhausted. Otherwise raise a `StopIterator` exception when values are exhausted.
+            Defaults to True.
+        chance_of_getting_true (int): Percentage (0-100) of the values in the returned iterable
+        set to True. Defaults to 50.
+        length (int): Length of the returned iterable. Defaults to 8.
     """
 
-    def _nautobot_boolean_iterator_sample(self):
-        iterator = [True, True, True, True, False, False, False, False]
+    def _nautobot_boolean_iterator_sample(self, chance_of_getting_true, length):
+        iterator = list(itertools.repeat(True, int(length * chance_of_getting_true / 100)))
+        iterator += list(itertools.repeat(False, length - len(iterator)))
         factory.random.randgen.shuffle(iterator)
         return iterator
 
-    def __init__(self, *args, cycle=True, getter=None):
+    def __init__(self, *args, cycle=True, getter=None, chance_of_getting_true=50, length=8):
         super().__init__(None, cycle=cycle, getter=getter)
 
         if cycle:
             self.iterator_builder = lambda: factory.utils.ResetableIterator(
-                itertools.cycle(self._nautobot_boolean_iterator_sample())
+                itertools.cycle(self._nautobot_boolean_iterator_sample(chance_of_getting_true, length))
             )
         else:
-            self.iterator_builder = lambda: factory.utils.ResetableIterator(self._nautobot_boolean_iterator_sample())
+            self.iterator_builder = lambda: factory.utils.ResetableIterator(
+                self._nautobot_boolean_iterator_sample(chance_of_getting_true, length)
+            )
