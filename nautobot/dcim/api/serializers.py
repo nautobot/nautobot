@@ -199,6 +199,7 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
 
 class RegionSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
+    # TODO: why was this disabled? What is needed before we can re-enable it?
     # parent = NestedRegionSerializer(required=False, allow_null=True)
     site_count = serializers.IntegerField(read_only=True)
 

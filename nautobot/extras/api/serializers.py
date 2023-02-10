@@ -161,6 +161,9 @@ class NautobotModelSerializer(
     Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
     """
 
+    # TODO: if we're going to keep this field, we should implement `get_field_names` similar to the mixins below
+    # so that this field is automatically included in all derived serializers and they don't need to explicitly
+    # be updated to declare it.
     web_url = serializers.SerializerMethodField()
 
     @extend_schema_field(serializers.URLField())
