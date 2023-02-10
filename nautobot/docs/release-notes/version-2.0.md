@@ -36,7 +36,7 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - Model instances that had a `site` field (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` corresponding to that `Site`. All other attributes on these models will remain unchanged.
 
-    - Model instances that have a `site` ContentType associated with it (`ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`) will have its `site` ContentType replaced by `location` ContentType and All other attributes on these models will remain unchanged.
+    - Model instances that have a `site` ContentType associated with it (`ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`) will have their `site` ContentType replaced by `location` ContentType and all other attributes on these models will remain unchanged.
 
     For Example:
 
@@ -62,7 +62,7 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - Model instances that had a `site` attribute (`CircuitTermination`, `Device`, `Location`, `PowerPanel`, `Rack`, `RackGroup`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` of `LocationType` **Site**. All other attributes on these models will remain unchanged.
 
-    - Model instances that have a `region` and `site` ContentTypes associated with it (`ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`) will have its `region` and `site` ContentTypes replaced by `location` ContentType and All other attributes on these models will remain unchanged.
+    - Model instances that have a `region` or `site` ContentType associated with them (`ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`) will have their `region` or `site` ContentType replaced by `location` ContentType and all other attributes on these models will remain unchanged.
 
     For Example:
 
@@ -88,9 +88,9 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
 `Region` and `Site` ContentTypes are being replaced with `Location` ContentType from these models: `ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`.
 
-"region" and "site" keys are being removed in the filter data of `DynamicGroups`. The old keys' associated values are being added to the existing "location" key and its associated list or to a new "location" key with an empty list if there is no existing "location" key.
+The "region" and "site" keys are being removed in the filter data of `DynamicGroups`. The old keys' associated values are being added to the existing "location" key and its associated list or to a new "location" key with an empty list if there is no existing "location" key.
 
-Checkout the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../installation/upgrading-from-nautobot-v1.md) guide.
+Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../installation/upgrading-from-nautobot-v1.md) guide.
 
 #### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
 
