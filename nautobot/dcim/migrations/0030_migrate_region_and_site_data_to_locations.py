@@ -239,6 +239,13 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 
         # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
 
+        DynamicGroup = apps.get_model("extras", "DynamicGroup")
+        dynamic_groups = DynamicGroup.objects.all()
+        for dg in dynamic_groups:
+            if "region" in dg.filter:
+                dg.filter.setdefault("location", []).extend(dg.filter.pop("region"))
+            dg.save()
+
         ExportTemplate = apps.get_model("extras", "exporttemplate")
         export_templates = ExportTemplate.objects.filter(content_type=region_ct)
         for et in export_templates:
@@ -300,6 +307,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         ConfigContext = apps.get_model("extras", "configcontext")
         CustomField = apps.get_model("extras", "customfield")
         CustomLink = apps.get_model("extras", "customlink")
+        DynamicGroup = apps.get_model("extras", "DynamicGroup")
         ExportTemplate = apps.get_model("extras", "exporttemplate")
         ImageAttachment = apps.get_model("extras", "imageattachment")
         JobHook = apps.get_model("extras", "jobhook")
@@ -374,6 +382,12 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for cf in custom_links:
             cf.content_type = location_ct
         CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
+
+        dynamic_groups = DynamicGroup.objects.all()
+        for dg in dynamic_groups:
+            if "site" in dg.filter:
+                dg.filter.setdefault("location", []).extend(dg.filter.pop("site"))
+            dg.save()
 
         export_templates = ExportTemplate.objects.filter(content_type=site_ct)
         for et in export_templates:
