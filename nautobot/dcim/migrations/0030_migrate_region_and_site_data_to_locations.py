@@ -242,10 +242,8 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         DynamicGroup = apps.get_model("extras", "DynamicGroup")
         dynamic_groups = DynamicGroup.objects.all()
         for dg in dynamic_groups:
-            if "location" not in dg.filter.keys():
-                dg.filter["location"] = []
-            dg.filter["location"] += dg.filter.get("region", [])
-            dg.filter.pop("region", None)
+            if "region" in dg.filter:
+                dg.filter.setdefault("location", []).extend(dg.filter.pop("region"))
             if not dg.filter["location"]:  # Remove the location key if the list is empty
                 dg.filter.pop("location")
             dg.save()
@@ -389,10 +387,8 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 
         dynamic_groups = DynamicGroup.objects.all()
         for dg in dynamic_groups:
-            if "location" not in dg.filter.keys():
-                dg.filter["location"] = []
-            dg.filter["location"] += dg.filter.get("site", [])
-            dg.filter.pop("site", None)
+            if "site" in dg.filter:
+                dg.filter.setdefault("location", []).extend(dg.filter.pop("site"))
             if not dg.filter["location"]:  # Remove the location key if the list is empty
                 dg.filter.pop("location")
             dg.save()
