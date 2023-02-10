@@ -1,6 +1,7 @@
 import logging
 import platform
 from collections import OrderedDict
+from typing import Any, Dict, List, Union
 
 from django import __version__ as DJANGO_VERSION
 from django.apps import apps
@@ -11,6 +12,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from rest_framework import status
+from rest_framework import fields as drf_fields
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -20,6 +22,14 @@ from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_react_template.mixins import FormSchemaViewSetMixin
+from drf_react_template.renderers import JSONSerializerRenderer
+from drf_react_template.schema_form_encoder import (
+    ColumnProcessor,
+    SchemaProcessor,
+    SerializerEncoder,
+    UiSchemaProcessor,
+    SerializerType,
+)
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
@@ -33,14 +43,15 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.exceptions import SerializerNotFound  # noqa: F401 code is temporarily commented out
+from nautobot.core.api.utils import get_serializer_for_model  # noqa: F401 code is temporarily commented out
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from . import serializers
+
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -294,19 +305,6 @@ class ModelViewSetMixin:
         context["depth"] = depth
 
         return context
-
-
-# TODO: move these imports up
-from drf_react_template.renderers import JSONSerializerRenderer
-from drf_react_template.schema_form_encoder import (
-    ColumnProcessor,
-    SchemaProcessor,
-    SerializerEncoder,
-    UiSchemaProcessor,
-    SerializerType,
-)
-from typing import Any, Dict, List, Tuple, Union
-from rest_framework import fields as drf_fields
 
 
 # TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
