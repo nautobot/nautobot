@@ -848,8 +848,9 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return ExecutionResult(errors=[e], invalid=True)
 
 
-# TODO: document or remove this?
 class GetMenu(NautobotAPIVersionMixin, APIView):
+    """API View that returns the registered nav-menu content."""
+
     permission_classes = [AllowAny]
 
     # TODO: the schema here is clearly wrong

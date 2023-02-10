@@ -111,10 +111,12 @@ class NotesViewSetMixin:
         return self.get_paginated_response(serializer.data)
 
 
-# TODO: Documentation needed
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 # TODO: Why is this in extras instead of core?
 class FormFieldsViewSetMixin:
-    # TODO: get_field_groups?
+    """TODO: docstring needed."""
+
+    # TODO: shouldn't this function generally be named "get_field_groups" not "get_field_group"?
     def get_field_group(self):
         return []
 
@@ -152,9 +154,10 @@ class FormFieldsViewSetMixin:
         return Response(data)
 
 
-# TODO: Documentation needed
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 # TODO: Why is this in extras instead of core?
 class TableFieldsViewSetMixin:
+    """TODO: docstring needed."""
 
     # TODO: this schema is definitely incorrect. Should this view even be in the schema?
     @extend_schema(

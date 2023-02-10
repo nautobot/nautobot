@@ -56,7 +56,6 @@ class DeviceContent(TemplateExtension):
             },
         ]
 
-    # TODO: this doesn't seem to be working, only the React components are being rendered as content extensions
     def full_width_page(self):
         return """
             <div class="card card-default">
@@ -79,7 +78,6 @@ class SiteContent(TemplateExtension):
     def right_page(self):
         return "SITE CONTENT - RIGHT PAGE"
 
-    # TODO: this doesn't seem to be working, only the React components are being rendered as content extensions
     def full_width_page(self):
         return "SITE CONTENT - FULL WIDTH PAGE"
 
