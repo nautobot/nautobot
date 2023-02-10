@@ -310,7 +310,6 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 
 | Model              | Removed Filter Field  | UI and API endpoints that are no longer supported in v2.X                                     |
 |--------------------|-----------------------|-----------------------------------------------------------------------------------------------|
-| Aggregate          | `tenant_group_id`     |                                                                                               |
 | Circuit            | `provider_id`         |                                                                                               |
 |                    | `provider_network_id` |                                                                                               |
 |                    | `region`              |                                                                                               |

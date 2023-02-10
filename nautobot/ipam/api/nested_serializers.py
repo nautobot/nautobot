@@ -6,7 +6,6 @@ from nautobot.ipam import models
 
 __all__ = [
     "IPFieldSerializer",
-    "NestedAggregateSerializer",
     "NestedIPAddressSerializer",
     "NestedPrefixSerializer",
     "NestedRIRSerializer",
@@ -61,27 +60,17 @@ class NestedRouteTargetSerializer(WritableNestedSerializer):
 
 
 #
-# RIRs/aggregates
+# RIRs
 #
 
 
 class NestedRIRSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
-    aggregate_count = serializers.IntegerField(read_only=True)
+    prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.RIR
-        fields = ["id", "url", "name", "slug", "aggregate_count"]
-
-
-class NestedAggregateSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
-    family = serializers.IntegerField(read_only=True)
-    prefix = IPFieldSerializer()
-
-    class Meta:
-        model = models.Aggregate
-        fields = ["id", "url", "family", "prefix"]
+        fields = ["id", "url", "name", "slug", "prefix_count"]
 
 
 #

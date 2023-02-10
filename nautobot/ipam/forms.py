@@ -8,7 +8,7 @@ from nautobot.core.forms import (
     BulkEditNullBooleanSelect,
     CSVChoiceField,
     CSVModelChoiceField,
-    DatePicker,
+    DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
@@ -54,7 +54,6 @@ from .constants import (
     SERVICE_PORT_MIN,
 )
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -242,83 +241,6 @@ class RIRFilterForm(NautobotFilterForm):
 
 
 #
-# Aggregates
-#
-
-
-class AggregateForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
-
-    class Meta:
-        model = Aggregate
-        fields = [
-            "prefix",
-            "rir",
-            "date_added",
-            "description",
-            "tenant_group",
-            "tenant",
-            "tags",
-        ]
-        help_texts = {
-            "prefix": "IPv4 or IPv6 network",
-            "rir": "Regional Internet Registry responsible for this prefix",
-        }
-        widgets = {
-            "date_added": DatePicker(),
-        }
-
-
-class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
-    rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Aggregate
-        fields = Aggregate.csv_headers
-
-
-class AggregateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Aggregate.objects.all(), widget=forms.MultipleHiddenInput())
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    date_added = forms.DateField(required=False)
-    description = forms.CharField(max_length=100, required=False)
-
-    class Meta:
-        nullable_fields = [
-            "date_added",
-            "description",
-        ]
-        widgets = {
-            "date_added": DatePicker(),
-        }
-
-
-class AggregateFilterForm(NautobotFilterForm, TenancyFilterForm):
-    model = Aggregate
-    field_order = [
-        "q",
-        "rir",
-    ]
-
-    q = forms.CharField(required=False, label="Search")
-    family = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
-        widget=StaticSelect2(),
-    )
-    rir = DynamicModelMultipleChoiceField(queryset=RIR.objects.all(), to_field_name="slug", required=False, label="RIR")
-    tag = TagFilterField(model)
-
-
-#
 # Prefixes
 #
 
@@ -346,6 +268,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "group_id": "$vlan_group",
         },
     )
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
 
     class Meta:
         model = Prefix
@@ -360,8 +283,16 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "description",
             "tenant_group",
             "tenant",
+            "rir",
+            "date_allocated",
             "tags",
         ]
+        help_texts = {
+            "rir": "Regional Internet Registry responsible for this prefix",
+        }
+        widgets = {
+            "date_allocated": DateTimePicker(),
+        }
 
     def __init__(self, *args, **kwargs):
 
@@ -402,6 +333,7 @@ class PrefixCSVForm(
         help_text="Assigned VLAN",
     )
     type = CSVChoiceField(choices=PrefixTypeChoices, required=False)
+    rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
 
     class Meta:
         model = Prefix
@@ -439,6 +371,8 @@ class PrefixBulkEditForm(
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    date_allocated = forms.DateTimeField(required=False)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
@@ -447,6 +381,8 @@ class PrefixBulkEditForm(
             "location",
             "vrf",
             "tenant",
+            "rir",
+            "date_allocated",
             "description",
         ]
 
@@ -472,6 +408,8 @@ class PrefixFilterForm(
         "tenant_group",
         "tenant",
         "expand",
+        "rir",
+        "date_allocated",
     ]
     mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")

@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 
 
 class TestVarbinaryIPField(TestCase):
@@ -110,33 +110,6 @@ class TestVarbinaryIPField(TestCase):
         prepped = self.field.get_db_prep_value(self.network, connection)
         manual = bytes(self.network_packed)
         self.assertEqual(prepped, manual)
-
-
-class TestAggregate(TestCase):
-    def test_get_utilization(self):
-        aggregate = Aggregate(prefix=netaddr.IPNetwork("22.0.0.0/8"), rir=RIR.objects.first())
-        aggregate.save()
-
-        # 25% utilization
-        Prefix.objects.bulk_create(
-            (
-                Prefix(prefix=netaddr.IPNetwork("22.0.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.16.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.32.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.48.0.0/12")),
-            )
-        )
-        self.assertEqual(aggregate.get_utilization(), (4194304, 16777216))
-
-        # 50% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.64.0.0/10")),))
-        self.assertEqual(aggregate.get_utilization(), (8388608, 16777216))
-
-        # 100% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.128.0.0/9")),))
-        self.assertEqual(aggregate.get_utilization(), (16777216, 16777216))
-
-        # TODO: equivalent IPv6 tests for thoroughness?
 
 
 class TestPrefix(TestCase):

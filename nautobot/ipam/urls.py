@@ -3,7 +3,6 @@ from django.urls import path
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from . import views
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -101,47 +100,6 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="rir_notes",
         kwargs={"model": RIR},
-    ),
-    # Aggregates
-    path("aggregates/", views.AggregateListView.as_view(), name="aggregate_list"),
-    path("aggregates/add/", views.AggregateEditView.as_view(), name="aggregate_add"),
-    path(
-        "aggregates/import/",
-        views.AggregateBulkImportView.as_view(),
-        name="aggregate_import",
-    ),
-    path(
-        "aggregates/edit/",
-        views.AggregateBulkEditView.as_view(),
-        name="aggregate_bulk_edit",
-    ),
-    path(
-        "aggregates/delete/",
-        views.AggregateBulkDeleteView.as_view(),
-        name="aggregate_bulk_delete",
-    ),
-    path("aggregates/<uuid:pk>/", views.AggregateView.as_view(), name="aggregate"),
-    path(
-        "aggregates/<uuid:pk>/edit/",
-        views.AggregateEditView.as_view(),
-        name="aggregate_edit",
-    ),
-    path(
-        "aggregates/<uuid:pk>/delete/",
-        views.AggregateDeleteView.as_view(),
-        name="aggregate_delete",
-    ),
-    path(
-        "aggregates/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="aggregate_changelog",
-        kwargs={"model": Aggregate},
-    ),
-    path(
-        "aggregates/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="aggregate_notes",
-        kwargs={"model": Aggregate},
     ),
     # Prefixes
     path("prefixes/", views.PrefixListView.as_view(), name="prefix_list"),

@@ -204,8 +204,73 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return self.filter(the_filter)
 
 
-class NetworkQuerySet(BaseNetworkQuerySet):
-    """Base class for Prefix/Aggregate querysets."""
+class PrefixQuerySet(BaseNetworkQuerySet):
+    """Queryset for `Prefix` objects."""
+
+    def annotate_tree(self):
+        """
+        Annotate the number of parent and child prefixes for each Prefix.
+
+        The UUID being used is fake for purposes of satisfying the COALESCE condition.
+        """
+        # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
+        # The value itself has no meaning, so we just generate a random UUID for the query.
+        FAKE_UUID = uuid.uuid4()
+
+        from nautobot.ipam.models import Prefix
+
+        return self.annotate(
+            parents=Subquery(
+                Prefix.objects.annotate(
+                    maybe_vrf=ExpressionWrapper(
+                        Coalesce(F("vrf_id"), FAKE_UUID),
+                        output_field=UUIDField(),
+                    )
+                )
+                .filter(
+                    Q(prefix_length__lt=OuterRef("prefix_length"))
+                    & Q(network__lte=OuterRef("network"))
+                    & Q(broadcast__gte=OuterRef("broadcast"))
+                    & Q(
+                        maybe_vrf=ExpressionWrapper(
+                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
+                            output_field=UUIDField(),
+                        )
+                    )
+                )
+                .order_by()
+                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
+                .values("fake_group_by")
+                .annotate(count=Count("*"))
+                .values("count")[:1],
+                output_field=IntegerField(),
+            ),
+            children=Subquery(
+                Prefix.objects.annotate(
+                    maybe_vrf=ExpressionWrapper(
+                        Coalesce(F("vrf_id"), FAKE_UUID),
+                        output_field=UUIDField(),
+                    )
+                )
+                .filter(
+                    Q(prefix_length__gt=OuterRef("prefix_length"))
+                    & Q(network__gte=OuterRef("network"))
+                    & Q(broadcast__lte=OuterRef("broadcast"))
+                    & Q(
+                        maybe_vrf=ExpressionWrapper(
+                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
+                            output_field=UUIDField(),
+                        )
+                    )
+                )
+                .order_by()
+                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
+                .values("fake_group_by")
+                .annotate(count=Count("*"))
+                .values("count")[:1],
+                output_field=IntegerField(),
+            ),
+        )
 
     def ip_family(self, family):
         try:
@@ -281,79 +346,6 @@ class NetworkQuerySet(BaseNetworkQuerySet):
             kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
-
-
-class AggregateQuerySet(NetworkQuerySet):
-    """Queryset for `Aggregate` objects."""
-
-
-class PrefixQuerySet(NetworkQuerySet):
-    """Queryset for `Prefix` objects."""
-
-    def annotate_tree(self):
-        """
-        Annotate the number of parent and child prefixes for each Prefix.
-
-        The UUID being used is fake for purposes of satisfying the COALESCE condition.
-        """
-        # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
-        # The value itself has no meaning, so we just generate a random UUID for the query.
-        FAKE_UUID = uuid.uuid4()
-
-        from nautobot.ipam.models import Prefix
-
-        return self.annotate(
-            parents=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
-                    Q(prefix_length__lt=OuterRef("prefix_length"))
-                    & Q(network__lte=OuterRef("network"))
-                    & Q(broadcast__gte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-            children=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
-                    Q(prefix_length__gt=OuterRef("prefix_length"))
-                    & Q(network__gte=OuterRef("network"))
-                    & Q(broadcast__lte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-        )
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):

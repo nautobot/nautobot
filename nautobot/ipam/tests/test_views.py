@@ -3,6 +3,7 @@ import datetime
 from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from django.utils.timezone import make_aware
 
 from nautobot.core.testing import ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
@@ -11,7 +12,6 @@ from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -109,40 +109,12 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_test_object = RIR.objects.first().name
 
 
-class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = Aggregate
-
-    @classmethod
-    def setUpTestData(cls):
-        rir = RIR.objects.first()
-
-        cls.form_data = {
-            "prefix": IPNetwork("22.99.0.0/16"),
-            "rir": rir.pk,
-            "date_added": datetime.date(2020, 1, 1),
-            "description": "A new aggregate",
-            "tags": [t.pk for t in Tag.objects.get_for_model(Aggregate)],
-        }
-
-        cls.csv_data = (
-            "prefix,rir",
-            f"22.4.0.0/16,{rir.name}",
-            f"22.5.0.0/16,{rir.name}",
-            f"22.6.0.0/16,{rir.name}",
-        )
-
-        cls.bulk_edit_data = {
-            "rir": RIR.objects.last().pk,
-            "date_added": datetime.date(2020, 1, 1),
-            "description": "New description",
-        }
-
-
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
 
     @classmethod
     def setUpTestData(cls):
+        rir = RIR.objects.first()
 
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
@@ -161,15 +133,17 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "status": status_reserved.pk,
             "role": roles[1].pk,
             "type": "pool",
+            "rir": rir.pk,
+            "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "A new prefix",
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
 
         cls.csv_data = (
-            "vrf,prefix,status",
-            f"{vrfs[0].name},10.4.0.0/16,active",
-            f"{vrfs[0].name},10.5.0.0/16,active",
-            f"{vrfs[0].name},10.6.0.0/16,active",
+            "vrf,prefix,status,rir",
+            f"{vrfs[0].name},10.4.0.0/16,active,{rir.name}",
+            f"{vrfs[0].name},10.5.0.0/16,active,{rir.name}",
+            f"{vrfs[0].name},10.6.0.0/16,active,{rir.name}",
         )
 
         cls.bulk_edit_data = {
@@ -179,6 +153,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "status": status_reserved.pk,
             "role": roles[1].pk,
             "type": "network",
+            "rir": RIR.objects.last().pk,
+            "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "New description",
         }
 

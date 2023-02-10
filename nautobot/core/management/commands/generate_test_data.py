@@ -64,7 +64,7 @@ class Command(BaseCommand):
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
-                AggregateFactory,
+                PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
                 VLANGroupFactory,
@@ -116,10 +116,8 @@ class Command(BaseCommand):
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
-        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
-        AggregateFactory.create_batch(5, has_tenant_group=True)
-        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
-        AggregateFactory.create_batch(10)
+        self.stdout.write("Creating Prefixes and IP Addresses...")
+        PrefixFactory.create_batch(20)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")

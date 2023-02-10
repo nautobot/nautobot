@@ -16,7 +16,6 @@ from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -266,10 +265,10 @@ class RIRTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     is_private = BooleanColumn(verbose_name="Private")
-    aggregate_count = LinkedCountColumn(
-        viewname="ipam:aggregate_list",
+    prefix_count = LinkedCountColumn(
+        viewname="ipam:prefix_list",
         url_params={"rir": "slug"},
-        verbose_name="Aggregates",
+        verbose_name="Prefixes",
     )
     actions = ButtonsColumn(RIR, pk_field="slug")
 
@@ -280,7 +279,7 @@ class RIRTable(BaseTable):
             "name",
             "slug",
             "is_private",
-            "aggregate_count",
+            "prefix_count",
             "description",
             "actions",
         )
@@ -288,55 +287,9 @@ class RIRTable(BaseTable):
             "pk",
             "name",
             "is_private",
-            "aggregate_count",
+            "prefix_count",
             "description",
             "actions",
-        )
-
-
-#
-# Aggregates
-#
-
-
-class AggregateTable(BaseTable):
-    pk = ToggleColumn()
-    prefix = tables.LinkColumn(verbose_name="Aggregate", order_by=("network", "prefix_length"))
-    rir = tables.Column(linkify=True)
-    tenant = TenantColumn()
-    date_added = tables.DateColumn(format="Y-m-d", verbose_name="Added")
-
-    class Meta(BaseTable.Meta):
-        model = Aggregate
-        fields = ("pk", "prefix", "rir", "tenant", "date_added", "description")
-
-
-class AggregateDetailTable(AggregateTable):
-    child_count = tables.Column(verbose_name="Prefixes")
-    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
-    tags = TagColumn(url_name="ipam:aggregate_list")
-
-    class Meta(AggregateTable.Meta):
-        fields = (
-            "pk",
-            "prefix",
-            "rir",
-            "tenant",
-            "child_count",
-            "utilization",
-            "date_added",
-            "description",
-            "tags",
-        )
-        default_columns = (
-            "pk",
-            "prefix",
-            "rir",
-            "tenant",
-            "child_count",
-            "utilization",
-            "date_added",
-            "description",
         )
 
 
@@ -354,6 +307,8 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
+    rir = tables.Column(linkify=True)
+    date_allocated = tables.DateTimeColumn()
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -368,6 +323,8 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "location",
             "vlan",
             "role",
+            "rir",
+            "date_allocated",
             "description",
         )
         default_columns = (

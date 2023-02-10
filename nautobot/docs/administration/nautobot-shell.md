@@ -44,7 +44,7 @@ from nautobot.extras.models.roles import Role
 from nautobot.extras.models.secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag, TaggedItem
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VMInterface, VirtualMachine

@@ -14,7 +14,6 @@ from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.factory import PrefixFactory
 from nautobot.ipam.filters import (
-    AggregateFilterSet,
     IPAddressFilterSet,
     PrefixFilterSet,
     RIRFilterSet,
@@ -25,7 +24,6 @@ from nautobot.ipam.filters import (
     VRFFilterSet,
 )
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -168,58 +166,14 @@ class RIRTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=False))
 
 
-class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
-    queryset = Aggregate.objects.all()
-    filterset = AggregateFilterSet
-    tenancy_related_name = "aggregates"
-
-    def test_search(self):
-        test_values = [
-            str(self.queryset.ip_family(4).last().prefix),  # e.g "10.0.0.0/8"
-            str(self.queryset.ip_family(4).first().network),  # e.g. "10.0.0.0"
-            str(self.queryset.ip_family(4).first().network).rsplit(".", 1)[0],  # e.g. "10.0.0"
-            str(self.queryset.ip_family(6).last().prefix),  # e.g "2001:db8:1::/48"
-            str(self.queryset.ip_family(6).first().network),  # e.g. "2001:db8:1::"
-            str(self.queryset.ip_family(6).first().network).rsplit("::", 1)[0],  # e.g. "2001:db8:1"
-        ]
-        for value in test_values:
-            with self.subTest(value=value):
-                params = {"q": value}
-                self.assertQuerysetEqualAndNotEmpty(
-                    self.filterset(params, self.queryset).qs, self.queryset.string_search(value)
-                )
-
-    def test_family(self):
-        params = {"family": "4"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.ip_family(4).count())
-        params = {"family": "6"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.ip_family(6).count())
-
-    def test_date_added(self):
-        dates = self.queryset.exclude(date_added__isnull=True).values_list("date_added", flat=True)[:2]
-        params = {"date_added": [str(date) for date in dates]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    # 2.0 TODO: Test for multiple values
-    def test_prefix(self):
-        params = {"prefix": self.queryset.ip_family(4).first().prefix}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"prefix": self.queryset.ip_family(6).first().prefix}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_rir(self):
-        rirs = list(RIR.objects.filter(aggregates__isnull=False).distinct())[:2]
-        params = {"rir_id": [rirs[0].pk, rirs[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
-        params = {"rir": [rirs[0].slug, rirs[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
-
-
 class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
     tenancy_related_name = "prefixes"
     generic_filter_tests = (
+        ["date_allocated"],
+        ["rir", "rir__id"],
+        ["rir", "rir__slug"],
         ["role", "role__id"],
         ["role", "role__slug"],
         ["status", "status__slug"],
