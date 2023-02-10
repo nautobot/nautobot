@@ -89,12 +89,14 @@
 
 The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed and replaced by a single `extras.Role` model. This means that any references to the removed models in the code now use the `extras.Role` model instead.
 
-The `dcim.region` and `dcim.site` models have been removed and replaced by `dcim.location` model. This means that any references to the removed models in the code now use the `dcim.location` model instead with `LocationType` "Site" and "Region".
+The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim.Location` model. This means that any references to the removed models in the code now use the `dcim.Location` model instead with `LocationType` "Site" and "Region".
 
 | Removed Model     | Replaced With  |
 |-------------------|----------------|
 | `dcim.DeviceRole` | `extras.Role`  |
 | `dcim.RackRole`   | `extras.Role`  |
+| `dcim.Region`     | `dcim.Location`|
+| `dcim.Site`       | `dcim.Location`|
 | `ipam.Role`       | `extras.Role`  |
 
 ## GraphQL and REST API Changes
