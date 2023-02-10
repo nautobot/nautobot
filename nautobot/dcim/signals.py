@@ -58,7 +58,7 @@ def rebuild_paths(obj):
 
 
 @receiver(post_save, sender=RackGroup)
-def handle_rackgroup_location_change(instance, created, **kwargs):
+def handle_rackgroup_location_change(instance, created, raw=False, **kwargs):
     """
     Update child RackGroups, Racks, and PowerPanels if Location assignment has changed.
 
@@ -70,8 +70,9 @@ def handle_rackgroup_location_change(instance, created, **kwargs):
     through child locations to find the "right" one, the best we can do is to raise to raise a ValidationError
     and roll back the changes we made.
     """
-    if created:
+    if raw or created:
         return
+
     with transaction.atomic():
         descendants = instance.location.descendants(include_self=True)
         content_types = instance.location.location_type.content_types.all()
@@ -117,7 +118,7 @@ def handle_rackgroup_location_change(instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Rack)
-def handle_rack_location_change(instance, created, **kwargs):
+def handle_rack_location_change(instance, created, raw=False, **kwargs):
     """
     Update child Devices if Location assignment has changed.
 
@@ -126,7 +127,7 @@ def handle_rack_location_change(instance, created, **kwargs):
     through child locations to find the "right" one, the best we can do is to raise a ValidationError
     and roll back the changes we made.
     """
-    if created:
+    if raw or created:
         return
     with transaction.atomic():
         devices_permitted = (
@@ -152,10 +153,12 @@ def handle_rack_location_change(instance, created, **kwargs):
 
 
 @receiver(post_save, sender=VirtualChassis)
-def assign_virtualchassis_master(instance, created, **kwargs):
+def assign_virtualchassis_master(instance, created, raw=False, **kwargs):
     """
     When a VirtualChassis is created, automatically assign its master device (if any) to the VC.
     """
+    if raw:
+        return
     if created and instance.master:
         master = Device.objects.get(pk=instance.master.pk)
         master.virtual_chassis = instance
