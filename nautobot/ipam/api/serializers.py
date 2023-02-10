@@ -91,7 +91,6 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "export_targets",
             "ipaddress_count",
             "prefix_count",
-            "web_url",
         ]
 
 
@@ -111,7 +110,6 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
             "name",
             "tenant",
             "description",
-            "web_url",
         ]
 
 
@@ -133,7 +131,6 @@ class RIRSerializer(NautobotModelSerializer):
             "is_private",
             "description",
             "aggregate_count",
-            "web_url",
         ]
 
 
@@ -154,7 +151,6 @@ class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "tenant",
             "date_added",
             "description",
-            "web_url",
         ]
         read_only_fields = ["family"]
 
@@ -180,7 +176,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
             "location",
             "description",
             "vlan_count",
-            "web_url",
         ]
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
@@ -224,7 +219,6 @@ class VLANSerializer(
             "role",
             "description",
             "prefix_count",
-            "web_url",
         ]
         validators = []
 
@@ -275,7 +269,6 @@ class PrefixSerializer(
             "status",
             "role",
             "description",
-            "web_url",
         ]
         read_only_fields = ["family"]
 
@@ -361,7 +354,6 @@ class IPAddressSerializer(
             "nat_outside",
             "dns_name",
             "description",
-            "web_url",
         ]
         read_only_fields = ["family"]
 
@@ -431,5 +423,4 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "protocol",
             "ip_addresses",
             "description",
-            "web_url",
         ]
