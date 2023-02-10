@@ -30,9 +30,7 @@ class Command(RunServerCommand):
             plugin_path = pathlib.Path(app.path).resolve()
 
             # TODO: Check that a plugin has a UI folder
-            jsconfig["compilerOptions"]["paths"]["@"+plugin_name + "/*"] = [str(plugin_path)+"/ui/*"]
-
-
+            jsconfig["compilerOptions"]["paths"]["@" + plugin_name + "/*"] = [str(plugin_path) + "/ui/*"]
 
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)

@@ -298,11 +298,13 @@ class ModelViewSetMixin:
 
 # TODO: move these imports up
 from drf_react_template.renderers import JSONSerializerRenderer
-from drf_react_template.schema_form_encoder import (ColumnProcessor,
-                                                    SchemaProcessor,
-                                                    SerializerEncoder,
-                                                    UiSchemaProcessor,
-                                                    SerializerType)
+from drf_react_template.schema_form_encoder import (
+    ColumnProcessor,
+    SchemaProcessor,
+    SerializerEncoder,
+    UiSchemaProcessor,
+    SerializerType,
+)
 from typing import Any, Dict, List, Tuple, Union
 from rest_framework import fields as drf_fields
 
@@ -311,21 +313,23 @@ from rest_framework import fields as drf_fields
 class MySchemaProcessor(SchemaProcessor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.TYPE_MAP.update({
-            "SlugField": {"type": "string"},
-            "CustomFieldsDataField": {"type": "object"},
-            "UUIDField": {"type": "string"},
-            "PrimaryKeyRelatedField": {'type': 'string', 'enum': 'choices'},
-            "ManyRelatedField": {'type': 'array', 'required': []},
-            "ContentTypeField": {'type': 'string', 'enum': 'choices'}
-        })
+        self.TYPE_MAP.update(
+            {
+                "SlugField": {"type": "string"},
+                "CustomFieldsDataField": {"type": "object"},
+                "UUIDField": {"type": "string"},
+                "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
+                "ManyRelatedField": {"type": "array", "required": []},
+                "ContentTypeField": {"type": "string", "enum": "choices"},
+            }
+        )
 
     def _get_type_map_value(self, field: SerializerType):
         result = {
-            'type': field.style.get('schema:type'),
-            'enum': field.style.get('schema:enum'),
-            'widget': field.style.get('ui:widget'),
-            'required': field.style.get('schema:required'),
+            "type": field.style.get("schema:type"),
+            "enum": field.style.get("schema:enum"),
+            "widget": field.style.get("ui:widget"),
+            "required": field.style.get("schema:required"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
         for k, v in result_default.items():
@@ -337,40 +341,40 @@ class MySchemaProcessor(SchemaProcessor):
     def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
         result = {}
         type_map_obj = self._get_type_map_value(field)
-        result['type'] = type_map_obj['type']
-        result['title'] = self._get_title(field, name)
+        result["type"] = type_map_obj["type"]
+        result["title"] = self._get_title(field, name)
 
         # if result['title'] == 'Content types':
         #     breakpoint()
 
         if isinstance(field, drf_serializers.ListField):
             if field.allow_empty:
-                result['required'] = not getattr(field, 'allow_empty', True)
-            result['items'] = self._get_field_properties(field.child, "")
-            result['uniqueItems'] = True
+                result["required"] = not getattr(field, "allow_empty", True)
+            result["items"] = self._get_field_properties(field.child, "")
+            result["uniqueItems"] = True
         elif isinstance(field, drf_serializers.ManyRelatedField):
             if field.allow_empty:
-                result['required'] = type_map_obj.get("required", [])
-            result['items'] = self._get_field_properties(field.child_relation, "")
-            result['uniqueItems'] = True
+                result["required"] = type_map_obj.get("required", [])
+            result["items"] = self._get_field_properties(field.child_relation, "")
+            result["uniqueItems"] = True
         else:
             if field.allow_null:
-                result['type'] = [result['type'], 'null']
-            enum = type_map_obj.get('enum')
+                result["type"] = [result["type"], "null"]
+            enum = type_map_obj.get("enum")
             if enum:
-                if enum == 'choices':
+                if enum == "choices":
                     choices = field.choices
-                    result['enum'] = list(choices.keys())
-                    result['enumNames'] = [v for v in choices.values()]
+                    result["enum"] = list(choices.keys())
+                    result["enumNames"] = [v for v in choices.values()]
                 if isinstance(enum, (list, tuple)):
                     if isinstance(enum, (list, tuple)):
-                        result['enum'] = [item[0] for item in enum]
-                        result['enumNames'] = [item[1] for item in enum]
+                        result["enum"] = [item[0] for item in enum]
+                        result["enumNames"] = [item[1] for item in enum]
                     else:
-                        result['enum'] = enum
-                        result['enumNames'] = [item for item in enum]
+                        result["enum"] = enum
+                        result["enumNames"] = [item for item in enum]
             try:
-                result['default'] = field.get_default()
+                result["default"] = field.get_default()
             except drf_fields.SkipField:
                 pass
 
@@ -383,10 +387,10 @@ class MySchemaProcessor(SchemaProcessor):
 class MyUiSchemaProcessor(UiSchemaProcessor):
     def _get_type_map_value(self, field: SerializerType):
         result = {
-            'type': field.style.get('schema:type'),
-            'enum': field.style.get('schema:enum'),
-            'widget': field.style.get('ui:widget'),
-            'required': field.style.get('schema:required'),
+            "type": field.style.get("schema:type"),
+            "enum": field.style.get("schema:enum"),
+            "widget": field.style.get("ui:widget"),
+            "required": field.style.get("schema:required"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
         for k, v in result_default.items():
@@ -404,10 +408,8 @@ class MySerializerEncoder(SerializerEncoder):
                 return ColumnProcessor(obj, self.renderer_context).get_schema()
             else:
                 return {
-                    'schema': MySchemaProcessor(obj, self.renderer_context).get_schema(),
-                    'uiSchema': MyUiSchemaProcessor(
-                        obj, self.renderer_context
-                    ).get_ui_schema(),
+                    "schema": MySchemaProcessor(obj, self.renderer_context).get_schema(),
+                    "uiSchema": MyUiSchemaProcessor(obj, self.renderer_context).get_ui_schema(),
                 }
         return super().default(obj)
 
