@@ -17,10 +17,10 @@ class Command(BaseCommand):
 
         # install npm dependencies and build compiled javascript
         ui_dir = os.path.join(os.path.dirname(settings.BASE_DIR), "nautobot_ui")
-        npm_install = subprocess.run(["npm", "install"], cwd=ui_dir)
+        npm_install = subprocess.run(["npm", "install"], cwd=ui_dir, check=False)
         if npm_install.returncode:
             raise CommandError(f"npm install failed with exit code {npm_install.returncode}")
-        npm_build = subprocess.run(["npm", "run", "build"], cwd=ui_dir)
+        npm_build = subprocess.run(["npm", "run", "build"], cwd=ui_dir, check=False)
         if npm_build.returncode:
             raise CommandError(f"npm build failed with exit code {npm_build.returncode}")
 

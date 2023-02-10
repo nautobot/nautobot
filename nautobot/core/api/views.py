@@ -330,7 +330,7 @@ class MySchemaProcessor(SchemaProcessor):
             "required": field.style.get("schema:required"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k, v in result_default.items():
+        for k in result_default:
             # if not result[k]:
             if result[k] is None:
                 result[k] = result_default[k]
@@ -363,14 +363,14 @@ class MySchemaProcessor(SchemaProcessor):
                 if enum == "choices":
                     choices = field.choices
                     result["enum"] = list(choices.keys())
-                    result["enumNames"] = [v for v in choices.values()]
+                    result["enumNames"] = list(choices.values())
                 if isinstance(enum, (list, tuple)):
                     if isinstance(enum, (list, tuple)):
                         result["enum"] = [item[0] for item in enum]
                         result["enumNames"] = [item[1] for item in enum]
                     else:
                         result["enum"] = enum
-                        result["enumNames"] = [item for item in enum]
+                        result["enumNames"] = list(enum)
             try:
                 result["default"] = field.get_default()
             except drf_fields.SkipField:
@@ -391,7 +391,7 @@ class MyUiSchemaProcessor(UiSchemaProcessor):
             "required": field.style.get("schema:required"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k, v in result_default.items():
+        for k in result_default:
             # if not result[k]:
             if result[k] is None:
                 result[k] = result_default[k]
