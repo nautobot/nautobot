@@ -82,7 +82,7 @@ class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     tangible or logical resources on the network, or within the organization.
     """
 
-    tags = TaggableManager(through=TaggedItem, manager=_NautobotTaggableManager)
+    tags = TaggableManager(through=TaggedItem, manager=_NautobotTaggableManager, ordering=["name"])
 
     class Meta:
         abstract = True

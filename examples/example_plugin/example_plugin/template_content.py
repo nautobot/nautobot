@@ -79,41 +79,10 @@ class SiteContent(TemplateExtension):
         return "SITE CONTENT - RIGHT PAGE"
 
     def full_width_page(self):
-        return """
-            <div class="card card-default">
-                <div class="card-header">
-                    <strong>Plugin Full Width Page</strong>
-                </div>
-                <div class="card-body">
-                    <span>Check me out! I'll show up after anything defined in the detail view template.</span>
-                    /dcim/devices/[pk]/?tab=plugin_tab_2
-                </div>
-            </div>
-        """
+        return "SITE CONTENT - FULL WIDTH PAGE"
 
     def buttons(self):
         return "SITE CONTENT - BUTTONS"
-
-    def detail_tabs(self):
-        """
-        You may define extra tabs to render on a model's detail page by utilizing this method.
-        Each tab is defined as a dict in a list of dicts.
-
-        For each of the tabs defined:
-        - The <title> key's value will become the tab link's title.
-        - The <url> key's value is used to render the HTML link for the tab.
-
-        Since the `model` attribute of this class is set as "circuits.circuit",
-        these tabs will be added to the Circuit model's detail page.
-
-        This example demonstrates defining one tab.
-        """
-        return [
-            {
-                "title": "Go to Login",
-                "url": reverse("login"),
-            },
-        ]
 
 
 class ExampleModelContent(TemplateExtension):

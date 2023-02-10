@@ -162,6 +162,8 @@ class SiteViewSet(NautobotModelViewSet):
     serializer_class = serializers.SiteSerializer
     filterset_class = filters.SiteFilterSet
 
+    # TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+    # TODO: shouldn't this function generally be named "get_field_groups" not "get_field_group"?
     def get_field_group(self):
         groups = {
             "Site": ["name", "slug", "status", "region", "facility", "asn", "time_zone", "description"],

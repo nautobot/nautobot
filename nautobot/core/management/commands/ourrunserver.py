@@ -1,3 +1,4 @@
+# TODO: remove this file or merge it into `runserver.py`.
 import os
 import pathlib
 import json
@@ -6,8 +7,6 @@ import jinja2
 from django.apps import apps
 from django.conf import settings
 from django.contrib.staticfiles.management.commands.runserver import Command as RunServerCommand
-
-from nautobot.extras.registry import registry
 
 
 class Command(RunServerCommand):
@@ -29,14 +28,11 @@ class Command(RunServerCommand):
             plugin_path = pathlib.Path(app.path).resolve()
 
             # TODO: Check that a plugin has a UI folder
-            jsconfig["compilerOptions"]["paths"]["@"+plugin_name + "/*"] = [str(plugin_path)+"/ui/*"]
-
-
+            jsconfig["compilerOptions"]["paths"]["@" + plugin_name + "/*"] = [str(plugin_path) + "/ui/*"]
 
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
 
-        plugin_imports_base_file_path = os.path.join(nautobot_path, "nautobot_ui", "plugin_imports.js.j2")
         plugin_imports_final_file_path = os.path.join(nautobot_path, "nautobot_ui", "src", "plugin_imports.js")
 
         environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.join(nautobot_path, "nautobot_ui")))

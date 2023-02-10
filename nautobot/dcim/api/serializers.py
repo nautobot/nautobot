@@ -199,7 +199,7 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
 
 class RegionSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
-    # parent = NestedRegionSerializer(required=False, allow_null=True)
+    parent = NestedRegionSerializer(required=False, allow_null=True)
     site_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -211,7 +211,6 @@ class RegionSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
             "parent",
             "description",
             "site_count",
-            "web_url",
             "tree_depth",
         ]
 
@@ -255,7 +254,6 @@ class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
             "rack_count",
             "virtualmachine_count",
             "vlan_count",
-            "web_url",
         ]
 
 
@@ -284,7 +282,6 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
             "content_types",
             "description",
             "tree_depth",
-            "web_url",
         ]
 
 
@@ -335,7 +332,6 @@ class LocationSerializer(
             "rack_count",
             "virtualmachine_count",
             "vlan_count",
-            "web_url",
         ]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
@@ -374,7 +370,6 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
             "parent",
             "description",
             "rack_count",
-            "web_url",
             "tree_depth",
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
@@ -433,7 +428,6 @@ class RackSerializer(
             "comments",
             "device_count",
             "powerfeed_count",
-            "web_url",
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (group, facility_id). This
         # prevents facility_id from being interpreted as a required field.
@@ -478,7 +472,6 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMi
             "user",
             "tenant",
             "description",
-            "web_url",
         ]
 
 
@@ -524,7 +517,6 @@ class ManufacturerSerializer(NautobotModelSerializer):
             "devicetype_count",
             "inventoryitem_count",
             "platform_count",
-            "web_url",
         ]
 
 
@@ -549,7 +541,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "rear_image",
             "comments",
             "device_count",
-            "web_url",
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
         # prevents slug from being interpreted as a required field.
@@ -583,7 +574,6 @@ class ConsolePortTemplateSerializer(NautobotModelSerializer):
             "label",
             "type",
             "description",
-            "web_url",
         ]
 
 
@@ -601,7 +591,6 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
             "label",
             "type",
             "description",
-            "web_url",
         ]
 
 
@@ -621,7 +610,6 @@ class PowerPortTemplateSerializer(NautobotModelSerializer):
             "maximum_draw",
             "allocated_draw",
             "description",
-            "web_url",
         ]
 
 
@@ -643,7 +631,6 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
             "power_port",
             "feed_leg",
             "description",
-            "web_url",
         ]
 
 
@@ -662,7 +649,6 @@ class InterfaceTemplateSerializer(NautobotModelSerializer):
             "type",
             "mgmt_only",
             "description",
-            "web_url",
         ]
 
 
@@ -681,7 +667,6 @@ class RearPortTemplateSerializer(NautobotModelSerializer):
             "type",
             "positions",
             "description",
-            "web_url",
         ]
 
 
@@ -702,7 +687,6 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
             "rear_port",
             "rear_port_position",
             "description",
-            "web_url",
         ]
 
 
@@ -718,7 +702,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
             "name",
             "label",
             "description",
-            "web_url",
         ]
 
 
@@ -745,7 +728,6 @@ class PlatformSerializer(NautobotModelSerializer):
             "description",
             "device_count",
             "virtualmachine_count",
-            "web_url",
         ]
 
 
@@ -804,7 +786,6 @@ class DeviceSerializer(
             "comments",
             "local_config_context_schema",
             "local_config_context_data",
-            "web_url",
         ]
         validators = []
 
@@ -877,7 +858,6 @@ class ConsoleServerPortSerializer(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "web_url",
         ]
 
 
@@ -907,7 +887,6 @@ class ConsolePortSerializer(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "web_url",
         ]
 
 
@@ -941,7 +920,6 @@ class PowerOutletSerializer(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "web_url",
         ]
 
 
@@ -973,7 +951,6 @@ class PowerPortSerializer(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "web_url",
         ]
 
 
@@ -1047,7 +1024,6 @@ class InterfaceSerializer(
             "connected_endpoint_type",
             "connected_endpoint_reachable",
             "count_ipaddresses",
-            "web_url",
         ]
 
     def validate(self, data):
@@ -1084,7 +1060,6 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
             "cable",
             "cable_peer",
             "cable_peer_type",
-            "web_url",
         ]
 
 
@@ -1121,7 +1096,6 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, C
             "cable",
             "cable_peer",
             "cable_peer_type",
-            "web_url",
         ]
 
 
@@ -1139,7 +1113,6 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "label",
             "description",
             "installed_device",
-            "web_url",
         ]
 
 
@@ -1157,7 +1130,6 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerial
             "failover_strategy",
             "secrets_group",
             "comments",
-            "web_url",
         ]
 
 
@@ -1187,7 +1159,6 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
             "asset_tag",
             "discovered",
             "description",
-            "web_url",
             "tree_depth",
         ]
 
@@ -1221,7 +1192,6 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
             "color",
             "length",
             "length_unit",
-            "web_url",
         ]
 
     def _get_termination(self, obj, side):
@@ -1363,7 +1333,6 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
             "domain",
             "master",
             "member_count",
-            "web_url",
         ]
 
 
@@ -1388,7 +1357,6 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "rack_group",
             "name",
             "powerfeed_count",
-            "web_url",
         ]
 
 
@@ -1428,5 +1396,4 @@ class PowerFeedSerializer(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "web_url",
         ]

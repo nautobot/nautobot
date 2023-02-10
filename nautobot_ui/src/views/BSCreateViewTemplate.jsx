@@ -31,6 +31,7 @@ export default function BSCreateViewTemplate({ list_url }) {
     url: list_url,
     data: formData,
     withCredentials: false,
+    // TODO: obviously this can't ship with a hard-coded API token... see issue #3242
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Token nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"

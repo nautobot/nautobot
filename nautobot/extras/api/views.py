@@ -111,10 +111,16 @@ class NotesViewSetMixin:
         return self.get_paginated_response(serializer.data)
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+# TODO: Why is this in extras instead of core?
 class FormFieldsViewSetMixin:
+    """TODO: docstring needed."""
+
+    # TODO: shouldn't this function generally be named "get_field_groups" not "get_field_group"?
     def get_field_group(self):
         return []
 
+    # TODO: schema doesn't *look* correct to me based on a reading of the below code. Should this even be in the schema?
     @extend_schema(
         responses={
             200: {
@@ -148,7 +154,12 @@ class FormFieldsViewSetMixin:
         return Response(data)
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+# TODO: Why is this in extras instead of core?
 class TableFieldsViewSetMixin:
+    """TODO: docstring needed."""
+
+    # TODO: this schema is definitely incorrect. Should this view even be in the schema?
     @extend_schema(
         responses={
             200: {
@@ -322,6 +333,8 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
     Can also be used for models derived from BaseModel, so long as they support Notes.
     """
 
+    # TODO: this currently throws a 500 error in drf_react_template because it's returning an HttpResponse but
+    # drf_react_template thinks it's a REST endpoint that should be returning a JsonResponse
     @action(detail=True, url_path="plugin_full_width_fragment")
     def plugin_full_width_fragment(self, request, pk):
         """

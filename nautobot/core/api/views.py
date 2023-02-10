@@ -1,6 +1,7 @@
 import logging
 import platform
 from collections import OrderedDict
+from typing import Any, Dict, List, Union
 
 from django import __version__ as DJANGO_VERSION
 from django.apps import apps
@@ -11,6 +12,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from rest_framework import status
+from rest_framework import fields as drf_fields
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -20,6 +22,14 @@ from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_react_template.mixins import FormSchemaViewSetMixin
+from drf_react_template.renderers import JSONSerializerRenderer
+from drf_react_template.schema_form_encoder import (
+    ColumnProcessor,
+    SchemaProcessor,
+    SerializerEncoder,
+    UiSchemaProcessor,
+    SerializerType,
+)
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
@@ -33,14 +43,15 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.exceptions import SerializerNotFound  # noqa: F401 code is temporarily commented out
+from nautobot.core.api.utils import get_serializer_for_model  # noqa: F401 code is temporarily commented out
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from . import serializers
+
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -186,12 +197,10 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    """
     brief = False
     # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
     # select_related
     brief_prefetch_fields = []
-    """
 
     def get_serializer(self, *args, **kwargs):
 
@@ -201,45 +210,50 @@ class ModelViewSetMixin:
 
         return super().get_serializer(*args, **kwargs)
 
-    """
-    def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+    # TODO: the below needs to be either fixed or removed as part of issue #3042.
+    # def get_serializer_class(self):
+    #     logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
-        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-        if self.brief:
-            logger.debug("Request is for 'brief' format; initializing nested serializer")
-            try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                logger.debug(f"Using serializer {serializer}")
-                return serializer
-            except SerializerNotFound:
-                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+    #     # If using 'brief' mode, find and return the nested serializer for this model, if one exists
+    #     if self.brief:
+    #         logger.debug("Request is for 'brief' format; initializing nested serializer")
+    #         try:
+    #             serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
+    #             logger.debug(f"Using serializer {serializer}")
+    #             return serializer
+    #         except SerializerNotFound:
+    #             logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
-        # Fall back to the hard-coded serializer class
-        return self.serializer_class
+    #     # Fall back to the hard-coded serializer class
+    #     return self.serializer_class
 
-    def get_serializer_context(self, *args, **kwargs):
+    # TODO: this is part of issue #3042.
+    def get_serializer_context(self):
         ctx = super().get_serializer_context()
         ctx["request"] = None
+        try:
+            depth = int(self.request.query_params.get("depth", 0))
+        except ValueError:
+            depth = 0  # Ignore non-numeric parameters and keep default 0 depth
+        ctx["depth"] = depth
+
         return ctx
 
-    def get_queryset(self):
-        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-        if self.brief:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
+    # TODO: the below needs to be either fixed or remvoed as part of issue #3042.
+    # def get_queryset(self):
+    #     # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
+    #     if self.brief:
+    #         # v2 TODO(jathan): Replace prefetch_related with select_related
+    #         return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
-        return super().get_queryset()
-    """
+    #     return super().get_queryset()
 
-    """
-    def initialize_request(self, request, *args, **kwargs):
-        # Check if brief=True has been passed
-        if request.method == "GET" and request.GET.get("brief"):
-            self.brief = True
+    # def initialize_request(self, request, *args, **kwargs):
+    #     # Check if brief=True has been passed
+    #     if request.method == "GET" and request.GET.get("brief"):
+    #         self.brief = True
 
-        return super().initialize_request(request, *args, **kwargs)
-    """
+    #     return super().initialize_request(request, *args, **kwargs)
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -283,48 +297,31 @@ class ModelViewSetMixin:
             logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        try:
-            depth = int(self.request.query_params.get("depth", 0))
-        except ValueError:
-            depth = 0  # Ignore non-numeric parameters and keep default 0 depth
-        context["depth"] = depth
 
-        return context
-
-
-from drf_react_template.renderers import JSONSerializerRenderer
-from drf_react_template.schema_form_encoder import (ColumnProcessor,
-                                                    SchemaProcessor,
-                                                    SerializerEncoder,
-                                                    UiSchemaProcessor,
-                                                    SerializerType)
-from typing import Any, Dict, List, Tuple, Union
-from rest_framework import fields as drf_fields
-
-
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MySchemaProcessor(SchemaProcessor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.TYPE_MAP.update({
-            "SlugField": {"type": "string"},
-            "CustomFieldsDataField": {"type": "object"},
-            "UUIDField": {"type": "string"},
-            "PrimaryKeyRelatedField": {'type': 'string', 'enum': 'choices'},
-            "ManyRelatedField": {'type': 'array', 'required': []},
-            "ContentTypeField": {'type': 'string', 'enum': 'choices'}
-        })
+        self.TYPE_MAP.update(
+            {
+                "SlugField": {"type": "string"},
+                "CustomFieldsDataField": {"type": "object"},
+                "UUIDField": {"type": "string"},
+                "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
+                "ManyRelatedField": {"type": "array", "required": []},
+                "ContentTypeField": {"type": "string", "enum": "choices"},
+            }
+        )
 
     def _get_type_map_value(self, field: SerializerType):
         result = {
-            'type': field.style.get('schema:type'),
-            'enum': field.style.get('schema:enum'),
-            'widget': field.style.get('ui:widget'),
-            'required': field.style.get('schema:required'),
+            "type": field.style.get("schema:type"),
+            "enum": field.style.get("schema:enum"),
+            "widget": field.style.get("ui:widget"),
+            "required": field.style.get("schema:required"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k, v in result_default.items():
+        for k in result_default:
             # if not result[k]:
             if result[k] is None:
                 result[k] = result_default[k]
@@ -333,40 +330,40 @@ class MySchemaProcessor(SchemaProcessor):
     def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
         result = {}
         type_map_obj = self._get_type_map_value(field)
-        result['type'] = type_map_obj['type']
-        result['title'] = self._get_title(field, name)
+        result["type"] = type_map_obj["type"]
+        result["title"] = self._get_title(field, name)
 
         # if result['title'] == 'Content types':
         #     breakpoint()
 
         if isinstance(field, drf_serializers.ListField):
             if field.allow_empty:
-                result['required'] = not getattr(field, 'allow_empty', True)
-            result['items'] = self._get_field_properties(field.child, "")
-            result['uniqueItems'] = True
+                result["required"] = not getattr(field, "allow_empty", True)
+            result["items"] = self._get_field_properties(field.child, "")
+            result["uniqueItems"] = True
         elif isinstance(field, drf_serializers.ManyRelatedField):
             if field.allow_empty:
-                result['required'] = type_map_obj.get("required", [])
-            result['items'] = self._get_field_properties(field.child_relation, "")
-            result['uniqueItems'] = True
+                result["required"] = type_map_obj.get("required", [])
+            result["items"] = self._get_field_properties(field.child_relation, "")
+            result["uniqueItems"] = True
         else:
             if field.allow_null:
-                result['type'] = [result['type'], 'null']
-            enum = type_map_obj.get('enum')
+                result["type"] = [result["type"], "null"]
+            enum = type_map_obj.get("enum")
             if enum:
-                if enum == 'choices':
+                if enum == "choices":
                     choices = field.choices
-                    result['enum'] = list(choices.keys())
-                    result['enumNames'] = [v for v in choices.values()]
+                    result["enum"] = list(choices.keys())
+                    result["enumNames"] = list(choices.values())
                 if isinstance(enum, (list, tuple)):
                     if isinstance(enum, (list, tuple)):
-                        result['enum'] = [item[0] for item in enum]
-                        result['enumNames'] = [item[1] for item in enum]
+                        result["enum"] = [item[0] for item in enum]
+                        result["enumNames"] = [item[1] for item in enum]
                     else:
-                        result['enum'] = enum
-                        result['enumNames'] = [item for item in enum]
+                        result["enum"] = enum
+                        result["enumNames"] = list(enum)
             try:
-                result['default'] = field.get_default()
+                result["default"] = field.get_default()
             except drf_fields.SkipField:
                 pass
 
@@ -375,22 +372,24 @@ class MySchemaProcessor(SchemaProcessor):
         return result
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MyUiSchemaProcessor(UiSchemaProcessor):
     def _get_type_map_value(self, field: SerializerType):
         result = {
-            'type': field.style.get('schema:type'),
-            'enum': field.style.get('schema:enum'),
-            'widget': field.style.get('ui:widget'),
-            'required': field.style.get('schema:required'),
+            "type": field.style.get("schema:type"),
+            "enum": field.style.get("schema:enum"),
+            "widget": field.style.get("ui:widget"),
+            "required": field.style.get("schema:required"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k, v in result_default.items():
+        for k in result_default:
             # if not result[k]:
             if result[k] is None:
                 result[k] = result_default[k]
         return result
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MySerializerEncoder(SerializerEncoder):
     def default(self, obj: Any) -> Union[Dict, List]:
         if isinstance(obj, drf_serializers.Serializer):
@@ -398,18 +397,18 @@ class MySerializerEncoder(SerializerEncoder):
                 return ColumnProcessor(obj, self.renderer_context).get_schema()
             else:
                 return {
-                    'schema': MySchemaProcessor(obj, self.renderer_context).get_schema(),
-                    'uiSchema': MyUiSchemaProcessor(
-                        obj, self.renderer_context
-                    ).get_ui_schema(),
+                    "schema": MySchemaProcessor(obj, self.renderer_context).get_schema(),
+                    "uiSchema": MyUiSchemaProcessor(obj, self.renderer_context).get_ui_schema(),
                 }
         return super().default(obj)
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MyJSONSerializerRenderer(JSONSerializerRenderer):
     encoder_class = MySerializerEncoder
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MyFormSchemaViewSetMixin(FormSchemaViewSetMixin):
     renderer_classes = (MyJSONSerializerRenderer,)
 
@@ -850,8 +849,11 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
 
 class GetMenu(NautobotAPIVersionMixin, APIView):
+    """API View that returns the registered nav-menu content."""
+
     permission_classes = [AllowAny]
 
+    # TODO: the schema here is clearly wrong
     @extend_schema(
         responses={
             200: {
@@ -869,6 +871,7 @@ class GetMenu(NautobotAPIVersionMixin, APIView):
         }
     )
     def get(self, request):
+        # TODO: do we need this local import or can it be moved globally?
         from nautobot.extras.registry import registry
 
         return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])
