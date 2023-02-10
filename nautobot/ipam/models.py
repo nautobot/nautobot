@@ -447,6 +447,19 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         null=True,
         verbose_name="VLAN",
     )
+    rir = models.ForeignKey(
+        to="ipam.RIR",
+        on_delete=models.PROTECT,
+        related_name="prefixes",
+        blank=True,
+        null=True,
+        verbose_name="RIR",
+    )
+    date_allocated = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Date this prefix was allocated to an RIR, reserved in IPAM, etc.",
+    )
     description = models.CharField(max_length=200, blank=True)
 
     objects = PrefixQuerySet.as_manager()
