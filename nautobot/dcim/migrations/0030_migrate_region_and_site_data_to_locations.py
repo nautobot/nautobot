@@ -244,8 +244,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for dg in dynamic_groups:
             if "region" in dg.filter:
                 dg.filter.setdefault("location", []).extend(dg.filter.pop("region"))
-            if not dg.filter["location"]:  # Remove the location key if the list is empty
-                dg.filter.pop("location")
             dg.save()
 
         ExportTemplate = apps.get_model("extras", "exporttemplate")
@@ -389,8 +387,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for dg in dynamic_groups:
             if "site" in dg.filter:
                 dg.filter.setdefault("location", []).extend(dg.filter.pop("site"))
-            if not dg.filter["location"]:  # Remove the location key if the list is empty
-                dg.filter.pop("location")
             dg.save()
 
         export_templates = ExportTemplate.objects.filter(content_type=site_ct)
