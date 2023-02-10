@@ -1042,7 +1042,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_device(self):
-        devices = Device.objects.all()[:2]
+        devices = list(Device.objects.all()[:2])
         filter_params = [{"device_id": [devices[0].pk, devices[1].pk]}, {"device": [devices[0].pk, devices[1].name]}]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -1050,7 +1050,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_virtual_machine(self):
-        vms = VirtualMachine.objects.all()[:2]
+        vms = list(VirtualMachine.objects.all()[:2])
         filter_params = [{"virtual_machine_id": [vms[0].pk, vms[1].pk]}, {"virtual_machine": [vms[0].pk, vms[1].name]}]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
