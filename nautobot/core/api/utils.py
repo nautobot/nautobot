@@ -153,20 +153,9 @@ def rest_api_server_error(request, *args, **kwargs):
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# TODO: this is just a special case of nautobot.core.utils.lookup.get_route_for_model() and should be removed
-def get_model_api_endpoint(related_model):
-    app_label = related_model._meta.app_label
-    model_name = related_model._meta.model_name
-
-    if app_label in settings.PLUGINS:
-        data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-    else:
-        data_url = reverse(f"{app_label}-api:{model_name}-list")
-    return data_url
-
-
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 def format_output(field, field_value):
-    """TODO - docstring required."""
+    """TODO: docstring required."""
     data = {
         "field_name": field,  # Form field placeholder
         "type": "others",  # Param type e.g select field, char field, datetime field etc.
@@ -175,7 +164,7 @@ def format_output(field, field_value):
         "label": None,  # Form field placeholder
         "required": False,  # Form field placeholder
     }
-    # TODO - fix these local imports if at all possible
+    # TODO: fix these local imports if at all possible
     from nautobot.core.api import WritableNestedSerializer
     from rest_framework.fields import CharField
     from rest_framework.fields import IntegerField
@@ -233,6 +222,7 @@ def format_output(field, field_value):
     return data
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 def get_data_for_serializer_parameter(model):
     """TODO: docstring."""
     serializer = get_serializer_for_model(model)

@@ -210,47 +210,50 @@ class ModelViewSetMixin:
 
         return super().get_serializer(*args, **kwargs)
 
-    # TODO: need to re-enable the below. Are the changes here actually part of the UI work or are these actually
-    # part of the "reworking REST API nested serializers" proof-of-concept?
-    """
-    def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+    # TODO: the below needs to be either fixed or removed as part of issue #3042.
+    # def get_serializer_class(self):
+    #     logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
-        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-        if self.brief:
-            logger.debug("Request is for 'brief' format; initializing nested serializer")
-            try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                logger.debug(f"Using serializer {serializer}")
-                return serializer
-            except SerializerNotFound:
-                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+    #     # If using 'brief' mode, find and return the nested serializer for this model, if one exists
+    #     if self.brief:
+    #         logger.debug("Request is for 'brief' format; initializing nested serializer")
+    #         try:
+    #             serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
+    #             logger.debug(f"Using serializer {serializer}")
+    #             return serializer
+    #         except SerializerNotFound:
+    #             logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
-        # Fall back to the hard-coded serializer class
-        return self.serializer_class
+    #     # Fall back to the hard-coded serializer class
+    #     return self.serializer_class
 
-    def get_serializer_context(self, *args, **kwargs):
+    # TODO: this is part of issue #3042.
+    def get_serializer_context(self):
         ctx = super().get_serializer_context()
         ctx["request"] = None
+        try:
+            depth = int(self.request.query_params.get("depth", 0))
+        except ValueError:
+            depth = 0  # Ignore non-numeric parameters and keep default 0 depth
+        ctx["depth"] = depth
+
         return ctx
 
-    def get_queryset(self):
-        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-        if self.brief:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
+    # TODO: the below needs to be either fixed or remvoed as part of issue #3042.
+    # def get_queryset(self):
+    #     # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
+    #     if self.brief:
+    #         # v2 TODO(jathan): Replace prefetch_related with select_related
+    #         return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
-        return super().get_queryset()
-    """
+    #     return super().get_queryset()
 
-    """
-    def initialize_request(self, request, *args, **kwargs):
-        # Check if brief=True has been passed
-        if request.method == "GET" and request.GET.get("brief"):
-            self.brief = True
+    # def initialize_request(self, request, *args, **kwargs):
+    #     # Check if brief=True has been passed
+    #     if request.method == "GET" and request.GET.get("brief"):
+    #         self.brief = True
 
-        return super().initialize_request(request, *args, **kwargs)
-    """
+    #     return super().initialize_request(request, *args, **kwargs)
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -294,20 +297,8 @@ class ModelViewSetMixin:
             logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
-    # TODO: if this is needed, it needs to be merged into the commented-out `get_serializer_context` above.
-    # TODO: this looks like it's part of the "replace nested serializers with depth option" feature, though...
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        try:
-            depth = int(self.request.query_params.get("depth", 0))
-        except ValueError:
-            depth = 0  # Ignore non-numeric parameters and keep default 0 depth
-        context["depth"] = depth
 
-        return context
-
-
-# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MySchemaProcessor(SchemaProcessor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -381,7 +372,7 @@ class MySchemaProcessor(SchemaProcessor):
         return result
 
 
-# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MyUiSchemaProcessor(UiSchemaProcessor):
     def _get_type_map_value(self, field: SerializerType):
         result = {
@@ -398,7 +389,7 @@ class MyUiSchemaProcessor(UiSchemaProcessor):
         return result
 
 
-# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MySerializerEncoder(SerializerEncoder):
     def default(self, obj: Any) -> Union[Dict, List]:
         if isinstance(obj, drf_serializers.Serializer):
@@ -412,12 +403,12 @@ class MySerializerEncoder(SerializerEncoder):
         return super().default(obj)
 
 
-# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MyJSONSerializerRenderer(JSONSerializerRenderer):
     encoder_class = MySerializerEncoder
 
 
-# TODO: document or remove the below. I think it's part of the work to auto-generate edit forms in the UI?
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
 class MyFormSchemaViewSetMixin(FormSchemaViewSetMixin):
     renderer_classes = (MyJSONSerializerRenderer,)
 
