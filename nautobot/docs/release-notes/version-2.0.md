@@ -36,6 +36,8 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - Model instances that had a `site` field (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` corresponding to that `Site`. All other attributes on these models will remain unchanged.
 
+    - Model instances that have a `site` ContentType associated with it (`ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`) will have its `site` ContentType replaced by `location` ContentType and All other attributes on these models will remain unchanged.
+
     For Example:
 
     - We will start with a `Site` instance with name **AMS01** as the base `Site` for two top-level `Location` objects with names **root-01** and **root-02** respectively.
@@ -58,7 +60,9 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
         - If you have `Site` instances in your database without a `Region` assigned to them, one additional `Location` named **Global Region** of `LocationType` **Region** will be created and each `Location` of `LocationType` **Site** created from the legacy region-less `Site` instances will have the **Global Region** `Location` as their parent.
 
-    - Model instances that had a `site` attribute (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` of `LocationType` **Site**. All other attributes on these models will remain unchanged.
+    - Model instances that had a `site` attribute (`CircuitTermination`, `Device`, `Location`, `PowerPanel`, `Rack`, `RackGroup`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` of `LocationType` **Site**. All other attributes on these models will remain unchanged.
+
+    - Model instances that have a `region` and `site` ContentTypes associated with it (`ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`) will have its `region` and `site` ContentTypes replaced by `location` ContentType and All other attributes on these models will remain unchanged.
 
     For Example:
 
@@ -77,6 +81,16 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
     - However, **ams01-edge-01** only has its `site` attribute set as `Site` **AMS01** whereas **ams01-edge-02** and **ams01-edge-03** have both its `site` and `location` attributes set `Site` **AMS01** and `Location` **root-01** respectively.
 
     - During the data migration, **ams01-edge-01**'s `location` attribute will point to the new `Location` of `LocationType` **Site** with name **AMS01** while devices **ams01-edge-02** and **ams01-edge-03** will remain unchanged.
+
+##### Remove Site and Region Related Fields from Models
+
+`Region` and `Site` relationships are being removed from these models: `CircuitTermination`, `Device`, `Location`, `Rack`, `RackGroup`, `PowerFeed`, `PowerPanel`, `ConfigContext`, `Prefix`, `VLAN`, `VLANGroup`, `Cluster`.
+
+`Region` and `Site` ContentTypes are being replaced with `Location` ContentType from these models: `ComputedFields`, `CustomFields`, `CustomLinks`, `ExportTemplates`, `ImageAttachments`, `JobHooks`, `Notes`, `Relationships`, `Statuses`, `Tags` and `Webhooks`.
+
+"region" and "site" keys are being removed in the filter data of `DynamicGroups`. The old keys' associated values are being added to the existing "location" key and its associated list or to a new "location" key with an empty list if there is no existing "location" key.
+
+Checkout the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../installation/upgrading-from-nautobot-v1.md) guide.
 
 #### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
 
