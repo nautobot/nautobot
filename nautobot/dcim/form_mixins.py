@@ -7,10 +7,7 @@ from nautobot.dcim.models import Location
 
 class LocatableModelFormMixin(forms.Form):
     """
-    Mixin for model forms that can link to a Site (filtered by Region) and/or Location.
-
-    In the long term when Region and Site are collapsed into Location this should greatly reduce the number
-    of distinct places in the code that we need to touch.
+    Mixin for model forms that can link to a Location.
     """
 
     location = DynamicModelChoiceField(
@@ -35,10 +32,7 @@ class LocatableModelFormMixin(forms.Form):
 
 class LocatableModelBulkEditFormMixin(forms.Form):
     """
-    Mixin for model bulk-edit forms that can link to a Site (filtered by Region) and/or Location.
-
-    In the long term when Region and Site are collapsed into Location this should greatly reduce the number
-    of distinct places in the code that we need to touch.
+    Mixin for model bulk-edit forms that can link to a Location.
     """
 
     location = DynamicModelChoiceField(
@@ -58,10 +52,7 @@ class LocatableModelBulkEditFormMixin(forms.Form):
 
 class LocatableModelCSVFormMixin(forms.Form):
     """
-    Mixin for CSV forms that can be associated to a Site and optional Location.
-
-    In the long term when Region and Site are collapsed into Location this should greatly reduce the number
-    of distinct places in the code that we need to touch.
+    Mixin for CSV forms that can be associated to a Location.
     """
 
     location = CSVModelChoiceField(

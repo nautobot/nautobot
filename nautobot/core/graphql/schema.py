@@ -32,12 +32,12 @@ from nautobot.dcim.graphql.types import (
     DeviceType,
     FrontPortType,
     InterfaceType,
+    LocationType,
     PowerFeedType,
     PowerOutletType,
     PowerPortType,
     RackType,
     RearPortType,
-    LocationType,
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship

@@ -107,16 +107,20 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 |-----------------------|----------------|----------------------------------------------------------------------------------------------------------|
 | Cable                 | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Circuit               | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
-| Device                | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
+| Device                | `location`     | Now `location` has changed to a required field on this model Serializer                                  |
+|                       | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | DeviceRedundancyGroup | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Interface             | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | IPAddress             | `role`         | `/ipam/ip-addresses/` endpoint now uses role nested serializer for the role field, rather than a string. |
 |                       | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Location              | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | PowerFeed             | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
+| PowerPanel            | `location`     | Now `location` has changed to a required field on this model Serializer                                  |
 | Prefix                | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
-| Rack                  | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
-| RackGroup             | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.      |
+| Rack                  | `location`     | Now `location` has changed to a required field on this model Serializer                                  |
+|                       | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
+| RackGroup             | `location`     | Now `location` has changed to a required field on this model Serializer                                  |
+|                       | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.      |
 | Region                | `site_count`   | Now only counts Sites directly belonging to this Region, not those belonging to its descendants.         |
 | Site                  | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | TenantGroup           | `tenant_count` | Now only counts Tenants directly belonging to this TenantGroup, not those belonging to its descendants.  |

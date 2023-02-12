@@ -1,2 +1,6 @@
-Removed Site constraints for objects (CircuitTermination, Device, Location, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
-Removed regions and sites attributes from ConfigContext model class.
+Removed Site constraints for model classes (CircuitTermination, Device, Location, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
+Removed `regions` and `sites` attributes from ConfigContext model class.
+Removed `region` and `site` related fields from Serializers for aforementioned model classes.
+Removed `region` and `site` related fields from Forms for aforementioned model classes.
+Removed `region` and `site` related UI and API Endpoints for aforementioned model classes.
+Removed `region` and `site` columns from Tables for aforementioned model classes.

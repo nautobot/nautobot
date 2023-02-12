@@ -1,2 +1,2 @@
 Added Location constraints for objects (CircuitTermination, Device, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
-Added region and site data migration to locations for existing ConfigContext instances.
+Added Region and Site data migration to Locations for existing ConfigContext instances.

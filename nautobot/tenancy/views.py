@@ -83,6 +83,7 @@ class TenantView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         stats = {
+            # TODO: Should we include child locations of the filtered locations in the location_count below?
             "location_count": Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "rackreservation_count": RackReservation.objects.restrict(request.user, "view")

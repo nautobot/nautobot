@@ -67,6 +67,8 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
 
     # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
     # a location that is not the parent's location or None
+    # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
+    # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
     tagged_vlans = (
         model.objects.filter(pk__in=pk_set).exclude(location__isnull=True).exclude(location=instance.parent.location)
     )

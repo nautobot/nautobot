@@ -913,7 +913,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     group = DynamicModelMultipleChoiceField(
-        queryset=RackGroup.objects.select_related("location"),
+        queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
         null_option="None",

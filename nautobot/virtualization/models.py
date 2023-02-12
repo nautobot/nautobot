@@ -187,6 +187,8 @@ class Cluster(PrimaryModel):
                 )
 
         # Likewise, verify that host Devices match Location of this Cluster if any
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to create a Cluster with
+        # the parent Location or the child location of host Device?
         if self.present_in_database and self.location is not None:
             nonlocation_devices = (
                 Device.objects.filter(cluster=self)

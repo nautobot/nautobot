@@ -428,7 +428,6 @@ class RackFactory(PrimaryModelFactory):
             "has_comments",
             "has_facility_id",
             "has_group",
-            "has_location",
             "has_outer_depth",
             "has_outer_width",
             "has_role",

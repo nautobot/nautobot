@@ -498,6 +498,8 @@ class VLANFilterSet(
         fields = ["id", "vid", "name"]
 
     def get_for_device(self, queryset, name, value):
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
+        # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
         try:
             device = Device.objects.get(id=value)

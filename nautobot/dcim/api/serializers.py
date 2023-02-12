@@ -1009,6 +1009,8 @@ class InterfaceSerializer(
     def validate(self, data):
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
+        # the parent Location or the child location of `device.location`?
         for vlan in data.get("tagged_vlans", []):
             if vlan.location not in [device.location, None]:
                 raise serializers.ValidationError(

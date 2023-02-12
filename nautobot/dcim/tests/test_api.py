@@ -119,7 +119,7 @@ class Mixins:
             super().setUpTestData()
             cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
             cls.manufacturer = cls.device_type.manufacturer
-            cls.location = Location.objects.first()
+            cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
             cls.device_role = Role.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
                 device_type=cls.device_type, role=cls.device_role, name="Device 1", location=cls.location
@@ -1574,8 +1574,6 @@ class InterfaceTest(Mixins.BasePortTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-
         status_active = Status.objects.get(slug="active")
 
         cls.devices = (
@@ -1925,7 +1923,6 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_types = (
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
@@ -2028,7 +2025,6 @@ class CableTest(Mixins.BaseComponentTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         devices = (
             Device.objects.create(
                 device_type=cls.device_type,

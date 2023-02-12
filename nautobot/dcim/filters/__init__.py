@@ -257,6 +257,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     content_type = ContentTypeMultipleChoiceFilter(
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
+        label="Object types allowed to be associated with this Location Type",
     )
     has_circuit_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
