@@ -34,7 +34,7 @@ class UserFilterSet(BaseFilterSet):
         queryset=Group.objects.all(),
         label="Group (ID)",
     )
-    # TODO(timizuo): Migrate ModelMultipleChoiceFilter to NaturalKeyOrPKMultipleChoiceFilter
+    # TODO(timizuo): Migrate ModelMultipleChoiceFilter to NaturalKeyOrPKMultipleChoiceFilter: As of now NaturalKeyOrPKMultipleChoiceFilter isn't correctly handling integer id field
     group = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
