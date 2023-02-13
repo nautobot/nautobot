@@ -158,7 +158,7 @@ Type 'yes' to continue, or 'no' to cancel: """
                     "--natural-primary",
                     indent=2,
                     format="json",
-                    exclude=["contenttypes", "auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["contenttypes", "django_rq", "auth.permission", "extras.job", "extras.customfield"],
                     output=options["fixture_file"],
                 )
 
