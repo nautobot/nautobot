@@ -370,8 +370,6 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 )
 class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    # FIXME(timizuo): Related_name cannot be updated to `export_templates` as it collides with
-    #  ExportTemplate.owner_content_type related name
     owner_content_type = models.ForeignKey(
         to=ContentType,
         related_name="export_template_owners",

@@ -18,29 +18,54 @@
 
 ### Renamed Database Fields
 
-| Model               | Renamed Field                           | New Name                                       |
-|---------------------|-----------------------------------------|------------------------------------------------|
-| Cluster             | `group`                                 | `cluster_group`                                |
-|                     | `type`                                  | `cluster_type`                                 |
-| ConfigContextSchema | `device_set`                            | `dcim_device_related`                          |
-|                     | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
-| Device              | `device_role`                           | `role`                                         |
-|                     | `local_context_data`                    | `local_config_context_data`                    |
-|                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                     | `local_context_schema`                  | `local_config_context_schema`                  |
-| InventoryItem       | `child_items`                           | `children`                                     |
-|                     | `level`                                 | `tree_depth`                                   |
-| RackGroup           | `level`                                 | `tree_depth`                                   |
-| Region              | `level`                                 | `tree_depth`                                   |
-| Service             | `ipaddresses`                           | `ip_addresses`                                 |
-| Tenant              | `group`                                 | `tenant_group`                                 |
-| TenantGroup         | `level`                                 | `tree_depth`                                   |
-| VirtualMachine      | `local_context_data`                    | `local_config_context_data`                    |
-|                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                     | `local_context_schema`                  | `local_config_context_schema`                  |
-| VLAN                | `group`                                 | `vlan_group`                                   |
+| Model                   | Renamed Field                           | New Name                                       |
+|-------------------------|-----------------------------------------|------------------------------------------------|
+| Cluster                 | `group`                                 | `cluster_group`                                |
+|                         | `type`                                  | `cluster_type`                                 |
+| ConfigContextSchema     | `schema`                                | `config_context_schema`                        |
+|                         | `device_set`                            | `dcim_device_related`                          |
+|                         | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
+| ContentType             | `computedfield`                         | `computed_fields`                              |
+|                         | `configcontext`                         | `config_contexts`                              |
+|                         | `configcontextschema`                   | `config_context_schemas`                       |
+|                         | `customlink`                            | `custom_links`                                 |
+|                         | `dynamicgroup`                          | `dynamic_groups`                               |
+|                         | `exporttemplate`                        | `export_templates`                             |
+|                         | `imageattachment`                       | `image_attachments`                            |
+|                         | `note`                                  | `notes`                                        |
+| CustomFieldChoice       | `field`                                 | `custom_field`                                 |
+| CustomField             | `choices`                               | `custom_field_choices`                         |
+| Device                  | `device_role`                           | `role`                                         |
+|                         | `local_context_data`                    | `local_config_context_data`                    |
+|                         | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                         | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                         | `local_context_schema`                  | `local_config_context_schema`                  |
+| InventoryItem           | `child_items`                           | `children`                                     |
+|                         | `level`                                 | `tree_depth`                                   |
+| Job                     | `job_hook`                              | `job_hooks`                                    |
+|                         | `results`                               | `job_results`                                  |
+| JobResult               | `logs`                                  | `job_log_entries`                              |
+|                         | `schedule`                              | `scheduled_job`                                |
+| RackGroup               | `level`                                 | `tree_depth`                                   |
+| Region                  | `level`                                 | `tree_depth`                                   |
+| Relationship            | `associations`                          | `relationship_associations`                    |
+| ScheduledJob            | `job_model`                             | `job`                                          |
+|                         | `jobresult`                             | `job_results`                                  |
+| Secrets                 | `groups`                                | `secrets_groups`                               |
+|                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
+| SecretsGroup            | `gitrepository`                         | `git_repositories`                             |
+|                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
+| SecretsGroupAssociation | `group`                                 | `secrets_group`                                |
+| Service                 | `ipaddresses`                           | `ip_addresses`                                 |
+| Tenant                  | `group`                                 | `tenant_group`                                 |
+| TenantGroup             | `level`                                 | `tree_depth`                                   |
+| VirtualMachine          | `local_context_data`                    | `local_config_context_data`                    |
+|                         | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                         | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                         | `local_context_schema`                  | `local_config_context_schema`                  |
+| User                    | `changes`                               | `object_changes`                               |
+|                         | `note`                                  | `notes`                                        |
+| VLAN                    | `group`                                 | `vlan_group`                                   |
 
 ### Removed Database Fields
 
@@ -82,22 +107,27 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 ### Renamed Serializer Fields
 
-| Model                 | Renamed Field          | New Name                      |
-|-----------------------|------------------------|-------------------------------|
-| Cluster               | `group`                | `cluster_group`               |
-|                       | `type`                 | `cluster_type`                |
-| Device                | `device_role`          | `role`                        |
-|                       | `local_context_data`   | `local_config_context_data`   |
-|                       | `local_context_schema` | `local_config_context_schema` |
-| InventoryItem         | `_depth`               | `tree_depth`                  |
-| RackGroup             | `_depth`               | `tree_depth`                  |
-| Region                | `_depth`               | `tree_depth`                  |
-| Service               | `ipaddresses`          | `ip_addresses`                |
-| Tenant                | `group`                | `tenant_group`                |
-| TenantGroup           | `_depth`               | `tree_depth`                  |
-| VirtualMachine        | `local_context_data`   | `local_config_context_data`   |
-|                       | `local_context_schema` | `local_config_context_schema` |
-| VLAN                  | `group`                | `vlan_group`                  |
+| Model                     | Renamed Field          | New Name                      |
+|---------------------------|------------------------|-------------------------------|
+| ConfigContext             | `schema`               | `config_context_schema`       |
+| Cluster                   | `group`                | `cluster_group`               |
+|                           | `type`                 | `cluster_type`                |
+| CustomFieldChoice         | `field`                | `custom_field`                |
+| Device                    | `device_role`          | `role`                        |
+|                           | `local_context_data`   | `local_config_context_data`   |
+|                           | `local_context_schema` | `local_config_context_schema` |
+| InventoryItem             | `_depth`               | `tree_depth`                  |
+| JobResult                 | `schedule`             | `scheduled_job`               |
+| RackGroup                 | `_depth`               | `tree_depth`                  |
+| Region                    | `_depth`               | `tree_depth`                  |
+| ScheduledJob              | `job_model`            | `job`                         |
+| SecretsGroupAssociation   | `group`                | `secrets_group`               |
+| Service                   | `ipaddresses`          | `ip_addresses`                |
+| Tenant                    | `group`                | `tenant_group`                |
+| TenantGroup               | `_depth`               | `tree_depth`                  |
+| VirtualMachine            | `local_context_data`   | `local_config_context_data`   |
+|                           | `local_context_schema` | `local_config_context_schema` |
+| VLAN                      | `group`                | `vlan_group`                  |
 
 ### Removed Serializer Fields
 

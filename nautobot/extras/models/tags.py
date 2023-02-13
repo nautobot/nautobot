@@ -83,8 +83,6 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
 
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
-    # FixME: changing related name to tagged_items causes a
-    #  "ValueError: The annotation 'tagged_items' conflicts with a field on the model."
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
     object_id = models.UUIDField()
 
