@@ -1,1 +1,0 @@
-Removed `django-rq` dependency and support for RQ workers.

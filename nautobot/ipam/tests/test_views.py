@@ -160,7 +160,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "vlan": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,
-            "is_pool": True,
+            "type": "pool",
             "description": "A new prefix",
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
@@ -179,7 +179,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "tenant": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,
-            "is_pool": False,
+            "type": "network",
             "description": "New description",
         }
 
@@ -333,7 +333,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "site": vlangroups[1].site.pk,
             "vlan_group": vlangroups[1].pk,
             "vid": 999,
-            "name": "VLAN999",
+            "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status_reserved.pk,
             "role": roles[1].pk,

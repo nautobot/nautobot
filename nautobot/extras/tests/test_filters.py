@@ -789,7 +789,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 
@@ -1426,12 +1426,9 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_color(self):
         """Test the color search field."""
         params = {"color": [ColorChoices.COLOR_GREY]}
-        # This current expected count may change as more `Status` objects are
-        # imported by way of `extras.management.create_custom_statuses`. If as
-        # these objects are imported, and this test fails, this number will need
-        # to be adjusted.
-        expected_count = 4
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Status.objects.filter(color=ColorChoices.COLOR_GREY)
+        )
 
     def test_search(self):
         params = {"q": "active"}

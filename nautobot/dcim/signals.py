@@ -2,12 +2,10 @@ import logging
 
 from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
 
-from .choices import InterfaceModeChoices
 from .models import (
     Cable,
     CablePath,
@@ -19,6 +17,7 @@ from .models import (
     VirtualChassis,
     Interface,
 )
+from .utils import validate_interface_tagged_vlans
 
 
 def create_cablepath(node, rebuild=True):
@@ -58,7 +57,7 @@ def rebuild_paths(obj):
 
 
 @receiver(post_save, sender=RackGroup)
-def handle_rackgroup_site_location_change(instance, created, **kwargs):
+def handle_rackgroup_site_location_change(instance, created, raw=False, **kwargs):
     """
     Update child RackGroups, Racks, and PowerPanels if Site or Location assignment has changed.
 
@@ -69,6 +68,8 @@ def handle_rackgroup_site_location_change(instance, created, **kwargs):
     may or may not be permitted to contain Racks or PowerPanels. If it's not permitted, rather than trying to search
     through child locations to find the "right" one, the best we can do is simply to null out the location.
     """
+    if raw:
+        return
     if not created:
         if instance.location is not None:
             descendants = instance.location.descendants(include_self=True)
@@ -135,7 +136,7 @@ def handle_rackgroup_site_location_change(instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Rack)
-def handle_rack_site_location_change(instance, created, **kwargs):
+def handle_rack_site_location_change(instance, created, raw=False, **kwargs):
     """
     Update child Devices if Site or Location assignment has changed.
 
@@ -143,6 +144,8 @@ def handle_rack_site_location_change(instance, created, **kwargs):
     may or may not be permitted to contain Devices. If it's not permitted, rather than trying to search
     through child locations to find the "right" one, the best we can do is simply to null out the location.
     """
+    if raw:
+        return
     if not created:
         if instance.location is not None:
             devices_permitted = (
@@ -173,10 +176,12 @@ def handle_rack_site_location_change(instance, created, **kwargs):
 
 
 @receiver(post_save, sender=VirtualChassis)
-def assign_virtualchassis_master(instance, created, **kwargs):
+def assign_virtualchassis_master(instance, created, raw=False, **kwargs):
     """
     When a VirtualChassis is created, automatically assign its master device (if any) to the VC.
     """
+    if raw:
+        return
     if created and instance.master:
         master = Device.objects.get(pk=instance.master.pk)
         master.virtual_chassis = instance
@@ -281,11 +286,8 @@ def nullify_connected_endpoints(instance, **kwargs):
 
 
 @receiver(m2m_changed, sender=Interface.tagged_vlans.through)
-def prevent_adding_tagged_vlans_if_mode_not_set_to_tagged(sender, instance, action, **kwargs):
+def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, action, **kwargs):
     if action != "pre_add":
         return
 
-    if instance.mode != InterfaceModeChoices.MODE_TAGGED:
-        raise ValidationError(
-            {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"}
-        )
+    validate_interface_tagged_vlans(instance, kwargs["model"], kwargs["pk_set"])

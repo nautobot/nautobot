@@ -22,7 +22,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
@@ -246,6 +246,7 @@ class PrefixSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
+    type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
     site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
@@ -258,6 +259,7 @@ class PrefixSerializer(
             "url",
             "family",
             "prefix",
+            "type",
             "site",
             "location",
             "vrf",
@@ -265,7 +267,6 @@ class PrefixSerializer(
             "vlan",
             "status",
             "role",
-            "is_pool",
             "description",
         ]
         read_only_fields = ["family"]
@@ -362,11 +363,6 @@ class IPAddressSerializer(
         serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
         context = {"request": self.context["request"]}
         return serializer(obj.assigned_object, context=context).data
-
-
-# 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
-class IPAddressSerializerLegacy(IPAddressSerializer):
-    nat_outside = NestedIPAddressSerializer(read_only=True)
 
 
 class AvailableIPSerializer(serializers.Serializer):

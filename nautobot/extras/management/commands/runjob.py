@@ -82,7 +82,7 @@ class Command(BaseCommand):
                 obj_type=job_content_type,
                 user=user,
                 job_model=job,
-                job_id=uuid.uuid4(),
+                task_id=uuid.uuid4(),
             )
             run_job(
                 data=data,
@@ -104,7 +104,7 @@ class Command(BaseCommand):
             )
 
             # Wait on the job to finish
-            while job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+            while job_result.status not in JobResultStatusChoices.READY_STATES:
                 time.sleep(1)
                 job_result.refresh_from_db()
 
@@ -140,10 +140,8 @@ class Command(BaseCommand):
         if job_result.data["output"]:
             self.stdout.write(job_result.data["output"])
 
-        if job_result.status == JobResultStatusChoices.STATUS_FAILED:
-            status = self.style.ERROR("FAILED")
-        elif job_result.status == JobResultStatusChoices.STATUS_ERRORED:
-            status = self.style.ERROR("ERRORED")
+        if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
+            status = self.style.ERROR("FAILURE")
         else:
             status = self.style.SUCCESS("SUCCESS")
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: {status}")

@@ -1,5 +1,4 @@
 import json
-from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -12,7 +11,6 @@ from constance.test import override_config
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
@@ -173,46 +171,39 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
 class SiteTest(APIViewTestCases.APIViewTestCase):
     model = Site
     brief_fields = ["display", "id", "name", "slug", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
     slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
 
         regions = Region.objects.all()[:2]
-
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
+        cls.statuses = Status.objects.get_for_model(Site)
 
         cls.create_data = [
             {
                 "name": "Site 4",
                 "slug": "site-4",
                 "region": regions[1].pk,
-                "status": "active",
+                "status": cls.statuses[0].pk,
             },
             {
                 "name": "Site 5",
                 "slug": "site-5",
                 "region": regions[1].pk,
-                "status": "active",
+                "status": cls.statuses[0].pk,
             },
             {
                 "name": "Site 6",
                 "slug": "site-6",
                 "region": regions[1].pk,
-                "status": "active",
+                "status": cls.statuses[0].pk,
             },
-            {"name": "Site 7", "region": regions[1].pk, "status": "active"},
+            {"name": "Site 7", "region": regions[1].pk, "status": cls.statuses[0].pk},
         ]
+
+        cls.bulk_update_data = {
+            "status": cls.statuses[1].pk,
+        }
 
     def get_deletable_object_pks(self):
         Sites = [
@@ -230,7 +221,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": None}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": None}
 
         # Attempt to create new site with null time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -245,7 +236,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": ""}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": ""}
 
         # Attempt to create new site with blank time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -261,7 +252,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
         time_zone = "UTC"
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": time_zone}
 
         # Attempt to create new site with valid time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -277,7 +268,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.add_site")
         url = reverse("dcim-api:site-list")
         time_zone = "IDONOTEXIST"
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
+        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": time_zone}
 
         # Attempt to create new site with invalid time_zone attr.
         response = self.client.post(url, **self.header, data=site, format="json")
@@ -348,10 +339,7 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
 class LocationTest(APIViewTestCases.APIViewTestCase):
     model = Location
     brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
+    choices_fields = []
     slug_source = ["parent__slug", "name"]
 
     @classmethod
@@ -361,56 +349,53 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        status_active = Status.objects.get(slug="active")
+        cls.status_active = Status.objects.get(slug="active")
         cls.site = Site.objects.first()
         tenant = Tenant.objects.create(name="Test Tenant")
 
-        loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=status_active, site=cls.site)
-        loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=status_active, parent=loc1)
-        loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=status_active, parent=loc2)
+        loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status_active, site=cls.site)
+        loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=cls.status_active, parent=loc1)
+        loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=cls.status_active, parent=loc2)
         loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=cls.lt4, status=status_active, parent=loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.status_active, parent=loc3, tenant=tenant
         )
         for loc in [loc1, loc2, loc3, loc4]:
             loc.validated_save()
-
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
 
         cls.create_data = [
             {
                 "name": "Downtown Durham",
                 "location_type": cls.lt1.pk,
                 "site": cls.site.pk,
-                "status": "active",
+                "status": cls.status_active.pk,
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
                 "location_type": cls.lt2.pk,
                 "parent": loc1.pk,
-                "status": "active",
+                "status": cls.status_active.pk,
             },
             {
                 "name": "RTP4E-2",
                 "location_type": cls.lt3.pk,
                 "parent": loc2.pk,
-                "status": "active",
+                "status": cls.status_active.pk,
                 "description": "Second floor of RTP4E",
                 "tenant": tenant.pk,
             },
         ]
 
+        status_planned = Status.objects.get(slug="planned")
+
         # Changing location_type of an existing instance is not permitted
         cls.update_data = {
             "name": "A revised location",
             "slug": "a-different-slug",
-            "status": "planned",
+            "status": status_planned.pk,
+        }
+        cls.bulk_update_data = {
+            "status": status_planned.pk,
         }
 
     def test_time_zone_field_post_null(self):
@@ -423,7 +408,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": "active",
+            "status": self.status_active.pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
             "site": self.site.pk,
@@ -431,7 +416,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
         # Attempt to create new location with null time_zone attr.
         response = self.client.post(url, **self.header, data=location, format="json")
-        print(response.json())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["time_zone"], None)
 
@@ -445,7 +429,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": "active",
+            "status": self.status_active.pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
             "site": self.site.pk,
@@ -467,7 +451,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": "active",
+            "status": self.status_active.pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "site": self.site.pk,
@@ -489,7 +473,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": "active",
+            "status": self.status_active.pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "site": self.site.pk,
@@ -666,10 +650,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
     brief_fields = ["device_count", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["outer_unit", "status", "type", "width"]
+    choices_fields = ["outer_unit", "type", "width"]
 
     @classmethod
     def setUpTestData(cls):
@@ -706,37 +687,32 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
 
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "name": "Test Rack 4",
                 "site": sites[1].pk,
                 "group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
-                "status": "available",
+                "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 5",
                 "site": sites[1].pk,
                 "group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
-                "status": "available",
+                "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 6",
                 "site": sites[1].pk,
                 "group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
-                "status": "available",
+                "status": statuses[1].pk,
             },
         ]
+        cls.bulk_update_data = {
+            "status": statuses[1].pk,
+        }
 
     def test_get_rack_elevation(self):
         """
@@ -1266,10 +1242,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "failed",
-    }
-    choices_fields = ["face", "status"]
+    choices_fields = ["face"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1332,19 +1305,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"C": 3},
         )
 
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "device_type": device_type.pk,
                 "role": device_role.pk,
-                "status": "offline",
+                "status": device_statuses[1].pk,
                 "name": "Test Device 4",
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
@@ -1354,7 +1319,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device_type": device_type.pk,
                 "role": device_role.pk,
-                "status": "offline",
+                "status": device_statuses[1].pk,
                 "name": "Test Device 5",
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
@@ -1364,7 +1329,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device_type": device_type.pk,
                 "role": device_role.pk,
-                "status": "offline",
+                "status": device_statuses[1].pk,
                 "name": "Test Device 6",
                 "site": sites[1].pk,
                 "rack": racks[1].pk,
@@ -1372,6 +1337,9 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
+        cls.bulk_update_data = {
+            "status": device_statuses[1].pk,
+        }
 
     def test_config_context_included_by_default_in_list_view(self):
         """
@@ -1627,14 +1595,16 @@ class PowerOutletTest(Mixins.BasePortTestMixin):
         ]
 
 
-class InterfaceTestVersion12(Mixins.BasePortTestMixin):
+class InterfaceTest(Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
-    choices_fields = ["mode", "type", "status"]
+    choices_fields = ["mode", "type"]
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
+
+        status_active = Status.objects.get(slug="active")
 
         cls.devices = (
             Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 1", site=cls.site),
@@ -1673,6 +1643,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 8",
                 "type": "1000base-t",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
@@ -1681,6 +1652,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 9",
                 "type": "1000base-t",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1690,6 +1662,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 10",
                 "type": "virtual",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1701,6 +1674,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             "device": cls.devices[0].pk,
             "name": "expected-to-fail",
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": status_active.pk,
             "untagged_vlan": cls.vlans[0].pk,
         }
 
@@ -1709,6 +1683,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                "status": status_active.pk,
                 "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
@@ -1716,6 +1691,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "status": status_active.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
         ]
@@ -1727,6 +1703,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "status": status_active.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
@@ -1736,6 +1713,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "status": status_active.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
@@ -1745,35 +1723,11 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "status": status_active.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
         ]
-
-    def test_active_status_not_found(self):
-        self.add_permissions("dcim.add_interface")
-
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-        interface_ct = ContentType.objects.get_for_model(Interface)
-        status_active.content_types.remove(interface_ct)
-
-        data = {
-            "device": self.device.pk,
-            "name": "int-001",
-            "type": "1000base-t",
-            "mode": InterfaceModeChoices.MODE_TAGGED,
-        }
-
-        url = self._get_list_url()
-        response = self.client.post(url, data, format="json", **self.header)
-
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(
-            response.data["status"],
-            [
-                "Interface default status 'active' does not exist, create 'active' status for Interface or use the latest api_version"
-            ],
-        )
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
@@ -1841,7 +1795,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": self.devices[0].pk,
                 "name": "Tagged Interface",
                 "type": "1000base-t",
-                "status": "active",
+                "status": Status.objects.get_for_model(Interface)[0].pk,
                 "mode": InterfaceModeChoices.MODE_ACCESS,
                 "tagged_vlans": [self.vlans[0].pk, self.vlans[1].pk],
                 "untagged_vlan": self.vlans[2].pk,
@@ -1885,31 +1839,6 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
-
-
-class InterfaceTestVersion14(InterfaceTestVersion12):
-    api_version = "1.4"
-    validation_excluded_fields = ["status"]
-
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-
-        # Add status to all payload because status is required in v1.4
-        for i, _ in enumerate(cls.create_data):
-            cls.create_data[i]["status"] = "active"
-
-        cls.untagged_vlan_data["status"] = "active"
-
-        for i, _ in enumerate(cls.common_device_or_vc_data):
-            cls.common_device_or_vc_data[i]["status"] = "active"
-
-        for i, _ in enumerate(cls.interfaces_not_belonging_to_same_device_data):
-            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = "active"
-
-    @skip("Test not required in v1.4")
-    def test_active_status_not_found(self):
-        pass
 
 
 class FrontPortTest(Mixins.BasePortTestMixin):
@@ -2112,7 +2041,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
         "length": 100,
         "length_unit": "m",
     }
-    choices_fields = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
+    choices_fields = ["termination_a_type", "termination_b_type", "type", "length_unit"]
 
     # TODO: Allow updating cable terminations
     test_update_object = None
@@ -2168,21 +2097,13 @@ class CableTest(Mixins.BaseComponentTestMixin):
             status=statuses[0],
         )
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "termination_a_type": "dcim.interface",
                 "termination_a_id": interfaces[4].pk,
                 "termination_b_type": "dcim.interface",
                 "termination_b_id": interfaces[14].pk,
-                "status": "planned",
+                "status": statuses[1].pk,
                 "label": "Cable 4",
             },
             {
@@ -2190,7 +2111,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_a_id": interfaces[5].pk,
                 "termination_b_type": "dcim.interface",
                 "termination_b_id": interfaces[15].pk,
-                "status": "planned",
+                "status": statuses[1].pk,
                 "label": "Cable 5",
             },
             {
@@ -2198,7 +2119,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_a_id": interfaces[6].pk,
                 "termination_b_type": "dcim.interface",
                 "termination_b_id": interfaces[16].pk,
-                "status": "planned",
+                "status": statuses[1].pk,
                 "label": "Cable 6",
             },
         ]
@@ -2421,7 +2342,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
             "device_type": str(master_device.device_type.id),
             "role": str(master_device.role.id),
             "site": str(master_device.site.id),
-            "status": "active",
+            "status": str(Status.objects.get_for_model(Device)[0].id),
             "virtual_chassis": None,
         }
         self.add_permissions("dcim.change_device")
@@ -2474,10 +2395,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
     brief_fields = ["cable", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["phase", "status", "supply", "type"]
+    choices_fields = ["phase", "supply", "type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2536,63 +2454,55 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             type=REDUNDANT,
         )
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
+        statuses = Status.objects.get_for_model(PowerFeed)
 
         cls.create_data = [
             {
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
                 "rack": racks[3].pk,
-                "status": "active",
+                "status": statuses[0].pk,
                 "type": PRIMARY,
             },
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
                 "rack": racks[3].pk,
-                "status": "active",
+                "status": statuses[0].pk,
                 "type": REDUNDANT,
             },
         ]
+        cls.bulk_update_data = {
+            "status": statuses[1].pk,
+        }
 
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
     brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
-    create_data = [
-        {
-            "name": "Device Redundancy Group 4",
-            "failover_strategy": "active-active",
-            "status": "active",
-        },
-        {
-            "name": "Device Redundancy Group 5",
-            "failover_strategy": "active-passive",
-            "status": "planned",
-        },
-        {
-            "name": "Device Redundancy Group 6",
-            "failover_strategy": "active-active",
-            "status": "staging",
-        },
-    ]
-    bulk_update_data = {
-        "failover_strategy": "active-passive",
-    }
-    choices_fields = ["status", "failover_strategy"]
+    choices_fields = ["failover_strategy"]
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
+        statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
+        cls.create_data = [
+            {
+                "name": "Device Redundancy Group 4",
+                "failover_strategy": "active-active",
+                "status": statuses[0].pk,
+            },
+            {
+                "name": "Device Redundancy Group 5",
+                "failover_strategy": "active-passive",
+                "status": statuses[0].pk,
+            },
+            {
+                "name": "Device Redundancy Group 6",
+                "failover_strategy": "active-active",
+                "status": statuses[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "failover_strategy": "active-passive",
+            "status": statuses[1].pk,
+        }

@@ -1086,9 +1086,7 @@ class RequiredRelationshipTestMixin(TestCase):
                 "create_data": {
                     "vid": "1",
                     "name": "New VLAN",
-                    "status": str(Status.objects.get_for_model(VLAN).get(slug="active").pk)
-                    if interact_with == "ui"
-                    else "active",
+                    "status": str(Status.objects.get_for_model(VLAN).get(slug="active").pk),
                 },
                 "relationship": relationship_m2m,
                 "required_objects_generator": [

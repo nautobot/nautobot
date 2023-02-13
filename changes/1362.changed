@@ -1,0 +1,1 @@
+Added `type` field to `Prefix`, replacing "Container" status and `is_pool` field.

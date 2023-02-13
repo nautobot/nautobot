@@ -24,7 +24,7 @@
         </tr>
         <tr>
             <td>Started at</td>
-            <td>{{ result.created }}</td>
+            <td>{{ result.date_created }}</td>
         </tr>
         <tr>
             <td>User</td>
@@ -33,7 +33,7 @@
         <tr>
             <td>Duration</td>
             <td id="pending-result-loader">
-            {% if result.completed %}
+            {% if result.date_done %}
                 {{ result.duration }}
             {% else %}
                 <img src="{% static 'img/ajax-loader.gif' %}">

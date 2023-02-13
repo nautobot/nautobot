@@ -38,7 +38,7 @@
         <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
             <a href="{% url 'ipam:prefix_prefixes' pk=object.pk %}">Child Prefixes <span class="badge">{{ object.get_child_prefixes.count }}</span></a>
         </li>
-        {% if perms.ipam.view_ipaddress and object.status.slug != 'container' %}
+        {% if perms.ipam.view_ipaddress and object.type != 'container' %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
                 <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
             </li>
@@ -54,6 +54,12 @@
                     <tr>
                         <td>Family</td>
                         <td>IPv{{ object.family }}</td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td>
+                            {{ object.get_type_display }}
+                        </td>
                     </tr>
                     <tr>
                         <td>VRF</td>
@@ -119,10 +125,6 @@
                     <tr>
                         <td>Description</td>
                         <td>{{ object.description|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>Is a pool</td>
-                        <td>{{ object.is_pool | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Utilization</td>

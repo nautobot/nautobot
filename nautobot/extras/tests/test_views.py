@@ -1170,7 +1170,7 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("You do not have permission to run jobs", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_dry_run_not_runnable(self):
@@ -1184,7 +1184,7 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("This job cannot be run at this time", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_dry_run_needs_job_run_permission(self):
@@ -1200,7 +1200,7 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("You do not have permission to run this job", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_post_dry_run_needs_specific_job_run_permission(self):
@@ -1222,7 +1222,8 @@ class ApprovalQueueTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("You do not have permission to run this job", response_body)
         # No job was submitted
-        self.assertEqual(0, len(JobResult.objects.all()))
+        job_names = [instance1.job_model.name, instance2.job_model.name]
+        self.assertFalse(JobResult.objects.filter(name__in=job_names).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -1240,10 +1241,11 @@ class ApprovalQueueTestCase(
 
         response = self.client.post(self._get_url("view", instance), data)
         # Job was submitted
-        self.assertEqual(
-            1, len(JobResult.objects.all()), msg=extract_page_body(response.content.decode(response.charset))
+        self.assertTrue(
+            JobResult.objects.filter(name=instance.job_model.class_path).exists(),
+            msg=extract_page_body(response.content.decode(response.charset)),
         )
-        job_result = JobResult.objects.first()
+        job_result = JobResult.objects.get(name=instance.job_model.class_path)
         self.assertEqual(job_result.job_model, instance.job)
         self.assertEqual(job_result.user, self.user)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
@@ -1422,17 +1424,17 @@ class JobResultTestCase(
         obj_type = get_job_content_type()
         JobResult.objects.create(
             name="local/test_pass/TestPass",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
             name="local/test_fail/TestFail",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
             name="local/test_read_only_fail/TestReadOnlyFail",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
 
@@ -1645,7 +1647,7 @@ class JobTestCase(
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not presently installed", response_body)
 
-            self.assertEqual(0, len(JobResult.objects.all()))
+            self.assertFalse(JobResult.objects.filter(name=self.test_not_installed.name).exists())
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_not_enabled(self, _):
@@ -1659,8 +1661,7 @@ class JobTestCase(
             self.assertEqual(response.status_code, 200, msg=run_url)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not enabled to be run", response_body)
-
-            self.assertEqual(0, len(JobResult.objects.all()))
+            self.assertFalse(JobResult.objects.filter(name="local/test_fail/TestFail").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")

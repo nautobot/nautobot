@@ -36,7 +36,6 @@ COLOR_MAP = {
     "active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
     "available": ColorChoices.COLOR_GREEN,
     "connected": ColorChoices.COLOR_GREEN,
-    "container": ColorChoices.COLOR_GREY,
     "dhcp": ColorChoices.COLOR_GREEN,
     "decommissioned": ColorChoices.COLOR_GREY,
     "decommissioning": ColorChoices.COLOR_AMBER,
@@ -61,7 +60,6 @@ DESCRIPTION_MAP = {
     "active": "Unit is active",
     "available": "Unit is available",
     "connected": "Cable is connected",
-    "container": "Network contains children",
     "dhcp": "Dynamically assigned IPv4/IPv6 address",
     "decommissioned": "Circuit has been decommissioned",
     "decommissioning": "Unit is being decommissioned",
@@ -141,12 +139,14 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
+
+    # Only print a newline if we have verbosity!
+    if verbosity > 0:
+        print("\n", end="")
+
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
-
-    if verbosity >= 0:
-        print("\n", end="")
 
     if not models:
         models = CHOICESET_MAP.keys()

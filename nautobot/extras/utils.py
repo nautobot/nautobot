@@ -427,15 +427,13 @@ def migrate_role_data(
         is_m2m_field(bool): True if the role field is a ManyToManyField, else False
     """
 
-    # Determine the name of the legacy_role field based on its type
-    legacy_role_name = legacy_role if is_choice_field or is_m2m_field else legacy_role + "__name"
     # Retrieve the queryset of `model` instances that have a value for the `legacy_role` field
-    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).only(*["pk", legacy_role_name])
+    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).only(*["pk", legacy_role])
     instances_to_update_data = get_instances_to_pk_and_new_role(
         queryset=queryset,
         role_model=role_model,
         role_choiceset=role_choiceset,
-        legacy_role=legacy_role_name,
+        legacy_role=legacy_role,
         new_role=new_role,
         is_m2m_field=is_m2m_field,
     )
@@ -485,6 +483,8 @@ def get_instances_to_pk_and_new_role(queryset, role_model, role_choiceset, legac
                 role_names = legacy_role_field.values_list("name", flat=True)
                 role_equivalent = role_model.objects.filter(Q(name__in=role_names) | Q(slug__in=role_names))
             else:
+                if not isinstance(legacy_role_field, str):
+                    legacy_role_field = legacy_role_field.name
                 try:
                     role_equivalent = role_model.objects.get(Q(name=legacy_role_field) | Q(slug=legacy_role_field))
                 except role_model.DoesNotExist:

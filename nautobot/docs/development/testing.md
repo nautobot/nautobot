@@ -38,7 +38,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 
 Nautobot uses the [`factory_boy`](https://factoryboy.readthedocs.io/en/stable/) library as a way to generate randomized but plausible database data for use in unit and integration tests, or for convenience in populating a local development instance.
 
-Factories for each Nautobot app's models are defined in the corresponding `nautobot/APPNAME/factory.py` files. Helper classes and functions for certain common patterns are defined in `nautobot/core/factory.py`. Factories can be used directly from `nbshell` so long as you have `factory_boy` installed. Examples:
+Factories for each Nautobot app's models are defined in the corresponding `nautobot/APPNAME/factory.py` files. Helper classes and functions for certain common patterns are defined in `nautobot/core/factory.py`. Factories can be used directly from `nautobot-server nbshell` so long as you have `factory_boy` installed. Examples:
 
 ```python
 >>> from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory

@@ -123,10 +123,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 class CircuitTest(APIViewTestCases.APIViewTestCase):
     model = Circuit
     brief_fields = ["cid", "display", "id", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -146,50 +142,46 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
         Circuit.objects.create(
             cid="Circuit 1",
             provider=providers[0],
-            type=circuit_types[0],
+            circuit_type=circuit_types[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 2",
             provider=providers[0],
-            type=circuit_types[0],
+            circuit_type=circuit_types[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 3",
             provider=providers[0],
-            type=circuit_types[0],
+            circuit_type=circuit_types[0],
             status=statuses[0],
         )
-
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
 
         cls.create_data = [
             {
                 "cid": "Circuit 4",
                 "provider": providers[1].pk,
-                "type": circuit_types[1].pk,
-                "status": "offline",
+                "circuit_type": circuit_types[1].pk,
+                "status": statuses[1].pk,
             },
             {
                 "cid": "Circuit 5",
                 "provider": providers[1].pk,
-                "type": circuit_types[1].pk,
-                "status": "offline",
+                "circuit_type": circuit_types[1].pk,
+                "status": statuses[1].pk,
             },
             {
                 "cid": "Circuit 6",
                 "provider": providers[1].pk,
-                "type": circuit_types[1].pk,
-                "status": "offline",
+                "circuit_type": circuit_types[1].pk,
+                "status": statuses[1].pk,
             },
         ]
+
+        cls.bulk_update_data = {
+            "status": statuses[2].pk,
+        }
 
 
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
@@ -211,9 +203,9 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
 
         circuits = (
-            Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type),
-            Circuit.objects.create(cid="Circuit 2", provider=provider, type=circuit_type),
-            Circuit.objects.create(cid="Circuit 3", provider=provider, type=circuit_type),
+            Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),
+            Circuit.objects.create(cid="Circuit 2", provider=provider, circuit_type=circuit_type),
+            Circuit.objects.create(cid="Circuit 3", provider=provider, circuit_type=circuit_type),
         )
 
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side=SIDE_A)
@@ -237,3 +229,4 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         ]
 
         cls.bulk_update_data = {"port_speed": 123456}
+        cls.update_data = {"port_speed": 123456}

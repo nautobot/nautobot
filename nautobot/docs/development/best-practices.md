@@ -1,8 +1,16 @@
 # Best Practices
 
-While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through the `nbshell`.
+While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through `nautobot-server nbshell`.
 
 The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
+
+## Abstract Base Classes
+
+Abstract base classes are classes that do not inherit from a specific class. They are a great way to define an interface with useful abstract methods and attributes while providing great flexibility when it comes to implementations. For an example of abstract base classes, see `PathEndPoint` in `dcim` app.
+
+### Naming convention for related_name
+
+When it comes to writing an abstract base class and naming the reverse relation in a many-to-many or a many-to-one relationship, to ensure data consistency throughout the app, we recommend you to set your `related_name` attribute to **"%(app_label)s_%(class)s_related"** on your model's relationship field (models.ForeignKey, etc).
 
 ## Base Classes
 
@@ -62,7 +70,7 @@ Django places specific separation between validation and the saving of an instan
 
 Nautobot provides a convenience method that both enforces model validation and saves the instance in a single call to `validated_save()`. Any model which inherits from `nautobot.core.models.BaseModel` has this method available. This includes all core models and it is recommended that all new Nautobot models and plugin-provided models also inherit from `BaseModel` or one of its descendants such as `nautobot.core.models.generics.OrganizationalModel` or `nautobot.core.models.generics.PrimaryModel`.
 
-The intended audience for the `validated_save()` convenience method is Job authors and anyone writing scripts for, or interacting with the ORM directly through the `nbshell` command. It is generally not recommended however, to use `validated_save()` as a blanket replacement for the `save()` method in the core of Nautobot.
+The intended audience for the `validated_save()` convenience method is Job authors and anyone writing scripts for, or interacting with the ORM directly through the `nautobot-server nbshell` command. It is generally not recommended however, to use `validated_save()` as a blanket replacement for the `save()` method in the core of Nautobot.
 
 During execution, should model validation fail, `validated_save()` will raise `django.core.exceptions.ValidationError` in the normal Django fashion.
 

@@ -847,7 +847,7 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name=job_class.class_path,
             obj_type=get_job_content_type(),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
@@ -873,7 +873,7 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name=repo.name,
             obj_type=ContentType.objects.get_for_model(repo),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         self.assertEqual(job_result.related_object, repo)
@@ -886,12 +886,12 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name="irrelevant",
             obj_type=ContentType.objects.get_for_model(ip_address),
-            job_id=ip_address.pk,
+            task_id=ip_address.pk,
         )
 
         self.assertEqual(job_result.related_object, ip_address)
 
-        job_result.job_id = uuid.uuid4()
+        job_result.task_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
 
 
@@ -1382,7 +1382,7 @@ class JobLogEntryTest(TestCase):
             name=job_class.class_path,
             obj_type=get_job_content_type(),
             user=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
     def test_log_entry_creation(self):

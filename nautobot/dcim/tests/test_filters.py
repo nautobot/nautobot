@@ -196,7 +196,7 @@ def common_test_data(cls):
 
     provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
     circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
-    circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Test Circuit 1")
+    circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Test Circuit 1")
     CircuitTermination.objects.create(circuit=circuit, site=sites[0], location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, site=sites[1], term_side="Z")
 
@@ -818,9 +818,12 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_circuit_terminations(self):
-        circuit_terminations = CircuitTermination.objects.all()[:2]
+        circuit_terminations = list(CircuitTermination.objects.filter(site__isnull=False)[:2])
         params = {"circuit_terminations": [circuit_terminations[0].pk, circuit_terminations[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(circuit_terminations__in=circuit_terminations).distinct(),
+        )
 
     def test_has_circuit_terminations(self):
         with self.subTest():
@@ -1116,10 +1119,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_subtree(self):
         params = {"subtree": [self.loc1.slug, self.nested_loc.pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            Location.objects.get(name=self.loc1.name).descendants(include_self=True),
-        )
+        expected = Location.objects.get(name=self.loc1.name).descendants(include_self=True)
+        expected |= Location.objects.get(name=self.nested_loc.name).descendants(include_self=True)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected.distinct())
 
     def test_child_location_type(self):
         params = {"child_location_type": ["room", LocationType.objects.get(name="Floor").pk]}
@@ -1330,7 +1332,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             )
 
     def test_prefixes(self):
-        prefixes = list(Prefix.objects.filter(site__isnull=False)[:2])
+        prefixes = list(Prefix.objects.filter(site__locations__isnull=False)[:2])
         params = {"prefixes": [prefixes[0].pk, prefixes[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(prefixes__in=prefixes).distinct()
@@ -3539,10 +3541,11 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
                 status=interface_status_map["active"],
             ),
         )
+        interface_taggable_vlan = VLAN.objects.filter(site=devices[2].site).first()
 
-        cabled_interfaces[3].tagged_vlans.add(vlans[0])
-        cabled_interfaces[4].tagged_vlans.add(vlans[1])
-        cabled_interfaces[5].tagged_vlans.add(vlans[2])
+        cabled_interfaces[3].tagged_vlans.add(interface_taggable_vlan)
+        cabled_interfaces[4].tagged_vlans.add(interface_taggable_vlan)
+        cabled_interfaces[5].tagged_vlans.add(interface_taggable_vlan)
 
         Interface.objects.filter(pk=cabled_interfaces[0].pk).update(
             enabled=True,
