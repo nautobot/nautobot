@@ -438,7 +438,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
         name=name,
         task="nautobot.extras.jobs.scheduled_job_handler",
         job_class=job.class_path,
-        job=job_model,
+        job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
         kwargs=task_kwargs,
@@ -881,7 +881,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     def approve(self, request, pk):
         scheduled_job = get_object_or_404(self.queryset, pk=pk)
 
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job, action="approve"):
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
             raise PermissionDenied("You do not have permission to approve this request.")
 
         # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
@@ -923,7 +923,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     def deny(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
 
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job, action="approve"):
+        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
             raise PermissionDenied("You do not have permission to deny this request.")
 
         scheduled_job.delete()
@@ -947,7 +947,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     @action(detail=True, url_path="dry-run", methods=["post"], permission_classes=[ScheduledJobViewPermissions])
     def dry_run(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-        job_model = scheduled_job.job
+        job_model = scheduled_job.job_model
         if job_model is None or not job_model.runnable:
             raise MethodNotAllowed("This job cannot be dry-run at this time.")
         if not Job.objects.check_perms(request.user, instance=job_model, action="run"):

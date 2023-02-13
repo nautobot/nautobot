@@ -1378,16 +1378,16 @@ class JobTest(
         schedule = ScheduledJob.objects.last()
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1468,9 +1468,9 @@ class JobTest(
             get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertIsNone(response.data["schedule"])
+        self.assertIsNone(response.data["scheduled_job"])
         # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
         data_job_result = response.data["job_result"]
         del data_job_result["url"]
@@ -1581,16 +1581,16 @@ class JobTest(
         schedule = ScheduledJob.objects.last()
         self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1721,16 +1721,16 @@ class JobTest(
 
         schedule = ScheduledJob.objects.last()
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -2057,7 +2057,7 @@ class ScheduledJobTest(
             name="test1",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job_model.class_path,
-            job=job_model,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -2067,7 +2067,7 @@ class ScheduledJobTest(
             name="test2",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job_model.class_path,
-            job=job_model,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -2077,7 +2077,7 @@ class ScheduledJobTest(
             name="test3",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=job_model.class_path,
-            job=job_model,
+            job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             approval_required=True,
@@ -2096,7 +2096,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=cls.job_model.class_path,
-            job=cls.job_model,
+            job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
             approval_required=True,
@@ -2137,7 +2137,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=self.job_model.class_path,
-            job=self.job_model,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -2161,7 +2161,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=self.job_model.class_path,
-            job=self.job_model,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
             user=self.additional_user,
@@ -2179,7 +2179,7 @@ class JobApprovalTest(APITestCase):
             name="test",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class=self.job_model.class_path,
-            job=self.job_model,
+            job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
             user=self.additional_user,

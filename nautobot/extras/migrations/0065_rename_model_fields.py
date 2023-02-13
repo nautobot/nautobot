@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0062_replace_related_names"),
+        ("extras", "0064_replace_related_names"),
     ]
 
     operations = [
@@ -32,11 +32,6 @@ class Migration(migrations.Migration):
             model_name="jobresult",
             old_name="schedule",
             new_name="scheduled_job",
-        ),
-        migrations.RenameField(
-            model_name="scheduledjob",
-            old_name="job_model",
-            new_name="job",
         ),
         migrations.RenameField(
             model_name="secretsgroupassociation",

@@ -1,7 +1,6 @@
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import ForeignKey
 from django.test import override_settings, tag

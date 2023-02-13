@@ -62,7 +62,7 @@ JOB_LOGS = "job_logs"
 # The JOB_RESULT_METRIC variable is a counter metric that counts executions of jobs,
 # including information beyond what a tool like flower could get by introspecting
 # the celery task queue. This is accomplished by looking one abstraction deeper into
-# the job model of Nautobot.
+# the job_model model of Nautobot.
 JOB_RESULT_METRIC = Histogram(
     "nautobot_job_duration_seconds", "Results of Nautobot jobs.", ["grouping", "name", "status"]
 )
@@ -592,7 +592,7 @@ class JobResult(BaseModel, CustomFieldModel):
     )
     traceback = models.TextField(blank=True, null=True)
     meta = models.JSONField(null=True, default=None, editable=False)
-    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
+    scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
     task_id = models.UUIDField(unique=True)
 
@@ -905,10 +905,10 @@ class ScheduledJob(BaseModel):
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
         db_index=True,
     )
-    # Note that we allow job to be null and use models.SET_NULL here.
+    # Note that we allow job_model to be null and use models.SET_NULL here.
     # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
-    job = models.ForeignKey(
+    job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
     )
     job_class = models.CharField(

@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0061_rename_configcontext_role"),
+        ("extras", "0063_jobresult__add_celery_fields"),
     ]
 
     operations = [
@@ -148,17 +148,6 @@ class Migration(migrations.Migration):
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="job_results",
                 to="extras.job",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="jobresult",
-            name="schedule",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="job_results",
-                to="extras.scheduledjob",
             ),
         ),
         migrations.AlterField(

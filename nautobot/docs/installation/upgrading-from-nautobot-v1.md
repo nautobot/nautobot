@@ -28,11 +28,11 @@
 |                         | `interface`                             | `dcim_interface_related`                       |
 |                         | `powerfeed`                             | `dcim_powerfeed_related`                       |
 |                         | `poweroutlet`                           | `dcim_poweroutlet_related`                     |
-|                         | `powerport`                             | `dcim_powerport_related`                       |   
+|                         | `powerport`                             | `dcim_powerport_related`                       |
 | Circuit                 | `termination_a`                         | `circuit_termination_a`                        |
 |                         | `termination_z`                         | `circuit_termination_z`                        |
 |                         | `terminations`                          | `circuit_terminations`                         |
-|                         | `type`                                  | `circuit_type`                                 |                                  
+|                         | `type`                                  | `circuit_type`                                 |
 | Cluster                 | `group`                                 | `cluster_group`                                |
 |                         | `type`                                  | `cluster_type`                                 |
 | ConfigContextSchema     | `schema`                                | `config_context_schema`                        |
@@ -139,7 +139,7 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 |-------------------------|------------------------|-------------------------------|
 | Circuit                 | `termination_a`        | `circuit_termination_a`       |
 |                         | `termination_z`        | `circuit_termination_z`       |
-|                         | `type`                 | `circuit_type`                | 
+|                         | `type`                 | `circuit_type`                |
 | ConfigContext           | `schema`               | `config_context_schema`       |
 | Cluster                 | `group`                | `cluster_group`               |
 |                         | `type`                 | `cluster_type`                |

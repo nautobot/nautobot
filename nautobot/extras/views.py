@@ -1198,7 +1198,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     name=schedule_name,
                     task="nautobot.extras.jobs.scheduled_job_handler",
                     job_class=job_model.class_path,
-                    job=job_model,
+                    job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
                     kwargs=task_kwargs,
@@ -1288,7 +1288,7 @@ class JobApprovalRequestView(generic.ObjectView):
         We don't care to actually get any data back from the form as we will not ever change it.
         Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
         """
-        job_model = instance.job
+        job_model = instance.job_model
         if job_model is not None:
             job_class = job_model.job_class
         else:
@@ -1324,7 +1324,7 @@ class JobApprovalRequestView(generic.ObjectView):
         force_approve = "_force_approve" in post_data
         dry_run = "_dry_run" in post_data
 
-        job_model = scheduled_job.job
+        job_model = scheduled_job.job_model
 
         if dry_run:
             # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
