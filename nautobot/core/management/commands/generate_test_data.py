@@ -1,3 +1,5 @@
+import os
+
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import DEFAULT_DB_ALIAS, connections
@@ -23,8 +25,19 @@ class Command(BaseCommand):
             dest="interactive",
             help="Do NOT prompt the user for input or confirmation of any kind.",
         )
+        parser.add_argument(
+            "--cache-test-fixtures",
+            action="store_true",
+            help="Save test database to a json fixture file to re-use on subsequent tests.",
+        )
+        parser.add_argument(
+            "--fixture-file",
+            default="development/factory_dump.json",
+            help="Fixture file to use with --cache-test-fixtures.",
+        )
 
-    def handle(self, *args, **options):
+    def _generate_factory_data(self, seed):
+
         try:
             import factory.random
 
@@ -57,25 +70,8 @@ class Command(BaseCommand):
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
-        if options["flush"]:
-            if options["interactive"]:
-                confirm = input(
-                    f"""\
-You have requested a flush of the database before generating new data.
-This will IRREVERSIBLY DESTROY all data in the "{connections[DEFAULT_DB_ALIAS].settings_dict['NAME']}" database,
-including all user accounts, and return each table to an empty state.
-Are you SURE you want to do this?
-
-Type 'yes' to continue, or 'no' to cancel: """
-                )
-                if confirm != "yes":
-                    self.stdout.write("Cancelled.")
-                    return
-
-            self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
-            call_command("flush", "--no-input")
-
-        seed = options["seed"] or get_random_string(16)
+        if not seed:
+            seed = get_random_string(16)
         self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
         factory.random.reseed_random(seed)
 
@@ -130,5 +126,42 @@ Type 'yes' to continue, or 'no' to cancel: """
         DeviceRedundancyGroupFactory.create_batch(10)
         self.stdout.write("Creating DeviceRoles...")
         DeviceRoleFactory.create_batch(10)
+
+    def handle(self, *args, **options):
+        if options["flush"]:
+            if options["interactive"]:
+                confirm = input(
+                    f"""\
+You have requested a flush of the database before generating new data.
+This will IRREVERSIBLY DESTROY all data in the "{connections[DEFAULT_DB_ALIAS].settings_dict['NAME']}" database,
+including all user accounts, and return each table to an empty state.
+Are you SURE you want to do this?
+
+Type 'yes' to continue, or 'no' to cancel: """
+                )
+                if confirm != "yes":
+                    self.stdout.write("Cancelled.")
+                    return
+
+            self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
+            call_command("flush", "--no-input")
+
+        if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
+            call_command("loaddata", options["fixture_file"])
+        else:
+            self._generate_factory_data(options["seed"])
+
+            if options["cache_test_fixtures"]:
+                call_command(
+                    "dumpdata",
+                    "--natural-foreign",
+                    "--natural-primary",
+                    indent=2,
+                    format="json",
+                    exclude=["contenttypes", "django_rq", "auth.permission", "extras.job", "extras.customfield"],
+                    output=options["fixture_file"],
+                )
+
+                self.stdout.write(self.style.SUCCESS(f"Dumped factory data to {options['fixture_file']}"))
 
         self.stdout.write(self.style.SUCCESS("Database populated successfully!"))
