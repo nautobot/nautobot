@@ -371,7 +371,7 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
         label="Field",
     )
     field = django_filters.ModelMultipleChoiceFilter(
-        field_name="field__name",
+        field_name="custom_field__name",
         queryset=CustomField.objects.all(),
         to_field_name="name",
         label="Field (name)",
