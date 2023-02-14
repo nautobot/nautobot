@@ -11,6 +11,7 @@
 
 | Model        | Field          | Changes                                           |
 |--------------|----------------|---------------------------------------------------|
+| (all)        | `created`      | Changed from DateField to DateTimeField           |
 | JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
 |              | `log_object`   | No longer accepts `null` values, use `""` instead |
 | Prefix       | `is_pool`      | Replaced by new field `type`, valid choices are "Container", "Network" and "Pool" |
@@ -105,6 +106,7 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 
 | Model                 | Field          | Changes                                                                                                  |
 |-----------------------|----------------|----------------------------------------------------------------------------------------------------------|
+| (all)                 | `created`      | Now is a date/time (`"2023-02-14T19:57:45.320232Z"`) rather than only a date                             |
 | Cable                 | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Circuit               | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Device                | `location`     | Now `location` has changed to a required field on this model Serializer                                  |
@@ -240,6 +242,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 | Model                 | Enhanced Filter Field | Changes                                                    | UI and Rest API endpoints Available in v2.X  |
 |-----------------------|-----------------------|------------------------------------------------------------|----------------------------------------------|
+| (all)                 | `created[__(gte|lte)]`| Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`|
 | Circuit               | `circuit_type`        | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`|
 |                       | `provider`            | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`|
 |                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`|
