@@ -9,15 +9,15 @@ Nautobot provides an object-based permissions framework, which replace's Django'
 
 ## Example Constraint Definitions
 
-| Constraints | Description |
-| ----------- | ----------- |
-| `{"status": "active"}` | Status is active |
-| `{"status__in": ["planned", "reserved"]}` | Status is active **OR** reserved |
-| `{"status": "active", "role": "testing"}` | Status is active **OR** role is testing |
-| `{"name__startswith": "Foo"}` | Name starts with "Foo" (case-sensitive) |
-| `{"name__iendswith": "bar"}` | Name ends with "bar" (case-insensitive) |
-| `{"vid__gte": 100, "vid__lt": 200}` | VLAN ID is greater than or equal to 100 **AND** less than 200 |
-| `[{"vid__lt": 200}, {"status": "reserved"}]` | VLAN ID is less than 200 **OR** status is reserved |
+| Constraints                                           | Description                                                   |
+|-------------------------------------------------------|---------------------------------------------------------------|
+| `{"status__name": "Active"}`                          | Status name is active                                         |
+| `{"status__name__in": ["Planned", "Reserved"]}`       | Status name is active **OR** reserved                         |
+| `{"status__name": "Active", "role__name": "testing"}` | Status name is active **OR** role name is testing             |
+| `{"name__startswith": "Foo"}`                         | Name starts with "Foo" (case-sensitive)                       |
+| `{"name__iendswith": "bar"}`                          | Name ends with "bar" (case-insensitive)                       |
+| `{"vid__gte": 100, "vid__lt": 200}`                   | VLAN ID is greater than or equal to 100 **AND** less than 200 |
+| `[{"vid__lt": 200}, {"status__name": "Reserved"}]`    | VLAN ID is less than 200 **OR** status is reserved            |
 
 ## Permissions Enforcement
 
@@ -30,16 +30,16 @@ If the permission _has_ been granted, Nautobot will compile any specified constr
 ```json
 [
     {"site__name__in":  ["NYC1", "NYC2"]},
-    {"status":  "offline", "tenant__isnull":  true}
+    {"status__name":  "Offline", "tenant__isnull":  true}
 ]
 ```
 
-This grants the user access to view any device that is assigned to a site named NYC1 or NYC2, **or** which has a status of "offline" and has no tenant assigned. These constraints are equivalent to the following ORM query:
+This grants the user access to view any device that is assigned to a site named NYC1 or NYC2, **or** which has a status name of "Offline" and has no tenant assigned. These constraints are equivalent to the following ORM query:
 
 ```no-highlight
 Site.objects.filter(
     Q(site__name__in=['NYC1', 'NYC2']),
-    Q(status='active', tenant__isnull=True)
+    Q(status__name='Active', tenant__isnull=True)
 )
 ```
 
