@@ -1,4 +1,6 @@
+import csv
 import re
+from io import StringIO
 from tree_queries.models import TreeNode
 from typing import Optional, Sequence
 from unittest import skipIf
@@ -747,6 +749,30 @@ class ViewTestCases:
                 response = self.client.get(f"{self._get_url('list')}?export")
                 self.assertHttpStatus(response, 200)
                 self.assertEqual(response.get("Content-Type"), "text/csv")
+                instance1 = self._get_queryset().first()
+                # With filtering
+                response = self.client.get(f"{self._get_url('list')}?export&id={instance1.pk}")
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(response.get("Content-Type"), "text/csv")
+                response_body = response.content.decode(response.charset)
+                # I cannot count the number of lines "\n" directly because sometimes there might be too many characters
+                # in a line that will cause a linewrap, so we might end up with more than 2 lines
+                count = 0
+                csv_file = StringIO(response_body)
+                reader = csv.reader(csv_file, delimiter=",")
+                for _ in reader:
+                    count += 1
+                self.assertEqual(count, 2)
+                # This block of code is for checking the content of the csv output.
+                # But it does not work for some of the models.
+                # csv_headers = getattr(self.model, "csv_headers")
+                # model_field = (
+                #     "name" or "slug" or "username"
+                #     if ("name" or "username" or "slug") in csv_headers
+                #     else csv_headers[0]
+                # )
+                # self.assertIn(str(getattr(instance1, model_field)), response_body)
+                # self.assertIn(str(getattr(instance2, model_field)), response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):

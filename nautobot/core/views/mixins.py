@@ -41,6 +41,7 @@ from nautobot.utilities.forms import (
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
+    get_filterable_params_from_filter_params,
     prepare_cloned_fields,
 )
 from nautobot.utilities.views import GetReturnURLMixin
@@ -78,6 +79,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
+    nonefilter_params = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -304,6 +306,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
         return obj
 
+    def get_filter_params(self, request):
+        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
+        filter_params = request.GET.copy()
+        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset_class)
+
     def get_queryset(self):
         """
         Get the list of items for this view.
@@ -436,9 +443,28 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "sort",  # table sorting
     )
 
+    def get_filtered_queryset_for_export(self):
+        """
+        Helper method for NautobotUIViewSet to recognize request's filter_params when exporting.
+        Since the export response cannot be captured from NautobotHTMLRenderer,
+        We have to do it here in the ObjectListViewMixin class.
+        """
+        queryset = self.get_queryset()
+        filter_params = self.get_filter_params(self.request)
+        if self.filterset_class is not None:
+            filterset = self.filterset_class(filter_params, self.queryset)
+            queryset = filterset.qs
+            if not filterset.is_valid():
+                messages.error(
+                    self.request,
+                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                )
+                queryset = queryset.none()
+        return queryset
+
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
-        queryset = self.get_queryset()
+        queryset = self.get_filtered_queryset_for_export()
         if request.GET.get("export"):
             et = get_object_or_404(
                 ExportTemplate,
@@ -473,7 +499,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as concatenated YAML documents.
         """
-        queryset = self.get_queryset()
+        queryset = self.get_filtered_queryset_for_export()
         yaml_data = [obj.to_yaml() for obj in queryset]
 
         return "---\n".join(yaml_data)
@@ -482,7 +508,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
         """
-        queryset = self.get_queryset()
+        queryset = self.get_filtered_queryset_for_export()
         csv_data = []
         custom_fields = []
         # Start with the column headers
