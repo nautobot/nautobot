@@ -41,7 +41,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
             prefix.save()
 
             # if type, tenant or description don't match, print an error message
-            mismatches = dict()
+            mismatches = {}
             if instance.description != prefix.description:
                 mismatches["description"] = instance.description
             if instance.tenant != prefix.tenant:
