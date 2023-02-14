@@ -8,7 +8,6 @@ from nautobot.core.api import (
 from nautobot.dcim.api.nested_serializers import (
     NestedLocationSerializer,
     NestedPlatformSerializer,
-    NestedSiteSerializer,
 )
 from nautobot.dcim.api.serializers import InterfaceCommonSerializer
 from nautobot.dcim.choices import InterfaceModeChoices
@@ -83,7 +82,6 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     cluster_type = NestedClusterTypeSerializer()
     cluster_group = NestedClusterGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
@@ -96,7 +94,6 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "site",
             "location",
             "comments",
             "tags",
@@ -114,7 +111,6 @@ class VirtualMachineSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
-    site = NestedSiteSerializer(read_only=True)
     location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)
     cluster = NestedClusterSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -130,7 +126,6 @@ class VirtualMachineSerializer(
             "url",
             "name",
             "status",
-            "site",
             "location",
             "cluster",
             "role",
@@ -203,10 +198,10 @@ class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixi
         # Validate many-to-many VLAN assignments
         virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")
         for vlan in data.get("tagged_vlans", []):
-            if vlan.site not in [virtual_machine.site, None]:
+            if vlan.location not in [virtual_machine.location, None]:
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must belong to the same site as the interface's parent virtual "
+                        "tagged_vlans": f"VLAN {vlan} must belong to the same location as the interface's parent virtual "
                         f"machine, or it must be global."
                     }
                 )

@@ -26,7 +26,7 @@ __all__ = (
 class PowerPanelTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    site = tables.LinkColumn(viewname="dcim:site", args=[Accessor("site__slug")])
+    location = tables.LinkColumn(viewname="dcim:location", args=[Accessor("location__slug")])
     powerfeed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel_id": "pk"},
@@ -36,8 +36,8 @@ class PowerPanelTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = PowerPanel
-        fields = ("pk", "name", "site", "rack_group", "powerfeed_count", "tags")
-        default_columns = ("pk", "name", "site", "rack_group", "powerfeed_count")
+        fields = ("pk", "name", "location", "rack_group", "powerfeed_count", "tags")
+        default_columns = ("pk", "name", "location", "rack_group", "powerfeed_count")
 
 
 #

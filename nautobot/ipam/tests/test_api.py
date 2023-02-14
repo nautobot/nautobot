@@ -10,7 +10,7 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.testing.api import APITransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
@@ -500,8 +500,16 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        vlan_groups = VLANGroup.objects.filter(site__isnull=False, location__isnull=False)[:2]
         statuses = Status.objects.get_for_model(VLAN)
+        vlan_groups = VLANGroup.objects.filter(location__isnull=False)[:2]
+
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `core.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
 
         cls.create_data = [
             {
@@ -509,7 +517,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 4 with a name much longer than 64 characters to verify that we increased the limit",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
             },
             {
@@ -517,7 +524,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 5",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
             },
             {
@@ -525,7 +531,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 6",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "site": vlan_groups[0].site.pk,
                 "location": vlan_groups[0].location.pk,
             },
         ]
@@ -562,7 +567,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
@@ -570,13 +575,13 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         devices = (
             Device.objects.create(
                 name="Device 1",
-                site=site,
+                location=location,
                 device_type=devicetype,
                 role=devicerole,
             ),
             Device.objects.create(
                 name="Device 2",
-                site=site,
+                location=location,
                 device_type=devicetype,
                 role=devicerole,
             ),

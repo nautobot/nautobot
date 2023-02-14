@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase, override_settings
 
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
@@ -152,13 +152,6 @@ class TestPrefix(TestCase):
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
-
-        location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
-        site_2 = Site.objects.exclude(pk=location.base_site.pk).last()
-        prefix.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            prefix.validated_save()
-        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
 
     def test_get_duplicates(self):
         prefixes = (
@@ -478,7 +471,7 @@ class TestIPAddress(TestCase):
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -491,7 +484,7 @@ class TestIPAddress(TestCase):
             device_type=devicetype,
             role=devicerole,
             name="TestDevice1",
-            site=site,
+            location=location,
             status=device_status,
         )
         interface = Interface.objects.create(device=device, name="eth0")
@@ -529,13 +522,6 @@ class TestVLANGroup(TestCase):
             group.validated_save()
         self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
-        location_type.content_types.add(ContentType.objects.get_for_model(VLANGroup))
-        site_2 = Site.objects.exclude(pk=location.base_site.pk).last()
-        group.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            group.validated_save()
-        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
-
     def test_get_next_available_vid(self):
 
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
@@ -566,21 +552,9 @@ class VLANTestCase(TestCase):
         self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
-        site_2 = Site.objects.exclude(pk=location.site.pk).first()
-        vlan.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            vlan.validated_save()
-        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
-
-        vlan.site = location.site
-        group = VLANGroup.objects.create(name="Group 1", site=site_2)
+        group = VLANGroup.objects.create(name="Group 1")
         vlan.vlan_group = group
-        with self.assertRaises(ValidationError) as cm:
-            vlan.validated_save()
-        self.assertIn(f"VLAN group must belong to the assigned site ({location.site.name})", str(cm.exception))
-
-        group.site = location.site
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type, site=location.site)
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type)
         group.location = location_2
         group.save()
         with self.assertRaises(ValidationError) as cm:

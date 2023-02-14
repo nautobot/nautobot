@@ -18,7 +18,7 @@ class TenantFilterExtension(FilterExtension):
             field_name="description", label="Description", method=suffix_search
         ),
         "example_plugin_dtype": MultiValueCharFilter(
-            field_name="sites__devices__device_type__slug", label="Device Type"
+            field_name="locations__devices__device_type__slug", label="Device Type"
         ),
     }
 

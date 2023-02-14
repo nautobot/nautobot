@@ -47,7 +47,7 @@ class ClusterGroupViewSet(NautobotModelViewSet):
 
 class ClusterViewSet(NautobotModelViewSet):
     queryset = (
-        Cluster.objects.select_related("cluster_type", "cluster_group", "tenant", "site")
+        Cluster.objects.select_related("cluster_type", "cluster_group", "tenant", "location")
         .prefetch_related("tags")
         .annotate(
             device_count=count_related(Device, "cluster"),
@@ -65,7 +65,7 @@ class ClusterViewSet(NautobotModelViewSet):
 
 class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     queryset = VirtualMachine.objects.select_related(
-        "cluster__site",
+        "cluster__location",
         "platform",
         "primary_ip4",
         "primary_ip6",

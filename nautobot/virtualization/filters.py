@@ -14,7 +14,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, Location, Platform
 from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
@@ -158,28 +158,6 @@ class VirtualMachineFilterSet(
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         label="Cluster (ID)",
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="cluster__site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="cluster__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__site",
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),

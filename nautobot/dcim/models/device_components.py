@@ -739,11 +739,13 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                     )
 
         # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site_id not in [self.device.site_id, None]:
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
+        # the parent Locations or the child locations of `device.location`?
+        if self.untagged_vlan and self.untagged_vlan.location_id not in [self.device.location_id, None]:
             raise ValidationError(
                 {
                     "untagged_vlan": (
-                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the interface's parent "
+                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same location as the interface's parent "
                         f"device, or it must be global."
                     )
                 }

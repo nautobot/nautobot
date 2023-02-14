@@ -497,8 +497,8 @@ class DynamicGroup(OrganizationalModel):
         elif hasattr(filter_field, "generate_query"):
             # Is this a list of strings? Well let's resolve it to related model objects so we can
             # pass it to `generate_query` to get a correct Q object back out. When values are being
-            # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
-            # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
+            # reconstructed from saved filters, lists of slugs are common e.g. (`{"location": ["ams01",
+            # "ams02"]}`, the value being a list of location slugs (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
