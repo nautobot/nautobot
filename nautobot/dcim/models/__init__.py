@@ -63,7 +63,5 @@ __all__ = (
     "RackReservation",
     "RearPort",
     "RearPortTemplate",
-    "Region",
-    "Site",
     "VirtualChassis",
 )
