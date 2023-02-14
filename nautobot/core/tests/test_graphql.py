@@ -1638,25 +1638,29 @@ query {
     def test_query_interfaces_filter_third_level(self):
         """Test "third-level" filtering of Interfaces within Devices within Locations."""
 
+        device1_id = str(self.device1.id)
+        device2_id = str(self.device2.id)
+        device3_id = str(self.device3.id)
         filters = (
-            (f'device_id: "{self.device1.id}"', 2),
-            ('kind: "virtual"', 2),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ("vlan: 100", 1),
-            (f'vlan_id: "{self.vlan1.id}"', 1),
+            (f'device_id: "{device1_id}"', {device1_id: 2}),
+            ('kind: "virtual"', {device1_id: 2, device2_id: 1, device3_id: 2}),
+            ('mac_address: "00:11:11:11:11:11"', {device1_id: 1}),
+            ("vlan: 100", {device1_id: 1}),
+            (f'vlan_id: "{self.vlan1.id}"', {device1_id: 1}),
         )
 
+        location_filter = f'id: ["{self.location1.id}", "{self.location2.id}"]'
         for filterv, nbr_expected_results in filters:
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { locations{ devices{ interfaces(" + filterv + "){ id }}}}"
+                query = "query { locations(" + location_filter + "){ devices{ id, interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 for count, _ in enumerate(result.data["locations"]):
-                    if result.data["locations"][count]["devices"]:
-                        self.assertEqual(
-                            len(result.data["locations"][count]["devices"][0]["interfaces"]), nbr_expected_results
-                        )
-                        break
+                    for device in result.data["locations"][count]["devices"]:
+                        if device["id"] in nbr_expected_results:
+                            self.assertEqual(len(device["interfaces"]), nbr_expected_results[device["id"]])
+                        else:
+                            self.assertEqual(len(device["interfaces"]), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
