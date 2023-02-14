@@ -450,9 +450,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         We have to do it here in the ObjectListViewMixin class.
         """
         queryset = self.get_queryset()
-        filter_params = self.get_filter_params(self.request)
         if self.filterset_class is not None:
-            filterset = self.filterset_class(filter_params, self.queryset)
+            filter_params = self.get_filter_params(self.request)
+            filterset = self.filterset_class(filter_params, queryset)
             queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(

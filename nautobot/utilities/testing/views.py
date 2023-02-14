@@ -744,36 +744,6 @@ class ViewTestCases:
                 response_body,
             )
 
-            # Built-in CSV export
-            if hasattr(self.model, "csv_headers"):
-                response = self.client.get(f"{self._get_url('list')}?export")
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(response.get("Content-Type"), "text/csv")
-                instance1 = self._get_queryset().first()
-                # With filtering
-                response = self.client.get(f"{self._get_url('list')}?export&id={instance1.pk}")
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(response.get("Content-Type"), "text/csv")
-                response_body = response.content.decode(response.charset)
-                # I cannot count the number of lines "\n" directly because sometimes there might be too many characters
-                # in a line that will cause a linewrap, so we might end up with more than 2 lines
-                count = 0
-                csv_file = StringIO(response_body)
-                reader = csv.reader(csv_file, delimiter=",")
-                for _ in reader:
-                    count += 1
-                self.assertEqual(count, 2)
-                # This block of code is for checking the content of the csv output.
-                # But it does not work for some of the models.
-                # csv_headers = getattr(self.model, "csv_headers")
-                # model_field = (
-                #     "name" or "slug" or "username"
-                #     if ("name" or "username" or "slug") in csv_headers
-                #     else csv_headers[0]
-                # )
-                # self.assertIn(str(getattr(instance1, model_field)), response_body)
-                # self.assertIn(str(getattr(instance2, model_field)), response_body)
-
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
@@ -824,6 +794,29 @@ class ViewTestCases:
             self.assertIn(
                 f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
             )
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_queryset_to_csv(self):
+            # Built-in CSV export
+            if hasattr(self.model, "csv_headers"):
+                response = self.client.get(f"{self._get_url('list')}?export")
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(response.get("Content-Type"), "text/csv")
+                instance1 = self._get_queryset().first()
+                # With filtering
+                response = self.client.get(f"{self._get_url('list')}?export&id={instance1.pk}")
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(response.get("Content-Type"), "text/csv")
+                response_body = response.content.decode(response.charset)
+                reader = csv.DictReader(StringIO(response_body))
+                data = [dict(row) for row in reader]
+                csv_headers = getattr(self.model, "csv_headers")
+                for i in range(len(data)):
+                    # x might be None, in that case use an empty sting
+                    instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
+                    for header in csv_headers:
+                        if data[i][header] is not None:
+                            self.assertIn(data[i][header], instance1_csv_data)
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
