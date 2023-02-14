@@ -4,7 +4,7 @@ import { useRoutes } from "react-router-dom"
 import Home from "@views/Home"
 import CreateView from "@views/generic/ObjectCreate"
 import DetailView from "@views/generic/ObjectRetrieve"
-import InstalledPlugins from "@views/InstalledPlugins"
+import InstalledApps from "@views/InstalledApps"
 import ListView from "@views/generic/ObjectList"
 import Login from "@views/Login"
 
@@ -50,7 +50,7 @@ export default function NautobotRouter() {
             children: [
                 {
                     path: "installed-plugins",
-                    element: <InstalledPlugins />
+                    element: <InstalledApps />
                 }
             ],
         },

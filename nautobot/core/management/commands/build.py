@@ -1,6 +1,7 @@
+import copy
 import json
 import os
-import pathlib
+from pathlib import Path
 import shlex
 import subprocess
 
@@ -10,8 +11,8 @@ from django.core.management.base import BaseCommand, CommandError
 import jinja2
 
 
-# TODO: Make this an absolute path relative to where the package is installed.
-NAUTOBOT_UI_DIR = os.path.join(os.path.dirname(settings.BASE_DIR), "nautobot_ui")
+# Where the UI code lies.
+NAUTOBOT_UI_DIR = Path(settings.BASE_DIR, "ui")
 
 
 class Command(BaseCommand):
@@ -27,11 +28,11 @@ class Command(BaseCommand):
             help="Do not install UI packages.",
         )
         parser.add_argument(
-            "--no-render-plugins",
+            "--no-render-apps",
             action="store_false",
-            dest="render_plugins",
+            dest="render_apps",
             default=True,
-            help="Do not render plugin imports.",
+            help="Do not render Nautobot App imports.",
         )
         parser.add_argument(
             "--no-npm-build",
@@ -41,40 +42,51 @@ class Command(BaseCommand):
             help="Do not compile UI.",
         )
 
-    def render_plugin_imports(self):
-        """Render `plugin_imports.js` and update `jsconfig.json` to map to the path for each."""
-        self.stdout.write(self.style.SUCCESS(">>> Rendering plugin imports..."))
-        router_file_path = os.path.join(NAUTOBOT_UI_DIR, "src", "router.js")
-        jsconfig_file_path = os.path.join(NAUTOBOT_UI_DIR, "jsconfig.json")
-        jsconfig_base_file_path = os.path.join(NAUTOBOT_UI_DIR, "jsconfig-base.json")
+    def render_app_imports(self):
+        """Render `app_imports.js` and update `jsconfig.json` to map to the path for each."""
+        self.stdout.write(self.style.WARNING(">>> Rendering Nautobot App imports..."))
+        router_file_path = Path(NAUTOBOT_UI_DIR, "src", "router.js")
+        jsconfig_file_path = Path(NAUTOBOT_UI_DIR, "jsconfig.json")
+        jsconfig_base_file_path = Path(NAUTOBOT_UI_DIR, "jsconfig-base.json")
 
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
 
-        for plugin_path in settings.PLUGINS:
-            plugin_name = plugin_path.split(".")[-1]
-            app_config = apps.get_app_config(plugin_name)
+        # We're goign to modify this list if apps don't have a `ui` directory.
+        enabled_apps = copy.copy(settings.PLUGINS)
 
-            abs_plugin_path = pathlib.Path(app_config.path).resolve()
-            plugin_path = os.path.relpath(abs_plugin_path, NAUTOBOT_UI_DIR)
+        for app_class_path in settings.PLUGINS:
+            app_name = app_class_path.split(".")[-1]
+            app_config = apps.get_app_config(app_name)
 
-            # TODO: Assert that a plugin has a UI folder.
-            jsconfig["compilerOptions"]["paths"][f"@{plugin_name}/*"] = [f"{plugin_path}/ui/*"]
+            abs_app_path = Path(app_config.path).resolve()
+            abs_app_ui_path = abs_app_path / "ui"
+            app_path = Path(os.path.relpath(abs_app_path, NAUTOBOT_UI_DIR))
+            app_ui_path = app_path / "ui"
+
+            # Assert that an App has a UI folder.
+            if not abs_app_ui_path.exists():
+                self.stdout.write(self.style.ERROR(f"- App {app_name!r} does not publish a UI; Skipping..."))
+                enabled_apps.remove(app_class_path)
+                continue
+            else:
+                self.stdout.write(self.style.SUCCESS(f"- App {app_name!r} imported"))
+
+            jsconfig["compilerOptions"]["paths"][f"@{app_name}/*"] = [f"{app_ui_path}/*"]
 
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
 
-        plugin_imports_final_file_path = os.path.join(NAUTOBOT_UI_DIR, "src", "plugin_imports.js")
-
+        app_imports_final_file_path = Path(NAUTOBOT_UI_DIR, "src", "app_imports.js")
         environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(NAUTOBOT_UI_DIR))
-        template = environment.get_template("plugin_imports.js.j2")
+        template = environment.get_template("app_imports.js.j2")
+        content = template.render(apps=enabled_apps)
 
-        content = template.render(plugins=settings.PLUGINS)
-
-        with open(plugin_imports_final_file_path, "w", encoding="utf-8") as generated_import_file:
+        with open(app_imports_final_file_path, "w", encoding="utf-8") as generated_import_file:
             generated_import_file.write(content)
 
-        pathlib.Path(router_file_path).touch()
+        # Touch the router to attempt to trigger a server reload.
+        Path(router_file_path).touch()
 
     def run_command(self, command, message, cwd=NAUTOBOT_UI_DIR):
         """
@@ -84,29 +96,43 @@ class Command(BaseCommand):
             command (str): The command to execute
             message (str): Message to display when command is executed
         """
-        self.stdout.write(self.style.SUCCESS(message))
+        self.stdout.write(self.style.WARNING(message))
 
-        out = subprocess.run(
-            shlex.split(command),
-            cwd=cwd,
-            env={**os.environ.copy()},
-        )
+        try:
+            out = subprocess.run(
+                shlex.split(command),
+                cwd=cwd,
+                env={**os.environ.copy()},
+            )
+        except FileNotFoundError as err:
+            raise CommandError(f"`{command}` failed with error: {err}")
+
         if out.returncode:
             raise CommandError(f"`{command}` failed with exit code {out.returncode}")
 
     def handle(self, **options):
-        # Change to UI dir and set environment variables to be read by Webpack.
-        os.environ["NAUTOBOT_STATIC_URL"] = settings.STATIC_URL
-        os.environ["NAUTOBOT_STATICFILES_DIR"] = settings.STATICFILES_DIRS[0]
+        verbosity = options["verbosity"]
+        if verbosity > 1:
+            os.environ["NAUTOBOT_DEBUG"] = "1"
 
-        # Generate `plugin_import.js`
-        if options.get("render_plugins"):
-            self.render_plugin_imports()
+        # Generate `app_imports.js`
+        if options["render_apps"]:
+            self.render_app_imports()
 
-        # Try to run the build command. Make sure that if it errors, it prints
-        # something like "Hey couldn't find npm, did you install it?"
-        if options.get("npm_install"):
-            self.run_command("npm install", ">>> Installing Nautobot dependencies...")
+        # Run `npm install` and keep it silent by default.
+        if options["npm_install"]:
+            args = "install"
+            if verbosity <= 1:
+                args += " -s --no-progress"
 
-        if options.get("npm_build"):
-            self.run_command("npm run build", ">>> Compiling Nautobot UI...")
+            self.run_command(f"npm {args}", ">>> Installing Nautobot UI dependencies...")
+
+        # Run `npm build` and keep it silent by default. NAUTOBOT_DEBUG is also set here so that
+        # `console.log` isn't suppressed when we want verbosity.
+        if options["npm_build"]:
+            args = "run build"
+            if verbosity <= 1:
+                args += " -s"
+            self.run_command(f"npm {args}", ">>> Compiling Nautobot UI packages...")
+
+        self.stdout.write(self.style.SUCCESS(">>> Nautobot UI build complete! 🎉"))

@@ -478,7 +478,7 @@ STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "project-static"),
-    os.path.join(os.path.dirname(BASE_DIR), "nautobot_ui", "build", "static"),
+    os.path.join(BASE_DIR, "ui", "build", "static"),
 )
 
 # Media

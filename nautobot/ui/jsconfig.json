@@ -21,7 +21,7 @@
                 "src/components/core/*"
             ],
             "@example_plugin/*": [
-                "../examples/example_plugin/example_plugin/ui/*"
+                "../../examples/example_plugin/example_plugin/ui/*"
             ]
         }
     }

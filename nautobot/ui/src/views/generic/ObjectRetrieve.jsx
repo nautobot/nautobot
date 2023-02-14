@@ -4,9 +4,9 @@ import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
 import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
-import create_plugin_tab from "@components/plugins/PluginTab"
-import PluginComponents from "@components/core/Plugins"
-import PluginFullWidthComponentsWithProps from "@components/plugins/PluginFullWidthComponents"
+import create_app_tab from "@components/apps/AppTab"
+import AppComponents from "@components/core/Apps"
+import AppFullWidthComponentsWithProps from "@components/apps/AppFullWidthComponents"
 import { nautobot_url } from "src/index"
 
 
@@ -18,7 +18,7 @@ const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) =
     let tabs = data.tabs.map((tab_top) => (
       Object.keys(tab_top).map(function (tab_key) {
         let tab = tab_top[tab_key]
-        let tab_component = create_plugin_tab({ tab: tab })
+        let tab_component = create_app_tab({ tab: tab })
         return tab_component
       })
     ))
@@ -64,12 +64,12 @@ export default function ObjectRetrieve({ api_url }) {
     api_url = `${nautobot_url}/api/${app_name}/${model_name}/${object_id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
-  const { data: pluginHTML } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
+  const { data: appHTML } = useSWR(() => api_url ? api_url + "app_full_width_fragment/" : null, fetcherHTML)
   const ui_url = objectData ? `${nautobot_url}${objectData.formData.web_url}?viewconfig=true` : null
-  var { data: pluginConfig } = useSWR(() => ui_url, fetcherTabs)
+  var { data: appConfig } = useSWR(() => ui_url, fetcherTabs)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
-  if (!pluginConfig) return <></>
+  if (!appConfig) return <></>
 
   const route_name = `${app_name}:${model_name}`;
 
@@ -100,9 +100,9 @@ export default function ObjectRetrieve({ api_url }) {
           </Table>
         </Card>
         <br />
-        <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
+        <div dangerouslySetInnerHTML={{ __html: appHTML }} />
         <br />
-        {PluginFullWidthComponentsWithProps(route_name, obj)}
+        {AppFullWidthComponentsWithProps(route_name, obj)}
       </Tab>
       <Tab key="advanced" eventKey="advanced" title="Advanced">
         <br />
@@ -123,13 +123,13 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="change_log" eventKey="change_log" title="Change Log">
         <p>Changelog to be rendered here</p>
       </Tab>
-      {pluginConfig}
+      {appConfig}
     </Tabs>
   </>)
 
   let return_view = default_view;
-  if (PluginComponents.CustomViews?.[route_name] && "retrieve" in PluginComponents.CustomViews?.[route_name]) {
-    const CustomView = PluginComponents.CustomViews[route_name].retrieve
+  if (AppComponents.CustomViews?.[route_name] && "retrieve" in AppComponents.CustomViews?.[route_name]) {
+    const CustomView = AppComponents.CustomViews[route_name].retrieve
     return_view = <CustomView {...obj} />
   }
 

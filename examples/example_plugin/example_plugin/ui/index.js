@@ -1,11 +1,11 @@
-export { default as ExamplePluginFullWidthPageComponent } from "./FullWidthPage"
+export { default as ExampleAppFullWidthPageComponent } from "./FullWidthPage"
 
-const plugin_config = {
+const app_config = {
     detail_tabs: {},
     full_width_components: {
-        "dcim:sites": ["ExamplePluginFullWidthPageComponent"]
+        "dcim:sites": ["ExampleAppFullWidthPageComponent"]
     },
     view_overrides: {}
 }
 
-export default plugin_config
+export default app_config

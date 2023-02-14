@@ -1,6 +1,10 @@
 const {aliasDangerous, configPaths} = require('react-app-rewire-alias/lib/aliasDangerous')
 const path = require("path")
 
+// Suppress console logging unless debugging is explicitly enabled.
+if (!process.env.NAUTOBOT_DEBUG) {
+  console.log = function () {}
+}
 
 /*
 console.log()
