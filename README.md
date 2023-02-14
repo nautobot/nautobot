@@ -21,9 +21,9 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 | Branch      | Status |
 |-------------|------------|
-| **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
-| **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
-| **next** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **[main](https://github.com/nautobot/nautobot/tree/main)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **[develop](https://github.com/nautobot/nautobot/tree/develop)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **[next](https://github.com/nautobot/nautobot/tree/next)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
 
 ## Screenshots
 
