@@ -34,14 +34,6 @@ layout = (
         weight=100,
         items=(
             HomePageItem(
-                name="Sites",
-                link="dcim:site_list",
-                model=models.Site,
-                description="Geographic location",
-                permissions=["dcim.view_site"],
-                weight=100,
-            ),
-            HomePageItem(
                 name="Locations",
                 link="dcim:location_list",
                 model=models.Location,

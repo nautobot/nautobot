@@ -68,8 +68,6 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 
@@ -134,129 +132,6 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
                 "return_url": return_url,
             },
         )
-
-
-#
-# Regions
-#
-
-
-class RegionListView(generic.ObjectListView):
-    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
-    filterset = filters.RegionFilterSet
-    filterset_form = forms.RegionFilterForm
-    table = tables.RegionTable
-
-
-class RegionView(generic.ObjectView):
-    queryset = Region.objects.all()
-
-    def get_extra_context(self, request, instance):
-
-        # Sites
-        sites = (
-            Site.objects.restrict(request.user, "view")
-            .filter(region__in=instance.descendants(include_self=True))
-            .select_related("region", "tenant")
-            .prefetch_related("parent")
-        )
-
-        sites_table = tables.SiteTable(sites)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(sites_table)
-
-        return {
-            "sites_table": sites_table,
-        }
-
-
-class RegionEditView(generic.ObjectEditView):
-    queryset = Region.objects.all()
-    model_form = forms.RegionForm
-
-
-class RegionDeleteView(generic.ObjectDeleteView):
-    queryset = Region.objects.all()
-
-
-class RegionBulkImportView(generic.BulkImportView):
-    queryset = Region.objects.all()
-    model_form = forms.RegionCSVForm
-    table = tables.RegionTable
-
-
-class RegionBulkDeleteView(generic.BulkDeleteView):
-    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
-    filterset = filters.RegionFilterSet
-    table = tables.RegionTable
-
-
-#
-# Sites
-#
-
-
-class SiteListView(generic.ObjectListView):
-    queryset = Site.objects.select_related("region", "tenant")
-    filterset = filters.SiteFilterSet
-    filterset_form = forms.SiteFilterForm
-    table = tables.SiteTable
-
-
-class SiteView(generic.ObjectView):
-    queryset = Site.objects.select_related("region", "tenant__tenant_group")
-
-    def get_extra_context(self, request, instance):
-        stats = {}
-        rack_groups = ()
-        locations = ()
-
-        locations_table = tables.LocationTable(locations)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(locations_table)
-
-        return {
-            "locations_table": locations_table,
-            "stats": stats,
-            "rack_groups": rack_groups,
-        }
-
-
-class SiteEditView(generic.ObjectEditView):
-    queryset = Site.objects.all()
-    model_form = forms.SiteForm
-    template_name = "dcim/site_edit.html"
-
-
-class SiteDeleteView(generic.ObjectDeleteView):
-    queryset = Site.objects.all()
-
-
-class SiteBulkImportView(generic.BulkImportView):
-    queryset = Site.objects.all()
-    model_form = forms.SiteCSVForm
-    table = tables.SiteTable
-
-
-class SiteBulkEditView(generic.BulkEditView):
-    queryset = Site.objects.select_related("region", "tenant")
-    filterset = filters.SiteFilterSet
-    table = tables.SiteTable
-    form = forms.SiteBulkEditForm
-
-
-class SiteBulkDeleteView(generic.BulkDeleteView):
-    queryset = Site.objects.select_related("region", "tenant")
-    filterset = filters.SiteFilterSet
-    table = tables.SiteTable
 
 
 #

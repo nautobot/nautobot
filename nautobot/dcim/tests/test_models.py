@@ -41,7 +41,6 @@ from nautobot.dcim.models import (
     RackGroup,
     RearPort,
     RearPortTemplate,
-    Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status
@@ -523,7 +522,6 @@ class LocationTestCase(TestCase):
         )
 
         self.status = Status.objects.get(slug="active")
-        self.site = Site.objects.first()
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
@@ -573,10 +571,10 @@ class LocationTestCase(TestCase):
 
     def test_parent_type_nestable_logic(self):
         """A location of a nestable type may have a parent of the same type."""
-        # A location using a root-level nestable type can have a site rather than a parent
+        # A location using a root-level nestable type can have a parent
         location_1 = Location(name="Region 1", location_type=self.root_nestable_type, status=self.status)
         location_1.validated_save()
-        # A location using a root-level nestable type can have a parent rather than a site
+        # A location using a root-level nestable type can have a parent
         location_2 = Location(
             name="Region 1-A", location_type=self.root_nestable_type, parent=location_1, status=self.status
         )
@@ -774,7 +772,7 @@ class DeviceTestCase(TestCase):
             name=device1.name,
         )
 
-        # Two devices assigned to the same Site and no Tenant should fail validation
+        # Two devices assigned to the same Location and no Tenant should fail validation
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
@@ -783,13 +781,13 @@ class DeviceTestCase(TestCase):
         device1.save()
         device2.tenant = tenant
 
-        # Two devices assigned to the same Site and the same Tenant should fail validation
+        # Two devices assigned to the same Location and the same Tenant should fail validation
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
         device2.tenant = None
 
-        # Two devices assigned to the same Site and different Tenants should pass validation
+        # Two devices assigned to the same Location and different Tenants should pass validation
         device2.full_clean()
         device2.save()
 
@@ -1190,20 +1188,3 @@ class InterfaceTestCase(TestCase):
             f"Tagged VLAN with names {[self.other_location_vlan.name]} must all belong to the "
             f"same location as the interface's parent device, or it must be global.",
         )
-
-
-class SiteTestCase(TestCase):
-    def test_latitude_or_longitude(self):
-        """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Site).get(slug="active")
-        site = Site(
-            name="Site A",
-            slug="site-a",
-            status=active_status,
-            longitude=55.1234567896,
-            latitude=55.1234567896,
-        )
-        site.validated_save()
-
-        self.assertEqual(site.longitude, Decimal("55.123457"))
-        self.assertEqual(site.latitude, Decimal("55.123457"))

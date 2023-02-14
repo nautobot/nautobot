@@ -53,8 +53,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.api.views import (
@@ -128,28 +126,6 @@ class PassThroughPortMixin:
         serializer = serializers.CablePathSerializer(cablepaths, context={"request": request}, many=True)
 
         return Response(serializer.data)
-
-
-#
-# Regions
-#
-
-
-class RegionViewSet(NautobotModelViewSet):
-    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
-    serializer_class = serializers.RegionSerializer
-    filterset_class = filters.RegionFilterSet
-
-
-#
-# Sites
-#
-
-
-class SiteViewSet(NautobotModelViewSet):
-    queryset = Site.objects.select_related("region", "status", "tenant").prefetch_related("tags")
-    serializer_class = serializers.SiteSerializer
-    filterset_class = filters.SiteFilterSet
 
 
 #

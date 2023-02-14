@@ -27,7 +27,6 @@ from .devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Pl
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
 from .racks import Rack, RackGroup, RackReservation
-from .sites import Region, Site
 
 __all__ = (
     "BaseInterface",

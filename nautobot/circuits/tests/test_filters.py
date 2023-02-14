@@ -37,7 +37,6 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         providers = Provider.objects.all()[:2]
         circuit_types = CircuitType.objects.all()[:2]
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:2]
         cls.locations = Location.objects.filter(children__isnull=True)[:2]
 
         circuits = (

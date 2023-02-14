@@ -126,8 +126,6 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 
@@ -190,7 +188,9 @@ class InterfaceCommonForm(forms.Form):
         elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
-        # Validate tagged VLANs; must be a global VLAN or in the same site
+        # Validate tagged VLANs; must be a global VLAN or in the same location
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
+        # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
         elif mode == InterfaceModeChoices.MODE_TAGGED:
             valid_locations = [None, self.cleaned_data[parent_field].location]
             invalid_vlans = [str(v) for v in tagged_vlans if v.location not in valid_locations]
@@ -237,156 +237,6 @@ class ComponentForm(BootstrapMixin, forms.Form):
 #
 # Fields
 #
-
-
-#
-# Regions
-#
-
-
-class RegionForm(NautobotModelForm):
-    parent = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
-    slug = SlugField()
-
-    class Meta:
-        model = Region
-        fields = (
-            "parent",
-            "name",
-            "slug",
-            "description",
-        )
-
-
-class RegionCSVForm(CustomFieldModelCSVForm):
-    parent = CSVModelChoiceField(
-        queryset=Region.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Name of parent region",
-    )
-
-    class Meta:
-        model = Region
-        fields = Region.csv_headers
-
-
-class RegionFilterForm(NautobotFilterForm):
-    model = Site
-    q = forms.CharField(required=False, label="Search")
-
-
-#
-# Sites
-#
-
-
-class SiteForm(NautobotModelForm, TenancyForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
-    slug = SlugField()
-    comments = CommentField()
-
-    class Meta:
-        model = Site
-        fields = [
-            "name",
-            "slug",
-            "status",
-            "region",
-            "tenant_group",
-            "tenant",
-            "facility",
-            "asn",
-            "time_zone",
-            "description",
-            "physical_address",
-            "shipping_address",
-            "latitude",
-            "longitude",
-            "contact_name",
-            "contact_phone",
-            "contact_email",
-            "comments",
-            "tags",
-        ]
-        widgets = {
-            "physical_address": SmallTextarea(
-                attrs={
-                    "rows": 3,
-                }
-            ),
-            "shipping_address": SmallTextarea(
-                attrs={
-                    "rows": 3,
-                }
-            ),
-            "time_zone": StaticSelect2(),
-        }
-        help_texts = {
-            "name": "Full name of the site",
-            "facility": "Data center provider and facility (e.g. Equinix NY7)",
-            "asn": "BGP autonomous system number",
-            "time_zone": "Local time zone",
-            "description": "Short description (will appear in sites list)",
-            "physical_address": "Physical location of the building (e.g. for GPS)",
-            "shipping_address": "If different from the physical address",
-            "latitude": "Latitude in decimal format (xx.yyyyyy)",
-            "longitude": "Longitude in decimal format (xx.yyyyyy)",
-        }
-
-
-class SiteCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    region = CSVModelChoiceField(
-        queryset=Region.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned region",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Site
-        fields = Site.csv_headers
-        help_texts = {
-            "time_zone": mark_safe(
-                'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
-            )
-        }
-
-
-class SiteBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Site.objects.all(), widget=forms.MultipleHiddenInput)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
-    description = forms.CharField(max_length=100, required=False)
-    time_zone = TimeZoneFormField(
-        choices=add_blank_choice(TimeZoneFormField().choices),
-        required=False,
-        widget=StaticSelect2(),
-    )
-
-    class Meta:
-        nullable_fields = [
-            "region",
-            "tenant",
-            "asn",
-            "description",
-            "time_zone",
-        ]
-
-
-class SiteFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilterFormMixin):
-    model = Site
-    field_order = ["q", "status", "region", "tenant_group", "tenant"]
-    q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    tag = TagFilterField(model)
 
 
 #
