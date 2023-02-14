@@ -23,7 +23,9 @@ function get_components() {
     for (const [plugin_name, import_promise] of Object.entries(NautobotPlugins)) {
         import_promise.then((value) => {
             if (value?.default?.view_overrides) {
+                // eslint-disable-next-line
                 Object.entries(value.default.view_overrides).map(([route, views]) => {
+                    // eslint-disable-next-line
                     Object.entries(views).map(([view_action, component]) => {
                         if (!base["CustomViews"][route]) base["CustomViews"][route] = {}
                         base["CustomViews"][route][view_action] = lazy(() => my_import_as_function(plugin_name, component))
@@ -31,8 +33,10 @@ function get_components() {
                 })
             }
             if (value?.default?.full_width_components) {
+                // eslint-disable-next-line
                 Object.entries(value.default.full_width_components).map(([route, components]) => {
                     if (!base["FullWidthComponents"][route]) base["FullWidthComponents"][route] = []
+                    // eslint-disable-next-line
                     components.map((component) => {
                         base["FullWidthComponents"][route].push(lazy(() => my_import_as_function(plugin_name, component)))
                     })

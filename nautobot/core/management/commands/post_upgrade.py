@@ -11,6 +11,7 @@ This will run the following management commands with default settings, in order:
 
 - migrate
 - trace_paths
+- build
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
@@ -28,6 +29,13 @@ class Command(BaseCommand):
         return parser
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            "--no-build",
+            action="store_false",
+            dest="build",
+            default=True,
+            help="Do not automatically build the user interface.",
+        )
         parser.add_argument(
             "--no-clearsessions",
             action="store_false",
@@ -74,7 +82,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
-            print("Performing database migrations...")
+            self.stdout.write("Performing database migrations...")
             call_command(
                 "migrate",
                 interactive=False,
@@ -85,30 +93,36 @@ class Command(BaseCommand):
 
         # Run trace_paths
         if options.get("trace_paths"):
-            print("Generating cable paths...")
+            self.stdout.write("Generating cable paths...")
             call_command("trace_paths", no_input=True)
+            print()
+
+        # Run build
+        if options.get("build"):
+            self.stdout.write("Building user interface...")
+            call_command("build")
             print()
 
         # Run collectstatic
         if options.get("collectstatic"):
-            print("Collecting static files...")
+            self.stdout.write("Collecting static files...")
             call_command("collectstatic", interactive=False)
             print()
 
         # Run remove_stale_contenttypes
         if options.get("remove_stale_contenttypes"):
-            print("Removing stale content types...")
+            self.stdout.write("Removing stale content types...")
             call_command("remove_stale_contenttypes", interactive=False)
             print()
 
         # Run clearsessions
         if options.get("clearsessions"):
-            print("Removing expired sessions...")
+            self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
             print()
 
         # Run invalidate all
         if options.get("invalidate_all"):
-            print("Invalidating cache...")
+            self.stdout.write("Invalidating cache...")
             call_command("invalidate", "all")
             print()

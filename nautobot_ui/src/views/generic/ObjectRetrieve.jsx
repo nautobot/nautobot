@@ -15,14 +15,13 @@ const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) =
 const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) => {
   return res.json().then((data) => {
 
-    let tabs = []
-    data.tabs.map((tab_top) => {
+    let tabs = data.tabs.map((tab_top) => (
       Object.keys(tab_top).map(function (tab_key) {
         let tab = tab_top[tab_key]
         let tab_component = create_plugin_tab({ tab: tab })
-        tabs.push(tab_component)
+        return tab_component
       })
-    })
+    ))
     return tabs
   })
 })
@@ -60,7 +59,6 @@ function RenderRow(props) {
 }
 
 export default function ObjectRetrieve({ api_url }) {
-  var pluginConfig = []
   const { app_name, model_name, object_id } = useParams()
   if (!!app_name && !!model_name && !!object_id && !api_url) {
     api_url = `${nautobot_url}/api/${app_name}/${model_name}/${object_id}/`
