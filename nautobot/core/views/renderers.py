@@ -3,7 +3,6 @@ import logging
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
