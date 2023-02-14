@@ -4044,7 +4044,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
-        statuses = list(Status.objects.get_for_model(Site)[:2])
+        statuses = list(Status.objects.get_for_model(Cable)[:2])
         with self.subTest():
             params = {"status": [statuses[0].slug]}
             self.assertEqual(
