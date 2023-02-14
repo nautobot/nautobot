@@ -268,7 +268,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "group_id": "$vlan_group",
         },
     )
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
 
     class Meta:
         model = Prefix
@@ -372,7 +372,7 @@ class PrefixBulkEditForm(
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
-    date_allocated = forms.DateTimeField(required=False)
+    date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
@@ -407,9 +407,6 @@ class PrefixFilterForm(
         "role",
         "tenant_group",
         "tenant",
-        "expand",
-        "rir",
-        "date_allocated",
     ]
     mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
@@ -441,6 +438,11 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    type = forms.MultipleChoiceField(
+        required=False,
+        choices=PrefixTypeChoices,
+        widget=StaticSelect2Multiple(),
+    )
     tag = TagFilterField(model)
 
 

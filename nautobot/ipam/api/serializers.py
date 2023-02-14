@@ -237,9 +237,10 @@ class PrefixSerializer(
             "vrf",
             "tenant",
             "vlan",
-            "rir",
             "status",
             "role",
+            "rir",
+            "date_allocated",
             "description",
         ]
         read_only_fields = ["family"]

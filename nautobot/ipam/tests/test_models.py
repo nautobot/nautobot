@@ -115,6 +115,7 @@ class TestVarbinaryIPField(TestCase):
 class TestPrefix(TestCase):
     def setUp(self):
         super().setUp()
+        Prefix.objects.all().delete()
         self.statuses = Status.objects.get_for_model(Prefix)
 
     def test_prefix_validation(self):
@@ -319,6 +320,50 @@ class TestPrefix(TestCase):
             (IPAddress(address=netaddr.IPNetwork("aaaa::0/128")), IPAddress(address=netaddr.IPNetwork("aaaa::f/128")))
         )
         self.assertEqual(prefix.get_utilization(), (2, 16))
+
+        # Large Prefix
+        large_prefix = Prefix.objects.create(prefix="22.0.0.0/8", type=PrefixTypeChoices.TYPE_CONTAINER)
+
+        # 25% utilization
+        Prefix.objects.bulk_create(
+            (
+                Prefix(prefix=netaddr.IPNetwork("22.0.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.16.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.32.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.48.0.0/12")),
+            )
+        )
+        self.assertEqual(large_prefix.get_utilization(), (4194304, 16777216))
+
+        # 50% utilization
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.64.0.0/10")),))
+        self.assertEqual(large_prefix.get_utilization(), (8388608, 16777216))
+
+        # 100% utilization
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.128.0.0/9")),))
+        self.assertEqual(large_prefix.get_utilization(), (16777216, 16777216))
+
+        # IPv6 Large Prefix
+        large_prefix_v6 = Prefix.objects.create(prefix="ab00::/8", type=PrefixTypeChoices.TYPE_CONTAINER)
+
+        # 25% utilization
+        Prefix.objects.bulk_create(
+            (
+                Prefix(prefix=netaddr.IPNetwork("ab00::/12")),
+                Prefix(prefix=netaddr.IPNetwork("ab10::/12")),
+                Prefix(prefix=netaddr.IPNetwork("ab20::/12")),
+                Prefix(prefix=netaddr.IPNetwork("ab30::/12")),
+            )
+        )
+        self.assertEqual(large_prefix_v6.get_utilization(), (2**118, 2**120))
+
+        # 50% utilization
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("ab40::/10")),))
+        self.assertEqual(large_prefix_v6.get_utilization(), (2**119, 2**120))
+
+        # 100% utilization
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("ab80::/9")),))
+        self.assertEqual(large_prefix_v6.get_utilization(), (2**120, 2**120))
 
     #
     # Uniqueness enforcement tests
