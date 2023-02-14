@@ -25,7 +25,6 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
-
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
@@ -443,11 +442,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "sort",  # table sorting
     )
 
-    def get_filtered_queryset_for_export(self):
+    def filter_queryset(self):
         """
-        Helper method for NautobotUIViewSet to recognize request's filter_params when exporting.
-        Since the export response cannot be captured from NautobotHTMLRenderer,
-        We have to do it here in the ObjectListViewMixin class.
+        Filter a query with request querystrings.
         """
         queryset = self.get_queryset()
         if self.filterset_class is not None:
@@ -464,7 +461,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
-        queryset = self.get_filtered_queryset_for_export()
+        queryset = self.filter_queryset()
         if request.GET.get("export"):
             et = get_object_or_404(
                 ExportTemplate,
@@ -499,7 +496,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as concatenated YAML documents.
         """
-        queryset = self.get_filtered_queryset_for_export()
+        queryset = self.filter_queryset()
         yaml_data = [obj.to_yaml() for obj in queryset]
 
         return "---\n".join(yaml_data)
@@ -508,7 +505,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
         """
-        queryset = self.get_filtered_queryset_for_export()
+        queryset = self.filter_queryset()
         csv_data = []
         custom_fields = []
         # Start with the column headers

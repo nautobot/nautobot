@@ -811,12 +811,12 @@ class ViewTestCases:
                 reader = csv.DictReader(StringIO(response_body))
                 data = [dict(row) for row in reader]
                 csv_headers = getattr(self.model, "csv_headers")
-                for i in range(len(data)):
+                for _, entry in enumerate(data):
                     # x might be None, in that case use an empty sting
                     instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
                     for header in csv_headers:
-                        if data[i][header] is not None:
-                            self.assertIn(data[i][header], instance1_csv_data)
+                        if entry[header]:
+                            self.assertIn(entry[header], instance1_csv_data)
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
