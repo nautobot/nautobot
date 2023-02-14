@@ -316,7 +316,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "location",
         "rir",
         "role",
-        "site",
         "status",
         "tenant",
         "type",

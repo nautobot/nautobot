@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0017_prefix_remove_is_pool"),
+        ("ipam", "0018_remove_site_foreign_key_from_ipam_models"),
     ]
 
     operations = [
