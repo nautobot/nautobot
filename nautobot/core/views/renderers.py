@@ -158,17 +158,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             if view.action == "list":
                 if view.filterset_class is not None:
+                    view.queryset = view.filter_queryset(view.queryset)
                     filter_params = view.get_filter_params(request)
                     filterset = view.filterset_class(filter_params, view.queryset)
                     filterset_filters = filterset.get_filters()
-                    view.queryset = filterset.qs
-                    if not filterset.is_valid():
-                        messages.error(
-                            request,
-                            mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-                        )
-                        view.queryset = view.queryset.none()
-
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in filter_params.items()

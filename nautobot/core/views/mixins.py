@@ -442,11 +442,10 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "sort",  # table sorting
     )
 
-    def filter_queryset(self):
+    def filter_queryset(self, queryset):
         """
         Filter a query with request querystrings.
         """
-        queryset = self.get_queryset()
         if self.filterset_class is not None:
             filter_params = self.get_filter_params(self.request)
             filterset = self.filterset_class(filter_params, queryset)
@@ -461,7 +460,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
-        queryset = self.filter_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         if request.GET.get("export"):
             et = get_object_or_404(
                 ExportTemplate,
@@ -496,7 +495,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as concatenated YAML documents.
         """
-        queryset = self.filter_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         yaml_data = [obj.to_yaml() for obj in queryset]
 
         return "---\n".join(yaml_data)
@@ -505,7 +504,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
         """
-        queryset = self.filter_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         csv_data = []
         custom_fields = []
         # Start with the column headers

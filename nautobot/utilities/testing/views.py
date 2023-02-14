@@ -815,6 +815,7 @@ class ViewTestCases:
                     # x might be None, in that case use an empty sting
                     instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
                     for header in csv_headers:
+                        # ignore "", None and etc, we only want "name", "slug" or similar identifiers
                         if entry[header]:
                             self.assertIn(entry[header], instance1_csv_data)
 
