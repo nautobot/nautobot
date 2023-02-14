@@ -6,7 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("circuits", "0011_remove_site_foreign_key_from_circuit_termination_class"),
         ("dcim", "0032_remove_site_foreign_key_from_dcim_models"),
+        ("extras", "0063_remove_site_and_region_attributes_from_config_context"),
+        ("ipam", "0018_remove_site_foreign_key_from_ipam_models"),
+        ("virtualization", "0016_remove_site_foreign_key_from_cluster_class"),
     ]
 
     operations = [
