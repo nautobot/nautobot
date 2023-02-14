@@ -31,12 +31,12 @@ All attributes defined within a single JSON object are applied with a logical AN
 
 ```json
 {
-  "status": "active",
+  "status__name": "Active",
   "region__name": "Americas"
 }
 ```
 
-The permission will grant access only to sites which have a status of "active" **and** which are assigned to the "Americas" region.
+The permission will grant access only to sites which have a status of "Active" **and** which are assigned to the "Americas" region.
 
 To achieve a logical OR with a different set of constraints, define multiple objects within a list. For example, if you want to constrain the permission to VLANs with an ID between 100 and 199 _or_ a status of "reserved," do the following:
 
@@ -47,7 +47,7 @@ To achieve a logical OR with a different set of constraints, define multiple obj
     "vid__lt": 200
   },
   {
-    "status": "reserved"
+    "status__name": "Reserved"
   }
 ]
 ```
