@@ -92,9 +92,7 @@ def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    app_config = apps.get_app_config("extras")
-    # TODO: why can't/shouldn't we pass `apps` through to create_custom_statuses? We get failures if we do, but why?
-    create_custom_statuses(app_config, **kwargs)
+    create_custom_statuses(apps=apps, **kwargs)
 
 
 def export_statuses_from_choiceset(choiceset, color_map=None, description_map=None):
@@ -125,10 +123,10 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
 
 
 def create_custom_statuses(
-    app_config=None,
+    app_config=None,  # unused
     verbosity=2,
     interactive=True,
-    using=DEFAULT_DB_ALIAS,
+    using=DEFAULT_DB_ALIAS,  # unused
     apps=global_apps,
     models=None,
     **kwargs,
