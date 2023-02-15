@@ -157,7 +157,7 @@ function initializeColorPicker(context, dropdownParent=null){
 function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-api').each(function(){
-        thisobj = $(this)
+        thisobj = $(this);
         placeholder = thisobj.attr("data-null-option") || "---------";
         thisobj.select2({
             allowClear: true,
@@ -191,9 +191,10 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     };
 
                     // Set api_version
-                    api_version = $(element).attr("data-api-version")
-                    if(api_version)
-                    parameters["api_version"] = api_version
+                    api_version = $(element).attr("data-api-version");
+                    if(api_version){
+                        parameters["api_version"] = api_version;
+                    }
 
 
                     // Allow for controlling the brief setting from within APISelect
@@ -207,11 +208,11 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                             $.each($.parseJSON(attr.value), function(index, value) {
                                 // Referencing the value of another form field
                                 if (value.startsWith('$')) {
-                                    let element_id = $(element).attr("id")
+                                    let element_id = $(element).attr("id");
                                     let ref_field;
 
                                     if(element_id.includes("id_form-")){
-                                        let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
+                                        let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
                                         ref_field = $("#" + id_prefix + value.slice(1));
                                     }
                                     else {
@@ -284,7 +285,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                             results['global'].children.push(record);
                         }
                         else {
-                            results[idx] = record
+                            results[idx] = record;
                         }
 
                         return results;
