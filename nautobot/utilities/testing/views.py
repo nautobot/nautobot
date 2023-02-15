@@ -809,15 +809,21 @@ class ViewTestCases:
                 self.assertEqual(response.get("Content-Type"), "text/csv")
                 response_body = response.content.decode(response.charset)
                 reader = csv.DictReader(StringIO(response_body))
-                data = [dict(row) for row in reader]
-                csv_headers = getattr(self.model, "csv_headers")
-                for _, entry in enumerate(data):
-                    # x might be None, in that case use an empty sting
-                    instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
-                    for header in csv_headers:
-                        # ignore "", None and etc, we only want "name", "slug" or similar identifiers
-                        if entry[header]:
-                            self.assertIn(entry[header], instance1_csv_data)
+                print(response_body)
+                data = [dict(row) for row in reader][0]
+                print(data)
+                instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
+                # append instance
+                instance1_cf_values = [
+                    "" if value is None else value for value in instance1.get_custom_fields().values()
+                ]
+                instance1_csv_data += instance1_cf_values
+                # Since values in `data` are all in str; cast all values in instance1_csv_data to str
+                instance1_csv_data = [str(val) for val in instance1_csv_data]
+                instance1_cf_headers = ["cf_" + str(cf.slug) for cf in instance1.get_custom_fields().keys()]
+                instance1_csv_headers = list(getattr(self.model, "csv_headers")) + instance1_cf_headers
+                self.assertEquals(instance1_csv_headers, list(data.keys()))
+                self.assertEquals(instance1_csv_data, list(data.values()))
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """

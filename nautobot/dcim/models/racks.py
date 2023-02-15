@@ -400,7 +400,7 @@ class Rack(PrimaryModel, StatusModel):
             self.asset_tag,
             self.width,
             self.u_height,
-            self.desc_units,
+            str(self.desc_units),
             self.outer_width,
             self.outer_depth,
             self.outer_unit,
