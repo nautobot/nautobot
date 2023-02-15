@@ -111,7 +111,7 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
 
 
 #
-# RIRs/aggregates
+# RIRs
 #
 
 

@@ -1,10 +1,6 @@
 # IP Address Management
 
 {%
-    include-markdown "../models/ipam/aggregate.md"
-    heading-offset=1
-%}
-{%
     include-markdown "../models/ipam/rir.md"
     heading-offset=1
 %}
