@@ -16,6 +16,7 @@ from nautobot.core.filters import (
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.ipam import choices
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
@@ -235,11 +236,12 @@ class PrefixFilterSet(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )
+    type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
     tag = TagFilter()
 
     class Meta:
         model = Prefix
-        fields = ["id", "is_pool", "prefix"]
+        fields = ["id", "type", "prefix"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -496,10 +498,12 @@ class VLANFilterSet(
         fields = ["id", "vid", "name"]
 
     def get_for_device(self, queryset, name, value):
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
+        # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
         try:
             device = Device.objects.get(id=value)
-            return queryset.filter(Q(site__isnull=True) | Q(site=device.site))
+            return queryset.filter(Q(location__isnull=True) | Q(location=device.location))
         except Device.DoesNotExist:
             return queryset.none()
 

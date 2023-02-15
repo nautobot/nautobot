@@ -39,7 +39,7 @@ class ClusterTypeView(generic.ObjectView):
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(cluster_type=instance)
-            .select_related("cluster_group", "site", "tenant")
+            .select_related("cluster_group", "location", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -99,7 +99,7 @@ class ClusterGroupView(generic.ObjectView):
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(cluster_group=instance)
-            .select_related("cluster_type", "site", "tenant")
+            .select_related("cluster_type", "location", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -162,7 +162,7 @@ class ClusterView(generic.ObjectView):
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(cluster=instance)
-            .select_related("site", "rack", "tenant", "device_type__manufacturer")
+            .select_related("location", "rack", "tenant", "device_type__manufacturer")
         )
         device_table = DeviceTable(list(devices), orderable=False)
         if request.user.has_perm("virtualization.change_cluster"):
@@ -190,14 +190,14 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "location")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "location")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 
@@ -415,7 +415,9 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "vlan_group", "tenant", "role"):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
+            "location", "vlan_group", "tenant", "role"
+        ):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)

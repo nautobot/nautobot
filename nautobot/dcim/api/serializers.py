@@ -21,7 +21,6 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -81,7 +80,6 @@ from nautobot.extras.api.serializers import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
-from nautobot.extras.models import Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
@@ -222,12 +220,6 @@ class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
     region = NestedRegionSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
-    circuit_count = serializers.IntegerField(read_only=True)
-    device_count = serializers.IntegerField(read_only=True)
-    prefix_count = serializers.IntegerField(read_only=True)
-    rack_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Site
@@ -250,12 +242,6 @@ class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
             "contact_phone",
             "contact_email",
             "comments",
-            "circuit_count",
-            "device_count",
-            "prefix_count",
-            "rack_count",
-            "virtualmachine_count",
-            "vlan_count",
         ]
 
 
@@ -294,7 +280,6 @@ class LocationSerializer(
     location_type = NestedLocationTypeSerializer()
     parent = NestedLocationSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    site = NestedSiteSerializer(required=False, allow_null=True)
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
@@ -312,7 +297,6 @@ class LocationSerializer(
             "status",
             "location_type",
             "parent",
-            "site",
             "tenant",
             "description",
             "tree_depth",
@@ -356,8 +340,7 @@ class LocationSerializer(
 
 class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
 
@@ -367,23 +350,22 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
             "url",
             "name",
             "slug",
-            "site",
             "location",
             "parent",
             "description",
             "rack_count",
             "tree_depth",
         ]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "name"))]
+        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("location", "name"))]
 
     def validate(self, data):
-        # Validate uniqueness of (site, slug) since we omitted the automatically-created validator from Meta.
+        # Validate uniqueness of (location, slug) since we omitted the automatically-created validator from Meta.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("slug", None):
-            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "slug"))
+            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("location", "slug"))
             validator(data, self)
 
         # Enforce model validation
@@ -396,8 +378,7 @@ class RackSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
@@ -412,7 +393,6 @@ class RackSerializer(
             "url",
             "name",
             "facility_id",
-            "site",
             "location",
             "group",
             "tenant",
@@ -743,8 +723,7 @@ class DeviceSerializer(
     device_type = NestedDeviceTypeSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     rack = NestedRackSerializer(required=False, allow_null=True)
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     primary_ip = NestedIPAddressSerializer(read_only=True)
@@ -768,7 +747,6 @@ class DeviceSerializer(
             "platform",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "position",
@@ -976,11 +954,11 @@ class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         return super().validate(data)
 
 
-# 2.0 TODO: This becomes non-default in 2.0, removed in 2.2.
-class InterfaceSerializerVersion12(
+class InterfaceSerializer(
     InterfaceCommonSerializer,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     device = NestedDeviceSerializer()
@@ -1005,6 +983,7 @@ class InterfaceSerializerVersion12(
             "url",
             "device",
             "name",
+            "status",
             "label",
             "type",
             "enabled",
@@ -1028,41 +1007,20 @@ class InterfaceSerializerVersion12(
         ]
 
     def validate(self, data):
-
-        # set interface status to active if status not provided
-        if not data.get("status"):
-            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
-            # which raises an error when validating except status is explicitly set here
-            query = Status.objects.get_for_model(Interface)
-            try:
-                data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-            except Status.DoesNotExist:
-                raise serializers.ValidationError(
-                    {
-                        "status": "Interface default status 'active' does not exist, "
-                        "create 'active' status for Interface or use the latest api_version"
-                    }
-                )
-
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
+        # the parent Location or the child location of `device.location`?
         for vlan in data.get("tagged_vlans", []):
-            if vlan.site not in [device.site, None]:
+            if vlan.location not in [device.location, None]:
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must belong to the same site as the interface's parent device, or "
+                        "tagged_vlans": f"VLAN {vlan} must belong to the same location as the interface's parent device, or "
                         f"it must be global."
                     }
                 )
 
         return super().validate(data)
-
-
-class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
-    class Meta:
-        model = Interface
-        fields = InterfaceSerializerVersion12.Meta.fields.copy()
-        fields.insert(4, "status")
 
 
 class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
@@ -1367,8 +1325,7 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 
 class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     powerfeed_count = serializers.IntegerField(read_only=True)
 
@@ -1376,7 +1333,6 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = PowerPanel
         fields = [
             "url",
-            "site",
             "location",
             "rack_group",
             "name",

@@ -148,6 +148,48 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.10 (2023-02-06)
+
+### Added
+
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added `CELERY_WORKER_PROMETHEUS_PORTS` configuration setting
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added prometheus HTTP server listening on the worker to expose worker metrics
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added `nautobot_job_duration_seconds` counter metric that reports on job execution
+
+### Changed
+
+- [#3177](https://github.com/nautobot/nautobot/issues/3177) - Updated VLANFactory to generate longer and more "realistic" VLAN names.
+- [#3198](https://github.com/nautobot/nautobot/issues/3198) - Added dependencies towncrier section, removed extra newline.
+
+### Dependencies
+
+- [#3227](https://github.com/nautobot/nautobot/issues/3227) - Updated `django` to 3.2.17.
+
+### Fixed
+
+- [#3126](https://github.com/nautobot/nautobot/issues/3126) - Fixed interface not raising exception when adding a VLAN from a different site in tagged_vlans.
+- [#3153](https://github.com/nautobot/nautobot/issues/3153) - Made integration test `CableConnectFormTestCase.test_js_functionality` more resilient and less prone to erroneous failures.
+- [#3177](https://github.com/nautobot/nautobot/issues/3177) - Fixed a spurious failure in BulkEditObjectsViewTestCase.test_bulk_edit_objects_with_constrained_permission.
+- [#3200](https://github.com/nautobot/nautobot/issues/3200) - Added `dependencies` to the list of valid change fragment types in the documentation.
+
+### Security
+
+- [#3227](https://github.com/nautobot/nautobot/issues/3227) - Updated `django` to 3.2.17 due to CVE-2023-23969.
+
+## v1.5.9 (2023-01-26)
+
+### Changed
+
+- [#3117](https://github.com/nautobot/nautobot/issues/3117) - Update Renovate config to batch lockfile updates to next.
+- [#3144](https://github.com/nautobot/nautobot/issues/3144) - Updated `netutils` to `~1.4.0`
+- [#3171](https://github.com/nautobot/nautobot/issues/3171) - Increased maximum VLAN name length from 64 characters to 255 characters.
+
+### Fixed
+
+- [#3114](https://github.com/nautobot/nautobot/issues/3114) - Fixed Navbar scroll through top-level menu in low resolution desktop screens.
+- [#3155](https://github.com/nautobot/nautobot/issues/3155) - Aligned buttons on device component create page.
+- [#3169](https://github.com/nautobot/nautobot/issues/3169) - Fixed data mismatch in `ScheduledJob` causing celery workers to fail when running scheduled jobs created in versions prior to `v1.5.8`. ⚠ **NOTE**: If your celery workers are failing on startup after upgrading to `v1.5.8`, you may need to purge the celery queue with `nautobot-server celery purge` or `nautobot-server celery purge -Q <queues>` to purge custom queues.
+
 ## v1.5.8 (2023-01-23)
 
 ### Added

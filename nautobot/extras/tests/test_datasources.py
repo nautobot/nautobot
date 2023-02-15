@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
 from nautobot.core.testing import TransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -56,10 +56,9 @@ class GitTest(TransactionTestCase):
         # Needed for use with the change_logging decorator
         self.mock_request.id = uuid.uuid4()
 
-        self.site = Site.objects.create(name="Test Site", slug="test-site")
         self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
-        self.location = Location.objects.create(location_type=self.location_type, name="Test Location", site=self.site)
+        self.location = Location.objects.create(location_type=self.location_type, name="Test Location")
         self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
@@ -70,7 +69,6 @@ class GitTest(TransactionTestCase):
             name="test-device",
             role=self.role,
             device_type=self.device_type,
-            site=self.site,
             location=self.location,
             status=self.device_status,
         )
@@ -87,7 +85,7 @@ class GitTest(TransactionTestCase):
         self.job_result = JobResult.objects.create(
             name=self.repo.name,
             obj_type=ContentType.objects.get_for_model(GitRepository),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         self.config_context_schema = {
@@ -282,7 +280,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 self.repo.refresh_from_db()
@@ -315,7 +313,7 @@ class GitTest(TransactionTestCase):
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
-                    job_id=uuid.uuid4(),
+                    task_id=uuid.uuid4(),
                 )
 
                 # Run the Git operation and refresh the object from the DB
@@ -324,7 +322,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 MockGitRepo.assert_called_with(
@@ -354,7 +352,7 @@ class GitTest(TransactionTestCase):
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
-                    job_id=uuid.uuid4(),
+                    task_id=uuid.uuid4(),
                 )
 
                 # Run the Git operation and refresh the object from the DB
@@ -363,7 +361,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 MockGitRepo.assert_called_with(
@@ -424,7 +422,7 @@ class GitTest(TransactionTestCase):
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
-                    job_id=uuid.uuid4(),
+                    task_id=uuid.uuid4(),
                 )
 
                 # Run the Git operation and refresh the object from the DB
@@ -433,7 +431,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
                 MockGitRepo.assert_called_with(
@@ -457,7 +455,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
 
@@ -489,7 +487,7 @@ class GitTest(TransactionTestCase):
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
-                    job_id=uuid.uuid4(),
+                    task_id=uuid.uuid4(),
                 )
 
                 # Run the Git operation and refresh the object from the DB
@@ -498,7 +496,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
 
@@ -583,7 +581,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_FAILED,
+                    JobResultStatusChoices.STATUS_FAILURE,
                     self.job_result.data,
                 )
 
@@ -696,7 +694,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     self.job_result.status,
-                    JobResultStatusChoices.STATUS_COMPLETED,
+                    JobResultStatusChoices.STATUS_SUCCESS,
                     self.job_result.data,
                 )
 
@@ -783,13 +781,13 @@ class GitTest(TransactionTestCase):
                 self.job_result = JobResult.objects.create(
                     name=self.repo.name,
                     obj_type=ContentType.objects.get_for_model(GitRepository),
-                    job_id=uuid.uuid4(),
+                    task_id=uuid.uuid4(),
                 )
 
                 git_repository_diff_origin_and_local(self.repo.pk, self.mock_request, self.job_result.pk)
                 self.job_result.refresh_from_db()
 
-                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_COMPLETED, self.job_result.data)
+                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS, self.job_result.data)
 
                 MockGitRepo.return_value.checkout.assert_not_called()
                 MockGitRepo.assert_called_with(

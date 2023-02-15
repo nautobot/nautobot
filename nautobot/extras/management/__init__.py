@@ -16,12 +16,12 @@ CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
+    "dcim.Site": dcim_choices.SiteStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
     "dcim.Rack": dcim_choices.RackStatusChoices,
     "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,
-    "dcim.Site": dcim_choices.SiteStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
@@ -36,7 +36,6 @@ COLOR_MAP = {
     "active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
     "available": ColorChoices.COLOR_GREEN,
     "connected": ColorChoices.COLOR_GREEN,
-    "container": ColorChoices.COLOR_GREY,
     "dhcp": ColorChoices.COLOR_GREEN,
     "decommissioned": ColorChoices.COLOR_GREY,
     "decommissioning": ColorChoices.COLOR_AMBER,
@@ -61,7 +60,6 @@ DESCRIPTION_MAP = {
     "active": "Unit is active",
     "available": "Unit is available",
     "connected": "Cable is connected",
-    "container": "Network contains children",
     "dhcp": "Dynamically assigned IPv4/IPv6 address",
     "decommissioned": "Circuit has been decommissioned",
     "decommissioning": "Unit is being decommissioned",
@@ -74,10 +72,10 @@ DESCRIPTION_MAP = {
     "planned": "Unit has been planned",
     "provisioning": "Circuit is being provisioned",
     "reserved": "Unit is reserved",
-    "retired": "Site or Location has been retired",
+    "retired": "Location has been retired",
     "slaac": "Dynamically assigned IPv6 address",
     "staged": "Unit has been staged",
-    "staging": "Site or Location is in the process of being staged",
+    "staging": "Location is in the process of being staged",
 }
 
 
@@ -141,12 +139,14 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
+
+    # Only print a newline if we have verbosity!
+    if verbosity > 0:
+        print("\n", end="")
+
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
-
-    if verbosity >= 0:
-        print("\n", end="")
 
     if not models:
         models = CHOICESET_MAP.keys()

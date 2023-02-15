@@ -95,15 +95,10 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(name="Active")
-        site = Site.objects.first()
         location_type = LocationType.objects.create(name="Root Type")
         cls.locations = (
-            Location.objects.create(
-                name="Root 1", location_type=location_type, site=site, status=active, tenant=cls.queryset[0]
-            ),
-            Location.objects.create(
-                name="Root 2", location_type=location_type, site=site, status=active, tenant=cls.queryset[1]
-            ),
+            Location.objects.create(name="Root 1", location_type=location_type, status=active, tenant=cls.queryset[0]),
+            Location.objects.create(name="Root 2", location_type=location_type, status=active, tenant=cls.queryset[1]),
         )
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
@@ -123,7 +118,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
                 device_type=DeviceType.objects.first(),
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
-                site=Site.objects.first(),
+                location=cls.locations[0],
                 status=active,
                 tenant=Tenant.objects.first(),
             ),
@@ -132,7 +127,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
                 device_type=DeviceType.objects.first(),
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
-                site=Site.objects.first(),
+                location=cls.locations[0],
                 status=active,
                 tenant=Tenant.objects.last(),
             ),
@@ -154,7 +149,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"aggregates": [aggregates[0].pk, aggregates[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__in=aggregates),
+            self.queryset.filter(aggregates__in=aggregates).distinct(),
         )
 
     def test_has_aggregates(self):
@@ -453,19 +448,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vrfs__in=vrfs).distinct(),
-        )
-
-    def test_has_vrfs(self):
-        """Test the `has_vrfs` filter."""
-        params = {"has_vrfs": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vrfs__isnull=False).distinct(),
-        )
-        params = {"has_vrfs": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vrfs__isnull=True).distinct(),
         )
 
     def test_search(self):

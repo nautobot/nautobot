@@ -20,7 +20,6 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     Platform,
-    Site,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -63,7 +62,7 @@ class ComputedFieldTest(TestCase):
 
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="good_computed_field",
             label="Good Computed Field",
             template="{{ obj.name }} is awesome!",
@@ -71,7 +70,7 @@ class ComputedFieldTest(TestCase):
             weight=100,
         )
         self.bad_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="bad_computed_field",
             label="Bad Computed Field",
             template="{{ not_in_context | not_a_filter }} is horrible!",
@@ -79,24 +78,24 @@ class ComputedFieldTest(TestCase):
             weight=50,
         )
         self.blank_fallback_value = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="blank_fallback_value",
             label="Blank Fallback Value",
             template="{{ obj.location }}",
             weight=50,
         )
-        self.site1 = Site.objects.first()
+        self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
     def test_render_method(self):
-        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+        rendered_value = self.good_computed_field.render(context={"obj": self.location1})
+        self.assertEqual(rendered_value, f"{self.location1.name} is awesome!")
 
     def test_render_method_undefined_error(self):
-        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
+        rendered_value = self.blank_fallback_value.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, "")
 
     def test_render_method_bad_template(self):
-        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        rendered_value = self.bad_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
@@ -114,10 +113,8 @@ class ConfigContextTest(TestCase):
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
         self.devicerole = Role.objects.get_for_model(Device).first()
-        self.site = Site.objects.filter(region__isnull=False).first()
-        self.region = self.site.region
         location_type = LocationType.objects.create(name="Location Type 1")
-        self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
+        self.location = Location.objects.create(name="Location 1", location_type=location_type)
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
@@ -127,7 +124,6 @@ class ConfigContextTest(TestCase):
             name="Device 1",
             device_type=self.devicetype,
             role=self.devicerole,
-            site=self.site,
             location=self.location,
         )
 
@@ -185,10 +181,6 @@ class ConfigContextTest(TestCase):
 
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
-        site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
-        site_context.sites.add(self.site)
-        region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
-        region_context.regions.add(self.region)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
         platform_context.platforms.add(self.platform)
         tenant_group_context = ConfigContext.objects.create(name="tenant group", weight=100, data={"tenant_group": 1})
@@ -200,7 +192,6 @@ class ConfigContextTest(TestCase):
 
         device = Device.objects.create(
             name="Device 2",
-            site=self.site,
             location=self.location,
             tenant=self.tenant,
             platform=self.platform,
@@ -212,17 +203,13 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "site", "region", "platform", "tenant_group", "tenant", "tag"]:
+        for key in ["location", "platform", "tenant_group", "tenant", "tag"]:
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
 
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
-        site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
-        site_context.sites.add(self.site)
-        region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
-        region_context.regions.add(self.region)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
         platform_context.platforms.add(self.platform)
         tenant_group_context = ConfigContext.objects.create(name="tenant group", weight=100, data={"tenant_group": 1})
@@ -241,7 +228,6 @@ class ConfigContextTest(TestCase):
             name="Cluster",
             cluster_group=cluster_group,
             cluster_type=cluster_type,
-            site=self.site,
             location=self.location,
         )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
@@ -261,8 +247,6 @@ class ConfigContextTest(TestCase):
         self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
         for key in [
             "location",
-            "site",
-            "region",
             "platform",
             "tenant_group",
             "tenant",
@@ -287,7 +271,7 @@ class ConfigContextTest(TestCase):
 
         device = Device.objects.create(
             name="Device 3",
-            site=self.site,
+            location=self.location,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
@@ -318,7 +302,7 @@ class ConfigContextTest(TestCase):
 
         device = Device.objects.create(
             name="Device 3",
-            site=self.site,
+            location=self.location,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
@@ -381,13 +365,13 @@ class ConfigContextSchemaTestCase(TestCase):
 
         # Device
         status = Status.objects.get(slug="active")
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             name="device",
-            site=site,
+            location=location,
             device_type=device_type,
             role=device_role,
             status=status,
@@ -847,7 +831,7 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name=job_class.class_path,
             obj_type=get_job_content_type(),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
@@ -873,7 +857,7 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name=repo.name,
             obj_type=ContentType.objects.get_for_model(repo),
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
         self.assertEqual(job_result.related_object, repo)
@@ -886,12 +870,12 @@ class JobResultTest(TestCase):
         job_result = JobResult(
             name="irrelevant",
             obj_type=ContentType.objects.get_for_model(ip_address),
-            job_id=ip_address.pk,
+            task_id=ip_address.pk,
         )
 
         self.assertEqual(job_result.related_object, ip_address)
 
-        job_result.job_id = uuid.uuid4()
+        job_result.task_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
 
 
@@ -939,8 +923,8 @@ class SecretTest(TestCase):
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
 
-        self.site = Site.objects.first()
-        self.site.slug = "nyc"
+        self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.location.slug = "nyc"
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""
@@ -963,7 +947,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.environment_secret.get_value(obj=self.site)
+            self.environment_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.environment_secret}" '
@@ -972,7 +956,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.environment_secret_templated.get_value(obj=self.site)
+            self.environment_secret_templated.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
@@ -1003,7 +987,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretParametersError) as handler:
-            self.environment_secret.get_value(obj=self.site)
+            self.environment_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretParametersError: Secret "{self.environment_secret}" '
@@ -1038,7 +1022,7 @@ class SecretTest(TestCase):
         # Malformed Jinja2
         self.environment_secret_templated.parameters["variable"] = "{{ obj."
         with self.assertRaises(SecretParametersError) as handler:
-            self.environment_secret_templated.get_value(obj=self.site)
+            self.environment_secret_templated.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretParametersError: Secret "{self.environment_secret_templated}" '
@@ -1050,7 +1034,7 @@ class SecretTest(TestCase):
         # Since we're not using Jinja2's StrictUndefined, this just renders as an empty string
         self.environment_secret_templated.parameters["variable"] = "{{ obj.primary_ip4 }}"
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.environment_secret_templated.get_value(obj=self.site)
+            self.environment_secret_templated.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
@@ -1063,19 +1047,19 @@ class SecretTest(TestCase):
         """Successful retrieval of an environment variable secret."""
         self.assertEqual(self.environment_secret.get_value(), "supersecretvalue")
         # It's OK to pass a context obj even if the secret in question isn't templated
-        self.assertEqual(self.environment_secret.get_value(obj=self.site), "supersecretvalue")
+        self.assertEqual(self.environment_secret.get_value(obj=self.location), "supersecretvalue")
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": ""})
     def test_environment_variable_value_success_empty(self):
         """Successful retrieval of an environment variable secret even if set to an empty string."""
         self.assertEqual(self.environment_secret.get_value(), "")
         # It's OK to pass a context obj even if the secret in question isn't templated
-        self.assertEqual(self.environment_secret.get_value(obj=self.site), "")
+        self.assertEqual(self.environment_secret.get_value(obj=self.location), "")
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_NYC": "lessthansecretvalue"})
     def test_environment_variable_templated_success(self):
         """Successful retrieval of a templated environment variable secret."""
-        self.assertEqual(self.environment_secret_templated.get_value(obj=self.site), "lessthansecretvalue")
+        self.assertEqual(self.environment_secret_templated.get_value(obj=self.location), "lessthansecretvalue")
 
     def test_text_file_clean_validation(self):
         secret = Secret.objects.create(
@@ -1110,7 +1094,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.text_file_secret.get_value(obj=self.site)
+            self.text_file_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
@@ -1137,7 +1121,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretParametersError) as handler:
-            self.text_file_secret.get_value(obj=self.site)
+            self.text_file_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretParametersError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
@@ -1151,7 +1135,7 @@ class SecretTest(TestCase):
         try:
             self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
             # It's OK to pass a context obj even if the secret in question isn't templated
-            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+            self.assertEqual(self.text_file_secret.get_value(obj=self.location), "Hello world!")
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
@@ -1162,7 +1146,7 @@ class SecretTest(TestCase):
         try:
             self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
             # It's OK to pass a context obj even if the secret in question isn't templated
-            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+            self.assertEqual(self.text_file_secret.get_value(obj=self.location), "Hello world!")
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
@@ -1173,19 +1157,19 @@ class SecretTest(TestCase):
         try:
             self.assertEqual(self.text_file_secret.get_value(), "")
             # It's OK to pass a context obj even if the secret in question isn't templated
-            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "")
+            self.assertEqual(self.text_file_secret.get_value(obj=self.location), "")
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
     def test_text_file_templated_value_success(self):
         """Successful retrieval of a templated text file secret."""
-        path = self.text_file_secret_templated.rendered_parameters(obj=self.site)["path"]
+        path = self.text_file_secret_templated.rendered_parameters(obj=self.location)["path"]
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         with open(path, "w", encoding="utf8") as file_handle:
             file_handle.write("Hello?")
         try:
-            self.assertEqual(self.text_file_secret_templated.get_value(obj=self.site), "Hello?")
+            self.assertEqual(self.text_file_secret_templated.get_value(obj=self.location), "Hello?")
         finally:
             os.remove(path)
             os.rmdir(os.path.dirname(path))
@@ -1217,7 +1201,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretProviderError) as handler:
-            self.environment_secret.get_value(obj=self.site)
+            self.environment_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretProviderError: Secret "{self.environment_secret}" (provider "it-is-a-mystery"): '
@@ -1309,13 +1293,13 @@ class StatusTest(TestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
             role=devicerole,
-            site=site,
+            location=location,
             status=self.status,
         )
 
@@ -1382,7 +1366,7 @@ class JobLogEntryTest(TestCase):
             name=job_class.class_path,
             obj_type=get_job_content_type(),
             user=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
     def test_log_entry_creation(self):

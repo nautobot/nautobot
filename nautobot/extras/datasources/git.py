@@ -17,7 +17,7 @@ import yaml
 from nautobot.core.celery import nautobot_task
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.requests import copy_safe_request
-from nautobot.dcim.models import Device, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -99,24 +99,26 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
             level_choice=LogLevelChoices.LOG_FAILURE,
             logger=logger,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
         job_result.save()
         return GitJobResult(job_result=job_result, repository_record=None)
 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
 
 
+# TODO(jathan): This should likely be deleted since it's coercing state and this
+# should be managed by the database backend.
 def log_job_result_final_status(job_result, job_type):
     """Check Job status and save log to DB
     Args:
         job_result (JobResult): JobResult Instance
         job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
     """
-    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+    if job_result.status not in JobResultStatusChoices.READY_STATES:
         if JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE).exists():
-            job_result.set_status(JobResultStatusChoices.STATUS_FAILED)
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
         else:
-            job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+            job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.log(
         f"Repository {job_type} completed in {job_result.duration}",
         level_choice=LogLevelChoices.LOG_INFO,
@@ -125,6 +127,8 @@ def log_job_result_final_status(job_result, job_type):
     job_result.save()
 
 
+# TODO(jathan): The state transition stuff here should be deleted in exchange
+# for trusting the database backend.
 @nautobot_task
 def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
     """
@@ -140,7 +144,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         return
 
     job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(JobResultStatusChoices.STATUS_STARTED)
     job_result.save()
 
     try:
@@ -166,12 +170,14 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
             f"Error while refreshing {repository_record.name}: {exc}",
             level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
 
     finally:
         log_job_result_final_status(job_result, "synchronization")
 
 
+# TODO(jathan): The state transition stuff here should be deleted in exchange
+# for trusting the database backend.
 @nautobot_task
 def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, **kwargs):
     """
@@ -186,7 +192,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         return
 
     job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
+    job_result.set_status(JobResultStatusChoices.STATUS_STARTED)
     job_result.save()
     try:
         if not os.path.exists(settings.GIT_ROOT):
@@ -199,7 +205,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
             f"Error while running a dry run on {repository_record.name}: {exc}",
             level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
 
     finally:
         log_job_result_final_status(job_result, "dry run")
@@ -285,7 +291,7 @@ def ensure_git_repository(
 
     except Exception as exc:
         if job_result:
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
             job_result.save()
         elif logger:
@@ -326,7 +332,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
 
     except Exception as exc:
         if job_result:
-            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
             job_result.save()
         elif logger:
@@ -398,8 +404,6 @@ def update_git_config_contexts(repository_record, job_result):
 
     # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
     for filter_type in (
-        "regions",
-        "sites",
         "locations",
         "device_types",
         "roles",
@@ -512,7 +516,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     (name, weight, description, etc.), while all other keys in the dictionary will go into the record's "data" field.
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
-    the reason is that the serializer only allows us to identify related objects (Region, Site, Role, etc.)
+    the reason is that the serializer only allows us to identify related objects (Locations, Role, etc.)
     by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
@@ -534,8 +538,6 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     # Translate relationship queries/filters to lists of related objects
     relations = {}
     for key, model_class in [
-        ("regions", Region),
-        ("sites", Site),
         ("locations", Location),
         ("device_types", DeviceType),
         ("roles", Role),

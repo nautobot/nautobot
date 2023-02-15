@@ -4,7 +4,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.dcim.models import Site, Rack, Device, RackReservation
+from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.virtualization.models import VirtualMachine, Cluster
 from . import filters, forms, tables
@@ -83,7 +83,8 @@ class TenantView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         stats = {
-            "site_count": Site.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            # TODO: Should we include child locations of the filtered locations in the location_count below?
+            "location_count": Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
             .filter(tenant=instance)

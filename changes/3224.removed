@@ -1,0 +1,1 @@
+Removed support for Nautobot "1.x" REST API versions. The minimum supported REST API version is now "2.0".

@@ -2,7 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.dcim.models import Location, LocationType, Site
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
@@ -11,22 +11,15 @@ from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster,
 
 class ClusterTestCase(TestCase):
     def test_cluster_validation(self):
-        active = Status.objects.get(name="Active")
         cluster_type = ClusterType.objects.create(name="Test Cluster Type 1")
-        site_1 = Site.objects.create(name="Test Site 1", status=active)
-        site_2 = Site.objects.create(name="Test Site 2", status=active)
         location_type = LocationType.objects.create(name="Location Type 1")
-        location = Location.objects.create(name="Location 1", location_type=location_type, site=site_1)
-        cluster = Cluster(name="Test Cluster 1", cluster_type=cluster_type, site=site_1, location=location)
+        location = Location.objects.create(name="Location 1", location_type=location_type)
+        cluster = Cluster(name="Test Cluster 1", cluster_type=cluster_type, location=location)
         with self.assertRaises(ValidationError) as cm:
             cluster.validated_save()
         self.assertIn('Clusters may not associate to locations of type "Location Type 1"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
-        cluster.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            cluster.validated_save()
-        self.assertIn('Location "Location 1" does not belong to site "Test Site 2"', str(cm.exception))
 
 
 class VirtualMachineTestCase(TestCase):
@@ -74,8 +67,8 @@ class VirtualMachineTestCase(TestCase):
 
 class VMInterfaceTestCase(TestCase):
     def setUp(self):
-        site = Site.objects.create(name="Site-1", slug="site-1")
-        self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site)
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         self.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")

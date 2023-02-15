@@ -1,14 +1,11 @@
-from unittest import skip
-
-from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
-from nautobot.virtualization.choices import VMInterfaceStatusChoices
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -139,67 +136,65 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
 class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
     model = VirtualMachine
     brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "staged",
-    }
-    choices_fields = ["status"]
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         clustergroup = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        location_type = LocationType.objects.get(name="Campus")
+        locations = Location.objects.filter(location_type=location_type)[:2]
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, cluster_group=clustergroup),
-            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, cluster_group=clustergroup),
+            Cluster.objects.create(
+                name="Cluster 1", cluster_type=clustertype, cluster_group=clustergroup, location=locations[0]
+            ),
+            Cluster.objects.create(
+                name="Cluster 2", cluster_type=clustertype, cluster_group=clustergroup, location=locations[1]
+            ),
         )
 
-        statuses = Status.objects.get_for_model(VirtualMachine)
+        cls.statuses = Status.objects.get_for_model(VirtualMachine)
 
         VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=clusters[0],
             local_config_context_data={"A": 1},
-            status=statuses[0],
+            status=cls.statuses[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
             local_config_context_data={"B": 2},
-            status=statuses[0],
+            status=cls.statuses[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
             local_config_context_data={"C": 3},
-            status=statuses[0],
+            status=cls.statuses[0],
         )
-
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
 
         cls.create_data = [
             {
                 "name": "Virtual Machine 4",
                 "cluster": clusters[1].pk,
-                "status": "active",
+                "status": cls.statuses[0].pk,
             },
             {
                 "name": "Virtual Machine 5",
                 "cluster": clusters[1].pk,
-                "status": "active",
+                "status": cls.statuses[0].pk,
             },
             {
                 "name": "Virtual Machine 6",
                 "cluster": clusters[1].pk,
-                "status": "active",
+                "status": cls.statuses[0].pk,
             },
         ]
+        cls.bulk_update_data = {
+            "status": cls.statuses[1].pk,
+        }
 
     def test_config_context_included_by_default_in_list_view(self):
         """
@@ -230,7 +225,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         data = {
             "name": "Virtual Machine 1",
             "cluster": Cluster.objects.first().pk,
-            "status": "active",
+            "status": self.statuses[1].pk,
         }
         url = reverse("virtualization-api:virtualmachine-list")
         self.add_permissions("virtualization.add_virtualmachine")
@@ -283,13 +278,13 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
-class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
+class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     model = VMInterface
     brief_fields = ["display", "id", "name", "url", "virtual_machine"]
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = ["mode", "status"]
+    choices_fields = ["mode"]
 
     @classmethod
     def setUpTestData(cls):
@@ -297,6 +292,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
+        status_active = Status.objects.get(slug="active")
 
         interfaces = (
             VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1"),
@@ -314,6 +310,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 4",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
@@ -321,6 +318,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 5",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
@@ -329,6 +327,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 6",
+                "status": status_active.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
@@ -339,31 +338,9 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         cls.untagged_vlan_data = {
             "virtual_machine": virtualmachine.pk,
             "name": "expected-to-fail",
+            "status": status_active.pk,
             "untagged_vlan": vlans[0].pk,
         }
-
-    def test_active_status_not_found(self):
-        self.add_permissions("virtualization.add_vminterface")
-
-        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
-        status_active.content_types.remove(vminterface_ct)
-
-        data = {
-            "virtual_machine": VirtualMachine.objects.first().id,
-            "name": "VMInterface-001",
-        }
-
-        url = self._get_list_url()
-        response = self.client.post(url, data, format="json", **self.header)
-
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(
-            response.data["status"],
-            [
-                "VMInterface default status 'active' does not exist, create 'active' status for VMInterface or use the latest api_version"
-            ],
-        )
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
@@ -389,7 +366,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             payload = {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Tagged Interface",
-                "status": "active",
+                "status": Status.objects.get(slug="active").pk,
                 "tagged_vlans": [vlan.pk],
             }
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
@@ -431,22 +408,3 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
-
-
-class VMInterfaceTestVersion14(VMInterfaceTestVersion12):
-    api_version = "1.4"
-    validation_excluded_fields = ["status"]
-
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-
-        # Add status to all payload because status is required in v1.4
-        for i, _ in enumerate(cls.create_data):
-            cls.create_data[i]["status"] = "active"
-
-        cls.untagged_vlan_data["status"] = "active"
-
-    @skip("Test not required in v1.4")
-    def test_active_status_not_found(self):
-        pass

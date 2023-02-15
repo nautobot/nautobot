@@ -424,7 +424,7 @@ def vscode(context):
 # ------------------------------------------------------------------------------
 @task
 def nbshell(context):
-    """Launch an interactive nbshell session."""
+    """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     run_command(context, command, pty=True)
@@ -637,9 +637,7 @@ def check_schema(context, api_version=None):
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = nautobot_version.split(".")[:2]
         assert current_major == "2", f"check_schemas version calc must be updated to handle version {current_major}"
-        api_versions = ["1.2", "1.3", "1.4", "1.5"] + [
-            f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)
-        ]
+        api_versions = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
@@ -648,6 +646,7 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -664,6 +663,7 @@ def check_schema(context, api_version=None):
 )
 def unittest(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -685,6 +685,8 @@ def unittest(
     command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
+    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+        command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"
     if failfast:
@@ -721,6 +723,7 @@ def unittest_coverage(context):
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -737,6 +740,7 @@ def unittest_coverage(context):
 )
 def integration_test(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -756,6 +760,7 @@ def integration_test(
 
     unittest(
         context,
+        cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
         label=label,
         failfast=failfast,
@@ -772,6 +777,7 @@ def integration_test(
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -787,6 +793,7 @@ def integration_test(
 )
 def performance_test(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -808,6 +815,7 @@ def performance_test(
 
     unittest(
         context,
+        cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
         label=label,
         failfast=failfast,

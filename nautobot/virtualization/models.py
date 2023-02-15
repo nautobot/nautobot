@@ -149,13 +149,6 @@ class Cluster(PrimaryModel):
         blank=True,
         null=True,
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="clusters",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -165,12 +158,11 @@ class Cluster(PrimaryModel):
     )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "cluster_type", "cluster_group", "site", "location", "tenant", "comments"]
+    csv_headers = ["name", "cluster_type", "cluster_group", "location", "tenant", "comments"]
     clone_fields = [
         "cluster_type",
         "cluster_group",
         "tenant",
-        "site",
         "location",
     ]
 
@@ -188,27 +180,15 @@ class Cluster(PrimaryModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
                 )
 
-        # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
-        if self.present_in_database and self.site:
-            nonsite_devices = Device.objects.filter(cluster=self).exclude(site=self.site).count()
-            if nonsite_devices:
-                raise ValidationError(
-                    {
-                        "site": f"{nonsite_devices} devices are assigned as hosts for this cluster but are not in site {self.site}"
-                    }
-                )
-
         # Likewise, verify that host Devices match Location of this Cluster if any
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to create a Cluster with
+        # the parent Location or the child location of host Device?
         if self.present_in_database and self.location is not None:
             nonlocation_devices = (
                 Device.objects.filter(cluster=self)
@@ -229,7 +209,6 @@ class Cluster(PrimaryModel):
             self.name,
             self.cluster_type.name,
             self.cluster_group.name if self.cluster_group else None,
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,
             self.comments,
@@ -397,14 +376,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
             return self.primary_ip4
         else:
             return None
-
-    @property
-    def site(self):
-        return self.cluster.site
-
-    @property
-    def site_id(self):
-        return self.cluster.site_id
 
     @property
     def location(self):

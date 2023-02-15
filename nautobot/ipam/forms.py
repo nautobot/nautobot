@@ -27,7 +27,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Interface, Rack, Region, Site
+from nautobot.dcim.models import Device, Interface, Location, Rack
 from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
@@ -44,7 +44,7 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import IPAddressFamilyChoices, ServiceProtocolChoices
+from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -334,7 +334,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"location_id": "$location"},
         initial_params={"vlans": "$vlan"},
     )
     vlan = DynamicModelChoiceField(
@@ -342,7 +342,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN",
         query_params={
-            "site_id": "$site",
+            "location": "$location",
             "group_id": "$vlan_group",
         },
     )
@@ -352,12 +352,11 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         fields = [
             "prefix",
             "vrf",
-            "site",
             "location",
             "vlan",
             "status",
             "role",
-            "is_pool",
+            "type",
             "description",
             "tenant_group",
             "tenant",
@@ -402,6 +401,7 @@ class PrefixCSVForm(
         to_field_name="vid",
         help_text="Assigned VLAN",
     )
+    type = CSVChoiceField(choices=PrefixTypeChoices, required=False)
 
     class Meta:
         model = Prefix
@@ -412,9 +412,9 @@ class PrefixCSVForm(
 
         if data:
 
-            # Limit vlan queryset by assigned site and vlan_group
+            # Limit vlan queryset by assigned location and vlan_group
             params = {
-                f"site__{self.fields['site'].to_field_name}": data.get("site"),
+                f"location__{self.fields['location'].to_field_name}": data.get("location"),
                 f"vlan_group__{self.fields['vlan_group'].to_field_name}": data.get("vlan_group"),
             }
             self.fields["vlan"].queryset = self.fields["vlan"].queryset.filter(**params)
@@ -428,6 +428,10 @@ class PrefixBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
+    type = forms.ChoiceField(
+        choices=add_blank_choice(PrefixTypeChoices),
+        required=False,
+    )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -435,13 +439,11 @@ class PrefixBulkEditForm(
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    is_pool = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is a pool")
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
         model = Prefix
         nullable_fields = [
-            "site",
             "location",
             "vrf",
             "tenant",
@@ -465,13 +467,10 @@ class PrefixFilterForm(
         "vrf_id",
         "present_in_vrf_id",
         "status",
-        "region",
-        "site",
         "location",
         "role",
         "tenant_group",
         "tenant",
-        "is_pool",
         "expand",
     ]
     mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
@@ -504,11 +503,6 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    is_pool = forms.NullBooleanField(
-        required=False,
-        label="Is a pool",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
     tag = TagFilterField(model)
 
 
@@ -544,31 +538,24 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         required=False,
         label="VRF",
     )
-    nat_region = DynamicModelChoiceField(
-        queryset=Region.objects.all(),
+    nat_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
         required=False,
-        label="Region",
-        initial_params={"sites": "$nat_site"},
-    )
-    nat_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        label="Site",
-        query_params={"region": "$nat_region"},
+        label="Location",
     )
     nat_rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$nat_location"},
     )
     nat_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
-            "site": "$site",
+            "location": "$nat_location",
             "rack": "$nat_rack",
         },
     )
@@ -608,7 +595,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "dns_name",
             "description",
             "primary_for_parent",
-            "nat_site",
             "nat_rack",
             "nat_device",
             "nat_cluster",
@@ -634,7 +620,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             if instance.nat_inside:
                 nat_inside_parent = instance.nat_inside.assigned_object
                 if isinstance(nat_inside_parent, Interface):
-                    initial["nat_site"] = nat_inside_parent.device.site.pk
+                    initial["nat_location"] = nat_inside_parent.device.location.pk
                     if nat_inside_parent.device.rack:
                         initial["nat_rack"] = nat_inside_parent.device.rack.pk
                     initial["nat_device"] = nat_inside_parent.device.pk
@@ -938,8 +924,6 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = VLANGroup
         fields = [
-            "region",
-            "site",
             "location",
             "name",
             "slug",
@@ -966,13 +950,12 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
 
     class Meta:
         model = VLAN
         fields = [
-            "site",
             "location",
             "vlan_group",
             "vid",
@@ -985,7 +968,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "site": "Leave blank if this VLAN spans multiple sites",
+            "location": "Leave blank if this VLAN spans multiple locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -1022,7 +1005,7 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
         if data:
 
             # Limit vlan queryset by assigned group
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)
 
 
@@ -1037,7 +1020,7 @@ class VLANBulkEditForm(
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location_id": "$location"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
@@ -1045,7 +1028,6 @@ class VLANBulkEditForm(
     class Meta:
         model = VLAN
         nullable_fields = [
-            "site",
             "location",
             "vlan_group",
             "tenant",
@@ -1063,8 +1045,6 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "region",
-        "site",
         "location",
         "group_id",
         "status",
@@ -1078,7 +1058,7 @@ class VLANFilterForm(
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"region": "$region"},
+        query_params={"location": "$location"},
     )
     tag = TagFilterField(model)
 

@@ -45,11 +45,14 @@ def _get_user_if_authenticated(user, objectchange):
         return None
 
 
-def _handle_changed_object(change_context, sender, instance, **kwargs):
+def _handle_changed_object(change_context, sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
+
+    if raw:
+        return
 
     object_m2m_changed = False
 
@@ -197,8 +200,8 @@ def git_repository_pre_delete(instance, **kwargs):
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        job_id=uuid.uuid4(),
-        status=JobResultStatusChoices.STATUS_RUNNING,
+        task_id=uuid.uuid4(),
+        status=JobResultStatusChoices.STATUS_STARTED,
     )
 
     # This isn't running in the context of a Job execution transaction,
@@ -208,8 +211,8 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-        job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
+    if job_result.status not in JobResultStatusChoices.READY_STATES:
+        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.save()
 
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
@@ -237,11 +240,13 @@ def dynamic_group_children_changed(sender, instance, action, reverse, model, pk_
         )
 
 
-def dynamic_group_membership_created(sender, instance, **kwargs):
+def dynamic_group_membership_created(sender, instance, raw=False, **kwargs):
     """
     Forcibly call `full_clean()` when a new `DynamicGroupMembership` object
     is manually created to prevent inadvertantly creating invalid memberships.
     """
+    if raw:
+        return
     instance.full_clean()
 
 

@@ -1,7 +1,13 @@
 import factory
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker, random_instance
-from nautobot.dcim.models import Site, Location, Platform
+from nautobot.core.factory import (
+    NautobotBoolIterator,
+    OrganizationalModelFactory,
+    PrimaryModelFactory,
+    UniqueFaker,
+    random_instance,
+)
+from nautobot.dcim.models import Location, Platform
 from nautobot.extras.models import Role, Status
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
@@ -15,7 +21,7 @@ class ClusterTypeFactory(OrganizationalModelFactory):
     name = UniqueFaker("color")
     # Slug isn't defined here since it inherits from name.
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
@@ -27,7 +33,7 @@ class ClusterGroupFactory(OrganizationalModelFactory):
     name = UniqueFaker("color")
     # Slug isn't defined here since it inherits from name.
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
@@ -38,36 +44,24 @@ class ClusterFactory(PrimaryModelFactory):
             "has_comments",
             "has_cluster_group",
             "has_location",
-            "has_site",
             "has_tenant",
         )
 
     name = UniqueFaker("color")
     cluster_type = random_instance(ClusterType, allow_null=False)
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    has_cluster_group = factory.Faker("pybool")
+    has_cluster_group = NautobotBoolIterator()
     cluster_group = factory.Maybe("has_cluster_group", random_instance(ClusterGroup), None)
 
-    has_location = factory.Faker("pybool")
+    has_location = NautobotBoolIterator()
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Cluster), allow_null=False), None
     )
 
-    has_site = factory.Faker("pybool")
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe(
-            "has_site",
-            random_instance(Site),
-            None,
-        ),
-    )
-
-    has_tenant = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
 
@@ -91,31 +85,31 @@ class VirtualMachineFactory(PrimaryModelFactory):
     cluster = random_instance(Cluster, allow_null=False)
     status = random_instance(lambda: Status.objects.get_for_model(VirtualMachine), allow_null=False)
 
-    has_role = factory.Faker("pybool")
+    has_role = NautobotBoolIterator()
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(VirtualMachine)), None)
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    has_platform = factory.Faker("pybool")
+    has_platform = NautobotBoolIterator()
     platform = factory.Maybe("has_platform", random_instance(Platform), None)
 
     # TODO: Need to have associated VMInterfaces that these IPs belong to.
-    # has_primary_ip4 = factory.Faker("pybool")
+    # has_primary_ip4 = NautobotBoolIterator()
     # primary_ip4 = factory.Maybe("has_primary_ip4", random_instance(IPAddress), None)
-    # has_primary_ip6 = factory.Faker("pybool")
+    # has_primary_ip6 = NautobotBoolIterator()
     # primary_ip6 = factory.Maybe("has_primary_ip6", random_instance(IPAddress), None)
 
-    has_vcpus = factory.Faker("pybool")
+    has_vcpus = NautobotBoolIterator()
     vcpus = factory.Maybe("has_vcpus", factory.Faker("pyint", min_value=2, max_value=256, step=2), None)
 
-    has_memory = factory.Faker("pybool")
+    has_memory = NautobotBoolIterator()
     memory = factory.Maybe("has_memory", factory.Faker("pyint", min_value=1024, max_value=1024 * 1024, step=1024), None)
 
-    has_disk = factory.Faker("pybool")
+    has_disk = NautobotBoolIterator()
     disk = factory.Maybe("has_disk", factory.Faker("pyint"), None)
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 

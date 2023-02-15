@@ -74,7 +74,6 @@ class ClusterTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tenant = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
     cluster_type = tables.Column(linkify=True)
     cluster_group = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
@@ -97,7 +96,6 @@ class ClusterTable(BaseTable):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "site",
             "device_count",
             "vm_count",
             "tags",
@@ -108,7 +106,6 @@ class ClusterTable(BaseTable):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "site",
             "device_count",
             "vm_count",
         )

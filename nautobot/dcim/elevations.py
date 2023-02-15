@@ -182,7 +182,7 @@ class RackElevationSVG:
         query_params = urlencode(
             {
                 "rack": rack.pk,
-                "site": rack.site.pk,
+                "location": rack.location.pk,
                 "face": face_id,
                 "position": id_,
             }

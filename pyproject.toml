@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.0.0-alpha.0"
+version = "2.0.0-alpha.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.16"
+Django = "~3.2.17"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -87,8 +87,6 @@ django-webserver = "~1.2.0"
 djangorestframework = "~3.14.0"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.25.0", extras = ["sidecar"]}
-# 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
-drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
 GitPython = "~3.1.30"
 # GraphQL support
@@ -116,7 +114,7 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.3.0"
+netutils = "~1.4.0"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter
@@ -324,13 +322,14 @@ signature-mutators=["unittest.mock.patch"]
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-1.5.md"
+filename = "nautobot/docs/release-notes/version-2.0.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [tool.towncrier.fragment.added]
 [tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.dependencies]
 [tool.towncrier.fragment.deprecated]
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]

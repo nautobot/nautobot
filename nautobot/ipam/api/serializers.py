@@ -14,7 +14,6 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
-    NestedSiteSerializer,
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
@@ -22,7 +21,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
@@ -161,7 +160,6 @@ class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class VLANGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vlan_count = serializers.IntegerField(read_only=True)
 
@@ -171,7 +169,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
             "url",
             "name",
             "slug",
-            "site",
             "location",
             "description",
             "vlan_count",
@@ -181,11 +178,11 @@ class VLANGroupSerializer(NautobotModelSerializer):
 
     def validate(self, data):
 
-        # Validate uniqueness of name and slug if a site has been assigned.
+        # Validate uniqueness of name and slug if a location has been assigned.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        if data.get("site", None):
+        if data.get("location", None):
             for field in ["name", "slug"]:
-                validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("site", field))
+                validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("location", field))
                 validator(data, self)
 
         # Enforce model validation
@@ -198,7 +195,6 @@ class VLANSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
-    site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vlan_group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -208,7 +204,6 @@ class VLANSerializer(
         model = VLAN
         fields = [
             "url",
-            "site",
             "location",
             "vlan_group",
             "vid",
@@ -246,7 +241,7 @@ class PrefixSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
-    site = NestedSiteSerializer(required=False, allow_null=True)
+    type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
     location = NestedLocationSerializer(required=False, allow_null=True)
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -258,14 +253,13 @@ class PrefixSerializer(
             "url",
             "family",
             "prefix",
-            "site",
+            "type",
             "location",
             "vrf",
             "tenant",
             "vlan",
             "status",
             "role",
-            "is_pool",
             "description",
         ]
         read_only_fields = ["family"]
@@ -362,11 +356,6 @@ class IPAddressSerializer(
         serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
         context = {"request": self.context["request"]}
         return serializer(obj.assigned_object, context=context).data
-
-
-# 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
-class IPAddressSerializerLegacy(IPAddressSerializer):
-    nat_outside = NestedIPAddressSerializer(read_only=True)
 
 
 class AvailableIPSerializer(serializers.Serializer):

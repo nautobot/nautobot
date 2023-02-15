@@ -1,0 +1,1 @@
+Changed representation of related Status objects in the REST API to use a NestedStatusSerializer instead of presenting as enums.

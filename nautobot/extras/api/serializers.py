@@ -3,7 +3,6 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
-from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -18,7 +17,6 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
@@ -27,11 +25,8 @@ from nautobot.dcim.api.nested_serializers import (
     NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedRackSerializer,
-    NestedRegionSerializer,
-    NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
-from nautobot.extras.api.fields import StatusSerializerField
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -84,7 +79,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
-from .fields import MultipleChoiceJSONField
+from .fields import MultipleChoiceJSONField, RoleSerializerField, StatusSerializerField
 from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -168,25 +163,13 @@ class NautobotModelSerializer(
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
-    status = StatusSerializerField(queryset=Status.objects.all())
+    status = StatusSerializerField(required=True)
 
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "status")
         return fields
-
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def status_choices(cls):  # pylint: disable=no-self-argument
-        """
-        Get the list of valid status values for this serializer.
-
-        In the case where multiple serializers have the same set of status choices, it's necessary to set
-        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] for at least one of the matching serializers,
-        or else drf-spectacular will report:
-        'enum naming encountered a non-optimally resolvable collision for fields named "status"'
-        """
-        return list(cls().fields["status"].get_choices().keys())
 
 
 class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
@@ -277,18 +260,6 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     )
     owner = serializers.SerializerMethodField(read_only=True)
     schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
-    regions = SerializedPKRelatedField(
-        queryset=Region.objects.all(),
-        serializer=NestedRegionSerializer,
-        required=False,
-        many=True,
-    )
-    sites = SerializedPKRelatedField(
-        queryset=Site.objects.all(),
-        serializer=NestedSiteSerializer,
-        required=False,
-        many=True,
-    )
     locations = SerializedPKRelatedField(
         queryset=Location.objects.all(),
         serializer=NestedLocationSerializer,
@@ -351,8 +322,6 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "description",
             "schema",
             "is_active",
-            "regions",
-            "sites",
             "locations",
             "roles",
             "device_types",
@@ -471,29 +440,6 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         if self.instance is None:
             if "slug" in data and "name" not in data:
                 data["name"] = data["slug"]
-
-        return super().validate(data)
-
-
-class CustomFieldSerializerVersion12(CustomFieldSerializer):
-    # In older versions of the REST API, neither `label` nor `slug` were required fields. See also validate() below.
-    label = serializers.CharField(max_length=50, required=False)
-    slug = serializers.CharField(max_length=50, required=False)
-
-    class Meta(CustomFieldSerializer.Meta):
-        fields = CustomFieldSerializer.Meta.fields.copy()
-        fields.insert(4, "name")
-
-    def validate(self, data):
-        # Logic copied from CustomField.clean_fields(), since this needs to happen *before* the instance is created
-        if self.instance is None:
-            # 2.0 TODO: this is to fix up existing usage when caller specifies a name but not a label;
-            # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
-            if "name" in data and "label" not in data:
-                data["label"] = data["name"]
-
-            if "label" in data and "slug" not in data:
-                data["slug"] = slugify_dashes_to_underscores(data["label"])
 
         return super().validate(data)
 
@@ -730,8 +676,6 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
             serializer = NestedLocationSerializer
         elif isinstance(obj.parent, Rack):
             serializer = NestedRackSerializer
-        elif isinstance(obj.parent, Site):
-            serializer = NestedSiteSerializer
         else:
             raise Exception("Unexpected type of parent object for ImageAttachment")
 
@@ -844,16 +788,16 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
         model = JobResult
         fields = [
             "url",
-            "created",
-            "completed",
+            "date_created",
+            "date_done",
             "name",
             "job_model",
             "obj_type",
             "status",
             "user",
             "data",
-            "job_id",
-            "job_kwargs",
+            "task_id",
+            "task_kwargs",
             "schedule",
         ]
 
@@ -1189,10 +1133,6 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 #
 
 
-class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
-    """NestedSerializer field for `Role` object fields."""
-
-
 class RoleModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `role` choice field to model serializers."""
 
@@ -1322,37 +1262,6 @@ class StatusSerializer(NautobotModelSerializer):
 class TagSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Tag
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "tagged_items",
-        ]
-
-    def validate(self, data):
-        data = super().validate(data)
-
-        # All relevant content_types should be assigned to newly created tag for API Version <1.3
-        if (self.instance is None or not self.instance.present_in_database) and "content_types" not in data:
-            data["content_types"] = TaggableClassesQuery().as_queryset()
-
-        # check if tag is assigned to any of the removed content_types
-        if self.instance is not None and self.instance.present_in_database and "content_types" in data:
-            content_types_id = [content_type.id for content_type in data["content_types"]]
-            errors = self.instance.validate_content_types_removal(content_types_id)
-
-            if errors:
-                raise serializers.ValidationError(errors)
-
-        return data
-
-
-class TagSerializerVersion13(TagSerializer):
     content_types = ContentTypeField(
         queryset=TaggableClassesQuery().as_queryset(),
         many=True,
@@ -1370,6 +1279,19 @@ class TagSerializerVersion13(TagSerializer):
             "tagged_items",
             "content_types",
         ]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        # check if tag is assigned to any of the removed content_types
+        if self.instance is not None and self.instance.present_in_database and "content_types" in data:
+            content_types_id = [content_type.id for content_type in data["content_types"]]
+            errors = self.instance.validate_content_types_removal(content_types_id)
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+        return data
 
 
 #

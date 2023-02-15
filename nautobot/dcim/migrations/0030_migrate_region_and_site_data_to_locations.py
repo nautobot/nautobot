@@ -4,8 +4,31 @@ import logging
 
 from django.db import migrations
 from django.db.utils import IntegrityError
+from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
+
+
+def add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct):
+    """
+    Ensure that the Statuses and Tags assigned to Site can also be assigned to Locations
+    before creating Site LocationType locations.
+
+    Args:
+        apps: Installed apps
+        site_ct: ContentType for Site Model Class
+        location_ct: ContentType for Location Model Class
+    """
+    # Status
+    Status = apps.get_model("extras", "status")
+    statuses = Status.objects.filter(content_types__in=[site_ct])
+    for status in statuses:
+        status.content_types.add(location_ct)
+    # Tags
+    Tag = apps.get_model("extras", "tag")
+    tags = Tag.objects.filter(content_types__in=[site_ct])
+    for tag in tags:
+        tag.content_types.add(location_ct)
 
 
 def create_region_location_type_locations(region_class, location_class, region_lt):
@@ -143,6 +166,10 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
     Site = apps.get_model("dcim", "site")
     LocationType = apps.get_model("dcim", "locationtype")
     Location = apps.get_model("dcim", "location")
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    region_ct = ContentType.objects.get_for_model(Region)
+    site_ct = ContentType.objects.get_for_model(Site)
+    location_ct = ContentType.objects.get_for_model(Location)
 
     # Region instances exist
     if Region.objects.exists():
@@ -157,6 +184,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
                     description="Parent Location of Region LocationType for all sites that "
                     "did not have a region attribute set before the migration",
                 )
+            add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
             create_site_location_type_locations(
                 site_class=Site,
                 location_type_class=LocationType,
@@ -167,6 +195,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             )
     elif Site.objects.exists():  # Only Site instances exist, we make Site the top level LocationType
         site_lt = LocationType.objects.create(name="Site")
+        add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
         create_site_location_type_locations(
             site_class=Site,
             location_type_class=LocationType,
@@ -175,6 +204,98 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             exclude_lt="Site",
         )
 
+    # Reassign Region Models to Locations of Region LocationType
+    if Region.objects.exists():
+        # Extras App
+        ComputedField = apps.get_model("extras", "computedfield")
+        computed_fields = ComputedField.objects.filter(content_type=region_ct)
+        for cf in computed_fields:
+            cf.content_type = location_ct
+        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
+        ConfigContext = apps.get_model("extras", "configcontext")
+        ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", "regions")
+        for cc in ccs:
+            region_name_list = list(cc.regions.all().values_list("name", flat=True))
+            region_locs = list(Location.objects.filter(name__in=region_name_list, location_type=region_lt))
+            if len(region_locs) < len(region_name_list):
+                logger.warning(
+                    f'There is a mismatch between the number of Regions ({len(region_name_list)}) and the number of "Region" LocationType locations ({len(region_locs)})'
+                    f" found in this ConfigContext {cc.name}"
+                )
+            cc.locations.add(*region_locs)
+            cc.save()
+
+        CustomField = apps.get_model("extras", "customfield")
+        custom_fields = CustomField.objects.filter(content_types__in=[region_ct])
+        for cf in custom_fields:
+            cf.content_types.add(location_ct)
+
+        region_locs = Location.objects.filter(location_type=region_lt).exclude(name="Global Region")
+        for location in region_locs:
+            region = Region.objects.get(name=location.name)
+            location._custom_field_data = region._custom_field_data
+        Location.objects.bulk_update(region_locs, ["_custom_field_data"], 1000)
+
+        # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
+
+        DynamicGroup = apps.get_model("extras", "DynamicGroup")
+        dynamic_groups = DynamicGroup.objects.all()
+        for dg in dynamic_groups:
+            if "region" in dg.filter:
+                dg.filter.setdefault("location", []).extend(dg.filter.pop("region"))
+            dg.save()
+
+        ExportTemplate = apps.get_model("extras", "exporttemplate")
+        export_templates = ExportTemplate.objects.filter(content_type=region_ct)
+        for et in export_templates:
+            et.content_type = location_ct
+        ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
+
+        JobHook = apps.get_model("extras", "jobhook")
+        job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
+        for jh in job_hooks:
+            jh.content_types.add(location_ct)
+
+        Note = apps.get_model("extras", "note")
+        notes = Note.objects.filter(assigned_object_type=region_ct)
+        for note in notes:
+            note.assigned_object_type = location_ct
+            region = Region.objects.get(id=note.assigned_object_id)
+            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
+            note.assigned_object_id = region_loc.id
+        Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
+
+        Relationship = apps.get_model("extras", "relationship")
+        RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
+
+        src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=region_ct)
+        src_relationship_associations.update(source_type=location_ct)
+        for relationship_association in src_relationship_associations:
+            src_region = Region.objects.get(id=relationship_association.source_id)
+            src_loc = Location.objects.get(name=src_region.name, location_type=region_lt)
+            relationship_association.source = src_loc
+            relationship_association.source_id = src_loc.id
+        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
+        src_relationships = Relationship.objects.filter(source_type=region_ct)
+        src_relationships.update(source_type=location_ct)
+
+        dst_relationship_associations = RelationshipAssociation.objects.filter(relationship__destination_type=region_ct)
+        dst_relationship_associations.update(destination_type=location_ct)
+        for relationship_association in dst_relationship_associations:
+            dst_region = Region.objects.get(id=relationship_association.destination_id)
+            dst_loc = Location.objects.get(name=dst_region.name, location_type=region_lt)
+            relationship_association.destination = dst_loc
+            relationship_association.destination_id = dst_loc.pk
+        RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
+        dst_relationships = Relationship.objects.filter(destination_type=region_ct)
+        dst_relationships.update(destination_type=location_ct)
+
+        WebHook = apps.get_model("extras", "webhook")
+        web_hooks = WebHook.objects.filter(content_types__in=[region_ct])
+        for wh in web_hooks:
+            wh.content_types.add(location_ct)
+
     # Reassign Site Models to Locations of Site LocationType
     if Site.objects.exists():  # Iff Site instances exist
         CircuitTermination = apps.get_model("circuits", "circuittermination")
@@ -182,16 +303,32 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         PowerPanel = apps.get_model("dcim", "powerpanel")
         RackGroup = apps.get_model("dcim", "rackgroup")
         Rack = apps.get_model("dcim", "rack")
+        ComputedField = apps.get_model("extras", "computedfield")
+        ConfigContext = apps.get_model("extras", "configcontext")
+        CustomField = apps.get_model("extras", "customfield")
+        CustomLink = apps.get_model("extras", "customlink")
+        DynamicGroup = apps.get_model("extras", "DynamicGroup")
+        ExportTemplate = apps.get_model("extras", "exporttemplate")
+        ImageAttachment = apps.get_model("extras", "imageattachment")
+        JobHook = apps.get_model("extras", "jobhook")
+        Note = apps.get_model("extras", "note")
+        WebHook = apps.get_model("extras", "webhook")
+        Relationship = apps.get_model("extras", "relationship")
+        RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
         Prefix = apps.get_model("ipam", "prefix")
         VLANGroup = apps.get_model("ipam", "vlangroup")
         VLAN = apps.get_model("ipam", "vlan")
         Cluster = apps.get_model("virtualization", "cluster")
 
+        site_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
+
+        # Circuits App
         cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
         for ct in cts:
             ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
 
+        # DCIM App
         devices = Device.objects.filter(location__isnull=True).select_related("site")
         for device in devices:
             device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
@@ -212,9 +349,101 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
         Rack.objects.bulk_update(racks, ["location"], 1000)
 
+        # Extras App
+        computed_fields = ComputedField.objects.filter(content_type=site_ct)
+        for cf in computed_fields:
+            cf.content_type = location_ct
+        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
+        ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", "sites")
+        for cc in ccs:
+            site_name_list = list(cc.sites.all().values_list("name", flat=True))
+            site_locs = list(Location.objects.filter(name__in=site_name_list, location_type=site_lt))
+            if len(site_locs) < len(site_name_list):
+                logger.warning(
+                    f'There is a mismatch between the number of Sites ({len(site_name_list)}) and the number of "Site" LocationType locations ({len(site_locs)})'
+                    f" found in this ConfigContext {cc.name}"
+                )
+            cc.locations.add(*site_locs)
+            cc.save()
+
+        CustomField = apps.get_model("extras", "customfield")
+        custom_fields = CustomField.objects.filter(content_types__in=[site_ct])
+        for cf in custom_fields:
+            cf.content_types.add(location_ct)
+
+        site_locs = Location.objects.filter(location_type=site_lt)
+        for location in site_locs:
+            site = Site.objects.get(name=location.name)
+            location._custom_field_data = site._custom_field_data
+        Location.objects.bulk_update(site_locs, ["_custom_field_data"], 1000)
+
+        custom_links = CustomLink.objects.filter(content_type=site_ct)
+        for cf in custom_links:
+            cf.content_type = location_ct
+        CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
+
+        dynamic_groups = DynamicGroup.objects.all()
+        for dg in dynamic_groups:
+            if "site" in dg.filter:
+                dg.filter.setdefault("location", []).extend(dg.filter.pop("site"))
+            dg.save()
+
+        export_templates = ExportTemplate.objects.filter(content_type=site_ct)
+        for et in export_templates:
+            et.content_type = location_ct
+        ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
+
+        image_attachments = ImageAttachment.objects.filter(content_type=site_ct)
+        for ia in image_attachments:
+            ia.content_type = location_ct
+            site = Site.objects.get(id=ia.object_id)
+            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
+            ia.object_id = site_loc.id
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
+
+        job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
+        for jh in job_hooks:
+            jh.content_types.add(location_ct)
+
+        notes = Note.objects.filter(assigned_object_type=site_ct)
+        for note in notes:
+            note.assigned_object_type = location_ct
+            site = Site.objects.get(id=note.assigned_object_id)
+            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
+            note.assigned_object_id = site_loc.id
+        Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
+
+        src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=site_ct)
+        src_relationship_associations.update(source_type=location_ct)
+        for relationship_association in src_relationship_associations:
+            src_site = Site.objects.get(id=relationship_association.source_id)
+            src_loc = Location.objects.get(name=src_site.name, location_type=site_lt)
+            relationship_association.source = src_loc
+            relationship_association.source_id = src_loc.id
+        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
+        src_relationships = Relationship.objects.filter(source_type=site_ct)
+        src_relationships.update(source_type=location_ct)
+
+        dst_relationship_associations = RelationshipAssociation.objects.filter(relationship__destination_type=site_ct)
+        dst_relationship_associations.update(destination_type=location_ct)
+        for relationship_association in dst_relationship_associations:
+            dst_site = Site.objects.get(id=relationship_association.destination_id)
+            dst_loc = Location.objects.get(name=dst_site.name, location_type=site_lt)
+            relationship_association.destination = dst_loc
+            relationship_association.destination_id = dst_loc.pk
+        RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
+        dst_relationships = Relationship.objects.filter(destination_type=site_ct)
+        dst_relationships.update(destination_type=location_ct)
+
+        web_hooks = WebHook.objects.filter(content_types__in=[site_ct])
+        for wh in web_hooks:
+            wh.content_types.add(location_ct)
+
         # Below models' site attribute is not required, so we need to check each instance if the site field is not null
         # if so we reassign it to Site Location and if not we leave it alone
 
+        # IPAM App
         prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for prefix in prefixes:
             prefix.location = Location.objects.get(name=prefix.site.name, location_type=site_lt)
@@ -230,6 +459,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             vlan.location = Location.objects.get(name=vlan.site.name, location_type=site_lt)
         VLAN.objects.bulk_update(vlans, ["location"], 1000)
 
+        # Virtualization App
         clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for cluster in clusters:
             cluster.location = Location.objects.get(name=cluster.site.name, location_type=site_lt)

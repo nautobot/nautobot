@@ -6,13 +6,24 @@ Prefixes are automatically organized by their parent aggregates. Additionally, e
 
 Each prefix must be assigned a [`status`](../../models/extras/status.md) and can optionally be assigned a role. These terms are often used interchangeably so it's important to recognize the difference between them. The **status** defines a prefix's operational state. The following statuses are provided by default:
 
-* Container - A summary of child prefixes
 * Active - Provisioned and in use
 * Reserved - Designated for future use
 * Deprecated - No longer in use
+
++/- 2.0.0
+    The "Container" status was removed and its functionality was replaced by the `Prefix.type` field.
 
 On the other hand, a prefix's **role** defines its function. Role assignment is optional and roles are fully customizable. For example, you might create roles to differentiate between production and development infrastructure.
 
 A prefix may also be assigned to a VLAN. This association is helpful for associating address space with layer two domains. A VLAN may have multiple prefixes assigned to it.
 
-The prefix model include an "is pool" flag. If enabled, Nautobot will treat this prefix as a range (such as a NAT pool) wherein every IP address is valid and assignable. This logic is used when identifying available IP addresses within a prefix. If this flag is disabled, Nautobot will assume that the first and last (broadcast) address within an IPv4 prefix are unusable.
+The prefix model can be set to one of three types through the `type` field. The valid prefix types are:
+
+* Container
+* Network (default)
+* Pool
+
+If a prefix's type is set to "Pool", Nautobot will treat this prefix as a range (such as a NAT pool) wherein every IP address is valid and assignable. This logic is used when identifying available IP addresses within a prefix. If type is set to "Container" or "Network", Nautobot will assume that the first and last (network and broadcast) addresses within an IPv4 prefix are unusable.
+
++/- 2.0.0
+    The `is_pool` field was removed and its functionality was replaced by the `Prefix.type` field.

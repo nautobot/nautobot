@@ -2,7 +2,7 @@
 
 from django.test import TestCase
 
-from nautobot.dcim.models import Device, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import forms, models
 
@@ -63,7 +63,7 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(slug="active")}
+        self.extra_data = {"status": Status.objects.get(slug="active"), "type": "network"}
 
 
 class IPAddressFormTest(BaseNetworkFormTest, TestCase):
@@ -96,10 +96,10 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
         status_active = Status.objects.get_for_model(Device).get(slug="active")
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device = Device.objects.create(
             name="Device 1",
-            site=site,
+            location=location,
             device_type=devicetype,
             role=devicerole,
             status=status_active,

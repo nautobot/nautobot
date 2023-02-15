@@ -1,8 +1,14 @@
 from nautobot.extras.jobs import Job, FileVar
 
 
+class FileUploadFailed(Exception):
+    """Explicit exception for use with testing."""
+
+
 class TestFileUploadFail(Job):
     """Uploads and reads the file but then deliberately fails."""
+
+    exception = FileUploadFailed
 
     class Meta:
         name = "File Upload Failure"
@@ -18,4 +24,4 @@ class TestFileUploadFail(Job):
         contents = str(blob.read())
         self.log_warning(message=f"File contents: {contents}")
 
-        raise Exception("Test failure")
+        raise self.exception("Test failure")

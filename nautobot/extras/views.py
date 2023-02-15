@@ -277,7 +277,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
         device_table = DeviceTable(
             data=instance.dcim_device_related.select_related(
                 "tenant",
-                "site",
+                "location",
                 "rack",
                 "device_type",
                 "role",
@@ -806,9 +806,9 @@ class GitRepositoryListView(generic.ObjectListView):
             r.name: r
             for r in JobResult.objects.filter(
                 obj_type=git_repository_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
-            .order_by("completed")
+            .order_by("date_done")
             .defer("data")
         }
         return {
@@ -934,7 +934,7 @@ class GitRepositoryResultView(generic.ObjectView):
         git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         job_result = (
             JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
-            .order_by("-created")
+            .order_by("-date_created")
             .first()
         )
 
@@ -1087,14 +1087,14 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_result_pk = initial.pop("kwargs_from_job_result")
             try:
                 job_result = job_model.results.get(pk=job_result_pk)
-                # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
+                # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
                 # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                 explicit_initial = initial
-                initial = job_result.job_kwargs.get("data", {}).copy()
-                commit = job_result.job_kwargs.get("commit")
+                initial = job_result.task_kwargs.get("data", {}).copy()
+                commit = job_result.task_kwargs.get("commit")
                 if commit is not None:
                     initial.setdefault("_commit", commit)
-                task_queue = job_result.job_kwargs.get("task_queue")
+                task_queue = job_result.task_kwargs.get("task_queue")
                 if task_queue is not None:
                     initial.setdefault("_task_queue", task_queue)
                 initial.update(explicit_initial)
@@ -1183,7 +1183,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
-                job_kwargs = {
+                task_kwargs = {
                     "data": job_model.job_class.serialize_data(job_form.cleaned_data),
                     "request": copy_safe_request(request),
                     "user": request.user.pk,
@@ -1192,7 +1192,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "task_queue": job_form.cleaned_data.get("_task_queue", None),
                 }
                 if task_queue:
-                    job_kwargs["celery_kwargs"] = {"queue": task_queue}
+                    task_kwargs["celery_kwargs"] = {"queue": task_queue}
 
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
@@ -1201,7 +1201,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=job_kwargs,
+                    kwargs=task_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     queue=task_queue,
@@ -1535,7 +1535,7 @@ class JobResultView(generic.ObjectView):
         if "export" in request.GET:
             response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
             underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
-            formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
+            formated_completion_time = instance.date_done.strftime("%Y-%m-%d_%H_%M")
             filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
             response["Content-Disposition"] = f"attachment; filename={filename}"
             return response
@@ -1821,7 +1821,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 
             devices = instance.dcim_device_related.select_related(
                 "status",
-                "site",
+                "location",
                 "tenant",
                 "role",
                 "rack",
@@ -1833,7 +1833,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "assigned_object_type",
             )
             prefixes = instance.ipam_prefix_related.select_related(
-                "site",
+                "location",
                 "status",
                 "tenant",
                 "vlan",
@@ -1847,7 +1847,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             )
             vlans = instance.ipam_vlan_related.select_related(
                 "vlan_group",
-                "site",
+                "location",
                 "status",
                 "tenant",
             )
