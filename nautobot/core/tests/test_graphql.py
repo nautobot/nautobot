@@ -6,6 +6,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
@@ -1470,39 +1471,65 @@ query {
         """Test "second-level" filtering of FrontPorts within a Devices query."""
 
         filters = (
-            (f'name: "{self.device1_frontports[0].name}"', 1),
-            (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
+            (
+                f'name: "{self.device1_frontports[0].name}"',
+                Q(name=self.device1_frontports[0].name),
+            ),
+            (
+                f'device: "{self.device1.name}"',
+                Q(device=self.device1),
+            ),
+            (
+                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ frontports(" + filterv + "){ id }}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { devices{ id, frontports(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
+                for device in result.data["devices"]:
+                    qs = FrontPort.objects.filter(device_id=device["id"])
+                    expected_count = qs.filter(qs_filter).count()
+                    matched = max(matched, len(device["frontports"]))
+                    self.assertEqual(len(device["frontports"]), expected_count)
+                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_frontport_filter_third_level(self):
         """Test "third-level" filtering of FrontPorts within Devices within Locations."""
 
         filters = (
-            (f'name: "{self.device1_frontports[0].name}"', 1),
-            (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
+            (
+                f'name: "{self.device1_frontports[0].name}"',
+                Q(name=self.device1_frontports[0].name),
+            ),
+            (
+                f'device: "{self.device1.name}"',
+                Q(device=self.device1),
+            ),
+            (
+                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { locations{ devices{ frontports(" + filterv + "){ id }}}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { locations{ devices{ id, frontports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                for count, _ in enumerate(result.data["locations"]):
-                    if result.data["locations"][count]["devices"]:
-                        self.assertEqual(
-                            len(result.data["locations"][count]["devices"][0]["frontports"]), nbr_expected_results
-                        )
-                        break
+                for location in result.data["locations"]:
+                    for device in location["devices"]:
+                        qs = FrontPort.objects.filter(device_id=device["id"])
+                        expected_count = qs.filter(qs_filter).count()
+                        matched = max(matched, len(device["frontports"]))
+                        self.assertEqual(len(device["frontports"]), expected_count)
+                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_front_ports_cable_peer(self):
@@ -1597,15 +1624,42 @@ query {
         """Test custom interface filter fields and boolean, not other concrete fields."""
 
         filters = (
-            (f'device_id: "{self.device1.id}"', 2),
-            ('device: "Device 3"', 2),
-            ('device: ["Device 1", "Device 3"]', 4),
-            ('kind: "virtual"', 5),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ("vlan: 100", 1),
-            (f'vlan_id: "{self.vlan1.id}"', 1),
-            ("mgmt_only: true", 1),
-            ("enabled: false", 1),
+            (
+                f'device_id: "{self.device1.id}"',
+                Interface.objects.filter(device=self.device1).count(),
+            ),
+            (
+                'device: "Device 3"',
+                Interface.objects.filter(device=self.device3).count(),
+            ),
+            (
+                'device: ["Device 1", "Device 3"]',
+                Interface.objects.filter(device__in=[self.device1, self.device3]).count(),
+            ),
+            (
+                'kind: "virtual"',
+                Interface.objects.filter(type=InterfaceTypeChoices.TYPE_VIRTUAL).count(),
+            ),
+            (
+                'mac_address: "00:11:11:11:11:11"',
+                Interface.objects.filter(mac_address="00:11:11:11:11:11").count(),
+            ),
+            (
+                "vlan: 100",
+                Interface.objects.filter(Q(untagged_vlan__vid=100) | Q(tagged_vlans__vid=100)).count(),
+            ),
+            (
+                f'vlan_id: "{self.vlan1.id}"',
+                Interface.objects.filter(Q(untagged_vlan=self.vlan1) | Q(tagged_vlans=self.vlan1)).count(),
+            ),
+            (
+                "mgmt_only: true",
+                Interface.objects.filter(mgmt_only=True).count(),
+            ),
+            (
+                "enabled: false",
+                Interface.objects.filter(enabled=False).count(),
+            ),
         )
 
         for filterv, nbr_expected_results in filters:
@@ -1620,47 +1674,81 @@ query {
         """Test "second-level" filtering of Interfaces within a Devices query."""
 
         filters = (
-            (f'device_id: "{self.device1.id}"', 2),
-            ('kind: "virtual"', 2),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ("vlan: 100", 1),
-            (f'vlan_id: "{self.vlan1.id}"', 1),
+            (
+                f'device_id: "{self.device1.id}"',
+                Q(device=self.device1),
+            ),
+            (
+                'kind: "virtual"',
+                Q(type=InterfaceTypeChoices.TYPE_VIRTUAL),
+            ),
+            (
+                'mac_address: "00:11:11:11:11:11"',
+                Q(mac_address="00:11:11:11:11:11"),
+            ),
+            (
+                "vlan: 100",
+                Q(untagged_vlan__vid=100) | Q(tagged_vlans__vid=100),
+            ),
+            (
+                f'vlan_id: "{self.vlan1.id}"',
+                Q(untagged_vlan=self.vlan1) | Q(tagged_vlans=self.vlan1),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ interfaces(" + filterv + "){ id }}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { devices{ id, interfaces(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
+                for device in result.data["devices"]:
+                    qs = Interface.objects.filter(device_id=device["id"])
+                    expected_count = qs.filter(qs_filter).count()
+                    matched = max(matched, len(device["interfaces"]))
+                    self.assertEqual(len(device["interfaces"]), expected_count)
+                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter_third_level(self):
         """Test "third-level" filtering of Interfaces within Devices within Locations."""
 
-        device1_id = str(self.device1.id)
-        device2_id = str(self.device2.id)
-        device3_id = str(self.device3.id)
         filters = (
-            (f'device_id: "{device1_id}"', {device1_id: 2}),
-            ('kind: "virtual"', {device1_id: 2, device2_id: 1, device3_id: 2}),
-            ('mac_address: "00:11:11:11:11:11"', {device1_id: 1}),
-            ("vlan: 100", {device1_id: 1}),
-            (f'vlan_id: "{self.vlan1.id}"', {device1_id: 1}),
+            (
+                f'device_id: "{self.device1.id}"',
+                Q(device=self.device1),
+            ),
+            (
+                'kind: "virtual"',
+                Q(type=InterfaceTypeChoices.TYPE_VIRTUAL),
+            ),
+            (
+                'mac_address: "00:11:11:11:11:11"',
+                Q(mac_address="00:11:11:11:11:11"),
+            ),
+            (
+                "vlan: 100",
+                Q(untagged_vlan__vid=100) | Q(tagged_vlans__vid=100),
+            ),
+            (
+                f'vlan_id: "{self.vlan1.id}"',
+                Q(untagged_vlan=self.vlan1) | Q(tagged_vlans=self.vlan1),
+            ),
         )
 
-        location_filter = f'id: ["{self.location1.id}", "{self.location2.id}"]'
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { locations(" + location_filter + "){ devices{ id, interfaces(" + filterv + "){ id }}}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filter=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { locations{ devices{ id, interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                for count, _ in enumerate(result.data["locations"]):
-                    for device in result.data["locations"][count]["devices"]:
-                        if device["id"] in nbr_expected_results:
-                            self.assertEqual(len(device["interfaces"]), nbr_expected_results[device["id"]])
-                        else:
-                            self.assertEqual(len(device["interfaces"]), 0)
+                for location in result.data["locations"]:
+                    for device in location["devices"]:
+                        qs = Interface.objects.filter(device_id=device["id"])
+                        expected_count = qs.filter(qs_filter).count()
+                        matched = max(matched, len(device["interfaces"]))
+                        self.assertEqual(len(device["interfaces"]), expected_count)
+                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
