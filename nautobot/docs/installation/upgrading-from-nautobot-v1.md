@@ -251,7 +251,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | PowerOutlet           | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
 | PowerPanel            | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<slug>`                                         |
 | PowerPort             | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
-| Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container                                          |network|pool>`                           |
+| Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
 | Provider              | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
 | ProviderNetwork       | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
 | Rack                  | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
