@@ -10,7 +10,7 @@ from nautobot.core.testing.utils import post_data
 from nautobot.core.testing.views import ModelViewTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
@@ -19,18 +19,18 @@ from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, Vi
 
 
 class ChangeLogViewTest(ModelViewTestCase):
-    model = Site
+    model = Location
 
     @classmethod
     def setUpTestData(cls):
 
-        # Create a custom field on the Site model
-        ct = ContentType.objects.get_for_model(Site)
+        # Create a custom field on the Location model
+        ct = ContentType.objects.get_for_model(Location)
         cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="my_field", required=False)
         cf.validated_save()
         cf.content_types.set([ct])
 
-        # Create a select custom field on the Site model
+        # Create a select custom field on the Location model
         cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             name="my_field_select",
@@ -42,15 +42,18 @@ class ChangeLogViewTest(ModelViewTestCase):
         CustomFieldChoice.objects.create(custom_field=cf_select, value="Bar")
         CustomFieldChoice.objects.create(custom_field=cf_select, value="Foo")
 
-        cls.tags = Tag.objects.get_for_model(Site)
+        cls.tags = Tag.objects.get_for_model(Location)
 
-        cls.site_status = Status.objects.get_for_model(Site).first()
+        cls.location_status = Status.objects.get_for_model(Location).first()
+        cls.location_type = LocationType.objects.create(name="Test Root", slug="test-root")
+        cls.location_type.validated_save()
 
     def test_create_object(self):
         form_data = {
-            "name": "Test Site 1",
-            "slug": "test-site-1",
-            "status": Status.objects.get(slug="active").pk,
+            "location_type": self.location_type.pk,
+            "name": "Test Location 1",
+            "slug": "test-location-1",
+            "status": self.location_status.pk,
             "cf_my_field": "ABC",
             "cf_my_field_select": "Bar",
             "tags": [tag.pk for tag in self.tags],
@@ -60,15 +63,21 @@ class ChangeLogViewTest(ModelViewTestCase):
             "path": self._get_url("add"),
             "data": post_data(form_data),
         }
-        self.add_permissions("dcim.add_site", "extras.view_tag", "extras.view_status")
+        self.add_permissions(
+            "dcim.add_location",
+            "dcim.view_locationtype",
+            "dcim.change_locationtype",
+            "extras.view_tag",
+            "extras.view_status",
+        )
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
         # Verify the creation of a new ObjectChange record
-        site = Site.objects.get(name="Test Site 1")
+        location = Location.objects.get(name="Test Location 1")
         # First OC is the creation; second is the tags update
-        oc = get_changes_for_model(site).first()
-        self.assertEqual(oc.changed_object, site)
+        oc = get_changes_for_model(location).first()
+        self.assertEqual(oc.changed_object, location)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], form_data["cf_my_field"])
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], form_data["cf_my_field_select"])
@@ -76,17 +85,19 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_update_object(self):
-        site = Site(
-            name="Test Site 1",
-            slug="test-site-1",
+        location = Location(
+            name="Test Location 1",
+            slug="test-location-1",
             status=Status.objects.get(slug="active"),
+            location_type=self.location_type,
         )
-        site.save()
-        site.tags.set(self.tags[:2])
+        location.save()
+        location.tags.set(self.tags[:2])
 
         form_data = {
-            "name": "Test Site X",
-            "slug": "test-site-x",
+            "location_type": self.location_type.pk,
+            "name": "Test Location X",
+            "slug": "test-location-x",
             "status": Status.objects.get(slug="planned").pk,
             "cf_my_field": "DEF",
             "cf_my_field_select": "Foo",
@@ -94,17 +105,23 @@ class ChangeLogViewTest(ModelViewTestCase):
         }
 
         request = {
-            "path": self._get_url("edit", instance=site),
+            "path": self._get_url("edit", instance=location),
             "data": post_data(form_data),
         }
-        self.add_permissions("dcim.change_site", "extras.view_tag", "extras.view_status")
+        self.add_permissions(
+            "dcim.change_location",
+            "dcim.view_locationtype",
+            "dcim.change_locationtype",
+            "extras.view_tag",
+            "extras.view_status",
+        )
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
         # Verify the creation of a new ObjectChange record
-        site.refresh_from_db()
-        oc = get_changes_for_model(site).first()
-        self.assertEqual(oc.changed_object, site)
+        location.refresh_from_db()
+        oc = get_changes_for_model(location).first()
+        self.assertEqual(oc.changed_object, location)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], form_data["cf_my_field"])
         self.assertEqual(
@@ -115,25 +132,26 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_delete_object(self):
-        site = Site(
-            name="Test Site 1",
-            slug="test-site-1",
+        location = Location(
+            name="Test Location 1",
+            slug="test-location-1",
+            location_type=self.location_type,
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
-        site.save()
-        site.tags.set(self.tags)
+        location.save()
+        location.tags.set(self.tags)
 
         request = {
-            "path": self._get_url("delete", instance=site),
+            "path": self._get_url("delete", instance=location),
             "data": post_data({"confirm": True}),
         }
-        self.add_permissions("dcim.delete_site")
+        self.add_permissions("dcim.delete_location")
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
         oc = ObjectChange.objects.first()
         self.assertEqual(oc.changed_object, None)
-        self.assertEqual(oc.object_repr, site.name)
+        self.assertEqual(oc.object_repr, location.name)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
@@ -142,38 +160,49 @@ class ChangeLogViewTest(ModelViewTestCase):
 
     def test_change_context(self):
         form_data = {
-            "name": "Test Site 1",
-            "slug": "test-site-1",
+            "name": "Test Location 1",
+            "slug": "test-location-1",
             "status": Status.objects.get(slug="active").pk,
+            "location_type": self.location_type.pk,
         }
 
         request = {
             "path": self._get_url("add"),
             "data": post_data(form_data),
         }
-        self.add_permissions("dcim.add_site", "extras.view_tag", "extras.view_status")
+        self.add_permissions(
+            "dcim.add_location",
+            "dcim.change_locationtype",
+            "dcim.view_locationtype",
+            "extras.view_tag",
+            "extras.view_status",
+        )
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
         # Verify the creation of a new ObjectChange record
-        site = Site.objects.get(name="Test Site 1")
-        oc = get_changes_for_model(site).first()
+        location = Location.objects.get(name="Test Location 1")
+        oc = get_changes_for_model(location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_WEB)
-        self.assertEqual(oc.change_context_detail, "dcim:site_add")
+        self.assertEqual(oc.change_context_detail, "dcim:location_add")
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_legacy_object_data(self):
-        self.add_permissions("dcim.view_site", "extras.view_objectchange")
+        self.add_permissions("dcim.view_location", "extras.view_objectchange")
+        location_type = LocationType.objects.get(name="Campus")
         with context_managers.web_request_context(self.user):
-            site = Site.objects.create(
-                name="testobjectchangesite", description="initial description", status=self.site_status
+            location = Location.objects.create(
+                name="testobjectchangelocation",
+                description="initial description",
+                status=self.location_status,
+                location_type=location_type,
             )
 
         # create objectchange without object_data_v2
         with context_managers.web_request_context(self.user):
-            site.description = "changed description1"
-            site.validated_save()
-        oc_without_object_data_v2_1 = get_changes_for_model(site).first()
+            location.description = "changed description1"
+            location.validated_save()
+        oc_without_object_data_v2_1 = get_changes_for_model(location).first()
         oc_without_object_data_v2_1.object_data_v2 = None
         oc_without_object_data_v2_1.validated_save()
         with self.subTest("previous ObjectChange has object_data_v2, current ObjectChange does not"):
@@ -183,9 +212,9 @@ class ChangeLogViewTest(ModelViewTestCase):
 
         # create second objectchange without object_data_v2
         with context_managers.web_request_context(self.user):
-            site.description = "changed description2"
-            site.validated_save()
-        oc_without_object_data_v2_2 = get_changes_for_model(site).first()
+            location.description = "changed description2"
+            location.validated_save()
+        oc_without_object_data_v2_2 = get_changes_for_model(location).first()
         oc_without_object_data_v2_2.object_data_v2 = None
         oc_without_object_data_v2_2.validated_save()
         with self.subTest("previous and current ObjectChange do not have object_data_v2"):
@@ -195,9 +224,9 @@ class ChangeLogViewTest(ModelViewTestCase):
 
         # create objectchange with object_data_v2
         with context_managers.web_request_context(self.user):
-            site.description = "changed description3"
-            site.validated_save()
-        oc_with_object_data_v2 = get_changes_for_model(site).first()
+            location.description = "changed description3"
+            location.validated_save()
+        oc_with_object_data_v2 = get_changes_for_model(location).first()
         with self.subTest("previous ObjectChange does not have object_data_v2, current ObjectChange does"):
             resp = self.client.get(oc_with_object_data_v2.get_absolute_url())
             self.assertContains(resp, escape('"description": "changed description2"'))
@@ -208,13 +237,13 @@ class ChangeLogAPITest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        # Create a custom field on the Site model
-        ct = ContentType.objects.get_for_model(Site)
+        # Create a custom field on the Location model
+        ct = ContentType.objects.get_for_model(Location)
         cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="my_field", required=False)
         cf.save()
         cf.content_types.set([ct])
 
-        # Create a select custom field on the Site model
+        # Create a select custom field on the Location model
         cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             name="my_field_select",
@@ -226,14 +255,16 @@ class ChangeLogAPITest(APITestCase):
         CustomFieldChoice.objects.create(custom_field=cf_select, value="Bar")
         CustomFieldChoice.objects.create(custom_field=cf_select, value="Foo")
 
-        self.tags = Tag.objects.get_for_model(Site)
-        self.statuses = Status.objects.get_for_model(Site)
+        self.tags = Tag.objects.get_for_model(Location)
+        self.statuses = Status.objects.get_for_model(Location)
 
     def test_create_object(self):
+        location_type = LocationType.objects.get(name="Campus")
         data = {
-            "name": "Test Site 1",
-            "slug": "test-site-1",
-            "status": self.statuses.first().pk,
+            "name": "Test Location 1",
+            "slug": "test-location-1",
+            "status": self.statuses.get(slug="active").pk,
+            "location_type": f"{location_type.pk}",
             "custom_fields": {
                 "my_field": "ABC",
                 "my_field_select": "Bar",
@@ -244,15 +275,15 @@ class ChangeLogAPITest(APITestCase):
             ],
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
-        url = reverse("dcim-api:site-list")
-        self.add_permissions("dcim.add_site", "extras.view_status")
+        url = reverse("dcim-api:location-list")
+        self.add_permissions("dcim.add_location", "extras.view_status")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-        site = Site.objects.get(pk=response.data["id"])
-        oc = get_changes_for_model(site).first()
-        self.assertEqual(oc.changed_object, site)
+        location = Location.objects.get(pk=response.data["id"])
+        oc = get_changes_for_model(location).first()
+        self.assertEqual(oc.changed_object, location)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
         self.assertEqual(oc.object_data["tags"], sorted([self.tags[0].name, self.tags[1].name]))
@@ -260,16 +291,19 @@ class ChangeLogAPITest(APITestCase):
 
     def test_update_object(self):
         """Test PUT with changelogs."""
-        site = Site.objects.create(
-            name="Test Site 1",
-            slug="test-site-1",
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.create(
+            name="Test Location 1",
+            slug="test-location-1",
             status=self.statuses.get(slug="planned"),
+            location_type=location_type,
         )
 
         data = {
-            "name": "Test Site X",
-            "slug": "test-site-x",
-            "status": self.statuses.first().pk,
+            "name": "Test Location X",
+            "slug": "test-location-x",
+            "status": self.statuses.get(slug="active").pk,
+            "location_type": f"{location_type.pk}",
             "custom_fields": {
                 "my_field": "DEF",
                 "my_field_select": "Foo",
@@ -277,15 +311,15 @@ class ChangeLogAPITest(APITestCase):
             "tags": [{"name": self.tags[2].name}],
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
-        self.add_permissions("dcim.change_site", "extras.view_status")
-        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        self.add_permissions("dcim.change_location", "extras.view_status")
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
 
         response = self.client.put(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        site = Site.objects.get(pk=response.data["id"])
-        oc = get_changes_for_model(site).first()
-        self.assertEqual(oc.changed_object, site)
+        location = Location.objects.get(pk=response.data["id"])
+        oc = get_changes_for_model(location).first()
+        self.assertEqual(oc.changed_object, location)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
         self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
@@ -293,16 +327,18 @@ class ChangeLogAPITest(APITestCase):
 
     def test_partial_update_object(self):
         """Test PATCH with changelogs."""
-        site = Site.objects.create(
-            name="Test Site 1",
-            slug="test-site-1",
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.create(
+            name="Test Location 1",
+            slug="test-location-1",
+            location_type=location_type,
             status=self.statuses.get(slug="planned"),
             _custom_field_data={
                 "my_field": "DEF",
                 "my_field_select": "Foo",
             },
         )
-        site.tags.add(self.tags[2])
+        location.tags.add(self.tags[2])
 
         # We only want to update a single field.
         data = {
@@ -310,44 +346,46 @@ class ChangeLogAPITest(APITestCase):
         }
 
         self.assertEqual(ObjectChange.objects.count(), 0)
-        self.add_permissions("dcim.change_site", "extras.view_status")
-        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        self.add_permissions("dcim.change_location", "extras.view_status")
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
 
         # Perform a PATCH (partial update)
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        site = Site.objects.get(pk=response.data["id"])
+        location = Location.objects.get(pk=response.data["id"])
 
         # Get only the most recent OC
-        oc = get_changes_for_model(site).first()
-        self.assertEqual(oc.changed_object, site)
+        oc = get_changes_for_model(location).first()
+        self.assertEqual(oc.changed_object, location)
         self.assertEqual(oc.object_data["description"], data["description"])
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
-        self.assertEqual(oc.object_data["custom_fields"], site.custom_field_data)
+        self.assertEqual(oc.object_data["custom_fields"], location.custom_field_data)
         self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_delete_object(self):
-        site = Site(
-            name="Test Site 1",
-            slug="test-site-1",
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location(
+            name="Test Location 1",
+            slug="test-location-1",
+            location_type=location_type,
             status=self.statuses.get(slug="active"),
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
-        site.save()
-        site.tags.set(self.tags[:2])
+        location.save()
+        location.tags.set(self.tags[:2])
         self.assertEqual(ObjectChange.objects.count(), 0)
-        self.add_permissions("dcim.delete_site", "extras.view_status")
-        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
-        initial_count = Site.objects.count()
+        self.add_permissions("dcim.delete_location", "extras.view_status")
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
+        initial_count = Location.objects.count()
 
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Site.objects.count(), initial_count - 1)
+        self.assertEqual(Location.objects.count(), initial_count - 1)
 
         oc = ObjectChange.objects.first()
         self.assertEqual(oc.changed_object, None)
-        self.assertEqual(oc.object_repr, site.name)
+        self.assertEqual(oc.object_repr, location.name)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
@@ -357,35 +395,39 @@ class ChangeLogAPITest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_get_graphql_object(self):
         """Test GET with changelogs via GraphQL."""
-        site_payload = {
-            "name": "Test Site 1",
-            "slug": "test-site-1",
-            "status": self.statuses.first().pk,
+        location_type = LocationType.objects.get(name="Campus")
+        location_payload = {
+            "name": "Test Location 1",
+            "slug": "test-location-1",
+            "status": self.statuses.get(slug="active").pk,
+            "location_type": location_type.pk,
         }
-        self.add_permissions("dcim.add_site")
+        self.add_permissions("dcim.add_location")
 
-        sites_url = reverse("dcim-api:site-list")
-        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
-        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+        locations_url = reverse("dcim-api:location-list")
+        new_location_response = self.client.post(locations_url, location_payload, format="json", **self.header)
+        self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
         gql_payload = '{query: object_changes(q: "") { object_repr } }'
         resp = execute_query(gql_payload, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
+        self.assertEqual(first=location_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_object_lte_filter(self):
-        site_payload = {
-            "name": "Test Site 2",
-            "slug": "test-site-2",
-            "status": self.statuses.first().pk,
+        location_type = LocationType.objects.get(name="Campus")
+        location_payload = {
+            "name": "Test Location 2",
+            "slug": "test-location-2",
+            "status": self.statuses.get(slug="active").pk,
+            "location_type": location_type.pk,
         }
-        self.add_permissions("dcim.add_site")
+        self.add_permissions("dcim.add_location")
 
         time = "2021-03-14 00:00:00"
-        sites_url = reverse("dcim-api:site-list")
-        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
-        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+        locations_url = reverse("dcim-api:location-list")
+        new_location_response = self.client.post(locations_url, location_payload, format="json", **self.header)
+        self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
         gql_payload = f'{{query: object_changes(time__lte: "{time}") {{ object_repr }} }}'
         resp = execute_query(gql_payload, user=self.user).to_dict()
@@ -395,41 +437,45 @@ class ChangeLogAPITest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_object_gte_filter(self):
-        site_payload = {
-            "name": "Test Site 1",
-            "slug": "test-site-1",
-            "status": self.statuses.first().pk,
+        location_type = LocationType.objects.get(name="Campus")
+        location_payload = {
+            "name": "Test Location 1",
+            "slug": "test-location-1",
+            "status": self.statuses.get(slug="active").pk,
+            "location_type": location_type.pk,
         }
-        self.add_permissions("dcim.add_site")
+        self.add_permissions("dcim.add_location")
 
         time = "2021-03-14 00:00:00"
-        sites_url = reverse("dcim-api:site-list")
-        new_site_response = self.client.post(sites_url, site_payload, format="json", **self.header)
-        self.assertHttpStatus(new_site_response, status.HTTP_201_CREATED)
+        locations_url = reverse("dcim-api:location-list")
+        new_location_response = self.client.post(locations_url, location_payload, format="json", **self.header)
+        self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
         gql_payload = f'{{query: object_changes(time__gte: "{time}") {{ object_repr }} }}'
         resp = execute_query(gql_payload, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertIsInstance(resp["data"].get("query"), list)
-        self.assertEqual(first=site_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
+        self.assertEqual(first=location_payload["name"], second=resp["data"]["query"][0].get("object_repr", ""))
 
     def test_change_context(self):
-        site_payload = {
-            "name": "Test Site 1",
-            "slug": "test-site-1",
-            "status": self.statuses.first().pk,
+        location_type = LocationType.objects.get(name="Campus")
+        location_payload = {
+            "name": "Test Location 1",
+            "slug": "test-location-1",
+            "status": self.statuses.get(slug="active").pk,
+            "location_type": location_type.pk,
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
 
-        response = self.client.post(url, site_payload, format="json", **self.header)
+        response = self.client.post(url, location_payload, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-        site = Site.objects.get(pk=response.data["id"])
-        oc = get_changes_for_model(site).first()
+        location = Location.objects.get(pk=response.data["id"])
+        oc = get_changes_for_model(location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_WEB)
-        self.assertEqual(oc.change_context_detail, "dcim-api:site-list")
+        self.assertEqual(oc.change_context_detail, "dcim-api:location-list")
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_m2m_change(self):
@@ -470,14 +516,18 @@ class ChangeLogAPITest(APITestCase):
 class ObjectChangeModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.site_status = Status.objects.get_for_model(Site).first()
+        cls.location_status = Status.objects.get_for_model(Location).first()
 
     def test_get_snapshots(self):
         with context_managers.web_request_context(self.user):
-            site = Site.objects.create(
-                name="testobjectchangesite", description="initial description", status=self.site_status
+            location_type = LocationType.objects.get(name="Campus")
+            location = Location.objects.create(
+                name="testobjectchangelocation",
+                description="initial description",
+                status=self.location_status,
+                location_type=location_type,
             )
-        initial_object_change = get_changes_for_model(site).first()
+        initial_object_change = get_changes_for_model(location).first()
 
         with self.subTest("test get_snapshots ObjectChange create"):
             snapshots = initial_object_change.get_snapshots()
@@ -488,9 +538,9 @@ class ObjectChangeModelTest(TestCase):
 
         # first objectchange without object_data_v2
         with context_managers.web_request_context(self.user):
-            site.description = "changed description1"
-            site.validated_save()
-        oc_without_object_data_v2_1 = get_changes_for_model(site).first()
+            location.description = "changed description1"
+            location.validated_save()
+        oc_without_object_data_v2_1 = get_changes_for_model(location).first()
         oc_without_object_data_v2_1.object_data_v2 = None
         oc_without_object_data_v2_1.validated_save()
         with self.subTest("test get_snapshots previous ObjectChange has object_data_v2, current ObjectChange does not"):
@@ -502,9 +552,9 @@ class ObjectChangeModelTest(TestCase):
 
         # second objectchange without object_data_v2
         with context_managers.web_request_context(self.user):
-            site.description = "changed description2"
-            site.validated_save()
-        oc_without_object_data_v2_2 = get_changes_for_model(site).first()
+            location.description = "changed description2"
+            location.validated_save()
+        oc_without_object_data_v2_2 = get_changes_for_model(location).first()
         oc_without_object_data_v2_2.object_data_v2 = None
         oc_without_object_data_v2_2.validated_save()
         with self.subTest("test get_snapshots previous and current ObjectChange do not have object_data_v2"):
@@ -516,9 +566,9 @@ class ObjectChangeModelTest(TestCase):
 
         # objectchange with object_data_v2
         with context_managers.web_request_context(self.user):
-            site.description = "changed description3"
-            site.validated_save()
-        oc_with_object_data_v2 = get_changes_for_model(site).first()
+            location.description = "changed description3"
+            location.validated_save()
+        oc_with_object_data_v2 = get_changes_for_model(location).first()
         with self.subTest(
             "test get_snapshots previous ObjectChange does not have object_data_v2, current ObjectChange does"
         ):
@@ -529,10 +579,10 @@ class ObjectChangeModelTest(TestCase):
             self.assertEqual(snapshots["differences"]["added"], {"description": "changed description3"})
 
         # objectchange action delete
-        site_pk = site.pk
+        location_pk = location.pk
         with context_managers.web_request_context(self.user):
-            site.delete()
-        oc_delete = get_changes_for_model(Site).filter(changed_object_id=site_pk).first()
+            location.delete()
+        oc_delete = get_changes_for_model(Location).filter(changed_object_id=location_pk).first()
         with self.subTest("test get_snapshots ObjectChange delete"):
             snapshots = oc_delete.get_snapshots()
             self.assertEqual(snapshots["prechange"], oc_with_object_data_v2.object_data_v2)

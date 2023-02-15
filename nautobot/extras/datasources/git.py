@@ -17,7 +17,7 @@ import yaml
 from nautobot.core.celery import nautobot_task
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.requests import copy_safe_request
-from nautobot.dcim.models import Device, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -404,8 +404,6 @@ def update_git_config_contexts(repository_record, job_result):
 
     # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
     for filter_type in (
-        "regions",
-        "sites",
         "locations",
         "device_types",
         "roles",
@@ -518,7 +516,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     (name, weight, description, etc.), while all other keys in the dictionary will go into the record's "data" field.
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
-    the reason is that the serializer only allows us to identify related objects (Region, Site, Role, etc.)
+    the reason is that the serializer only allows us to identify related objects (Locations, Role, etc.)
     by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
@@ -540,8 +538,6 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     # Translate relationship queries/filters to lists of related objects
     relations = {}
     for key, model_class in [
-        ("regions", Region),
-        ("sites", Site),
         ("locations", Location),
         ("device_types", DeviceType),
         ("roles", Role),

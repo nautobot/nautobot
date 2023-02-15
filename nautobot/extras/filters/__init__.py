@@ -12,7 +12,7 @@ from nautobot.core.filters import (
     TagFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     RelationshipTypeChoices,
@@ -187,28 +187,6 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Schema (slug or PK)",
     )
-    region_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="regions",
-        queryset=Region.objects.all(),
-        label="Region",
-    )
-    region = django_filters.ModelMultipleChoiceFilter(
-        field_name="regions__slug",
-        queryset=Region.objects.all(),
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="sites",
-        queryset=Site.objects.all(),
-        label="Site",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="sites__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
     location_id = django_filters.ModelMultipleChoiceFilter(
         field_name="locations",
         queryset=Location.objects.all(),
@@ -216,6 +194,7 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     location = django_filters.ModelMultipleChoiceFilter(
         field_name="locations__slug",
+        to_field_name="slug",
         queryset=Location.objects.all(),
         label="Location (slug)",
     )

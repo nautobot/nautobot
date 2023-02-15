@@ -339,7 +339,6 @@ class LocationFactory(PrimaryModelFactory):
             "has_contact_name",
             "has_contact_phone",
             "has_contact_email",
-            "has_site",
             "has_tenant",
             "has_description",
             "_parent",
@@ -411,9 +410,6 @@ class LocationFactory(PrimaryModelFactory):
             return factory.random.randgen.choice(parents)
         return None
 
-    has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
-    site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
-
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
@@ -432,7 +428,6 @@ class RackFactory(PrimaryModelFactory):
             "has_comments",
             "has_facility_id",
             "has_group",
-            "has_location",
             "has_outer_depth",
             "has_outer_width",
             "has_role",
@@ -447,15 +442,7 @@ class RackFactory(PrimaryModelFactory):
     has_role = NautobotBoolIterator()
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
 
-    has_location = NautobotBoolIterator()
-    location = factory.Maybe(
-        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
-    )
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        random_instance(Site),
-    )
+    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
 
     has_group = NautobotBoolIterator()
     group = factory.Maybe("has_group", random_instance(RackGroup), None)  # TODO there's no RackGroupFactory yet...

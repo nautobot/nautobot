@@ -147,18 +147,7 @@ class RegionViewSet(NautobotModelViewSet):
 
 
 class SiteViewSet(NautobotModelViewSet):
-    queryset = (
-        Site.objects.select_related("region", "status", "tenant")
-        .prefetch_related("tags")
-        .annotate(
-            device_count=count_related(Device, "site"),
-            rack_count=count_related(Rack, "site"),
-            prefix_count=count_related(Prefix, "site"),
-            vlan_count=count_related(VLAN, "site"),
-            circuit_count=count_related(Circuit, "circuit_terminations__site"),
-            virtualmachine_count=count_related(VirtualMachine, "cluster__site"),
-        )
-    )
+    queryset = Site.objects.select_related("region", "status", "tenant").prefetch_related("tags")
     serializer_class = serializers.SiteSerializer
     filterset_class = filters.SiteFilterSet
 
@@ -181,7 +170,7 @@ class LocationTypeViewSet(NautobotModelViewSet):
 
 class LocationViewSet(NautobotModelViewSet):
     queryset = (
-        Location.objects.select_related("location_type", "parent", "site", "status", "tenant")
+        Location.objects.select_related("location_type", "parent", "status", "tenant")
         .prefetch_related("tags")
         .annotate(
             device_count=count_related(Device, "location"),
@@ -202,7 +191,7 @@ class LocationViewSet(NautobotModelViewSet):
 
 
 class RackGroupViewSet(NautobotModelViewSet):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("location")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
 
@@ -214,7 +203,7 @@ class RackGroupViewSet(NautobotModelViewSet):
 
 class RackViewSet(NautobotModelViewSet):
     queryset = (
-        Rack.objects.select_related("site", "group__site", "status", "role", "tenant")
+        Rack.objects.select_related("location", "group__location", "status", "role", "tenant")
         .prefetch_related("tags")
         .annotate(
             device_count=count_related(Device, "rack"),
@@ -400,7 +389,6 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "role",
         "tenant",
         "platform",
-        "site",
         "rack",
         "parent_bay",
         "primary_ip4",
@@ -735,7 +723,7 @@ class VirtualChassisViewSet(NautobotModelViewSet):
 
 
 class PowerPanelViewSet(NautobotModelViewSet):
-    queryset = PowerPanel.objects.select_related("site", "rack_group").annotate(
+    queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
         powerfeed_count=count_related(PowerFeed, "power_panel")
     )
     serializer_class = serializers.PowerPanelSerializer

@@ -2,7 +2,7 @@
 <div class="node">
     <strong>{{ device|hyperlinked_object }}</strong><br />
     {{ device.device_type.manufacturer }} {{ device.device_type }}<br />
-    {{ device.site|hyperlinked_object }}
+    {{ device.location|hyperlinked_object }}
     {% if device.rack %}
         / {{ device.rack|hyperlinked_object }}
     {% endif %}

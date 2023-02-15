@@ -33,7 +33,7 @@ class RelationshipsTestCase(SeleniumTestCase):
         """
         device = create_test_device()
         power_panel = PowerPanel.objects.create(
-            site=device.site,
+            location=device.location,
             name="Test Power Panel",
         )
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)
