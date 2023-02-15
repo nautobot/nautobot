@@ -1189,7 +1189,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             try:
                 job_result.save()
             except IntegrityError:
-                # handle job deleted while job was running
+                # handle job_model deleted while job was running
                 job_result.job_model = None
                 job_result.save()
             if file_ids:

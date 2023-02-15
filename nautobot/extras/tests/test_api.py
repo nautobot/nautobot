@@ -1426,7 +1426,7 @@ class JobTest(
         # Assert that a JobResult for this job was NOT created.
         self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
-        # Assert that we have an immediate ScheduledJob and that it matches the job.
+        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
         self.assertIsNotNone(schedule)
         self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)

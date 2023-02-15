@@ -429,7 +429,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
-    # We pass in job_class and job here partly for forward/backward compatibility logic, and
+    # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
     # part fallback safety. It's mildly useful to store both the class_path string and the JobModel
     # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
     # null) you still have a bit of context on the ScheduledJob as to what it was originally

@@ -311,7 +311,7 @@ def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors
 
 def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):
     """
-    Create or update a job record based on the metadata of the provided job_class.
+    Create or update a job_model record based on the metadata of the provided job_class.
 
     Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
