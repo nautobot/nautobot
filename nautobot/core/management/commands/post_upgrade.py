@@ -11,7 +11,7 @@ This will run the following management commands with default settings, in order:
 
 - migrate
 - trace_paths
-- build
+- build_ui --npm-install
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
@@ -30,9 +30,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--no-build",
+            "--no-build-ui",
             action="store_false",
-            dest="build",
+            dest="build_ui",
             default=True,
             help="Do not automatically build the user interface.",
         )
@@ -98,9 +98,9 @@ class Command(BaseCommand):
             print()
 
         # Run build
-        if options.get("build"):
+        if options.get("build_ui"):
             self.stdout.write("Building user interface...")
-            call_command("build")
+            call_command("build_ui", npm_install=True)
             print()
 
         # Run collectstatic

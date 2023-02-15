@@ -17,15 +17,15 @@ NAUTOBOT_UI_DIR = Path(settings.BASE_DIR, "ui")
 
 class Command(BaseCommand):
 
-    help = "Build user interface for Nautobot server environment and installed Nautobot Apps."
+    help = "Build the user interface for the Nautobot server environment and installed Nautobot Apps."
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--no-npm-install",
-            action="store_false",
+            "--npm-install",
+            action="store_true",
             dest="npm_install",
-            default=True,
-            help="Do not install UI packages.",
+            default=False,
+            help="Install UI packages.",
         )
         parser.add_argument(
             "--no-render-apps",
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
 
-        # We're goign to modify this list if apps don't have a `ui` directory.
+        # We're going to modify this list if apps don't have a `ui` directory.
         enabled_apps = copy.copy(settings.PLUGINS)
 
         for app_class_path in settings.PLUGINS:
@@ -69,8 +69,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"- App {app_name!r} does not publish a UI; Skipping..."))
                 enabled_apps.remove(app_class_path)
                 continue
-            else:
-                self.stdout.write(self.style.SUCCESS(f"- App {app_name!r} imported"))
+            self.stdout.write(self.style.SUCCESS(f"- App {app_name!r} imported"))
 
             jsconfig["compilerOptions"]["paths"][f"@{app_name}/*"] = [f"{app_ui_path}/*"]
 
@@ -101,6 +100,7 @@ class Command(BaseCommand):
         try:
             out = subprocess.run(
                 shlex.split(command),
+                check=False,
                 cwd=cwd,
                 env={**os.environ.copy()},
             )
@@ -110,10 +110,21 @@ class Command(BaseCommand):
         if out.returncode:
             raise CommandError(f"`{command}` failed with exit code {out.returncode}")
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
         verbosity = options["verbosity"]
+
+        # NAUTOBOT_DEBUG is also set here so that `console.log` isn't suppressed when we want
+        # verbosity.
         if verbosity > 1:
             os.environ["NAUTOBOT_DEBUG"] = "1"
+
+        verbosity_map = {
+            0: "silent",
+            1: "silent",  # Default is "notice" but still too chatty, so "silent".
+            2: "info",
+            3: "silly",  # MAXIMUM OVERDEBUG
+        }
+        loglevel = f"--loglevel {verbosity_map[verbosity]}"
 
         # Generate `app_imports.js`
         if options["render_apps"]:
@@ -121,18 +132,12 @@ class Command(BaseCommand):
 
         # Run `npm install` and keep it silent by default.
         if options["npm_install"]:
-            args = "install"
-            if verbosity <= 1:
-                args += " -s --no-progress"
-
+            args = f"install {loglevel} --no-progress"
             self.run_command(f"npm {args}", ">>> Installing Nautobot UI dependencies...")
 
-        # Run `npm build` and keep it silent by default. NAUTOBOT_DEBUG is also set here so that
-        # `console.log` isn't suppressed when we want verbosity.
+        # Run `npm build` and keep it silent by default.
         if options["npm_build"]:
-            args = "run build"
-            if verbosity <= 1:
-                args += " -s"
+            args = f"run build {loglevel}"
             self.run_command(f"npm {args}", ">>> Compiling Nautobot UI packages...")
 
         self.stdout.write(self.style.SUCCESS(">>> Nautobot UI build complete! 🎉"))

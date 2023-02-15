@@ -1,5 +1,5 @@
 {
-  "name": "nautobot-ui",
+  "name": "nautobot",
   "version": "2.0.0a1",
   "private": true,
   "dependencies": {
