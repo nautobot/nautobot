@@ -799,7 +799,7 @@ class ViewTestCases:
         def test_queryset_to_csv(self):
             # Built-in CSV export
             if not hasattr(self.model, "csv_headers"):
-                self.skip(f"{self.model} has no csv_headers attribute?")
+                self.skipTest(f"{self.model} has no csv_headers attribute?")
             response = self.client.get(f"{self._get_url('list')}?export")
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.get("Content-Type"), "text/csv")
