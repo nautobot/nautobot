@@ -18,6 +18,7 @@ from nautobot.dcim.models import (
     Rack,
 )
 from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -27,6 +28,7 @@ from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
     ContentTypeFilterSet,
+    CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
     GitRepositoryFilterSet,
@@ -49,6 +51,8 @@ from nautobot.extras.filters import (
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -313,6 +317,30 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
         )
+
+
+class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = CustomFieldChoice.objects.all()
+    filterset = CustomFieldChoiceFilterSet
+
+    generic_filter_tests = (
+        ["value"],
+        ["custom_field", "custom_field__name"],
+        ["weight"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Device)
+        cfs = [
+            CustomField.objects.create(name=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
+            for num in range(3)
+        ]
+        for cf in cfs:
+            cf.content_types.set([obj_type])
+
+        for i, val in enumerate(["Value 1", "Value 2", "Value 3"]):
+            CustomFieldChoice.objects.create(custom_field=cfs[i], value=val, weight=100 * i)
 
 
 class CustomLinkTestCase(FilterTestCases.FilterTestCase):
@@ -1338,6 +1366,8 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = SecretsGroupAssociation.objects.all()
     filterset = SecretsGroupAssociationFilterSet
 
+    generic_filter_tests = (["secrets_group", "secrets_group__slug"])
+
     @classmethod
     def setUpTestData(cls):
         cls.secrets = (
@@ -1385,12 +1415,6 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
             access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
-
-    def test_group(self):
-        params = {"secrets_group_id": [self.groups[0].pk, self.groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"secrets_group": [self.groups[0].slug, self.groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_secret(self):
         params = {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]}

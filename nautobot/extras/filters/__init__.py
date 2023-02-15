@@ -344,16 +344,10 @@ class CustomFieldFilterSet(BaseFilterSet):
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
-    field_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="custom_field",
-        queryset=CustomField.objects.all(),
-        label="Field",
-    )
-    field = django_filters.ModelMultipleChoiceFilter(
-        field_name="custom_field__name",
+    custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
         to_field_name="name",
-        label="Field (name)",
+        label="Field (ID or name)",
     )
 
     class Meta:
@@ -859,15 +853,9 @@ class SecretsGroupFilterSet(
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
 
-    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Secrets Group (ID)",
-    )
-    secrets_group = django_filters.ModelMultipleChoiceFilter(
-        queryset=SecretsGroup.objects.all(),
-        field_name="secrets_group__slug",
-        to_field_name="slug",
-        label="Secrets Group (slug)",
+        label="Secrets Group (ID or slug)",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),
