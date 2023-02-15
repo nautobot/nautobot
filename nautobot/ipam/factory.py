@@ -438,16 +438,16 @@ class PrefixFactory(PrimaryModelFactory):
         has_vrf = factory.Faker("pybool")
         is_container = factory.Faker("pybool")
         is_ipv6 = factory.Faker("pybool")
-        ipv6_cidr = factory.Faker("ipv6", network=True)
+        ipv6_cidr = UniqueFaker("ipv6", network=True)
         # faker ipv6 provider generates networks with /0 cidr, change to anything but /0
         ipv6_fixed = factory.LazyAttribute(
-            lambda o: o.ipv6_cidr.replace("/0", f"/{UniqueFaker('pyint', min_length=1, max_length=128)!s}")
+            lambda o: o.ipv6_cidr.replace("/0", f"/{faker.Faker().pyint(min_value=1, max_value=128)!s}")
         )
 
     prefix = factory.Maybe(
         "is_ipv6",
         factory.SelfAttribute("ipv6_fixed"),
-        UniqueFaker("ipv4", network=True, private=True),
+        UniqueFaker("ipv4", network=True),
     )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     is_pool = factory.Faker("pybool")
