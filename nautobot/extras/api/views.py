@@ -462,7 +462,8 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
     if job_model.has_sensitive_variables:
         if (
-            request.data.get("scheduled_job")
+            "scheduled_job" in request.data
+            and "interval" in request.data["scheduled_job"]
             and request.data["scheduled_job"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
         ):
             raise ValidationError(
