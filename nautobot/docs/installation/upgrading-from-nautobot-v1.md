@@ -64,7 +64,7 @@
 | Relationship            | `associations`                          | `relationship_associations`                    |
 | ScheduledJob            | `job_model`                             | `job`                                          |
 |                         | `jobresult`                             | `job_results`                                  |
-| Secrets                 | `groups`                                | `secrets_groups`                               |
+| Secret                  | `groups`                                | `secrets_groups`                               |
 |                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
 | SecretsGroup            | `gitrepository`                         | `git_repositories`                             |
 |                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
