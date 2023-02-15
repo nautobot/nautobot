@@ -87,6 +87,8 @@
 
 ### Replaced Models
 
+#### Generic Role Model
+
 The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed and replaced by a single `extras.Role` model. This means that any references to the removed models in the code now use the `extras.Role` model instead.
 
 The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim.Location` model. This means that any references to the removed models in the code now use the `dcim.Location` model instead with `LocationType` "Site" and "Region".
@@ -98,6 +100,22 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 | `dcim.Region`     | `dcim.Location`|
 | `dcim.Site`       | `dcim.Location`|
 | `ipam.Role`       | `extras.Role`  |
+
+#### Aggregate Migrated to Prefix
+
+The `ipam.Aggregate` model has been removed and all existing aggregates will be migrated to `ipam.Prefix` with `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00`. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
+
+If a `Prefix` already exists with the same network and prefix length as a previous `Aggregate`, the `rir` and `date_added` fields will be copied to the existing prefix object. Messages will be output during migration (`nautobot-server migrate` or `nautobot-server post-upgrade`) if the `tenant`, `description` or `type` fields need to be manually migrated.
+
+| Aggregate        | Prefix               |
+|------------------|----------------------|
+| `broadcast`      | `broadcast`          |
+| **`date_added`** | **`date_allocated`** |
+| `description`    | `description`        |
+| `network`        | `network`            |
+| `prefix_length`  | `prefix_length`      |
+| `rir`            | `rir`                |
+| `tenant`         | `tenant`             |
 
 ## GraphQL and REST API Changes
 

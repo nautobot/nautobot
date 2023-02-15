@@ -206,6 +206,12 @@ Existing prefixes with a status of "Container" will be migrated to the "Containe
 
 The "Container" status will be removed and all prefixes will be migrated to the "Active" status if it exists. If the "Active" status was deleted, prefixes will be migrated to the first available prefix status in the database that is not "Container".
 
+#### Aggregate model Migrated to Prefix ([#3302](https://github.com/nautobot/nautobot/issues/3302))
+
+The `ipam.Aggregate` model has been removed and all existing aggregates will be migrated to `ipam.Prefix` with `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00`. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
+
+See the [upgrade guide](../installation/upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix) for more details on the data migration.
+
 ### Removed
 
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
