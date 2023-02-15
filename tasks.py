@@ -646,6 +646,7 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -662,6 +663,7 @@ def check_schema(context, api_version=None):
 )
 def unittest(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -683,6 +685,8 @@ def unittest(
     command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
+    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+        command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"
     if failfast:
@@ -719,6 +723,7 @@ def unittest_coverage(context):
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -735,6 +740,7 @@ def unittest_coverage(context):
 )
 def integration_test(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -754,6 +760,7 @@ def integration_test(
 
     unittest(
         context,
+        cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
         label=label,
         failfast=failfast,
@@ -770,6 +777,7 @@ def integration_test(
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -785,6 +793,7 @@ def integration_test(
 )
 def performance_test(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -806,6 +815,7 @@ def performance_test(
 
     unittest(
         context,
+        cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
         label=label,
         failfast=failfast,

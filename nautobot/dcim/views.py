@@ -136,6 +136,14 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
         )
 
 
+class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device:
+            return selected_object.device.name
+        return None
+
+
 #
 # Regions
 #
@@ -1725,7 +1733,7 @@ class ConsolePortBulkEditView(generic.BulkEditView):
     form = forms.ConsolePortBulkEditForm
 
 
-class ConsolePortBulkRenameView(generic.BulkRenameView):
+class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = ConsolePort.objects.all()
 
 
@@ -1789,7 +1797,7 @@ class ConsoleServerPortBulkEditView(generic.BulkEditView):
     form = forms.ConsoleServerPortBulkEditForm
 
 
-class ConsoleServerPortBulkRenameView(generic.BulkRenameView):
+class ConsoleServerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = ConsoleServerPort.objects.all()
 
 
@@ -1853,7 +1861,7 @@ class PowerPortBulkEditView(generic.BulkEditView):
     form = forms.PowerPortBulkEditForm
 
 
-class PowerPortBulkRenameView(generic.BulkRenameView):
+class PowerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = PowerPort.objects.all()
 
 
@@ -1917,7 +1925,7 @@ class PowerOutletBulkEditView(generic.BulkEditView):
     form = forms.PowerOutletBulkEditForm
 
 
-class PowerOutletBulkRenameView(generic.BulkRenameView):
+class PowerOutletBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = PowerOutlet.objects.all()
 
 
@@ -2008,7 +2016,7 @@ class InterfaceBulkEditView(generic.BulkEditView):
     form = forms.InterfaceBulkEditForm
 
 
-class InterfaceBulkRenameView(generic.BulkRenameView):
+class InterfaceBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = Interface.objects.all()
 
 
@@ -2073,7 +2081,7 @@ class FrontPortBulkEditView(generic.BulkEditView):
     form = forms.FrontPortBulkEditForm
 
 
-class FrontPortBulkRenameView(generic.BulkRenameView):
+class FrontPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = FrontPort.objects.all()
 
 
@@ -2137,7 +2145,7 @@ class RearPortBulkEditView(generic.BulkEditView):
     form = forms.RearPortBulkEditForm
 
 
-class RearPortBulkRenameView(generic.BulkRenameView):
+class RearPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = RearPort.objects.all()
 
 
@@ -2288,7 +2296,7 @@ class DeviceBayBulkEditView(generic.BulkEditView):
     form = forms.DeviceBayBulkEditForm
 
 
-class DeviceBayBulkRenameView(generic.BulkRenameView):
+class DeviceBayBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = DeviceBay.objects.all()
 
 
@@ -2347,7 +2355,7 @@ class InventoryItemBulkEditView(generic.BulkEditView):
     form = forms.InventoryItemBulkEditForm
 
 
-class InventoryItemBulkRenameView(generic.BulkRenameView):
+class InventoryItemBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = InventoryItem.objects.all()
 
 

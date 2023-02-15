@@ -1148,11 +1148,16 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def post(self, request):
         logger = logging.getLogger("nautobot.views.BulkRenameView")
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
 
         if "_preview" in request.POST or "_apply" in request.POST:
-            form = self.form(request.POST, initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
-
+            form = self.form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
                 try:
                     with transaction.atomic():
@@ -1191,8 +1196,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     form.add_error(None, msg)
 
         else:
-            form = self.form(initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
+            form = self.form(initial={"pk": query_pks})
 
         return render(
             request,
@@ -1202,8 +1206,19 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
                 "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
             },
         )
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """
+        Return selected_objects parent name.
+
+        Args:
+            selected_objects: The objects being renamed
+        """
+
+        return ""
 
 
 class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):

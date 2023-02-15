@@ -2447,17 +2447,17 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             {
                 "note": "This is a test.",
                 "assigned_object_id": site1.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.site",
             },
             {
                 "note": "This is a test.",
                 "assigned_object_id": site2.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.site",
             },
             {
                 "note": "This is a note on Site 1.",
                 "assigned_object_id": site1.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.site",
             },
         ]
         cls.bulk_update_data = {
