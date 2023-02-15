@@ -257,7 +257,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Config context table
         config_context_table = tables.ConfigContextTable(
-            data=instance.configcontext_set.all(),
+            data=instance.config_contexts.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -1520,7 +1520,7 @@ class JobResultView(generic.ObjectView):
         headers = JobLogEntry.csv_headers.copy()
         csv_data.append(",".join(headers))
 
-        for log_entry in instance.logs.all():
+        for log_entry in instance.job_log_entries.all():
             data = log_entry.to_csv()
             csv_data.append(csv_format(data))
 
@@ -1571,7 +1571,7 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
+        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 

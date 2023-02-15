@@ -823,7 +823,7 @@ class JobResultViewSet(
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
-        logs = job_result.logs.all()
+        logs = job_result.job_log_entries.all()
         serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
