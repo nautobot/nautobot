@@ -46,6 +46,7 @@
 |                      | `level`                                 | `tree_depth`                                   |
 | RackGroup            | `level`                                 | `tree_depth`                                   |
 | Region               | `level`                                 | `tree_depth`                                   |
+| RIR                  | `aggregates`                            | [`prefixes`](#aggregate-migrated-to-prefix)    |
 | Service              | `ipaddresses`                           | `ip_addresses`                                 |
 | Tenant               | `group`                                 | `tenant_group`                                 |
 | TenantGroup          | `level`                                 | `tree_depth`                                   |
