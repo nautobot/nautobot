@@ -169,6 +169,7 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 | `/ipam/prefixes/`                | `site`               | `Site` and `Region` models are replaced by `Location`|
 | `/ipam/vlans/`                   | `site`               | `Site` and `Region` models are replaced by `Location`|
 | `/ipam/vlangroups/`              | `site`               | `Site` and `Region` models are replaced by `Location`|
+| `/tenancy/tenants/`              | `site_count`         | `Site` and `Region` models are replaced by `Location`|
 
 ### Removed 1.X Version Endpoints and Serializer Representations
 
@@ -299,9 +300,9 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 |        | `power_outlets`        | `/dcim/devices/?power_outlets=True`        | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`              |
 |        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 
-### Removed Redundant Filter Fields
+### Removed Filter Fields
 
-Below is a table documenting [removed redundant filter field changes](../release-notes/version-2.0.md#removed-redundant-filter-fields-2804) in v2.x.
+Below is a table documenting [removed filter field changes](../release-notes/version-2.0.md#removed-filter-fields-2804) in v2.x.
 Unless stated otherwise, all of the `*_id=<uuid>` filters have been replaced by generic filters that support both uuid and slug.
 For example `/circuits/circuits/?provider_id=<uuid>` has been replaced by `/circuits/circuits/?provider=<uuid>`.
 
@@ -449,6 +450,8 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                    | `region_id`           |                                                                                               |
 |                    | `tenant_group_id`     |                                                                                               |
 | Tenant             | `group_id`            |                                                                                               |
+|                    | `has_sites`           |                                                                                               |
+|                    | `sites`               |                                                                                               |
 | TenantGroup        | `parent_id`           |                                                                                               |
 | VirtualChassis     | `master_id`           |                                                                                               |
 |                    | `region`              |                                                                                               |

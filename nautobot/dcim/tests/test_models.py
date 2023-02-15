@@ -571,10 +571,10 @@ class LocationTestCase(TestCase):
 
     def test_parent_type_nestable_logic(self):
         """A location of a nestable type may have a parent of the same type."""
-        # A location using a root-level nestable type can have a parent
+        # A location using a root-level nestable type can have no parent
         location_1 = Location(name="Region 1", location_type=self.root_nestable_type, status=self.status)
         location_1.validated_save()
-        # A location using a root-level nestable type can have a parent
+        # A location using a root-level nestable type can have no parent
         location_2 = Location(
             name="Region 1-A", location_type=self.root_nestable_type, parent=location_1, status=self.status
         )
