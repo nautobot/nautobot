@@ -848,3 +848,18 @@ def tests(context, lint_only=False, keepdb=False):
     build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
+
+
+@task(help={"version": "The version number or the rule to update the version."})
+def version(context, version=None):  # pylint: disable=redefined-outer-name
+    """
+    Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
+    provided.
+
+    The version number or rules are those supported by `poetry version`.
+    """
+    if version is None:
+        version = ""
+
+    run_command(context, f"poetry version --short {version}")
+    run_command(context, f"npm --prefix nautobot/ui version {version}")

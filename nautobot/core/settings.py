@@ -23,6 +23,9 @@ HOSTNAME = platform.node()
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# The directory where the Nautobot UI packaging is stored.
+NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "ui")
+
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
 
@@ -478,7 +481,7 @@ STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "project-static"),
-    os.path.join(BASE_DIR, "ui", "build", "static"),
+    os.path.join(NAUTOBOT_UI_DIR, "build", "static"),
 )
 
 # Media

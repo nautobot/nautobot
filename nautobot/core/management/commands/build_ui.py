@@ -11,10 +11,6 @@ from django.core.management.base import BaseCommand, CommandError
 import jinja2
 
 
-# Where the UI code lies.
-NAUTOBOT_UI_DIR = Path(settings.BASE_DIR, "ui")
-
-
 class Command(BaseCommand):
 
     help = "Build the user interface for the Nautobot server environment and installed Nautobot Apps."
@@ -45,9 +41,12 @@ class Command(BaseCommand):
     def render_app_imports(self):
         """Render `app_imports.js` and update `jsconfig.json` to map to the path for each."""
         self.stdout.write(self.style.WARNING(">>> Rendering Nautobot App imports..."))
-        router_file_path = Path(NAUTOBOT_UI_DIR, "src", "router.js")
-        jsconfig_file_path = Path(NAUTOBOT_UI_DIR, "jsconfig.json")
-        jsconfig_base_file_path = Path(NAUTOBOT_UI_DIR, "jsconfig-base.json")
+
+        ui_dir = settings.NAUTOBOT_UI_DIR
+
+        router_file_path = Path(ui_dir, "src", "router.js")
+        jsconfig_file_path = Path(ui_dir, "jsconfig.json")
+        jsconfig_base_file_path = Path(ui_dir, "jsconfig-base.json")
 
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
@@ -58,10 +57,9 @@ class Command(BaseCommand):
         for app_class_path in settings.PLUGINS:
             app_name = app_class_path.split(".")[-1]
             app_config = apps.get_app_config(app_name)
-
             abs_app_path = Path(app_config.path).resolve()
             abs_app_ui_path = abs_app_path / "ui"
-            app_path = Path(os.path.relpath(abs_app_path, NAUTOBOT_UI_DIR))
+            app_path = Path(os.path.relpath(abs_app_path, ui_dir))
             app_ui_path = app_path / "ui"
 
             # Assert that an App has a UI folder.
@@ -76,8 +74,8 @@ class Command(BaseCommand):
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
 
-        app_imports_final_file_path = Path(NAUTOBOT_UI_DIR, "src", "app_imports.js")
-        environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(NAUTOBOT_UI_DIR))
+        app_imports_final_file_path = Path(ui_dir, "src", "app_imports.js")
+        environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(ui_dir))
         template = environment.get_template("app_imports.js.j2")
         content = template.render(apps=enabled_apps)
 
@@ -87,7 +85,7 @@ class Command(BaseCommand):
         # Touch the router to attempt to trigger a server reload.
         Path(router_file_path).touch()
 
-    def run_command(self, command, message, cwd=NAUTOBOT_UI_DIR):
+    def run_command(self, command, message, cwd=settings.NAUTOBOT_UI_DIR):
         """
         Run a `command`, displaying `message` and exit. This splits it for you and runs it.
 
