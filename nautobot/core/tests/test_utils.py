@@ -7,11 +7,11 @@ from django.test import RequestFactory, TestCase
 
 from example_plugin.models import ExampleModel
 
+from nautobot.circuits import models as circuits_models
 from nautobot.core import constants, exceptions, forms, settings_funcs, testing
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
-from nautobot.circuits import models as circuits_models
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import forms as dcim_forms
 from nautobot.dcim import models as dcim_models
