@@ -25,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
+
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
@@ -69,6 +70,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     logger = logging.getLogger(__name__)
     lookup_field = "slug"
     # Attributes that need to be specified: form_class, queryset, serializer_class, table_class for most mixins.
+    # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
+    filter_params = None
+    filterset = None
     filterset_class = None
     filterset_form_class = None
     form_class = None
@@ -78,7 +82,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
-    nonefilter_params = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -447,13 +450,13 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         Filter a query with request querystrings.
         """
         if self.filterset_class is not None:
-            filter_params = self.get_filter_params(self.request)
-            filterset = self.filterset_class(filter_params, queryset)
-            queryset = filterset.qs
-            if not filterset.is_valid():
+            self.filter_params = self.get_filter_params(self.request)
+            self.filterset = self.filterset_class(self.filter_params, queryset)
+            queryset = self.filterset.qs
+            if not self.filterset.is_valid():
                 messages.error(
                     self.request,
-                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                    mark_safe(f"Invalid filters were specified: {self.filterset.errors}"),
                 )
                 queryset = queryset.none()
         return queryset

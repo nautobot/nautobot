@@ -798,32 +798,33 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_queryset_to_csv(self):
             # Built-in CSV export
-            if hasattr(self.model, "csv_headers"):
-                response = self.client.get(f"{self._get_url('list')}?export")
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(response.get("Content-Type"), "text/csv")
-                instance1 = self._get_queryset().first()
-                # With filtering
-                response = self.client.get(f"{self._get_url('list')}?export&id={instance1.pk}")
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(response.get("Content-Type"), "text/csv")
-                response_body = response.content.decode(response.charset)
-                reader = csv.DictReader(StringIO(response_body))
-                print(response_body)
-                data = [dict(row) for row in reader][0]
-                print(data)
-                instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
-                # append instance
-                instance1_cf_values = [
-                    "" if value is None else value for value in instance1.get_custom_fields().values()
-                ]
-                instance1_csv_data += instance1_cf_values
-                # Since values in `data` are all in str; cast all values in instance1_csv_data to str
-                instance1_csv_data = [str(val) for val in instance1_csv_data]
-                instance1_cf_headers = ["cf_" + str(cf.slug) for cf in instance1.get_custom_fields().keys()]
-                instance1_csv_headers = list(getattr(self.model, "csv_headers")) + instance1_cf_headers
-                self.assertEquals(instance1_csv_headers, list(data.keys()))
-                self.assertEquals(instance1_csv_data, list(data.values()))
+            if not hasattr(self.model, "csv_headers"):
+                self.skip(f"{self.model} has no csv_headers attribute?")
+            response = self.client.get(f"{self._get_url('list')}?export")
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(response.get("Content-Type"), "text/csv")
+            instance1 = self._get_queryset().first()
+            # With filtering
+            response = self.client.get(f"{self._get_url('list')}?export&id={instance1.pk}")
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(response.get("Content-Type"), "text/csv")
+            response_body = response.content.decode(response.charset)
+            reader = csv.DictReader(StringIO(response_body))
+            # This line will make data a dictionary with csv headers as keys and corresponding csv values as values.
+            # For example:
+            # {'name': 'AFRINIC', 'slug': 'afrinic', 'is_private': '', 'description': ...'}
+            data = [dict(row) for row in reader][0]
+
+            instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
+            # append instance
+            instance1_cf_values = ["" if value is None else value for value in instance1.get_custom_fields().values()]
+            instance1_csv_data += instance1_cf_values
+            # Since values in `data` are all in str; cast all values in instance1_csv_data to str
+            instance1_csv_data = [str(val) for val in instance1_csv_data]
+            instance1_cf_headers = ["cf_" + str(cf.slug) for cf in instance1.get_custom_fields().keys()]
+            instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
+            self.assertEqual(instance1_csv_headers, list(data.keys()))
+            self.assertEqual(instance1_csv_data, list(data.values()))
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """

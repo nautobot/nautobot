@@ -113,7 +113,7 @@ class VRF(PrimaryModel):
             self.name,
             self.rd,
             self.tenant.name if self.tenant else None,
-            self.enforce_unique,
+            str(self.enforce_unique),
             self.description,
         )
 
@@ -214,7 +214,7 @@ class RIR(OrganizationalModel):
         return (
             self.name,
             self.slug,
-            self.is_private,
+            str(self.is_private),
             self.description,
         )
 
@@ -626,7 +626,7 @@ class Prefix(PrimaryModel, StatusModel):
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
             self.role.name if self.role else None,
-            self.is_pool,
+            str(self.is_pool),
             self.description,
         )
 
@@ -974,7 +974,7 @@ class IPAddress(PrimaryModel, StatusModel):
             self.get_role_display(),
             obj_type,
             self.assigned_object_id,
-            is_primary,
+            str(is_primary),
             self.dns_name,
             self.description,
         )

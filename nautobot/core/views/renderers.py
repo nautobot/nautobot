@@ -157,13 +157,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             if view.action == "list":
                 if view.filterset_class is not None:
-                    view.queryset = view.filter_queryset(view.queryset)
-                    filter_params = view.get_filter_params(request)
-                    filterset = view.filterset_class(filter_params, view.queryset)
-                    filterset_filters = filterset.get_filters()
+                    view.queryset = view.filter_queryset(view.get_queryset())
+                    filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
-                        for field_name, values in filter_params.items()
+                        for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(request.GET, label_suffix="")
