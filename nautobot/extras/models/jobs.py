@@ -526,7 +526,6 @@ class JobResult(BaseModel, CustomFieldModel):
     # Note that we allow job to be null and use models.SET_NULL here.
     # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
-    # FixMe(timizuo):Changing this field to job results in a clash with `job_id`
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
