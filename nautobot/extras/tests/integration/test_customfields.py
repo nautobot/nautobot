@@ -122,7 +122,7 @@ class CustomFieldTestCase(SeleniumTestCase):
             self.browser.fill("custom_field_choices-5-value", "choice3")
 
             # Make sure it the new row has default values while we're at it.
-            self.assertEqual(rows.last.find_by_name("`custom_field_choices`-5-weight").value, "100")
+            self.assertEqual(rows.last.find_by_name("custom_field_choices-5-weight").value, "100")
 
         self._create_custom_field(
             field_label="Test Select", field_type="select", choices=choices, call_before_create=call_before_create
