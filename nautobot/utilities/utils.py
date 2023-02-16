@@ -42,6 +42,10 @@ from nautobot.utilities.exceptions import FilterSetFieldNotFound
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
+# Get the field name from a filterset parameter
+# e.g `name__ic` field name is `name`
+EXTRACT_FIELD_NAME_RE = re.compile(r"^(?P<field>\w+)__\w+")
+
 
 def csv_format(data):
     """
@@ -931,12 +935,9 @@ def get_widget_multiple_class(widget, attrs):
         >>> get_widget_multiple_class(APISelect)
         >>> APISelectMultiple
     """
-    # TODO get the multiple widget class of `widget`
     from django import forms as django_forms
     from nautobot.utilities import forms
 
-    # These widget do not have a multiple version
-    #  NumberInput
     widget_map = {
         forms.APISelect: forms.APISelectMultiple,
         django_forms.Textarea: forms.MultiValueCharInput,
@@ -949,6 +950,8 @@ def get_widget_multiple_class(widget, attrs):
         django_forms.TimeInput: forms.TimePicker,
         django_forms.DateTimeField: forms.DateTimePicker,  # TODO(timizuo) Not working for some reason
     }
+    # Get the multiple version of `widget` if not found use `widget`; In most cases widget has no multiple
+    # for example NumberField, DateTimeField, DateField etc. while in other cases widget is the multiple version
     multiple_widget = widget_map.get(widget, widget)()
 
     css_classes = multiple_widget.attrs.get("class", "")
@@ -957,51 +960,62 @@ def get_widget_multiple_class(widget, attrs):
     return multiple_widget
 
 
-def get_filterset_parameter_form_field_v2(model, field_name):
+def get_filterset_field_name(filterset_field):
+    """Return the model field name of a filterset field"""
+    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
+
+    # Get the field_name of a filterset field;
+    # only NaturalKeyOrPKMultipleChoiceFilter and TreeNodeMultipleChoiceFilter have its field_name set as the actual
+    # model field name; others like TagField, ModelMultipleField etc. sets its field_name as `<field_name>__<pk_field>`
+    # In that case we extract the field_name from it.
+    field_name = filterset_field.field_name
+    if not isinstance(filterset_field, (NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter)):
+        search = EXTRACT_FIELD_NAME_RE.search(field_name)
+        if search:
+            field_name = search.group("field")
+    return field_name
+
+
+def get_filterset_parameter_form_field_v2(model, parameter):
     from nautobot.utilities.forms import DynamicModelMultipleChoiceField
 
     model_form = get_form_for_model(model)(auto_id="id_for_%s")
     filterset_class = get_filterset_for_model(model)
-    field = get_filterset_field(filterset_class, field_name)
-    # Remove the `__n` suffix from field_name as exact and not-exact lookup should return the same DOM element
-    field_name = field_name.replace("__n", "") if field_name.endswith("__n") else field_name
+    filterset_field = get_filterset_field(filterset_class, parameter)
     widget_attrs = {}
     form_attrs = {}
 
     try:
-        # TODO(timizuo): Get form equalivant of filterset parameter name if available; since
-        #  not all fields on filterset have the same name with its model form
-        field_name = "tags" if field_name == "tag" else field_name
+        field_name = get_filterset_field_name(filterset_field)
+        form_field = model_form[field_name].field
+        widget_attrs = form_field.widget.attrs if hasattr(form_field, "query_params") else {}
 
-        model_field = model_form[field_name].field
-        widget_attrs = model_field.widget.attrs if hasattr(model_field, "query_params") else {}
-
-        if "to_field_name" in field.extra:
-            widget_attrs["value-field"] = field.extra.get("to_field_name", "id")
-        if hasattr(model_field, "choices"):
-            form_attrs["choices"] = model_field.choices
-        if hasattr(model_field, "queryset"):
-            form_attrs["queryset"] = model_field.queryset
+        if hasattr(form_field, "choices"):
+            form_attrs["choices"] = form_field.choices
+        if hasattr(form_field, "queryset"):
+            form_attrs["queryset"] = form_field.queryset
     except KeyError:
         # Occurs when field name not in form for example related names, created etc.
-        model_field = field.field
+        form_field = filterset_field.field
 
         # If field is a related field
-        if "queryset" in field.extra:
-            related_model = field.extra["queryset"].model
+        if "queryset" in filterset_field.extra:
+            related_model = filterset_field.extra["queryset"].model
             form_attrs = {
                 "queryset": related_model.objects.all(),
-                "to_field_name": field.extra.get("to_field_name", "id"),
+                "to_field_name": filterset_field.extra.get("to_field_name", "id"),
             }
-            model_field = DynamicModelMultipleChoiceField(**form_attrs)
+            form_field = DynamicModelMultipleChoiceField(**form_attrs)
 
-    model_field.widget = get_widget_multiple_class(model_field.widget.__class__, widget_attrs)
-    model_field.required = False
-    model_field.initial = None
-    model_field.widget.attrs.pop("required", None)
+    if "to_field_name" in filterset_field.extra:
+        widget_attrs["value-field"] = filterset_field.extra.get("to_field_name", "id")
+    form_field.widget = get_widget_multiple_class(form_field.widget.__class__, widget_attrs)
+    form_field.required = False
+    form_field.initial = None
+    form_field.widget.attrs.pop("required", None)
     for attr, value in form_attrs.items():
-        setattr(model_field, attr, value)
-    bond_field = model_field.get_bound_field(model_form, field_name)
+        setattr(form_field, attr, value)
+    bond_field = form_field.get_bound_field(model_form, parameter)
 
     return bond_field
 
