@@ -62,7 +62,7 @@ JOB_LOGS = "job_logs"
 # The JOB_RESULT_METRIC variable is a counter metric that counts executions of jobs,
 # including information beyond what a tool like flower could get by introspecting
 # the celery task queue. This is accomplished by looking one abstraction deeper into
-# the job_model model of Nautobot.
+# the job model of Nautobot.
 JOB_RESULT_METRIC = Histogram(
     "nautobot_job_duration_seconds", "Results of Nautobot jobs.", ["grouping", "name", "status"]
 )
@@ -523,7 +523,7 @@ class JobResult(BaseModel, CustomFieldModel):
     This model stores the results from running a Job.
     """
 
-    # Note that we allow job to be null and use models.SET_NULL here.
+    # Note that we allow job_model to be null and use models.SET_NULL here.
     # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
     job_model = models.ForeignKey(

@@ -777,7 +777,7 @@ class ScheduledJobTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job", "interval", "start_time", "last_run_at")
+        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
@@ -790,7 +790,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("name", "job", "interval", "user", "start_time", "actions")
+        fields = ("name", "job_model", "interval", "user", "start_time", "actions")
 
 
 class ObjectChangeTable(BaseTable):

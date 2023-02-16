@@ -62,7 +62,6 @@
 | RackGroup               | `level`                                 | `tree_depth`                                   |
 | Region                  | `level`                                 | `tree_depth`                                   |
 | Relationship            | `associations`                          | `relationship_associations`                    |
-| ScheduledJob            | `job_model`                             | `job`                                          |
 |                         | `jobresult`                             | `job_results`                                  |
 | Secret                  | `groups`                                | `secrets_groups`                               |
 |                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
@@ -171,7 +170,6 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 | JobResult               | `schedule`             | `scheduled_job`               |
 | RackGroup               | `_depth`               | `tree_depth`                  |
 | Region                  | `_depth`               | `tree_depth`                  |
-| ScheduledJob            | `job_model`            | `job`                         |
 | SecretsGroupAssociation | `group`                | `secrets_group`               |
 | Service                 | `ipaddresses`          | `ip_addresses`                |
 | Tenant                  | `group`                | `tenant_group`                |
