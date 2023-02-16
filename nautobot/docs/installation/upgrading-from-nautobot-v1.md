@@ -218,49 +218,51 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 ### Renamed Filter Fields
 
-| Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
-|-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
-| Cable                 | `tag`                     | `tags`                           | `/dcim/cables/?tags=<slug>`                                               |
-| Circuit               | `tag`                     | `tags`                           | `/circuits/circuits/?tags=<slug>`                                         |
-|                       | `type`                    | `circuit_type`                   | `/circuits/circuits/?circuit_type=<uuid/slug>`                            |
-| ConsolePort           | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
-| ConsoleServerPort     | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
-| Device                | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
-|                       | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
-|                       | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
-|                       | `local_context_schema_id` | `local_config_context_schema_id` | `/dcim/devices/?local_config_context_schema_id=<uuid>`                    |
-|                       | `local_context_schema`    | `local_config_context_schema`    | `/dcim/devices/?local_config_context_schema=<slug>`                       |
-|                       | `rack_group_id`           | `rack_group`                     | `/dcim/devices/?rack_group=<uuid/slug>`                                   |
-|                       | `rack_id`                 | `rack`                           | `/dcim/devices/?rack=<uuid/slug>`                                         |
-|                       | `tag`                     | `tags`                           | `/dcim/devices/?tags=<slug>`                                              |
-|                       | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
-| DeviceBay             | `tag`                     | `tags`                           | `/dcim/device-bays/?tags=<slug>`                                          |
-| DeviceRedundancyGroup | `tag`                     | `tags`                           | `/dcim/device-redundancy-groups/?tag=<slug>`                              |
-| DeviceType            | `tag`                     | `tags`                           | `/dcim/device-types/?tags=<slug>`                                         |
-| FrontPort             | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
-|                       | `tag`                     | `tags`                           | `/dcim/front-ports/?tags=<slug>`                                          |
-| Interface             | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
-| InventoryItem         | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
-|                       | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
-|                       | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<slug>`                                      |
-| Location              | `tag`                     | `tags`                           | `/dcim/locations/?tags=<slug>`                                            |
-| PowerFeed             | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
-|                       | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<slug>`                                          |
-| PowerOutlet           | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
-| PowerPanel            | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<slug>`                                         |
-| PowerPort             | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
-| Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
-| Provider              | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
-| ProviderNetwork       | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
-| Rack                  | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
-| RackReservation       | `tag`                     | `tags`                           | `/dcim/rack-reservations/?tags=<slug>`                                    |
-| RearPort              | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
-|                       | `tag`                     | `tags`                           | `/dcim/rear-ports/?tags=<slug>`                                           |
-| Site                  | `tag`                     | `tags`                           | `/dcim/sites/?tags=<slug>`                                                |
-| Tenant                | `tag`                     | `tags`                           | `/tenancy/tenants/?tags=<slug>`                                           |
-| VirtualMachine        | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
-|                       | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
-|                       | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
+| Model                    | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
+|--------------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
+| Cable                    | `tag`                     | `tags`                           | `/dcim/cables/?tags=<slug>`                                               |
+| Circuit                  | `tag`                     | `tags`                           | `/circuits/circuits/?tags=<slug>`                                         |
+|                          | `type`                    | `circuit_type`                   | `/circuits/circuits/?circuit_type=<uuid/slug>`                            |
+| ConsolePort              | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
+| ConsoleServerPort        | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
+| CustomFieldChoice        | `field`                   | `custom_field`                   | `/extras/custom-field-choices/?custom_field=<uuid/name>`                  |
+| Device                   | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
+|                          | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
+|                          | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
+|                          | `local_context_schema_id` | `local_config_context_schema_id` | `/dcim/devices/?local_config_context_schema_id=<uuid>`                    |
+|                          | `local_context_schema`    | `local_config_context_schema`    | `/dcim/devices/?local_config_context_schema=<slug>`                       |
+|                          | `rack_group_id`           | `rack_group`                     | `/dcim/devices/?rack_group=<uuid/slug>`                                   |
+|                          | `rack_id`                 | `rack`                           | `/dcim/devices/?rack=<uuid/slug>`                                         |
+|                          | `tag`                     | `tags`                           | `/dcim/devices/?tags=<slug>`                                              |
+|                          | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
+| DeviceBay                | `tag`                     | `tags`                           | `/dcim/device-bays/?tags=<slug>`                                          |
+| DeviceRedundancyGroup    | `tag`                     | `tags`                           | `/dcim/device-redundancy-groups/?tag=<slug>`                              |
+| DeviceType               | `tag`                     | `tags`                           | `/dcim/device-types/?tags=<slug>`                                         |
+| FrontPort                | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
+|                          | `tag`                     | `tags`                           | `/dcim/front-ports/?tags=<slug>`                                          |
+| Interface                | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
+| InventoryItem            | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
+|                          | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
+|                          | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<slug>`                                      |
+| Location                 | `tag`                     | `tags`                           | `/dcim/locations/?tags=<slug>`                                            |
+| PowerFeed                | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
+|                          | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<slug>`                                          |
+| PowerOutlet              | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
+| PowerPanel               | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<slug>`                                         |
+| PowerPort                | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
+| Prefix                   | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
+| Provider                 | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
+| ProviderNetwork          | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
+| Rack                     | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
+| RackReservation          | `tag`                     | `tags`                           | `/dcim/rack-reservations/?tags=<slug>`                                    |
+| RearPort                 | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
+|                          | `tag`                     | `tags`                           | `/dcim/rear-ports/?tags=<slug>`                                           |
+| SecretsGroupAssociation  | `group`                   | `secrets_group`                  | `/extras/secrets-groups-associations/?secrets_group=<uuid/slug>`          |
+| Site                     | `tag`                     | `tags`                           | `/dcim/sites/?tags=<slug>`                                                |
+| Tenant                   | `tag`                     | `tags`                           | `/tenancy/tenants/?tags=<slug>`                                           |
+| VirtualMachine           | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
+|                          | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
+|                          | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
 
 ### Enhanced Filter Fields
 
