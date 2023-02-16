@@ -344,7 +344,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     tags = serializers.SlugRelatedField(queryset=Tag.objects.all(), slug_field="slug", required=False, many=True)
     dynamic_groups = SerializedPKRelatedField(
         queryset=DynamicGroup.objects.all(),
-        serializer=NestedDynamicGroupSerializer(),
+        serializer=NestedDynamicGroupSerializer,
         required=False,
         many=True,
     )
