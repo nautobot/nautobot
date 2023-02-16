@@ -804,7 +804,7 @@ class DynamicFilterFormTest(TestCase):
         request_querydict.setlistdefault("slug", ["location-1"])
         request_querydict.setlistdefault("status", ["active"])
         request_querydict.setlistdefault("has_vlans", ["True"])
-        request_querydict.setdefault("created", "2022-09-05")
+        request_querydict.setdefault("created__gte", "2022-09-05 11:22:33")
         request_querydict.setlistdefault("asn", ["4"])
 
         with self.subTest("Test for lookup_value with a CharField"):
@@ -871,7 +871,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.StaticSelect2)
             self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
 
-        with self.subTest("Test for lookup_value with a DateField"):
+        with self.subTest("Test for lookup_value with a DateTimeField"):
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-4")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
@@ -883,7 +883,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertIsInstance(form.fields["lookup_value"].widget, forms.DatePicker)
+            self.assertIsInstance(form.fields["lookup_value"].widget, forms.DateTimePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-5")

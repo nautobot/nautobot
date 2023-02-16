@@ -26,7 +26,7 @@ class ChangeLoggedModel(models.Model):
     null to facilitate adding these fields to existing instances via a database migration.
     """
 
-    created = models.DateField(auto_now_add=True, blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
