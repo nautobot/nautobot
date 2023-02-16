@@ -924,6 +924,88 @@ def get_filterset_parameter_form_field(model, parameter):
     return form_field
 
 
+def get_widget_multiple_class(widget, attrs):
+    """Return the multiple version of the widget class if available.
+
+    Examples:
+        >>> get_widget_multiple_class(APISelect)
+        >>> APISelectMultiple
+    """
+    # TODO get the multiple widget class of `widget`
+    from django import forms as django_forms
+    from nautobot.utilities import forms
+
+    # These widget do not have a multiple version
+    #  NumberInput
+    widget_map = {
+        forms.APISelect: forms.APISelectMultiple,
+        django_forms.Textarea: forms.MultiValueCharInput,
+        django_forms.EmailInput: forms.MultiValueCharInput,
+        django_forms.TextInput: forms.MultiValueCharInput,
+        django_forms.SelectMultiple: forms.MultiValueCharInput,
+        forms.SmallTextarea: forms.MultiValueCharInput,
+        forms.SlugWidget: forms.MultiValueCharInput,
+        django_forms.DateInput: forms.DatePicker,
+        django_forms.TimeInput: forms.TimePicker,
+        django_forms.DateTimeField: forms.DateTimePicker,  # TODO(timizuo) Not working for some reason
+    }
+    multiple_widget = widget_map.get(widget, widget)()
+
+    css_classes = multiple_widget.attrs.get("class", "")
+    multiple_widget.attrs["class"] = "form-control " + css_classes
+    multiple_widget.attrs.update(attrs)
+    return multiple_widget
+
+
+def get_filterset_parameter_form_field_v2(model, field_name):
+    from nautobot.utilities.forms import DynamicModelMultipleChoiceField
+
+    model_form = get_form_for_model(model)(auto_id="id_for_%s")
+    filterset_class = get_filterset_for_model(model)
+    field = get_filterset_field(filterset_class, field_name)
+    # Remove the `__n` suffix from field_name as exact and not-exact lookup should return the same DOM element
+    field_name = field_name.replace("__n", "") if field_name.endswith("__n") else field_name
+    widget_attrs = {}
+    form_attrs = {}
+
+    try:
+        # TODO(timizuo): Get form equalivant of filterset parameter name if available; since
+        #  not all fields on filterset have the same name with its model form
+        field_name = "tags" if field_name == "tag" else field_name
+
+        model_field = model_form[field_name].field
+        widget_attrs = model_field.widget.attrs if hasattr(model_field, "query_params") else {}
+
+        if "to_field_name" in field.extra:
+            widget_attrs["value-field"] = field.extra.get("to_field_name", "id")
+        if hasattr(model_field, "choices"):
+            form_attrs["choices"] = model_field.choices
+        if hasattr(model_field, "queryset"):
+            form_attrs["queryset"] = model_field.queryset
+    except KeyError:
+        # Occurs when field name not in form for example related names, created etc.
+        model_field = field.field
+
+        # If field is a related field
+        if "queryset" in field.extra:
+            related_model = field.extra["queryset"].model
+            form_attrs = {
+                "queryset": related_model.objects.all(),
+                "to_field_name": field.extra.get("to_field_name", "id"),
+            }
+            model_field = DynamicModelMultipleChoiceField(**form_attrs)
+
+    model_field.widget = get_widget_multiple_class(model_field.widget.__class__, widget_attrs)
+    model_field.required = False
+    model_field.initial = None
+    model_field.widget.attrs.pop("required", None)
+    for attr, value in form_attrs.items():
+        setattr(model_field, attr, value)
+    bond_field = model_field.get_bound_field(model_form, field_name)
+
+    return bond_field
+
+
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict

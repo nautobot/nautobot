@@ -39,6 +39,7 @@ from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
+    get_filterset_parameter_form_field_v2,
     get_form_for_model,
     FilterSetFieldNotFound,
     ensure_content_type_and_field_name_inquery_params,
@@ -768,10 +769,14 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
                     "dom_element": f"<input type='text' name='{field_name}' class='form-control lookup_value-input' id='id_{field_name}'>"
                 }
             )
-        try:
-            form_field = get_filterset_parameter_form_field(model, field_name)
-        except FilterSetFieldNotFound:
-            return Response("field_name not found", 404)
+        # try:
+        #     form_field = get_filterset_parameter_form_field(model, field_name)
+        # except FilterSetFieldNotFound:
+        #     return Response("field_name not found", 404)
+        #
+        # field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
 
-        field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
+        form_field = get_filterset_parameter_form_field_v2(model, field_name)
+        field_dom_representation = form_field.as_widget()
+
         return Response({"dom_element": field_dom_representation})
