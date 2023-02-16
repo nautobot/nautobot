@@ -31,7 +31,7 @@ services:
     working_dir: /opt/node/nautobot
     user: node
     volumes:
-      - ../nautobot_ui/:/opt/node/nautobot
+      - ../nautobot/ui/:/opt/node/nautobot
       - ../:/source
     command: >
       bash -c "npm install && npm run start"  # TODO: running npm install every time is slow, can we persist a volume?

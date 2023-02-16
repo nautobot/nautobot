@@ -34,7 +34,7 @@ class RenderTabContent extends React.Component {
     }
 }
 
-export default function create_plugin_tab(props) {
+export default function create_app_tab(props) {
     let tab = props.tab
     return (
         <Tab title={tab.title} eventKey={tab.title} key={tab.title}><RenderTabContent tab={tab} /></Tab>

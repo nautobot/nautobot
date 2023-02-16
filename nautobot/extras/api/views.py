@@ -335,8 +335,8 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
 
     # TODO: this currently throws a 500 error in drf_react_template because it's returning an HttpResponse but
     # drf_react_template thinks it's a REST endpoint that should be returning a JsonResponse
-    @action(detail=True, url_path="plugin_full_width_fragment")
-    def plugin_full_width_fragment(self, request, pk):
+    @action(detail=True, url_path="app_full_width_fragment")
+    def app_full_width_fragment(self, request, pk):
         """
         Return html fragment from a plugin.
         """

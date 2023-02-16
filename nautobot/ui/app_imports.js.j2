@@ -1,0 +1,7 @@
+export const NautobotApps = {
+{% for app in apps %}
+    "{{ app }}": import("@{{ app }}"),
+{% endfor %}
+}
+
+export default NautobotApps

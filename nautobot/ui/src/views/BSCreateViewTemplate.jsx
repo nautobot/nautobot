@@ -2,7 +2,7 @@ import axios from "axios"
 import { Button, Col, Card, Row } from "react-bootstrap"
 import Cookies from 'js-cookie'
 import { useState } from "react"
-import { RJSFSchema } from "@rjsf/utils";
+// import { RJSFSchema } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/core";
 import useSWR from "swr"
@@ -20,8 +20,8 @@ export default function BSCreateViewTemplate({ list_url }) {
   if (!data) return <></>
 
   const post_schema = data.serializer.schema
-  const ui_schema = data.serializer.uiSchema
-  const log = (type) => console.log.bind(console, type)
+  // const ui_schema = data.serializer.uiSchema
+  // const log = (type) => console.log.bind(console, type)
   const model_name_title = post_schema.title
   const model_name = model_name_title.toLowerCase()
 
@@ -34,7 +34,7 @@ export default function BSCreateViewTemplate({ list_url }) {
     // TODO: obviously this can't ship with a hard-coded API token... see issue #3242
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Token nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+      "Authorization": "Token " + process.env.NAUTOBOT_API_TOKEN
     }
   })
 
