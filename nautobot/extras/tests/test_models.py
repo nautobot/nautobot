@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     ExportTemplate,
     FileAttachment,
     FileProxy,
@@ -40,7 +41,6 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
-    DynamicGroup,
     Webhook,
 )
 from nautobot.extras.utils import get_job_content_type
