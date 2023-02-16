@@ -16,6 +16,9 @@ if [ -d ./venv/ ]; then
     fi
 fi
 
+echo "Validating branch name..."
+[[ $(git branch --show-current) =~ ^u/ ]] || EXIT=1
+
 echo "Validating PEP8 compliance..."
 invoke flake8 || EXIT=1
 

@@ -1,1 +1,2 @@
 Updated developer documentation for user and prototype branching conventions.
+Updated pre-commit hook to validate user namespace prefix on branch name.
