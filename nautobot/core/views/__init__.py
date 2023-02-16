@@ -1,10 +1,12 @@
 import os
 import platform
 import sys
+import time
 
+import prometheus_client
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
-from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden
+from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
@@ -15,6 +17,9 @@ from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
+from prometheus_client import multiprocess
+from prometheus_client.metrics_core import GaugeMetricFamily
+from prometheus_client.registry import Collector
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
@@ -220,3 +225,34 @@ class CustomGraphQLView(GraphQLView):
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)
+
+
+class NautobotAppMetricsCollector(Collector):
+    """Custom Nautobot metrics collector.
+
+    Metric collector that reads from registry["plugin_metrics"] and yields any metrics registered there."""
+
+    def collect(self):
+        """Collect metrics from plugins."""
+        start = time.time()
+        for metric in registry["plugin_metrics"]:
+            yield from metric()
+        gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
+        duration = time.time() - start
+        gauge.add_metric([], format(duration * 1000, ".5f"))
+        yield gauge
+
+
+def custom_app_metric_view(request):
+    """Exports /metrics.
+
+    This overwrites the default django_prometheus view to inject metrics from Nautobot apps."""
+    if "PROMETHEUS_MULTIPROC_DIR" in os.environ or "prometheus_multiproc_dir" in os.environ:
+        prometheus_registry = prometheus_client.CollectorRegistry()
+        multiprocess.MultiProcessCollector(prometheus_registry)
+    else:
+        prometheus_registry = prometheus_client.REGISTRY
+    nb_app_collector = NautobotAppMetricsCollector()
+    prometheus_registry.register(nb_app_collector)
+    metrics_page = prometheus_client.generate_latest(prometheus_registry)
+    return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)

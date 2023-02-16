@@ -35,6 +35,7 @@ registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
+registry["plugin_metrics"] = []
 
 
 #
@@ -93,6 +94,7 @@ class NautobotAppConfig(NautobotConfig):
     homepage_layout = "homepage.layout"
     jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
+    metrics = "metrics.metrics"
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
@@ -146,6 +148,12 @@ class NautobotAppConfig(NautobotConfig):
         if jobs is not None:
             register_jobs(jobs)
             self.features["jobs"] = jobs
+
+        # Import metrics (if present)
+        metrics = import_object(f"{self.__module__}.{self.metrics}")
+        if metrics is not None:
+            register_metrics(metrics)
+            self.features["metrics"] = metrics
 
         # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
@@ -422,6 +430,16 @@ def register_jobs(class_list):
 
     # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
     # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
+
+
+def register_metrics(function_list):
+    """
+    Register a list of metric functions
+    """
+    for metric in function_list:
+        if not callable(metric):
+            raise TypeError(f"{metric} is not a callable.")
+        registry["plugin_metrics"].append(metric)
 
 
 class FilterExtension:
