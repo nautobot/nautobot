@@ -6,7 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0062_rename_configcontext_role"),
+        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
+        ("extras", "0063_jobresult__add_celery_fields"),
     ]
 
     operations = [

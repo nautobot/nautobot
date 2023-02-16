@@ -1,0 +1,164 @@
+from nautobot.core.tests.test_migration import NautobotDataMigrationTest
+
+
+class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
+    migrate_from = [("dcim", "0029_change_tree_manager_on_tree_models")]
+    migrate_to = [("dcim", "0030_migrate_region_and_site_data_to_locations")]
+
+    def populateDataBeforeMigration(self, apps):
+        """Populate Site/Site-related and Region/Region-related Data before migrating them to Locations"""
+        # Needed models
+        ContentType = apps.get_model("contenttypes", "ContentType")
+        Region = apps.get_model("dcim", "region")
+        Site = apps.get_model("dcim", "site")
+        LocationType = apps.get_model("dcim", "locationtype")
+        Location = apps.get_model("dcim", "location")
+        CircuitTermination = apps.get_model("circuits", "circuittermination")
+        Device = apps.get_model("dcim", "device")
+        PowerPanel = apps.get_model("dcim", "powerpanel")
+        RackGroup = apps.get_model("dcim", "rackgroup")
+        Rack = apps.get_model("dcim", "rack")
+        ComputedField = apps.get_model("extras", "computedfield")
+        ConfigContext = apps.get_model("extras", "configcontext")
+        CustomField = apps.get_model("extras", "customfield")
+        CustomLink = apps.get_model("extras", "customlink")
+        DynamicGroup = apps.get_model("extras", "DynamicGroup")
+        ExportTemplate = apps.get_model("extras", "exporttemplate")
+        ImageAttachment = apps.get_model("extras", "imageattachment")
+        JobHook = apps.get_model("extras", "jobhook")
+        Note = apps.get_model("extras", "note")
+        WebHook = apps.get_model("extras", "webhook")
+        Relationship = apps.get_model("extras", "relationship")
+        RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
+        Prefix = apps.get_model("ipam", "prefix")
+        VLANGroup = apps.get_model("ipam", "vlangroup")
+        VLAN = apps.get_model("ipam", "vlan")
+        Cluster = apps.get_model("virtualization", "cluster")
+        Status = apps.get_model("extras", "status")
+        Tag = apps.get_model("extras", "tag")
+
+        region_ct = ContentType.objects.get_for_model(Region)
+        site_ct = ContentType.objects.get_for_model(Site)
+        location_ct = ContentType.objects.get_for_model(Location)
+
+        regions = []
+        for i in range(10):
+            regions.append(Region(name=f"Test Region {i}"))
+        Region.objects.bulk_create(regions, batch_size=10)
+        # Nested Regions
+        region_2 = Region.objects.get(name="Test Region 2")
+        region_2.parent = Region.objects.get(name="Test Region 1")
+        region_2.save()
+        region_4 = Region.objects.get(name="Test Region 4")
+        region_4.parent = Region.objects.get(name="Test Region 3")
+        region_4.save()
+        region_5 = Region.objects.get(name="Test Region 5")
+        region_5.parent = Region.objects.get(name="Test Region 4")
+        region_5.save()
+
+        sites = []
+        for i in range(10):
+            sites.append(Site(name=f"Test Site {i}"))
+        Site.objects.bulk_create(sites, batch_size=10)
+        # Sites with Regions
+        site_2 = Site.objects.get(name="Test Site 2")
+        site_2.region = Region.objects.get(name="Test Region 1")
+        site_2.save()
+        site_4 = Site.objects.get(name="Test Site 4")
+        site_4.region = Region.objects.get(name="Test Region 2")
+        site_4.save()
+        site_6 = Site.objects.get(name="Test Site 6")
+        site_6.region = Region.objects.get(name="Test Region 3")
+        site_6.save()
+
+        location_types = []
+        for i in range(5):
+            location_types.append(LocationType(name=f"Test Location Type {i}"))
+        LocationType.objects.bulk_create(location_types, batch_size=10)
+        for i in range(5):
+            location_type = LocationType.objects.get(name=f"Test Location Type {i}")
+            if i == 0 or i == 1:
+                location_type.site = Site.objects.get(name=f"Test Site {i}")
+            else:
+                location_type.parent = LocationType.objects.get(name=f"Test Location Type {i - 1}")
+                location_type.save()
+
+        locations = []
+        for i in range(15):
+            location_type = LocationType.objects.get(name=f"Test Location Type {i % 5}")
+            locations.append(Location(name=f"Test Location {i}", location_type=location_type))
+        Location.objects.bulk_create(locations, batch_size=15)
+
+        for i in range(15):
+            if i % 5 == 0 or i % 5 == 1:
+                continue
+            else:
+                location = Location.objects.get(name=f"Test Location {i}")
+                location.parent = Location.objects.get(name=f"Test Location {i - 1}")
+                location.save()
+
+    def test_region_and_site_data_migration(self):
+
+        with self.subTest("Testing Region and Site correctly migrate to Locations"):
+            Site = self.apps.get_model("dcim", "site")
+            LocationType = self.apps.get_model("dcim", "locationtype")
+            Location = self.apps.get_model("dcim", "location")
+
+            # Test Location Types are created and the hierarchy is correct
+            self.assertEquals(len(LocationType.objects.filter(name="Region")), 1)
+            self.assertEquals(len(LocationType.objects.filter(name="Site")), 1)
+            self.assertEquals(LocationType.objects.get(name="Site").parent, LocationType.objects.get(name="Region"))
+            self.assertEquals(
+                LocationType.objects.get(name="Test Location Type 0").parent, LocationType.objects.get(name="Site")
+            )
+            self.assertEquals(
+                LocationType.objects.get(name="Test Location Type 1").parent, LocationType.objects.get(name="Site")
+            )
+            # Global Region is created
+            self.assertEquals(
+                len(
+                    Location.objects.filter(name="Global Region", location_type=LocationType.objects.get(name="Region"))
+                ),
+                1,
+            )
+
+            # For each region, a new location of LocationType "Region" is created
+            for i in range(10):
+                self.assertEquals(
+                    len(
+                        Location.objects.filter(
+                            name=f"Test Region {i}", location_type=LocationType.objects.get(name="Region")
+                        )
+                    ),
+                    1,
+                )
+            # For each site, a new location of LocationType "Site" is created and its parent, if not None, is
+            # mapped to a Region LocationType location with the same name as its assigned Region.
+            for i in range(10):
+                site_locations = Location.objects.filter(
+                    name=f"Test Site {i}", location_type=LocationType.objects.get(name="Site")
+                )
+                old_site = Site.objects.get(name=f"Test Site {i}")
+                self.assertEquals(len(site_locations), 1)
+                if old_site.region:
+                    self.assertEquals(site_locations.first().parent.name, old_site.region.name)
+
+            # Check that top level locations have Site locations as their parent, and they are matching up correctly
+            old_top_level_locations = Location.objects.filter(site__isnull=False)
+            for location in old_top_level_locations:
+                self.assertEquals(location.parent.name, location.site.name)
+
+        with self.subTest("Testing Circuits app model migration"):
+            pass
+
+        with self.subTest("Testing DCIM app model migration"):
+            pass
+
+        with self.subTest("Testing Extras app model migration"):
+            pass
+
+        with self.subTest("Testing IPAM app model migration"):
+            pass
+
+        with self.subTest("Testing Virtualization app model migration"):
+            pass
