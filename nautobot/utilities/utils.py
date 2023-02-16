@@ -963,14 +963,14 @@ def get_widget_multiple_class(widget, attrs):
 
 def get_filterset_field_name(filterset_field):
     """Return the model field name of a filterset field"""
-    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
+    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
 
     # Get the field_name of a filterset field;
-    # only NaturalKeyOrPKMultipleChoiceFilter and TreeNodeMultipleChoiceFilter have its field_name set as the actual
+    # only NaturalKeyOrPKMultipleChoiceFilter have its field_name set as the actual
     # model field name; others like TagField, ModelMultipleField etc. sets its field_name as `<field_name>__<pk_field>`
     # In that case we extract the field_name from it.
     field_name = filterset_field.field_name
-    if not isinstance(filterset_field, (NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter)):
+    if not isinstance(filterset_field, NaturalKeyOrPKMultipleChoiceFilter):
         search = EXTRACT_FIELD_NAME_RE.search(field_name)
         if search:
             field_name = search.group("field")
