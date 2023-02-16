@@ -2,10 +2,10 @@
 
 ## Running it
 
-Install and compile dependencies:
+Install and compile dependencies (note that you'll only use `--npm-install` on initial setup):
 
 ```no-highlight
-nautobot-server build
+nautobot-server build --npm-install
 ```
 
 Set the `NAUTOBOT_API_TOKEN` prior to starting the server:

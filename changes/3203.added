@@ -1,1 +1,1 @@
-Added a `nautobot-server build` command for building the web UI
+Added a `nautobot-server build_ui` command for building the web UI

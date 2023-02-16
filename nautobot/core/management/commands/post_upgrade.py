@@ -89,40 +89,40 @@ class Command(BaseCommand):
                 traceback=options["traceback"],
                 verbosity=options["verbosity"],
             )
-            print()
+            self.stdout.write()
 
         # Run trace_paths
         if options.get("trace_paths"):
             self.stdout.write("Generating cable paths...")
             call_command("trace_paths", no_input=True)
-            print()
+            self.stdout.write()
 
         # Run build
         if options.get("build_ui"):
             self.stdout.write("Building user interface...")
             call_command("build_ui", npm_install=True)
-            print()
+            self.stdout.write()
 
         # Run collectstatic
         if options.get("collectstatic"):
             self.stdout.write("Collecting static files...")
             call_command("collectstatic", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run remove_stale_contenttypes
         if options.get("remove_stale_contenttypes"):
             self.stdout.write("Removing stale content types...")
             call_command("remove_stale_contenttypes", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run clearsessions
         if options.get("clearsessions"):
             self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
-            print()
+            self.stdout.write()
 
         # Run invalidate all
         if options.get("invalidate_all"):
             self.stdout.write("Invalidating cache...")
             call_command("invalidate", "all")
-            print()
+            self.stdout.write()
