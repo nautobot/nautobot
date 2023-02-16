@@ -846,6 +846,7 @@ def get_filterset_field(filterset_class, field_name):
     return field
 
 
+# TODO(timizuo): Remove
 def get_filterset_parameter_form_field(model, parameter):
     """
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
@@ -977,7 +978,8 @@ def get_filterset_field_name(filterset_field):
 
 
 def get_filterset_parameter_form_field_v2(model, parameter):
-    from nautobot.utilities.forms import DynamicModelMultipleChoiceField
+    from nautobot.utilities.forms import DynamicModelMultipleChoiceField, MultipleContentTypeField
+    from nautobot.utilities.filters import ContentTypeMultipleChoiceFilter
 
     model_form = get_form_for_model(model)(auto_id="id_for_%s")
     filterset_class = get_filterset_for_model(model)
@@ -989,6 +991,11 @@ def get_filterset_parameter_form_field_v2(model, parameter):
         field_name = get_filterset_field_name(filterset_field)
         form_field = model_form[field_name].field
         widget_attrs = form_field.widget.attrs if hasattr(form_field, "query_params") else {}
+
+        # By default, choices_as_strings for ContentTypeMultipleChoiceFilter is set to False;
+        # that's why it needs to be reinitialized here and set to True
+        if isinstance(filterset_field, ContentTypeMultipleChoiceFilter):
+            form_field = MultipleContentTypeField(choices_as_strings=True, queryset=form_field.queryset)
 
         if hasattr(form_field, "choices"):
             form_attrs["choices"] = form_field.choices
