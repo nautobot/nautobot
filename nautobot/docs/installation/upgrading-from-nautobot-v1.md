@@ -21,40 +21,72 @@
 
 ### Renamed Database Fields
 
-| Model                | Renamed Field                           | New Name                                       |
-|----------------------|-----------------------------------------|------------------------------------------------|
-| CablePath            | `circuittermination`                    | `circuits_circuittermination_related`          |
-|                      | `consoleport`                           | `dcim_consoleport_related`                     |
-|                      | `consoleserverport`                     | `dcim_consoleserverport_related`               |
-|                      | `interface`                             | `dcim_interface_related`                       |
-|                      | `powerfeed`                             | `dcim_powerfeed_related`                       |
-|                      | `poweroutlet`                           | `dcim_poweroutlet_related`                     |
-|                      | `powerport`                             | `dcim_powerport_related`                       |
-| Circuit              | `termination_a`                         | `circuit_termination_a`                        |
-|                      | `termination_z`                         | `circuit_termination_z`                        |
-|                      | `terminations`                          | `circuit_terminations`                         |
-|                      | `type`                                  | `circuit_type`                                 |
-| Cluster              | `group`                                 | `cluster_group`                                |
-|                      | `type`                                  | `cluster_type`                                 |
-| ConfigContextSchema  | `device_set`                            | `dcim_device_related`                          |
-|                      | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
-| Device               | `device_role`                           | `role`                                         |
-|                      | `local_context_data`                    | `local_config_context_data`                    |
-|                      | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                      | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                      | `local_context_schema`                  | `local_config_context_schema`                  |
-| InventoryItem        | `child_items`                           | `children`                                     |
-|                      | `level`                                 | `tree_depth`                                   |
-| RackGroup            | `level`                                 | `tree_depth`                                   |
-| Region               | `level`                                 | `tree_depth`                                   |
-| Service              | `ipaddresses`                           | `ip_addresses`                                 |
-| Tenant               | `group`                                 | `tenant_group`                                 |
-| TenantGroup          | `level`                                 | `tree_depth`                                   |
-| VirtualMachine       | `local_context_data`                    | `local_config_context_data`                    |
-|                      | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                      | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                      | `local_context_schema`                  | `local_config_context_schema`                  |
-| VLAN                 | `group`                                 | `vlan_group`                                   |
+| Model                 | Renamed Field                           | New Name                                       |
+|-----------------------|-----------------------------------------|------------------------------------------------|
+| CablePath             | `circuittermination`                    | `circuit_terminations`                         |
+|                       | `consoleport`                           | `console_ports`                                |
+|                       | `consoleserverport`                     | `console_server_ports`                         |
+|                       | `interface`                             | `interfaces`                                   |
+|                       | `powerfeed`                             | `power_feeds`                                  |
+|                       | `poweroutlet`                           | `power_outlets`                                |
+|                       | `powerport`                             | `power_ports`                                  |
+| Circuit               | `termination_a`                         | `circuit_termination_a`                        |
+|                       | `termination_z`                         | `circuit_termination_z`                        |
+|                       | `terminations`                          | `circuit_terminations`                         |
+|                       | `type`                                  | `circuit_type`                                 |
+| Cluster               | `group`                                 | `cluster_group`                                |
+|                       | `type`                                  | `cluster_type`                                 |
+| ConfigContextSchema   | `device_set`                            | `dcim_device_related`                          |
+|                       | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
+| Device                | `consoleports`                          | `console_ports`                                |
+|                       | `consoleserverports`                    | `console_server_ports`                         |
+|                       | `devicebays`                            | `device_bays`                                  |
+|                       | `device_role`                           | `role`                                         |
+|                       | `frontports`                            | `front_ports`                                  |
+|                       | `inventoryitems`                        | `inventory_items`                              |
+|                       | `local_context_data`                    | `local_config_context_data`                    |
+|                       | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                       | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                       | `local_context_schema`                  | `local_config_context_schema`                  |
+|                       | `poweroutlets`                          | `power_outlets`                                |
+|                       | `powerports`                            | `power_ports`                                  |
+|                       | `rearports`                             | `rear_ports`                                   |
+| DeviceRedundancyGroup | `members`                               | `devices`                                      |
+| DeviceType            | `consoleporttemplates`                  | `console_port_templates`                       |
+|                       | `consoleserverporttemplates`            | `console_server_port_templates`                |
+|                       | `devicebaytemplates`                    | `device_bay_templates`                         |
+|                       | `frontporttemplates`                    | `front_port_templates`                         |
+|                       | `interfacetemplates`                    | `interface_templates`                          |
+|                       | `instances`                             | `devices`                                      |
+|                       | `poweroutlettemplates`                  | `power_outlet_templates`                       |
+|                       | `powerporttemplates`                    | `power_port_templates`                         |
+|                       | `rearporttemplates`                     | `rear_port_templates`                          |
+| FrontPortTemplate     | `rear_port`                             | `rear_port_template`                           |
+| InventoryItem         | `child_items`                           | `children`                                     |
+|                       | `level`                                 | `tree_depth`                                   |
+| Location              | `powerpanels`                           | `power_panels`                                 |
+| PowerOutletTemplate   | `power_port`                            | `power_port_template`                          |
+| PowerPanel            | `powerfeeds`                            | `power_feeds`                                  |
+| PowerPort             | `poweroutlets`                          | `power_outlets`                                |
+| PowerPortTemplate     | `poweroutlet_templates`                 | `power_outlet_templates`                       |
+| Rack                  | `group`                                 | `rack_group`                                   |
+|                       | `powerfeeds`                            | `power_feeds`                                  |
+|                       | `reservations`                          | `rack_reservations`                            |
+| RackGroup             | `level`                                 | `tree_depth`                                   |
+|                       | `powerpanels`                           | `power_panels`                                 |
+| RearPort              | `frontports`                            | `front_ports`                                  |
+| RearPortTemplate      | `frontport_templates`                   | `front_port_templates`                         |
+| Region                | `level`                                 | `tree_depth`                                   |
+| Service               | `ipaddresses`                           | `ip_addresses`                                 |
+| Tenant                | `group`                                 | `tenant_group`                                 |
+|                       | `rackreservations`                      | `rack_reservations`                            |
+| TenantGroup           | `level`                                 | `tree_depth`                                   |
+| User                  | `rackreservation_set`                   | `rack_reservations`                            |
+| VirtualMachine        | `local_context_data`                    | `local_config_context_data`                    |
+|                       | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                       | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                       | `local_context_schema`                  | `local_config_context_schema`                  |
+| VLAN                  | `group`                                 | `vlan_group`                                   |
 
 ### Removed Database Fields
 
@@ -142,7 +174,17 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 | Device                | `device_role`          | `role`                        |
 |                       | `local_context_data`   | `local_config_context_data`   |
 |                       | `local_context_schema` | `local_config_context_schema` |
+| FrontPortTemplate     | `rear_port`            | `rear_port_template`          |
+| Interface             | `count_ipaddresses`    | `ip_address_count`            |
 | InventoryItem         | `_depth`               | `tree_depth`                  |
+| Location              | `virtualmachine_count` | `virtual_machine_count`       |
+| Manufacturer          | `devicetype_count`     | `device_type_count`           |
+|                       | `inventoryitem_count`  | `inventory_item_count`        |
+| Platform              | `virtualmachine_count` | `virtual_machine_count`       |
+| PowerOutletTemplate   | `power_port`           | `power_port_template`         |
+| PowerPanel            | `powerfeed_count`      | `power_feed_count`            |
+| Rack                  | `group`                | `rack_group`                  |
+|                       | `powerfeed_count`      | `power_feed_count`            |
 | RackGroup             | `_depth`               | `tree_depth`                  |
 | Region                | `_depth`               | `tree_depth`                  |
 | Service               | `ipaddresses`          | `ip_addresses`                |
@@ -210,7 +252,9 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |                       | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
 | DeviceBay             | `tag`                     | `tags`                           | `/dcim/device-bays/?tags=<slug>`                                          |
 | DeviceRedundancyGroup | `tag`                     | `tags`                           | `/dcim/device-redundancy-groups/?tag=<slug>`                              |
-| DeviceType            | `tag`                     | `tags`                           | `/dcim/device-types/?tags=<slug>`                                         |
+| DeviceType            | `has_instances`           | `has_devices`                    | `/dcim/device-types/?has_devices=True/False`                              |
+|                       | `instances`               | `devices`                        | `/dcim/device-types/?devices=<uuid>`                                      |
+|                       | `tag`                     | `tags`                           | `/dcim/device-types/?tags=<slug>`                                         |
 | FrontPort             | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
 |                       | `tag`                     | `tags`                           | `/dcim/front-ports/?tags=<slug>`                                          |
 | Interface             | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
@@ -229,8 +273,12 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
 | Provider              | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
 | ProviderNetwork       | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
-| Rack                  | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
-| RackReservation       | `tag`                     | `tags`                           | `/dcim/rack-reservations/?tags=<slug>`                                    |
+| Rack                  | `group`                   | `rack_group`                     | `/dcim/racks/?rack_group=<uuid/slug>`                                     |
+|                       | `has_reservations`        | `has_rack_reservations`          | `/dcim/racks/?has_rack_reservations=True/False`                           |
+|                       | `reservations`            | `rack_reservations`              | `/dcim/racks/?rack_reservations=<uuid>`                                   |
+|                       | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
+| RackReservation       | `group`                   | `rack_group`                     | `/dcim/rack-reservations/?rack_group=<uuid/slug>`                         |
+|                       | `tag`                     | `tags`                           | `/dcim/rack-reservations/?tags=<slug>`                                    |
 | RearPort              | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
 |                       | `tag`                     | `tags`                           | `/dcim/rear-ports/?tags=<slug>`                                           |
 | Site                  | `tag`                     | `tags`                           | `/dcim/sites/?tags=<slug>`                                                |
