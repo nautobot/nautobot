@@ -2,8 +2,15 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
-from nautobot.core.filters import BaseFilterSet, SearchFilter
+from nautobot.dcim.models import RackReservation
+from nautobot.extras.models import ObjectChange
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.core.filters import (
+    BaseFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+)
 
 __all__ = (
     "GroupFilterSet",
@@ -29,16 +36,46 @@ class UserFilterSet(BaseFilterSet):
             "email": "icontains",
         },
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
+    #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
+    groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group",
+        label="Group (ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
+    groups = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
         label="Group (name)",
+    )
+    has_changes = RelatedMembershipBooleanFilter(
+        field_name="changes",
+        label="Has Changes",
+    )
+    changes = django_filters.ModelMultipleChoiceFilter(
+        field_name="changes",
+        queryset=ObjectChange.objects.all(),
+        label="Object Changes (ID)",
+    )
+    has_object_permissions = RelatedMembershipBooleanFilter(
+        field_name="object_permissions",
+        label="Has object permissions",
+    )
+    object_permissions = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=ObjectPermission.objects.all(),
+        label="Object Permission (ID or name)",
+    )
+    has_rack_reservations = RelatedMembershipBooleanFilter(
+        field_name="rackreservation",
+        label="Has Changes",
+    )
+    # TODO(timizuo): Since RackReservation has no natural-key field, NaturalKeyOrPKMultipleChoiceFilter can't be used
+    rack_reservations_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="rackreservation",
+        queryset=RackReservation.objects.all(),
+        label="Rack Reservation (ID)",
     )
 
     class Meta:
@@ -59,27 +96,23 @@ class TokenFilterSet(BaseFilterSet):
 
     class Meta:
         model = Token
-        fields = ["id", "key", "write_enabled", "created", "expires"]
+        fields = ["id", "key", "write_enabled", "created", "expires", "description"]
 
 
 class ObjectPermissionFilterSet(BaseFilterSet):
-    user_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="users",
-        queryset=get_user_model().objects.all(),
-        label="User",
-    )
-    user = django_filters.ModelMultipleChoiceFilter(
-        field_name="users__username",
+    users = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User (name)",
+        label="User (ID or username)",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
+    #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
+    groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
         label="Group",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
+    groups = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
@@ -88,4 +121,4 @@ class ObjectPermissionFilterSet(BaseFilterSet):
 
     class Meta:
         model = ObjectPermission
-        fields = ["id", "name", "enabled", "object_types"]
+        fields = ["id", "name", "enabled", "object_types", "description"]
