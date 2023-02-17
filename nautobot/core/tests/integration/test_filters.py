@@ -4,7 +4,7 @@ from django.urls import reverse
 from nautobot.dcim import factory
 from nautobot.dcim.models import Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField
+from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
@@ -32,6 +32,9 @@ class ListViewFilterTestCase(SeleniumTestCase):
         )
         for custom_field in self.custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Site)])
+
+        for x in ["A", "B", "C"]:
+            CustomFieldChoice.objects.create(field=self.custom_fields[2], value=f"fOption {x}")
 
     def tearDown(self):
         self.logout()
@@ -101,35 +104,38 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_element_not_present_by_xpath("//div[@class='filters-applied']"))
 
     def test_input_field_gets_updated(self):
-        """Assert that a filter input field on Dynamic Filter Form updates if same field is updated."""
+        """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:site_list")}')
-        # filter_btn = self.browser.find_by_id("id__filterbtn", wait_time=10)
-        # default_filter_dom = self.browser.find_by_xpath("//div[@id='default-filter']")
-        # advanced_filter_dom = self.browser.find_by_xpath("//div[@id='advanced-filter']")
-        # advanced_tab_btn = self.browser.find_by_xpath("//a[@href='#advanced-filter']")
-        # apply_filter_btn = default_filter_dom.find_by_xpath("//button[@type='submit']")
-        # default_tab_btn = self.browser.find_by_xpath("//a[@href='#default-filter']")
 
+        # TODO(timizuo): changing these from name to slug when resolving issue #824
         text_field_name = "cf_" + self.cf_text_field_name
+        text_integer_field_name = "cf_" + self.cf_integer_field_name
+        text_select_field_name = "cf_" + self.cf_select_field_name
 
         # Open the filter modal, configure filter and apply filter
         self.browser.find_by_id("id__filterbtn").click()
-        self.browser.find_by_name(text_field_name).first.fill("test")
+        self.browser.find_by_name(text_field_name).first.fill("example-text")
+        self.browser.find_by_name(text_integer_field_name).first.fill(4356)
         self.browser.find_by_xpath("//div[@id='default-filter']//button[@type='submit']").click()
+        self.assertTrue(self.browser.is_text_present("example-text"))
+        self.assertTrue(self.browser.is_text_present("4356"))
 
         # Assert on update of field in Default Filter the update is replicated on Advanced Filter
         self.browser.find_by_id("id__filterbtn").click()
         self.browser.find_by_name(text_field_name)[1].fill("test new")
+        self.browser.find_by_name(text_integer_field_name)[1].fill(1111)
         self.browser.find_by_xpath("//a[@href='#advanced-filter']").click()  # *
-        cf_text_field_dom = self.browser.find_by_name(text_field_name)[2]
-        self.assertEqual(cf_text_field_dom.value, "test new")
+        self.assertEqual(self.browser.find_by_name(text_field_name)[2].value, "test new")
+        self.assertEqual(self.browser.find_by_name(text_integer_field_name)[2].value, "1111")
 
         # Assert on update of field in Advanced Filter the update is replicated on Default Filter
         self.browser.find_by_name(text_field_name)[2].fill("test new update")
+        self.browser.find_by_name(text_integer_field_name)[2].fill(8888)
         self.browser.find_by_xpath("//a[@href='#default-filter']").click()
-        cf_text_field_dom = self.browser.find_by_name(text_field_name)[1]
-        self.assertEqual(cf_text_field_dom.value, "test new update")
+        self.assertEqual(self.browser.find_by_name(text_field_name)[1].value, "test new update")
+        self.assertEqual(self.browser.find_by_name(text_integer_field_name)[1].value, "8888")
 
         # Assert on update of filter, the new filter is applied
         self.browser.find_by_xpath("//div[@id='default-filter']//button[@type='submit']").click()
         self.assertTrue(self.browser.is_text_present("test new update"))
+        self.assertTrue(self.browser.is_text_present("8888"))
