@@ -72,6 +72,8 @@ The metadata used to create the config context has the following options and is 
 | is_active              | False    | True    | Whether or not the Config Context is active                                       |
 | config_context_schema  | False    | N/A     | Config Context Schema that it should be validated against                         |
 
++/- 2.0.0
+    The key for specifying Config Context Schemas was renamed from `schema` to `config_context_schema`.
 There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
 
 Here is an example `_metadata` key defined:
