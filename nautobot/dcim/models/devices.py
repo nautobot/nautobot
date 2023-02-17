@@ -416,7 +416,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     creation of a Device.
     """
 
-    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="instances")
+    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="devices")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -497,7 +497,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     device_redundancy_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
         on_delete=models.SET_NULL,
-        related_name="members",
+        related_name="devices",
         blank=True,
         null=True,
         verbose_name="Device Redundancy Group",

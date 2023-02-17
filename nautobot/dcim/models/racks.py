@@ -525,16 +525,16 @@ class RackReservation(PrimaryModel):
     One or more reserved units within a Rack.
     """
 
-    rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="reservations")
+    rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="rack_reservations")
     units = JSONArrayField(base_field=models.PositiveSmallIntegerField())
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="rackreservations",
+        related_name="rack_reservations",
         blank=True,
         null=True,
     )
-    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
     description = models.CharField(max_length=200)
 
     csv_headers = [
