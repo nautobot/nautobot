@@ -64,7 +64,9 @@ class ConfigContextSchemaValidationMixin:
 
 
 def limit_dynamic_group_choices():
-    return models.Q(app_label="virtualization", model="virtualmachine") | models.Q(app_label="dcim", model="device")
+    return models.Q(content_type__app_label="virtualization", content_type__model="virtualmachine") | models.Q(
+        content_type__app_label="dcim", content_type__model="device"
+    )
 
 
 @extras_features("graphql")
