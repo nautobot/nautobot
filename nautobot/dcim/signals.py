@@ -57,7 +57,7 @@ def rebuild_paths(obj):
 
 
 @receiver(post_save, sender=RackGroup)
-def handle_rackgroup_site_location_change(instance, created, **kwargs):
+def handle_rackgroup_site_location_change(instance, created, raw=False, **kwargs):
     """
     Update child RackGroups, Racks, and PowerPanels if Site or Location assignment has changed.
 
@@ -68,6 +68,8 @@ def handle_rackgroup_site_location_change(instance, created, **kwargs):
     may or may not be permitted to contain Racks or PowerPanels. If it's not permitted, rather than trying to search
     through child locations to find the "right" one, the best we can do is simply to null out the location.
     """
+    if raw:
+        return
     if not created:
         if instance.location is not None:
             descendants = instance.location.descendants(include_self=True)
@@ -134,7 +136,7 @@ def handle_rackgroup_site_location_change(instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Rack)
-def handle_rack_site_location_change(instance, created, **kwargs):
+def handle_rack_site_location_change(instance, created, raw=False, **kwargs):
     """
     Update child Devices if Site or Location assignment has changed.
 
@@ -142,6 +144,8 @@ def handle_rack_site_location_change(instance, created, **kwargs):
     may or may not be permitted to contain Devices. If it's not permitted, rather than trying to search
     through child locations to find the "right" one, the best we can do is simply to null out the location.
     """
+    if raw:
+        return
     if not created:
         if instance.location is not None:
             devices_permitted = (
@@ -172,10 +176,12 @@ def handle_rack_site_location_change(instance, created, **kwargs):
 
 
 @receiver(post_save, sender=VirtualChassis)
-def assign_virtualchassis_master(instance, created, **kwargs):
+def assign_virtualchassis_master(instance, created, raw=False, **kwargs):
     """
     When a VirtualChassis is created, automatically assign its master device (if any) to the VC.
     """
+    if raw:
+        return
     if created and instance.master:
         master = Device.objects.get(pk=instance.master.pk)
         master.virtual_chassis = instance

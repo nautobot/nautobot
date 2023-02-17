@@ -19,6 +19,7 @@ from django.utils import timezone
 
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
+from prometheus_client import Histogram
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
@@ -59,6 +60,14 @@ logger = logging.getLogger(__name__)
 # foreign key relationship works, but needs its own connection to avoid JobLogEntry
 # objects being created within transaction.atomic().
 JOB_LOGS = "job_logs"
+
+# The JOB_RESULT_METRIC variable is a counter metric that counts executions of jobs,
+# including information beyond what a tool like flower could get by introspecting
+# the celery task queue. This is accomplished by looking one abstraction deeper into
+# the job model of Nautobot.
+JOB_RESULT_METRIC = Histogram(
+    "nautobot_job_duration_seconds", "Results of Nautobot jobs.", ["grouping", "name", "status"]
+)
 
 
 @extras_features(
@@ -669,7 +678,14 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         self.status = status
         if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+            # Only add metrics if we have a related job model. If we are moving to a terminal state we should always
+            # have a related job model, so this shouldn't be too tight of a restriction.
             self.completed = timezone.now()
+            if self.job_model:
+                duration = self.completed - self.created
+                JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
+                    duration.total_seconds()
+                )
 
     @classmethod
     def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
@@ -805,14 +821,18 @@ class ScheduledJobs(models.Model):
     objects = ExtendedManager()
 
     @classmethod
-    def changed(cls, instance, **kwargs):
+    def changed(cls, instance, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered before a change"""
+        if raw:
+            return
         if not instance.no_changes:
             cls.update_changed()
 
     @classmethod
-    def update_changed(cls, **kwargs):
+    def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
+        if raw:
+            return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
 
     @classmethod

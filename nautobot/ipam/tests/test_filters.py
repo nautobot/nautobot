@@ -84,33 +84,29 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
 
     def test_import_target(self):
         route_targets = list(RouteTarget.objects.filter(importing_vrfs__isnull=False).distinct())[:2]
-        params = {"import_target_id": [route_targets[0].pk, route_targets[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(import_targets__in=route_targets).distinct(),
-            ordered=False,
-        )
-        params = {"import_target": [route_targets[0].name, route_targets[1].name]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(import_targets__in=route_targets).distinct(),
-            ordered=False,
-        )
+        filter_params = [
+            {"import_target_id": [route_targets[0].pk, route_targets[1].pk]},
+            {"import_target": [route_targets[0].pk, route_targets[1].name]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(import_targets__in=route_targets).distinct(),
+                ordered=False,
+            )
 
     def test_export_target(self):
         route_targets = list(RouteTarget.objects.filter(exporting_vrfs__isnull=False).distinct())[:2]
-        params = {"export_target_id": [route_targets[0].pk, route_targets[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(export_targets__in=route_targets).distinct(),
-            ordered=False,
-        )
-        params = {"export_target": [route_targets[0].name, route_targets[1].name]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(export_targets__in=route_targets).distinct(),
-            ordered=False,
-        )
+        filter_params = [
+            {"export_target_id": [route_targets[0].pk, route_targets[1].pk]},
+            {"export_target": [route_targets[0].pk, route_targets[1].name]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(export_targets__in=route_targets).distinct(),
+                ordered=False,
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -129,25 +125,19 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Tenanc
 
     def test_importing_vrf(self):
         vrfs = list(VRF.objects.filter(import_targets__isnull=False, rd__isnull=False).distinct())[:2]
-        params = {"importing_vrf_id": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(importing_vrfs__in=vrfs).distinct()
-        )
-        params = {"importing_vrf": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(importing_vrfs__in=vrfs).distinct()
-        )
+        filter_params = [{"importing_vrf_id": [vrfs[0].pk, vrfs[1].pk]}, {"importing_vrf": [vrfs[0].pk, vrfs[1].rd]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(importing_vrfs__in=vrfs).distinct()
+            )
 
     def test_exporting_vrf(self):
         vrfs = list(VRF.objects.filter(export_targets__isnull=False, rd__isnull=False).distinct())[:2]
-        params = {"exporting_vrf_id": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(exporting_vrfs__in=vrfs).distinct()
-        )
-        params = {"exporting_vrf": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(exporting_vrfs__in=vrfs).distinct()
-        )
+        filter_params = [{"exporting_vrf_id": [vrfs[0].pk, vrfs[1].pk]}, {"exporting_vrf": [vrfs[0].pk, vrfs[1].rd]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(exporting_vrfs__in=vrfs).distinct()
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -210,10 +200,11 @@ class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_rir(self):
         rirs = list(RIR.objects.filter(aggregates__isnull=False).distinct())[:2]
-        params = {"rir_id": [rirs[0].pk, rirs[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
-        params = {"rir": [rirs[0].slug, rirs[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
+        filter_params = [{"rir_id": [rirs[0].pk, rirs[1].pk]}, {"rir": [rirs[0].pk, rirs[1].slug]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs).distinct()
+            )
 
 
 class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -315,7 +306,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs)
         )
-        params = {"vrf": [vrfs[0].rd, vrfs[1].rd]}
+        params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vrf__rd__in=[vrfs[0].rd, vrfs[1].rd]),
@@ -673,7 +664,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs).distinct()
         )
-        params = {"vrf": [vrfs[0].rd, vrfs[1].rd]}
+        params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs).distinct()
         )
@@ -720,7 +711,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.queryset.filter(assigned_object_id__in=[interfaces[0].pk, interfaces[1].pk]),
         )
 
-        params = {"interface": [interfaces[0].name, interfaces[1].name]}
+        params = {"interface": [interfaces[0].pk, interfaces[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(assigned_object_id__in=[interfaces[0].pk, interfaces[1].pk]),
@@ -734,7 +725,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.queryset.filter(assigned_object_id__in=[vm_interfaces[0].pk, vm_interfaces[1].pk]),
         )
 
-        params = {"vminterface": [vm_interfaces[0].name, vm_interfaces[1].name]}
+        params = {"vminterface": [vm_interfaces[0].pk, vm_interfaces[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(assigned_object_id__in=[vm_interfaces[0].pk, vm_interfaces[1].pk]),
@@ -924,10 +915,11 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
-        params = {"group": [groups[0].slug, groups[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
+        filter_params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].pk, groups[1].slug]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups)
+            )
 
     def test_role(self):
         roles = list(Role.objects.filter(vlans__isnull=False).distinct())[:2]
@@ -1050,18 +1042,20 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_device(self):
-        devices = Device.objects.all()[:2]
-        params = {"device_id": [devices[0].pk, devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"device": [devices[0].name, devices[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        devices = list(Device.objects.all()[:2])
+        filter_params = [{"device_id": [devices[0].pk, devices[1].pk]}, {"device": [devices[0].pk, devices[1].name]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(device__in=devices).distinct()
+            )
 
     def test_virtual_machine(self):
-        vms = VirtualMachine.objects.all()[:2]
-        params = {"virtual_machine_id": [vms[0].pk, vms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"virtual_machine": [vms[0].name, vms[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        vms = list(VirtualMachine.objects.all()[:2])
+        filter_params = [{"virtual_machine_id": [vms[0].pk, vms[1].pk]}, {"virtual_machine": [vms[0].pk, vms[1].name]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(virtual_machine__in=vms).distinct()
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]

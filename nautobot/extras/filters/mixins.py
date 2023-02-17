@@ -30,6 +30,7 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
+from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
@@ -136,13 +137,11 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
     )
     local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        label="Schema (ID)",
+        label="Schema (ID) - Deprecated (use local_context_schema filter)",
     )
-    local_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_context_schema__slug",
+    local_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        to_field_name="slug",
-        label="Schema (slug)",
+        label="Schema (ID or slug)",
     )
 
     def _local_context_data(self, queryset, name, value):

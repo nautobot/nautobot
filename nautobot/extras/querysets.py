@@ -176,7 +176,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         my_groups = []
         # TODO(jathan): 3 queries per DynamicGroup instance
         for dynamic_group in eligible_groups.iterator():
-            if obj.pk in dynamic_group.members.values_list("pk", flat=True):
+            if dynamic_group.members.filter(pk=obj.pk).values_list("pk", flat=True).exists():
                 my_groups.append(dynamic_group.pk)
 
         # TODO(jathan): 1 query
