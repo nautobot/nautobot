@@ -22,6 +22,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
 
+        # TODO(timizuo): changing these from name to slug when resolving issue #824
         self.cf_text_field_name = "text_field"
         self.cf_integer_field_name = "integer_field"
         self.cf_select_field_name = "select_field"
@@ -128,7 +129,6 @@ class ListViewFilterTestCase(SeleniumTestCase):
         """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:site_list")}')
 
-        # TODO(timizuo): changing these from name to slug when resolving issue #824
         text_field_name = "cf_" + self.cf_text_field_name
         integer_field_name = "cf_" + self.cf_integer_field_name
         select_field_name = "cf_" + self.cf_select_field_name
