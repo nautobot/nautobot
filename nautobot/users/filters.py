@@ -54,7 +54,7 @@ class UserFilterSet(BaseFilterSet):
         label="Has Changes",
     )
     changes = django_filters.ModelMultipleChoiceFilter(
-        to_field_name="changes",
+        field_name="changes",
         queryset=ObjectChange.objects.all(),
         label="Object Changes (ID)",
     )
