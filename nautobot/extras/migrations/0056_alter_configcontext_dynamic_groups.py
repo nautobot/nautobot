@@ -7,13 +7,18 @@ import nautobot.extras.models.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0055_configcontext_dynamic_groups'),
+        ("extras", "0055_configcontext_dynamic_groups"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='configcontext',
-            name='dynamic_groups',
-            field=models.ManyToManyField(blank=True, limit_choices_to=nautobot.extras.models.models.limit_dynamic_group_choices, related_name='_extras_configcontext_dynamic_groups_+', to='extras.DynamicGroup'),
+            model_name="configcontext",
+            name="dynamic_groups",
+            field=models.ManyToManyField(
+                blank=True,
+                limit_choices_to=nautobot.extras.models.models.limit_dynamic_group_choices,
+                related_name="_extras_configcontext_dynamic_groups_+",
+                to="extras.DynamicGroup",
+            ),
         ),
     ]
