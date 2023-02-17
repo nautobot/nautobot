@@ -469,6 +469,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("circuits", "0009_circuittermination_location"),
         ("dcim", "0029_change_tree_manager_on_tree_models"),
     ]
 
@@ -477,4 +478,11 @@ class Migration(migrations.Migration):
             code=migrate_site_and_region_data_to_locations,
             reverse_code=migrations.operations.special.RunPython.noop,
         ),
+    ]
+    run_before = [
+        ("circuits", "0011_remove_site_foreign_key_from_circuit_termination_class"),
+        ("dcim", "0032_remove_site_foreign_key_from_dcim_models"),
+        ("extras", "0064_remove_site_and_region_attributes_from_config_context"),
+        ("ipam", "0018_remove_site_foreign_key_from_ipam_models"),
+        ("virtualization", "0015_rename_foreignkey_fields"),
     ]

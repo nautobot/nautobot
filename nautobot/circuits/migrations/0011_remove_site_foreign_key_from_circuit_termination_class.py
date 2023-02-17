@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("circuits", "0010_rename_foreign_keys_and_related_names"),
-        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
     ]
 
     operations = [

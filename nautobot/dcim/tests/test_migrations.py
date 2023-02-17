@@ -1,4 +1,5 @@
 from nautobot.core.tests.test_migration import NautobotDataMigrationTest
+from nautobot.circuits.choices import CircuitTerminationSideChoices
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
@@ -13,7 +14,12 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         Site = apps.get_model("dcim", "site")
         LocationType = apps.get_model("dcim", "locationtype")
         Location = apps.get_model("dcim", "location")
+        Provider = apps.get_model("circuits", "provider")
+        CircuitType = apps.get_model("circuits", "circuittype")
+        Circuit = apps.get_model("circuits", "circuit")
         CircuitTermination = apps.get_model("circuits", "circuittermination")
+        Manufacturer = apps.get_model("dcim", "manufacturer")
+        DeviceType = apps.get_model("dcim", "devicetype")
         Device = apps.get_model("dcim", "device")
         PowerPanel = apps.get_model("dcim", "powerpanel")
         RackGroup = apps.get_model("dcim", "rackgroup")
@@ -33,6 +39,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         Prefix = apps.get_model("ipam", "prefix")
         VLANGroup = apps.get_model("ipam", "vlangroup")
         VLAN = apps.get_model("ipam", "vlan")
+        ClusterType = apps.get_model("virtualization", "clustertype")
         Cluster = apps.get_model("virtualization", "cluster")
         Status = apps.get_model("extras", "status")
         Tag = apps.get_model("extras", "tag")
@@ -59,7 +66,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         sites = []
         for i in range(10):
             sites.append(Site(name=f"Test Site {i}"))
-        Site.objects.bulk_create(sites, batch_size=10)
+        self.sites = Site.objects.bulk_create(sites, batch_size=10)
         # Sites with Regions
         site_2 = Site.objects.get(name="Test Site 2")
         site_2.region = Region.objects.get(name="Test Region 1")
@@ -76,26 +83,92 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             location_types.append(LocationType(name=f"Test Location Type {i}"))
         LocationType.objects.bulk_create(location_types, batch_size=10)
         for i in range(5):
-            location_type = LocationType.objects.get(name=f"Test Location Type {i}")
             if i == 0 or i == 1:
-                location_type.site = Site.objects.get(name=f"Test Site {i}")
-            else:
-                location_type.parent = LocationType.objects.get(name=f"Test Location Type {i - 1}")
-                location_type.save()
+                continue
+            location_type = LocationType.objects.get(name=f"Test Location Type {i}")
+            location_type.parent = LocationType.objects.get(name=f"Test Location Type {i - 1}")
+            location_type.save()
 
         locations = []
         for i in range(15):
             location_type = LocationType.objects.get(name=f"Test Location Type {i % 5}")
             locations.append(Location(name=f"Test Location {i}", location_type=location_type))
-        Location.objects.bulk_create(locations, batch_size=15)
+        self.locations = Location.objects.bulk_create(locations, batch_size=15)
 
         for i in range(15):
             if i % 5 == 0 or i % 5 == 1:
-                continue
+                location = Location.objects.get(name=f"Test Location {i}")
+                location.site = Site.objects.get(name=f"Test Site {i % 5}")
+                location.save()
             else:
                 location = Location.objects.get(name=f"Test Location {i}")
                 location.parent = Location.objects.get(name=f"Test Location {i - 1}")
                 location.save()
+
+        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+
+        self.circuits = (
+            Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type),
+            Circuit.objects.create(cid="Circuit 2", provider=provider, type=circuit_type),
+            Circuit.objects.create(cid="Circuit 3", provider=provider, type=circuit_type),
+        )
+        SIDE_A = CircuitTerminationSideChoices.SIDE_A
+        SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
+        self.cts = (
+            CircuitTermination.objects.create(
+                circuit=self.circuits[0], site=Site.objects.get(name="Test Site 0"), term_side=SIDE_A
+            ),
+            CircuitTermination.objects.create(
+                circuit=self.circuits[0], site=Site.objects.get(name="Test Site 1"), term_side=SIDE_Z
+            ),
+            CircuitTermination.objects.create(
+                circuit=self.circuits[1], site=Site.objects.get(name="Test Site 0"), term_side=SIDE_A
+            ),
+            CircuitTermination.objects.create(
+                circuit=self.circuits[1], site=Site.objects.get(name="Test Site 1"), term_side=SIDE_Z
+            ),
+        )
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        device_type = Device.objects.create(name="Device Type 1", manufacturer=manufacturer)
+
+        Device.objects.create(
+            device_type=device_type,
+            name="Device 1",
+            site=Site.objects.get(name="Test Site 0"),
+            location=Location.objects.get(name="Test Location 0"),
+        )
+        Device.objects.create(
+            device_type=device_type,
+            name="Device 2",
+            site=Site.objects.get(name="Test Site 1"),
+            location=Location.objects.get(name="Test Location 1"),
+        )
+        Device.objects.create(
+            device_type=device_type,
+            name="Device 3",
+            site=Site.objects.get(name="Test Site 5"),
+        )
+
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+
+        self.clusters = (
+            Cluster.objects.create(name="Cluster 1", type=cluster_type, site=Site.objects.get(name="Test Site 0")),
+            Cluster.objects.create(name="Cluster 2", type=cluster_type, site=Site.objects.get(name="Test Site 1")),
+            Cluster.objects.create(
+                name="Cluster 3",
+                type=cluster_type,
+                site=Site.objects.get(name="Test Site 0"),
+                location=Location.objects.get(name="Test Location 0"),
+            ),
+            Cluster.objects.create(
+                name="Cluster 4",
+                type=cluster_type,
+                site=Site.objects.get(name="Test Site 0"),
+                location=Location.objects.get(name="Test Location 0"),
+            ),
+        )
 
     def test_region_and_site_data_migration(self):
 
@@ -149,10 +222,20 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                 self.assertEquals(location.parent.name, location.site.name)
 
         with self.subTest("Testing Circuits app model migration"):
-            pass
+            CircuitTermination = self.apps.get_model("circuits", "circuittermination")
+            cts = CircuitTermination.objects.all().select_related("site", "location")
+            for ct in cts:
+                self.assertEquals(ct.site.name, ct.location.name)
 
         with self.subTest("Testing DCIM app model migration"):
-            pass
+            Device = self.apps.get_model("dcim", "device")
+            device_1 = Device.objects.get(name="Device 1")
+            self.assertEquals(device_1.location.name, "Test Location 0")
+            device_2 = Device.objects.get(name="Device 2")
+            self.assertEquals(device_2.location.name, "Test Location 1")
+            device_3 = Device.objects.get(name="Device 3")
+            self.assertEquals(device_3.location.name, "Test Site 5")
+            self.assertEquals(device_3.location.location_type.name, "Site")
 
         with self.subTest("Testing Extras app model migration"):
             pass
@@ -161,4 +244,14 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             pass
 
         with self.subTest("Testing Virtualization app model migration"):
-            pass
+            Cluster = self.apps.get_model("virtualizaiton", "cluster")
+            clusters = Cluster.objects.filter(name__in=["Cluster 1", "Cluster 2"]).select_related("site", "location")
+            for cluster in clusters:
+                self.assertEquals(cluster.site.name, cluster.location.name)
+
+            clusters = Cluster.objects.filter(name__in=["Cluster 3", "Cluster 4"]).select_related("site", "location")
+            for cluster in clusters:
+                self.assertEquals(
+                    cluster.location.name,
+                    "Test Location 0",
+                )
