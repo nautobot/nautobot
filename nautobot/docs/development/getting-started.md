@@ -120,7 +120,7 @@ git pull upstream develop
 !!! warning
     If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
 
-Now that you've got the latest upstream changes, create your branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number. For example:
+Now that you've got the latest upstream changes, create your branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number and `yourusername` is your GitHub username. For example:
 
 ```no-highlight
 git checkout -b u/yourusername-1234-next-amazing-feature

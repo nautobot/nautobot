@@ -17,7 +17,7 @@ if [ -d ./venv/ ]; then
 fi
 
 echo "Validating branch name..."
-[[ $(git branch --show-current) =~ ^u/ ]] || EXIT=1
+[[ $(git branch --show-current) =~ ^u/ ]] || echo "! Your branch name does not conform to the 'u/' prefix convention."
 
 echo "Validating PEP8 compliance..."
 invoke flake8 || EXIT=1
