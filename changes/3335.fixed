@@ -1,1 +1,1 @@
-Fix Filter on custom field (selection) can't be changed once filter is configured.
+Fixed inability to change filtering on custom field (selection) once filter is configured.
