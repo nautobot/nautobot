@@ -47,13 +47,13 @@ class RoleModelMixin(models.Model):
     Abstract base class for any model which may have roles.
     """
 
-    role = RoleField()
+    role = RoleField(null=True, blank=True)
 
     class Meta:
         abstract = True
 
 
-class RoleRequiredRoleModelMixin(RoleModelMixin):
+class RoleRequiredRoleModelMixin(models.Model):
     """
     Abstract base class for any model which may have roles with role field required.
     """
