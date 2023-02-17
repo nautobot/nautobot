@@ -36,12 +36,12 @@ class UserFilterSet(BaseFilterSet):
             "email": "icontains",
         },
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
         label="Group",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
+    groups = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
@@ -98,11 +98,6 @@ class TokenFilterSet(BaseFilterSet):
 
 
 class ObjectPermissionFilterSet(BaseFilterSet):
-    users_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="users",
-        queryset=get_user_model().objects.all(),
-        label="User (ID)- Deprecated (use users filter)",
-    )
     users = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="users",
         queryset=get_user_model().objects.all(),
@@ -123,4 +118,4 @@ class ObjectPermissionFilterSet(BaseFilterSet):
 
     class Meta:
         model = ObjectPermission
-        fields = ["id", "name", "enabled", "object_types", "description", "constraints", "actions"]
+        fields = ["id", "name", "enabled", "object_types", "description"]

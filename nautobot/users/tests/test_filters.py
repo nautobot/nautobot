@@ -7,7 +7,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import make_aware
 
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Rack, RackReservation, Site
+from nautobot.dcim.factory import RackFactory, RackReservationFactory
+from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ObjectChange
 from nautobot.users.filters import (
@@ -26,6 +27,21 @@ User = get_user_model()
 class UserTestCase(FilterTestCases.FilterTestCase):
     queryset = User.objects.all()
     filterset = UserFilterSet
+
+    generic_filter_tests = (
+        ["username"],
+        ["first_name"],
+        ["last_name"],
+        ["email"],
+        ["groups_id", "groups__id"],
+        ["groups", "groups__name"],
+        ["rack_reservations_id", "rackreservation__id"],
+        ["changes", "changes__id"],
+        ["changes", "changes__id"],
+        ["changes", "changes__user_name"],
+        ["object_permissions", "object_permissions__id"],
+        ["object_permissions", "object_permissions__name"],
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -95,27 +111,8 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         cls.permissions[0].users.add(cls.users[0])
         cls.permissions[1].users.add(cls.users[1])
 
-        # TODO(timizuo): Use RackReservation.objects.all() since records should be available to use from.
-        rack = Rack.objects.create(name="Rack", site=site)
-        cls.rack_reservations = [
-            RackReservation.objects.create(rack=rack, units=[1, 2, 3], user=cls.users[num]) for num in range(3)
-        ]
-
-    def test_username(self):
-        params = {"username": ["User1", "User2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_first_name(self):
-        params = {"first_name": ["Hank", "Dale"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_last_name(self):
-        params = {"last_name": ["Hill", "Gribble"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_email(self):
-        params = {"email": ["hank@stricklandpropane.com", "dale@dalesdeadbug.com"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        RackFactory.create_batch(10)
+        RackReservationFactory.create_batch(5)
 
     def test_is_staff(self):
         params = {"is_staff": True}
@@ -126,83 +123,10 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         # 4 created active users in setUpTestData, plus one created active user in TestCase.setUp
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
-    def test_group(self):
-        groups = Group.objects.all()[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [groups[0].name, groups[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
-    def test_has_changes(self):
-        with self.subTest():
-            params = {"has_changes": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(changes__isnull=False).distinct(),
-            )
-        with self.subTest():
-            params = {"has_changes": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(changes__isnull=True).distinct(),
-            )
-
-    def test_changes(self):
-        changes = self.object_changes[:2]
-        params = {"changes": [changes[0].pk, changes[1].user.username]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(changes__in=changes).distinct(),
-        )
-
-    def test_has_object_permissions(self):
-        with self.subTest():
-            params = {"has_object_permissions": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(object_permissions__isnull=False).distinct(),
-            )
-        with self.subTest():
-            params = {"has_object_permissions": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(object_permissions__isnull=True).distinct(),
-            )
-
-    def test_object_permissions(self):
-        permissions = self.permissions[:2]
-        params = {"object_permissions": [permissions[0].pk, permissions[1].name]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(object_permissions__in=permissions).distinct(),
-        )
-
-    def test_has_rack_reservations(self):
-        with self.subTest():
-            params = {"has_rack_reservations": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(rackreservation__isnull=False).distinct(),
-            )
-        with self.subTest():
-            params = {"has_rack_reservations": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(rackreservation__isnull=True).distinct(),
-            )
-
-    def test_rack_reservations_id(self):
-        rack_reservations = self.rack_reservations[:2]
-        params = {"rack_reservations_id": [rack_reservations[0].pk, rack_reservations[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservation__in=rack_reservations).distinct(),
-        )
 
 
 class GroupTestCase(FilterTestCases.FilterTestCase):
@@ -229,6 +153,15 @@ class GroupTestCase(FilterTestCases.FilterTestCase):
 class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectPermission.objects.all()
     filterset = ObjectPermissionFilterSet
+
+    generic_filter_tests = (
+        ["users", "users__id"],
+        ["users", "users__username"],
+        ["groups_id", "groups__id"],
+        ["groups", "groups__name"],
+        ["description"],
+        ["name"],
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -269,46 +202,24 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
             permissions[i].users.set([users[i]])
             permissions[i].object_types.set([object_types[i]])
 
-    def test_name(self):
-        params = {"name": ["Permission 1", "Permission 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_enabled(self):
         params = {"enabled": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_group(self):
-        groups = Group.objects.filter(name__in=["Group 1", "Group 2"])
-        params = {"groups_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"groups": [groups[0].name, groups[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_user(self):
-        users = User.objects.filter(username__in=["User1", "User2"])
-        filter_params = [{"users_id": [users[0].pk, users[1].pk]}, {"users": [users[0].id, users[1].username]}]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(users__in=users),
-            )
 
     def test_object_types(self):
         object_types = ContentType.objects.filter(model__in=["site", "rack"])
         params = {"object_types": [object_types[0].pk, object_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_description(self):
-        descriptions = ["Description 1", "Description 2"]
-        params = {"description": descriptions}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(description__in=descriptions)
-        )
-
 
 class TokenTestCase(FilterTestCases.FilterTestCase):
     queryset = Token.objects.all()
     filterset = TokenFilterSet
+
+    generic_filter_tests = (
+        ["description"],
+        ["key"],
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -349,11 +260,6 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         params = {"expires__lte": ["2021-01-01 00:00:00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_key(self):
-        tokens = Token.objects.all()[:2]
-        params = {"key": [tokens[0].key, tokens[1].key]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_write_enabled(self):
         params = {"write_enabled": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -364,10 +270,3 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
-    def test_description(self):
-        descriptions = ["Description 1", "Description 2"]
-        params = {"description": descriptions}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(description__in=descriptions)
-        )
