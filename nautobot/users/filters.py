@@ -36,10 +36,12 @@ class UserFilterSet(BaseFilterSet):
             "email": "icontains",
         },
     )
+    # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
+    #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
     groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group",
+        label="Group (ID)",
     )
     groups = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
@@ -51,10 +53,10 @@ class UserFilterSet(BaseFilterSet):
         field_name="changes",
         label="Has Changes",
     )
-    changes = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="user_name",
+    changes = django_filters.ModelMultipleChoiceFilter(
+        to_field_name="changes",
         queryset=ObjectChange.objects.all(),
-        label="Object Changes (ID or user_name)",
+        label="Object Changes (ID)",
     )
     has_object_permissions = RelatedMembershipBooleanFilter(
         field_name="object_permissions",
@@ -99,11 +101,12 @@ class TokenFilterSet(BaseFilterSet):
 
 class ObjectPermissionFilterSet(BaseFilterSet):
     users = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="users",
         queryset=get_user_model().objects.all(),
         to_field_name="username",
         label="User (ID or username)",
     )
+    # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
+    #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
     groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
