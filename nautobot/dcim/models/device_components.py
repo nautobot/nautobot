@@ -795,7 +795,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         return self.type == InterfaceTypeChoices.TYPE_LAG
 
     @property
-    def count_ipaddresses(self):
+    def ip_address_count(self):
         return self.ip_addresses.count()
 
     @property
@@ -904,12 +904,12 @@ class RearPort(CableTermination, ComponentModel):
         super().clean()
 
         # Check that positions count is greater than or equal to the number of associated FrontPorts
-        frontport_count = self.frontports.count()
-        if self.positions < frontport_count:
+        front_port_count = self.front_ports.count()
+        if self.positions < front_port_count:
             raise ValidationError(
                 {
                     "positions": f"The number of positions cannot be less than the number of mapped front ports "
-                    f"({frontport_count})"
+                    f"({front_port_count})"
                 }
             )
 

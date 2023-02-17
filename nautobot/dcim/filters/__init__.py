@@ -853,7 +853,7 @@ class DeviceFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
-            "inventoryitems__serial": {
+            "inventory_items__serial": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },

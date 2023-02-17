@@ -287,7 +287,7 @@ def common_test_data(cls):
             comments="comment1",
             facility_id="rack-1",
             location=loc0,
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             tenant=tenants[0],
             status=cls.rack_status_map["active"],
             role=rackroles[0],
@@ -305,7 +305,7 @@ def common_test_data(cls):
             name="Rack 2",
             comments="comment2",
             facility_id="rack-2",
-            group=rack_groups[1],
+            rack_group=rack_groups[1],
             location=loc0,
             tenant=tenants[1],
             status=cls.rack_status_map["planned"],
@@ -324,7 +324,7 @@ def common_test_data(cls):
             name="Rack 3",
             comments="comment3",
             facility_id="rack-3",
-            group=rack_groups[2],
+            rack_group=rack_groups[2],
             location=loc0,
             tenant=tenants[2],
             status=cls.rack_status_map["reserved"],
@@ -466,7 +466,7 @@ def common_test_data(cls):
 
     PowerOutletTemplate.objects.create(
         device_type=device_types[0],
-        power_port=power_port_templates[0],
+        power_port_template=power_port_templates[0],
         name="Power Outlet 1",
         feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
         label="poweroutlet1",
@@ -474,7 +474,7 @@ def common_test_data(cls):
     )
     PowerOutletTemplate.objects.create(
         device_type=device_types[1],
-        power_port=power_port_templates[1],
+        power_port_template=power_port_templates[1],
         name="Power Outlet 2",
         feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
         label="poweroutlet2",
@@ -482,7 +482,7 @@ def common_test_data(cls):
     )
     PowerOutletTemplate.objects.create(
         device_type=device_types[2],
-        power_port=power_port_templates[2],
+        power_port_template=power_port_templates[2],
         name="Power Outlet 3",
         feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
         label="poweroutlet3",
@@ -544,7 +544,7 @@ def common_test_data(cls):
     FrontPortTemplate.objects.create(
         device_type=device_types[0],
         name="Front Port 1",
-        rear_port=rear_ports[0],
+        rear_port_template=rear_ports[0],
         type=PortTypeChoices.TYPE_8P8C,
         rear_port_position=1,
         label="frontport1",
@@ -553,7 +553,7 @@ def common_test_data(cls):
     FrontPortTemplate.objects.create(
         device_type=device_types[1],
         name="Front Port 2",
-        rear_port=rear_ports[1],
+        rear_port_template=rear_ports[1],
         type=PortTypeChoices.TYPE_110_PUNCH,
         rear_port_position=2,
         label="frontport2",
@@ -562,7 +562,7 @@ def common_test_data(cls):
     FrontPortTemplate.objects.create(
         device_type=device_types[2],
         name="Front Port 3",
-        rear_port=rear_ports[2],
+        rear_port_template=rear_ports[2],
         type=PortTypeChoices.TYPE_BNC,
         rear_port_position=3,
         label="frontport3",
@@ -1080,7 +1080,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         power_panels = PowerPanel.objects.filter(location__isnull=False)[:1]
         params = {"power_panels": [power_panels[0].pk, power_panels[0].name]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(powerpanels__in=[power_panels[0].pk])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(power_panels__in=[power_panels[0].pk])
         )
 
     def test_has_power_panels(self):
@@ -1088,13 +1088,13 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             params = {"has_power_panels": True}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(powerpanels__isnull=False).distinct(),
+                self.queryset.filter(power_panels__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_power_panels": False}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(powerpanels__isnull=True),
+                self.queryset.filter(power_panels__isnull=True),
             )
 
     def test_rack_groups(self):
@@ -1388,7 +1388,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             name="Rack 4",
             facility_id="rack-4",
             location=cls.loc1,
-            group=rack_group,
+            rack_group=rack_group,
             tenant=tenant,
             status=cls.rack_status_map["active"],
             role=rack_role,
@@ -1449,13 +1449,13 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             params = {"outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_group(self):
-        groups = RackGroup.objects.all()[:2]
+    def test_rack_group(self):
+        rack_groups = RackGroup.objects.all()[:2]
         with self.subTest():
-            params = {"group": [groups[0].pk, groups[1].pk]}
+            params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
-            params = {"group": [groups[0].slug, groups[1].slug]}
+            params = {"rack_group": [rack_groups[0].slug, rack_groups[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
@@ -1520,36 +1520,36 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             params = {"has_power_feeds": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_reservations(self):
-        reservations = RackReservation.objects.all()[:2]
-        params = {"reservations": [reservations[0], reservations[1]]}
+    def test_rack_reservations(self):
+        rack_reservations = RackReservation.objects.all()[:2]
+        params = {"rack_reservations": [rack_reservations[0], rack_reservations[1]]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_has_reservations(self):
+    def test_has_rack_reservations(self):
         with self.subTest():
-            params = {"has_reservations": True}
+            params = {"has_rack_reservations": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         with self.subTest():
-            params = {"has_reservations": False}
+            params = {"has_rack_reservations": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = RackReservation.objects.all()
     filterset = RackReservationFilterSet
-    tenancy_related_name = "rackreservations"
+    tenancy_related_name = "rack_reservations"
 
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
 
-    def test_group(self):
-        groups = RackGroup.objects.all()[:2]
+    def test_rack_group(self):
+        rack_groups = RackGroup.objects.all()[:2]
         with self.subTest():
-            params = {"group": [groups[0].pk, groups[1].pk]}
+            params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
-            params = {"group": [groups[0].slug, groups[1].slug]}
+            params = {"rack_group": [rack_groups[0].slug, rack_groups[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_user(self):
@@ -1766,13 +1766,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"console_ports": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleporttemplates__isnull=True),
+                self.queryset.exclude(console_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"console_ports": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleporttemplates__isnull=False),
+                self.queryset.exclude(console_port_templates__isnull=False),
             )
 
     def test_console_server_ports(self):
@@ -1780,13 +1780,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"console_server_ports": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleserverporttemplates__isnull=True),
+                self.queryset.exclude(console_server_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"console_server_ports": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleserverporttemplates__isnull=False),
+                self.queryset.exclude(console_server_port_templates__isnull=False),
             )
 
     def test_power_ports(self):
@@ -1794,13 +1794,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"power_ports": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(powerporttemplates__isnull=True),
+                self.queryset.exclude(power_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"power_ports": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(powerporttemplates__isnull=False),
+                self.queryset.exclude(power_port_templates__isnull=False),
             )
 
     def test_power_outlets(self):
@@ -1808,13 +1808,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"power_outlets": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(poweroutlettemplates__isnull=True),
+                self.queryset.exclude(power_outlet_templates__isnull=True),
             )
         with self.subTest():
             params = {"power_outlets": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(poweroutlettemplates__isnull=False),
+                self.queryset.exclude(power_outlet_templates__isnull=False),
             )
 
     def test_interfaces(self):
@@ -1822,17 +1822,17 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"interfaces": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(interfacetemplates__isnull=True),
+                self.queryset.exclude(interface_templates__isnull=True),
             )
         with self.subTest():
             params = {"interfaces": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(interfacetemplates__isnull=False),
+                self.queryset.exclude(interface_templates__isnull=False),
             )
 
     def test_pass_through_ports(self):
-        query = Q(frontporttemplates__isnull=False, rearporttemplates__isnull=False)
+        query = Q(front_port_templates__isnull=False, rear_port_templates__isnull=False)
         with self.subTest():
             params = {"pass_through_ports": True}
             self.assertQuerysetEqual(
@@ -1851,13 +1851,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"device_bays": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devicebaytemplates__isnull=True),
+                self.queryset.exclude(device_bay_templates__isnull=True),
             )
         with self.subTest():
             params = {"device_bays": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devicebaytemplates__isnull=False),
+                self.queryset.exclude(device_bay_templates__isnull=False),
             )
 
     def test_search(self):
@@ -1872,23 +1872,23 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         params = {"comments": comments}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(comments))
 
-    def test_instances(self):
+    def test_devices(self):
         instances = list(Device.objects.all()[:2])
-        params = {"instances": [instances[0].pk, instances[1].pk]}
+        params = {"devices": [instances[0].pk, instances[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(instances))
 
-    def test_has_instances(self):
+    def test_has_devices(self):
         with self.subTest():
-            params = {"has_instances": True}
+            params = {"has_devices": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(instances__isnull=True),
+                self.queryset.exclude(devices__isnull=True),
             )
         with self.subTest():
-            params = {"has_instances": False}
+            params = {"has_devices": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(instances__isnull=False),
+                self.queryset.exclude(devices__isnull=False),
             )
 
     def test_console_port_templates(self):
@@ -1901,13 +1901,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_console_port_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleporttemplates__isnull=True),
+                self.queryset.exclude(console_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_console_port_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleporttemplates__isnull=False),
+                self.queryset.exclude(console_port_templates__isnull=False),
             )
 
     def test_console_server_port_templates(self):
@@ -1920,13 +1920,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_console_server_port_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleserverporttemplates__isnull=True),
+                self.queryset.exclude(console_server_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_console_server_port_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(consoleserverporttemplates__isnull=False),
+                self.queryset.exclude(console_server_port_templates__isnull=False),
             )
 
     def test_power_port_templates(self):
@@ -1939,13 +1939,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_power_port_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(powerporttemplates__isnull=True),
+                self.queryset.exclude(power_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_power_port_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(powerporttemplates__isnull=False),
+                self.queryset.exclude(power_port_templates__isnull=False),
             )
 
     def test_power_outlet_templates(self):
@@ -1958,13 +1958,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_power_outlet_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(poweroutlettemplates__isnull=True),
+                self.queryset.exclude(power_outlet_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_power_outlet_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(poweroutlettemplates__isnull=False),
+                self.queryset.exclude(power_outlet_templates__isnull=False),
             )
 
     def test_interface_templates(self):
@@ -1977,13 +1977,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_interface_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(interfacetemplates__isnull=True),
+                self.queryset.exclude(interface_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_interface_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(interfacetemplates__isnull=False),
+                self.queryset.exclude(interface_templates__isnull=False),
             )
 
     def test_front_port_templates(self):
@@ -1996,13 +1996,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_front_port_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(frontporttemplates__isnull=True),
+                self.queryset.exclude(front_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_front_port_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(frontporttemplates__isnull=False),
+                self.queryset.exclude(front_port_templates__isnull=False),
             )
 
     def test_rear_port_templates(self):
@@ -2015,13 +2015,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_rear_port_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(rearporttemplates__isnull=True),
+                self.queryset.exclude(rear_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_rear_port_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(rearporttemplates__isnull=False),
+                self.queryset.exclude(rear_port_templates__isnull=False),
             )
 
     def test_device_bay_templates(self):
@@ -2034,13 +2034,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             params = {"has_device_bay_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devicebaytemplates__isnull=True),
+                self.queryset.exclude(device_bay_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_device_bay_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devicebaytemplates__isnull=False),
+                self.queryset.exclude(device_bay_templates__isnull=False),
             )
 
 
@@ -2140,13 +2140,13 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
             params = {"has_power_outlet_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(poweroutlet_templates__isnull=True),
+                self.queryset.exclude(power_outlet_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_power_outlet_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(poweroutlet_templates__isnull=False),
+                self.queryset.exclude(power_outlet_templates__isnull=False),
             )
 
 
@@ -2290,13 +2290,13 @@ class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
             params = {"has_front_port_templates": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(frontport_templates__isnull=True),
+                self.queryset.exclude(front_port_templates__isnull=True),
             )
         with self.subTest():
             params = {"has_front_port_templates": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(frontport_templates__isnull=False),
+                self.queryset.exclude(front_port_templates__isnull=False),
             )
 
 
@@ -2750,13 +2750,13 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
         )
 
         console_server_ports = (
-            devices[1].consoleserverports.get(name="Console Server Port 2"),
-            devices[2].consoleserverports.get(name="Console Server Port 3"),
+            devices[1].console_server_ports.get(name="Console Server Port 2"),
+            devices[2].console_server_ports.get(name="Console Server Port 3"),
         )
 
         console_ports = (
-            devices[0].consoleports.get(name="Console Port 1"),
-            devices[1].consoleports.get(name="Console Port 2"),
+            devices[0].console_ports.get(name="Console Port 1"),
+            devices[1].console_ports.get(name="Console Port 2"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2837,13 +2837,13 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
         )
 
         console_ports = (
-            devices[0].consoleports.get(name="Console Port 1"),
-            devices[1].consoleports.get(name="Console Port 2"),
+            devices[0].console_ports.get(name="Console Port 1"),
+            devices[1].console_ports.get(name="Console Port 2"),
         )
 
         console_server_ports = (
-            devices[1].consoleserverports.get(name="Console Server Port 2"),
-            devices[2].consoleserverports.get(name="Console Server Port 3"),
+            devices[1].console_server_ports.get(name="Console Server Port 2"),
+            devices[2].console_server_ports.get(name="Console Server Port 3"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2924,13 +2924,13 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         )
 
         power_outlets = (
-            devices[1].poweroutlets.get(name="Power Outlet 2"),
-            devices[2].poweroutlets.get(name="Power Outlet 3"),
+            devices[1].power_outlets.get(name="Power Outlet 2"),
+            devices[2].power_outlets.get(name="Power Outlet 3"),
         )
 
         power_ports = (
-            devices[0].powerports.get(name="Power Port 1"),
-            devices[1].powerports.get(name="Power Port 2"),
+            devices[0].power_ports.get(name="Power Port 1"),
+            devices[1].power_ports.get(name="Power Port 2"),
             PowerPort.objects.create(name="Power Port 4", device=devices[2]),
         )
 
@@ -3033,13 +3033,13 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
         )
 
         power_outlets = (
-            devices[1].poweroutlets.get(name="Power Outlet 2"),
-            devices[2].poweroutlets.get(name="Power Outlet 3"),
+            devices[1].power_outlets.get(name="Power Outlet 2"),
+            devices[2].power_outlets.get(name="Power Outlet 3"),
         )
 
         power_ports = (
-            devices[0].powerports.get(name="Power Port 1"),
-            devices[1].powerports.get(name="Power Port 2"),
+            devices[0].power_ports.get(name="Power Port 1"),
+            devices[1].power_ports.get(name="Power Port 2"),
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -3593,9 +3593,9 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         )
 
         rear_ports = (
-            devices[0].rearports.get(name="Rear Port 1"),
-            devices[1].rearports.get(name="Rear Port 2"),
-            devices[2].rearports.get(name="Rear Port 3"),
+            devices[0].rear_ports.get(name="Rear Port 1"),
+            devices[1].rear_ports.get(name="Rear Port 2"),
+            devices[2].rear_ports.get(name="Rear Port 3"),
             RearPort.objects.create(
                 device=devices[2],
                 name="Rear Port 4",
@@ -3611,9 +3611,9 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         )
 
         front_ports = (
-            devices[0].frontports.get(name="Front Port 1"),
-            devices[1].frontports.get(name="Front Port 2"),
-            devices[2].frontports.get(name="Front Port 3"),
+            devices[0].front_ports.get(name="Front Port 1"),
+            devices[1].front_ports.get(name="Front Port 2"),
+            devices[2].front_ports.get(name="Front Port 3"),
             FrontPort.objects.create(
                 device=devices[2],
                 name="Front Port 4",
@@ -3714,9 +3714,9 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         )
 
         rear_ports = (
-            devices[0].rearports.get(name="Rear Port 1"),
-            devices[1].rearports.get(name="Rear Port 2"),
-            devices[2].rearports.get(name="Rear Port 3"),
+            devices[0].rear_ports.get(name="Rear Port 1"),
+            devices[1].rear_ports.get(name="Rear Port 2"),
+            devices[2].rear_ports.get(name="Rear Port 3"),
             RearPort.objects.create(
                 device=devices[2],
                 name="Rear Port 4",
@@ -3858,8 +3858,8 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
         )
 
         device_bays = (
-            parent_devices[0].devicebays.first(),
-            parent_devices[1].devicebays.first(),
+            parent_devices[0].device_bays.first(),
+            parent_devices[1].device_bays.first(),
         )
         device_bays[0].installed_device = child_devices[0]
         device_bays[1].installed_device = child_devices[1]

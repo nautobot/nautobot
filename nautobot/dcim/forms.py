@@ -626,7 +626,7 @@ class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 
 
 class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
-    group = DynamicModelChoiceField(
+    rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         query_params={"location": "$location"},
@@ -637,7 +637,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         model = Rack
         fields = [
             "location",
-            "group",
+            "rack_group",
             "name",
             "facility_id",
             "tenant_group",
@@ -670,7 +670,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
 
 
 class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
-    group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
+    rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -694,9 +694,9 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
 
         if data:
 
-            # Limit group queryset by assigned location
+            # Limit rack_group queryset by assigned location
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
+            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
 class RackBulkEditForm(
@@ -707,7 +707,7 @@ class RackBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Rack.objects.all(), widget=forms.MultipleHiddenInput)
-    group = DynamicModelChoiceField(
+    rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         query_params={"location": "$location"},
@@ -740,7 +740,7 @@ class RackBulkEditForm(
         model = Rack
         nullable_fields = [
             "location",
-            "group",
+            "rack_group",
             "tenant",
             "serial",
             "asset_tag",
@@ -762,14 +762,14 @@ class RackFilterForm(
     field_order = [
         "q",
         "location",
-        "group",
+        "rack_group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
@@ -789,7 +789,7 @@ class RackFilterForm(
 class RackElevationFilterForm(RackFilterForm):
     field_order = [
         "q",
-        "group",
+        "rack_group",
         "id",
         "status",
         "role",
@@ -802,7 +802,7 @@ class RackElevationFilterForm(RackFilterForm):
         required=False,
         query_params={
             "location": "$location",
-            "group": "$group",
+            "rack_group": "$rack_group",
         },
     )
 
@@ -823,7 +823,7 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
         queryset=Rack.objects.all(),
         query_params={
             "location": "$location",
-            "group": "$rack_group",
+            "rack_group": "$rack_group",
         },
     )
     units = NumericArrayField(
@@ -882,7 +882,7 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
             # Limit rack queryset by assigned location and group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -905,14 +905,14 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = RackReservation
     field_order = [
         "q",
-        "group",
+        "rack_group",
         "user",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    group = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
@@ -1409,7 +1409,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         # Determine which rear port positions are occupied. These will be excluded from the list of available mappings.
         occupied_port_positions = [
             (front_port_template.rear_port_template_id, front_port_template.rear_port_position)
-            for front_port_template in device_type.frontporttemplates.all()
+            for front_port_template in device_type.front_port_templates.all()
         ]
 
         # Populate rear port choices
@@ -1739,7 +1739,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         query_params={
             "location": "$location",
-            "group": "$rack_group",
+            "rack_group": "$rack_group",
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
@@ -1997,7 +1997,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm, RoleRequiredR
             # Limit rack queryset by assigned location and group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -2143,7 +2143,7 @@ class DeviceFilterForm(
         null_option="None",
         query_params={
             "location": "$location",
-            "group": "$rack_group",
+            "rack_group": "$rack_group",
         },
     )
     manufacturer = DynamicModelMultipleChoiceField(
@@ -3078,7 +3078,7 @@ class FrontPortCreateForm(ComponentCreateForm):
         # Determine which rear port positions are occupied. These will be excluded from the list of available
         # mappings.
         occupied_port_positions = [
-            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.frontports.all()
+            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.front_ports.all()
         ]
 
         # Populate rear port choices
@@ -4113,7 +4113,7 @@ class VirtualChassisFilterForm(NautobotFilterForm):
         to_field_name="slug",
         required=False,
         null_option="None",
-        query_params={"group": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )
     tag = TagFilterField(model)
 
@@ -4152,7 +4152,7 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
         if data:
 
-            # Limit group queryset by assigned location
+            # Limit rack_group queryset by assigned location
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
@@ -4196,7 +4196,7 @@ class PowerFeedForm(NautobotModelForm):
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        initial_params={"powerpanels": "$power_panel"},
+        initial_params={"power_panels": "$power_panel"},
     )
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
     rack = DynamicModelChoiceField(
@@ -4273,7 +4273,7 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             # Limit rack queryset by location and group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -4307,7 +4307,6 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
-            "rackgroup",
             "comments",
         ]
 

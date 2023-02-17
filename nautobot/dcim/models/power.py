@@ -182,7 +182,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         return (
             self.power_panel.location.name,
             self.power_panel.name,
-            self.rack.group.name if self.rack and self.rack.group else None,
+            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
             self.rack.name if self.rack else None,
             self.name,
             self.get_status_display(),

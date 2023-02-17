@@ -209,4 +209,22 @@ class Migration(migrations.Migration):
             name='device_type',
             field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(on_delete=django.db.models.deletion.CASCADE, related_name='rear_port_templates', to='dcim.devicetype'),
         ),
+        migrations.AlterModelOptions(
+            name='rack',
+            options={'ordering': ('location', 'rack_group', '_name')},
+        ),
+        migrations.RenameField(
+            model_name='rack',
+            old_name='group',
+            new_name='rack_group',
+        ),
+        migrations.AlterField(
+            model_name='frontporttemplate',
+            name='rear_port_template',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='front_port_templates', to='dcim.rearporttemplate'),
+        ),
+        migrations.AlterUniqueTogether(
+            name='rack',
+            unique_together={('rack_group', 'facility_id'), ('rack_group', 'name')},
+        ),
     ]
