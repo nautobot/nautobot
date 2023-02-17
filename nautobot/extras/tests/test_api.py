@@ -393,14 +393,14 @@ class CreatedUpdatedFilterTest(APITestCase):
 
         # change the created and last_updated of one
         Rack.objects.filter(pk=self.rack2.pk).update(
+            created=make_aware(datetime(2001, 2, 3, 0, 1, 2, 3)),
             last_updated=make_aware(datetime(2001, 2, 3, 1, 2, 3, 4)),
-            created=make_aware(datetime(2001, 2, 3)),
         )
 
     def test_get_rack_created(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get(f"{url}?created=2001-02-03", **self.header)
+        response = self.client.get(f"{url}?created=2001-02-03%2000:01:02.000003", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -409,8 +409,13 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get(f"{url}?created__gte=2001-02-04", **self.header)
 
+        response = self.client.get(f"{url}?created__gte=2001-02-04", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
+
+        response = self.client.get(f"{url}?created__gte=2001-02-03%2000:01:03", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
@@ -418,8 +423,13 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get(f"{url}?created__lte=2001-02-04", **self.header)
 
+        response = self.client.get(f"{url}?created__lte=2001-02-04", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
+
+        response = self.client.get(f"{url}?created__lte=2001-02-03%2000:01:03", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
