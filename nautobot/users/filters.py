@@ -58,7 +58,7 @@ class UserFilterSet(BaseFilterSet):
     )
     has_object_permissions = RelatedMembershipBooleanFilter(
         field_name="object_permissions",
-        label="Has Changes",
+        label="Has object permissions",
     )
     object_permissions = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -69,7 +69,7 @@ class UserFilterSet(BaseFilterSet):
         field_name="rackreservation",
         label="Has Changes",
     )
-    # TODO(timizuo): Since RackReservation has no pk field yet, NaturalKeyOrPKMultipleChoiceFilter cant be used here
+    # TODO(timizuo): Since RackReservation has no natural-key field, NaturalKeyOrPKMultipleChoiceFilter can't be used
     rack_reservations_id = django_filters.ModelMultipleChoiceFilter(
         field_name="rackreservation",
         queryset=RackReservation.objects.all(),
