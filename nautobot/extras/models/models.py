@@ -62,8 +62,10 @@ class ConfigContextSchemaValidationMixin:
             except JSONSchemaValidationError as e:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
+
 def limit_dynamic_group_choices():
     return models.Q(app_label="virtualization", model="virtualmachine") | models.Q(app_label="dcim", model="device")
+
 
 @extras_features("graphql")
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
@@ -114,7 +116,9 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
-    dynamic_groups = models.ManyToManyField(to="extras.DynamicGroup", related_name="+", blank=True, limit_choices_to=limit_dynamic_group_choices)
+    dynamic_groups = models.ManyToManyField(
+        to="extras.DynamicGroup", related_name="+", blank=True, limit_choices_to=limit_dynamic_group_choices
+    )
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
     objects = ConfigContextQuerySet.as_manager()
