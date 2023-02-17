@@ -63,7 +63,6 @@
 | RackGroup               | `level`                                 | `tree_depth`                                   |
 | Region                  | `level`                                 | `tree_depth`                                   |
 | Relationship            | `associations`                          | `relationship_associations`                    |
-|                         | `jobresult`                             | `job_results`                                  |
 | Secret                  | `groups`                                | `secrets_groups`                               |
 |                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
 | SecretsGroup            | `gitrepository`                         | `git_repositories`                             |

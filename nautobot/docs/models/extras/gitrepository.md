@@ -64,13 +64,13 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 
 The metadata used to create the config context has the following options and is specified by the `_metadata` key.
 
-| Key         | Required | Default | Description                                                                       |
-| ----------- | -------- | ------- | --------------------------------------------------------------------------------- |
-| name        | True     | N/A     | The name that will be assigned to the Config Context                              |
-| weight      | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
-| description | False    | N/A     | The description applied to the Config Context                                     |
-| is_active   | False    | True    | Whether or not the Config Context is active                                       |
-| schema      | False    | N/A     | Config Context Schema that it should be validated against                         |
+| Key                    | Required | Default | Description                                                                       |
+|------------------------| -------- | ------- | --------------------------------------------------------------------------------- |
+| name                   | True     | N/A     | The name that will be assigned to the Config Context                              |
+| weight                 | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
+| description            | False    | N/A     | The description applied to the Config Context                                     |
+| is_active              | False    | True    | Whether or not the Config Context is active                                       |
+| config_context_schema  | False    | N/A     | Config Context Schema that it should be validated against                         |
 
 There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
 
@@ -84,7 +84,7 @@ Here is an example `_metadata` key defined:
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
         "regions": [{"slug": "nyc"}],
-        "schema": "Config Context Schema 1"
+        "config_context_schema": "Config Context Schema 1"
     },
     "acl": {
         "definitions": {
@@ -175,7 +175,7 @@ The implicit config contexts will be defined using dictionaries for both `_metad
         "weight": 1000,
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
-        "schema": "Config Context Schema 1"
+        "config_context_schema": "Config Context Schema 1"
     },
     "ntp-servers": [
         "172.16.10.22",
@@ -196,7 +196,7 @@ _metadata":
   weight: 1000
   description: "NTP and Syslog servers for region NYC"
   is_active: true
-  schema: "Config Context Schema 1"
+  config_context_schema: "Config Context Schema 1"
 
 ntp-servers:
   - 172.16.10.22

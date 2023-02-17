@@ -1366,7 +1366,10 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = SecretsGroupAssociation.objects.all()
     filterset = SecretsGroupAssociationFilterSet
 
-    generic_filter_tests = (["secrets_group", "secrets_group__slug"],)
+    generic_filter_tests = (
+        ["secrets_group", "secrets_group__id"],
+        ["secrets_group", "secrets_group__slug"],
+    )
 
     @classmethod
     def setUpTestData(cls):
