@@ -78,6 +78,7 @@ __all__ = (
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
     "ContentTypeFilterSet",
+    "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedFilterSet",
     "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldBooleanFilter",
