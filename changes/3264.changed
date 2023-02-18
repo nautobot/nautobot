@@ -1,1 +1,0 @@
-Changed `DynamicGroup.objects.get_for_object()` to be a little more efficient.

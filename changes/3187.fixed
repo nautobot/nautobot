@@ -1,1 +1,0 @@
-Fixed `DynamicModelChoiceField`s having a generic default label when one is provided.
