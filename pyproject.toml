@@ -118,6 +118,8 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
+# Note: netutils is limited in scope, dependencies, and observes semver, as such
+#       we permit a looser (^) version constraint here.
 netutils = "^1.4.0"
 # Image processing library
 Pillow = "~9.3.0"
