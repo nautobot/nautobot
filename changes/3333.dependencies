@@ -1,1 +1,1 @@
-Update `netutils` to ^1.4.0 from ~1.4.0.
+Updated `netutils` constraint from ~1.4.0 to ^1.4.0 to permit semver upgrades.
