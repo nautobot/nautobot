@@ -105,7 +105,13 @@ def get_route_for_model(model, action, api=False):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    # Because ContentType is not a core model in nautobot, running a 'ContentType. meta.app label'
+    # would return "contenttypes" rather than "extras".
+    if model is ContentType:
+        app_label = "extras"
+    else:
+        app_label = model._meta.app_label
+    prefix = f"{app_label}{suffix}:{model._meta.model_name}"
     sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
