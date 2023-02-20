@@ -10,6 +10,7 @@ from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
 
 import django_filters
+from django_filters import MultipleChoiceFilter
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
@@ -597,10 +598,6 @@ class BaseFilterSet(django_filters.FilterSet):
         ):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
 
-        # These filter types support only negation
-        elif existing_filter.extra.get("choices"):
-            lookup_map = FILTER_NEGATION_LOOKUP_MAP
-
         elif isinstance(
             existing_filter,
             (
@@ -719,6 +716,15 @@ class BaseFilterSet(django_filters.FilterSet):
 
         filters.update(new_filters)
         return filters
+
+    @classmethod
+    def filter_for_lookup(cls, field, lookup_type):
+        filter_class, params = super().filter_for_lookup(field, lookup_type)
+
+        if lookup_type == 'exact' and getattr(field, 'choices', None):
+            return MultipleChoiceFilter, {'choices': field.choices}
+
+        return filter_class, params
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)
