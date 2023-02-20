@@ -148,6 +148,49 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.11 (2023-02-18)
+
+### Added
+
+- [#3168](https://github.com/nautobot/nautobot/issues/3168) - Add device name to bulk interface rename header.
+- [#3184](https://github.com/nautobot/nautobot/issues/3184) - Added Git 2.0+ as a mandatory dependency in the installation instructions.
+- [#3255](https://github.com/nautobot/nautobot/issues/3255) - Added `--cache-test-fixtures` command line argument to Nautobot unit and integration tests.
+
+### Changed
+
+- [#3134](https://github.com/nautobot/nautobot/issues/3134) - Migrate ModelMultipleChoiceFilters to NaturalKeyOrPKMultipleChoiceFilter.
+- [#3224](https://github.com/nautobot/nautobot/issues/3224) - Updates to our deprecation policy: Prior-major REST API versions will be dropped upon next-major release.
+- [#3264](https://github.com/nautobot/nautobot/issues/3264) - Changed `DynamicGroup.objects.get_for_object()` to be a little more efficient.
+- [#3311](https://github.com/nautobot/nautobot/issues/3311) - Add Links to Branch Names to README.md.
+- [#3314](https://github.com/nautobot/nautobot/issues/3314) - Updated developer documentation for user and prototype branching conventions.
+- [#3314](https://github.com/nautobot/nautobot/issues/3314) - Updated pre-commit hook to validate user namespace prefix on branch name.
+
+### Dependencies
+
+- [#3251](https://github.com/nautobot/nautobot/issues/3251) - Updated `oauthlib` to 3.2.2.
+- [#3258](https://github.com/nautobot/nautobot/issues/3258) - Updated `cryptography` to 39.0.1.
+- [#3320](https://github.com/nautobot/nautobot/issues/3320) - Updated `django` to 3.2.18.
+- [#3333](https://github.com/nautobot/nautobot/issues/3333) - Updated `netutils` constraint from ~1.4.0 to ^1.4.0 to permit semver upgrades.
+
+### Fixed
+
+- [#2580](https://github.com/nautobot/nautobot/issues/2580) - Fixed fragile generic view test.
+- [#3187](https://github.com/nautobot/nautobot/issues/3187) - Fixed `DynamicModelChoiceField`s having a generic default label when one is provided.
+- [#3274](https://github.com/nautobot/nautobot/issues/3274) - Fixed ObjectListViewMixin's filtering when exporting objects in NautobotUIViewSet.
+- [#3277](https://github.com/nautobot/nautobot/issues/3277) - Fixed incorrect test data in `nautobot.extras.tests.test_api.NoteTest`.
+- [#3278](https://github.com/nautobot/nautobot/issues/3278) - Fixed docker development environment error when the Nautobot container tries to start before the database is ready.
+- [#3290](https://github.com/nautobot/nautobot/issues/3290) - Fixed an issue preventing the inclusion of `netutils` functions in Django templates.
+- [#3308](https://github.com/nautobot/nautobot/issues/3308) - Fixed incorrect documentation for object permissions.
+- [#3327](https://github.com/nautobot/nautobot/issues/3327) - Fixed Azure AD tenant configuration documentation.
+- [#3332](https://github.com/nautobot/nautobot/issues/3332) - Fixed missing imports in Secrets Providers plugin development documentation.
+- [#3335](https://github.com/nautobot/nautobot/issues/3335) - Fixed inability to change filtering on custom field (selection) once filter is configured.
+
+### Security
+
+- [#3251](https://github.com/nautobot/nautobot/issues/3251) - Updated `oauthlib` to 3.2.2 due to CVE-2022-36087. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3258](https://github.com/nautobot/nautobot/issues/3258) - Updated `cryptography` to 39.0.1 due to CVE-2023-0286, CVE-2023-23931. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3320](https://github.com/nautobot/nautobot/issues/3320) - Updated `django` to 3.2.18 due to CVE-2023-24580.
+
 ## v1.5.10 (2023-02-06)
 
 ### Added

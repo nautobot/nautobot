@@ -821,14 +821,18 @@ class ScheduledJobs(models.Model):
     objects = ExtendedManager()
 
     @classmethod
-    def changed(cls, instance, **kwargs):
+    def changed(cls, instance, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered before a change"""
+        if raw:
+            return
         if not instance.no_changes:
             cls.update_changed()
 
     @classmethod
-    def update_changed(cls, **kwargs):
+    def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
+        if raw:
+            return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
 
     @classmethod
