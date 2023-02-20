@@ -721,8 +721,8 @@ class BaseFilterSet(django_filters.FilterSet):
     def filter_for_lookup(cls, field, lookup_type):
         filter_class, params = super().filter_for_lookup(field, lookup_type)
 
-        if lookup_type == 'exact' and getattr(field, 'choices', None):
-            return MultipleChoiceFilter, {'choices': field.choices}
+        if lookup_type == "exact" and getattr(field, "choices", None):
+            return MultipleChoiceFilter, {"choices": field.choices}
 
         return filter_class, params
 
