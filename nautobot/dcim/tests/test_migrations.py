@@ -1,6 +1,6 @@
 from nautobot.core.tests.test_migration import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
-from netaddr import IPNetwork
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
@@ -10,129 +10,131 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
     def populateDataBeforeMigration(self, apps):
         """Populate Site/Site-related and Region/Region-related Data before migrating them to Locations"""
         # Needed models
-        ContentType = apps.get_model("contenttypes", "ContentType")
-        Region = apps.get_model("dcim", "region")
-        Site = apps.get_model("dcim", "site")
-        LocationType = apps.get_model("dcim", "locationtype")
-        Location = apps.get_model("dcim", "location")
-        Provider = apps.get_model("circuits", "provider")
-        CircuitType = apps.get_model("circuits", "circuittype")
-        Circuit = apps.get_model("circuits", "circuit")
-        CircuitTermination = apps.get_model("circuits", "circuittermination")
-        Manufacturer = apps.get_model("dcim", "manufacturer")
-        DeviceType = apps.get_model("dcim", "devicetype")
-        Device = apps.get_model("dcim", "device")
-        PowerPanel = apps.get_model("dcim", "powerpanel")
-        RackGroup = apps.get_model("dcim", "rackgroup")
-        Rack = apps.get_model("dcim", "rack")
-        ComputedField = apps.get_model("extras", "computedfield")
-        ConfigContext = apps.get_model("extras", "configcontext")
-        CustomField = apps.get_model("extras", "customfield")
-        CustomLink = apps.get_model("extras", "customlink")
-        DynamicGroup = apps.get_model("extras", "DynamicGroup")
-        ExportTemplate = apps.get_model("extras", "exporttemplate")
-        ImageAttachment = apps.get_model("extras", "imageattachment")
-        JobHook = apps.get_model("extras", "jobhook")
-        Note = apps.get_model("extras", "note")
-        WebHook = apps.get_model("extras", "webhook")
-        Relationship = apps.get_model("extras", "relationship")
-        RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
-        Prefix = apps.get_model("ipam", "prefix")
-        VLANGroup = apps.get_model("ipam", "vlangroup")
-        VLAN = apps.get_model("ipam", "vlan")
-        ClusterType = apps.get_model("virtualization", "clustertype")
-        Cluster = apps.get_model("virtualization", "cluster")
-        Status = apps.get_model("extras", "status")
-        Tag = apps.get_model("extras", "tag")
+        self.content_type = apps.get_model("contenttypes", "ContentType")
+        self.region = apps.get_model("dcim", "region")
+        self.site = apps.get_model("dcim", "site")
+        self.location_type = apps.get_model("dcim", "locationtype")
+        self.location = apps.get_model("dcim", "location")
+        self.provider = apps.get_model("circuits", "provider")
+        self.circuit_type = apps.get_model("circuits", "circuittype")
+        self.circuit = apps.get_model("circuits", "circuit")
+        self.circuit_termination = apps.get_model("circuits", "circuittermination")
+        self.manufacturer = apps.get_model("dcim", "manufacturer")
+        self.device_type = apps.get_model("dcim", "devicetype")
+        self.device = apps.get_model("dcim", "device")
+        self.power_panel = apps.get_model("dcim", "powerpanel")
+        self.rack_group = apps.get_model("dcim", "rackgroup")
+        self.rack = apps.get_model("dcim", "rack")
+        self.computed_field = apps.get_model("extras", "computedfield")
+        self.config_context = apps.get_model("extras", "configcontext")
+        self.custom_field = apps.get_model("extras", "customfield")
+        self.custom_link = apps.get_model("extras", "customlink")
+        self.dynamic_group = apps.get_model("extras", "DynamicGroup")
+        self.export_template = apps.get_model("extras", "exporttemplate")
+        self.image_attachment = apps.get_model("extras", "imageattachment")
+        self.job = apps.get_model("extras", "job")
+        self.job_hook = apps.get_model("extras", "jobhook")
+        self.note = apps.get_model("extras", "note")
+        self.web_hook = apps.get_model("extras", "webhook")
+        self.relationship = apps.get_model("extras", "relationship")
+        self.relationship_association = apps.get_model("extras", "relationshipassociation")
+        self.prefix = apps.get_model("ipam", "prefix")
+        self.vlan_group = apps.get_model("ipam", "vlangroup")
+        self.vlan = apps.get_model("ipam", "vlan")
+        self.cluster_type = apps.get_model("virtualization", "clustertype")
+        self.cluster = apps.get_model("virtualization", "cluster")
+        self.status = apps.get_model("extras", "status")
+        self.tag = apps.get_model("extras", "tag")
 
-        region_ct = ContentType.objects.get_for_model(Region)
-        site_ct = ContentType.objects.get_for_model(Site)
-        location_ct = ContentType.objects.get_for_model(Location)
+        self.region_ct = self.content_type.objects.get_for_model(self.region)
+        self.site_ct = self.content_type.objects.get_for_model(self.site)
+        self.location_ct = self.content_type.objects.get_for_model(self.location)
+        self.device_ct = self.content_type.objects.get_for_model(self.device)
 
         regions = []
         for i in range(10):
-            regions.append(Region(name=f"Test Region {i}"))
-        Region.objects.bulk_create(regions, batch_size=10)
+            regions.append(self.region(name=f"Test Region {i}"))
+        self.region.objects.bulk_create(regions, batch_size=10)
         # Nested Regions
-        region_2 = Region.objects.get(name="Test Region 2")
-        region_2.parent = Region.objects.get(name="Test Region 1")
+        region_2 = self.region.objects.get(name="Test Region 2")
+        region_2.parent = self.region.objects.get(name="Test Region 1")
         region_2.save()
-        region_4 = Region.objects.get(name="Test Region 4")
-        region_4.parent = Region.objects.get(name="Test Region 3")
+        region_4 = self.region.objects.get(name="Test Region 4")
+        region_4.parent = self.region.objects.get(name="Test Region 3")
         region_4.save()
-        region_5 = Region.objects.get(name="Test Region 5")
-        region_5.parent = Region.objects.get(name="Test Region 4")
+        region_5 = self.region.objects.get(name="Test Region 5")
+        region_5.parent = self.region.objects.get(name="Test Region 4")
         region_5.save()
 
         sites = []
         for i in range(10):
-            sites.append(Site(name=f"Test Site {i}"))
-        self.sites = Site.objects.bulk_create(sites, batch_size=10)
+            sites.append(self.site(name=f"Test Site {i}"))
+        self.sites = self.site.objects.bulk_create(sites, batch_size=10)
         # Sites with Regions
-        site_2 = Site.objects.get(name="Test Site 2")
-        site_2.region = Region.objects.get(name="Test Region 1")
+        site_2 = self.site.objects.get(name="Test Site 2")
+        site_2.region = self.region.objects.get(name="Test Region 1")
         site_2.save()
-        site_4 = Site.objects.get(name="Test Site 4")
-        site_4.region = Region.objects.get(name="Test Region 2")
+        site_4 = self.site.objects.get(name="Test Site 4")
+        site_4.region = self.region.objects.get(name="Test Region 2")
         site_4.save()
-        site_6 = Site.objects.get(name="Test Site 6")
-        site_6.region = Region.objects.get(name="Test Region 3")
+        site_6 = self.site.objects.get(name="Test Site 6")
+        site_6.region = self.region.objects.get(name="Test Region 3")
         site_6.save()
 
         location_types = []
         for i in range(5):
-            location_types.append(LocationType(name=f"Test Location Type {i}"))
-        LocationType.objects.bulk_create(location_types, batch_size=10)
+            location_types.append(self.location_type(name=f"Test Location Type {i}"))
+        self.location_type.objects.bulk_create(location_types, batch_size=10)
         for i in range(5):
             if i == 0 or i == 1:
                 continue
-            location_type = LocationType.objects.get(name=f"Test Location Type {i}")
-            location_type.parent = LocationType.objects.get(name=f"Test Location Type {i - 1}")
+            location_type = self.location_type.objects.get(name=f"Test Location Type {i}")
+            location_type.parent = self.location_type.objects.get(name=f"Test Location Type {i - 1}")
             location_type.save()
 
         locations = []
         for i in range(15):
-            location_type = LocationType.objects.get(name=f"Test Location Type {i % 5}")
-            locations.append(Location(name=f"Test Location {i}", location_type=location_type))
-        self.locations = Location.objects.bulk_create(locations, batch_size=15)
+            location_type = self.location_type.objects.get(name=f"Test Location Type {i % 5}")
+            locations.append(self.location(name=f"Test Location {i}", location_type=location_type))
+        self.locations = self.location.objects.bulk_create(locations, batch_size=15)
 
         for i in range(15):
             if i % 5 == 0 or i % 5 == 1:
-                location = Location.objects.get(name=f"Test Location {i}")
-                location.site = Site.objects.get(name=f"Test Site {i % 5}")
+                location = self.location.objects.get(name=f"Test Location {i}")
+                location.site = self.site.objects.get(name=f"Test Site {i % 5}")
                 location.save()
             else:
-                location = Location.objects.get(name=f"Test Location {i}")
-                location.parent = Location.objects.get(name=f"Test Location {i - 1}")
+                location = self.location.objects.get(name=f"Test Location {i}")
+                location.parent = self.location.objects.get(name=f"Test Location {i - 1}")
                 location.save()
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        provider = self.provider.objects.create(name="Provider 1", slug="provider-1")
+        circuit_type = self.circuit_type.objects.create(name="Circuit Type 1", slug="circuit-type-1")
 
         self.circuits = (
-            Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type),
-            Circuit.objects.create(cid="Circuit 2", provider=provider, type=circuit_type),
-            Circuit.objects.create(cid="Circuit 3", provider=provider, type=circuit_type),
+            self.circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type),
+            self.circuit.objects.create(cid="Circuit 2", provider=provider, type=circuit_type),
+            self.circuit.objects.create(cid="Circuit 3", provider=provider, type=circuit_type),
         )
         SIDE_A = CircuitTerminationSideChoices.SIDE_A
         SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
         self.cts = (
-            CircuitTermination.objects.create(
-                circuit=self.circuits[0], site=Site.objects.get(name="Test Site 0"), term_side=SIDE_A
+            self.circuit_termination.objects.create(
+                circuit=self.circuits[0], site=self.site.objects.get(name="Test Site 0"), term_side=SIDE_A
             ),
-            CircuitTermination.objects.create(
-                circuit=self.circuits[0], site=Site.objects.get(name="Test Site 1"), term_side=SIDE_Z
+            self.circuit_termination.objects.create(
+                circuit=self.circuits[0], site=self.site.objects.get(name="Test Site 1"), term_side=SIDE_Z
             ),
-            CircuitTermination.objects.create(
-                circuit=self.circuits[1], site=Site.objects.get(name="Test Site 0"), term_side=SIDE_A
+            self.circuit_termination.objects.create(
+                circuit=self.circuits[1], site=self.site.objects.get(name="Test Site 0"), term_side=SIDE_A
             ),
-            CircuitTermination.objects.create(
-                circuit=self.circuits[1], site=Site.objects.get(name="Test Site 1"), term_side=SIDE_Z
+            self.circuit_termination.objects.create(
+                circuit=self.circuits[1], site=self.site.objects.get(name="Test Site 1"), term_side=SIDE_Z
             ),
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
-        device_type = DeviceType.objects.create(
+        manufacturer = self.manufacturer.objects.create(name="Manufacturer 1")
+        device_type = self.device_type.objects.create(
             comments="Device type 1",
             model="Model 1",
             slug="model-1",
@@ -141,58 +143,58 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             is_full_depth=True,
             manufacturer=manufacturer,
         )
-        site_0 = Site.objects.get(name="Test Site 0")
-        site_1 = Site.objects.get(name="Test Site 1")
-        site_2 = Site.objects.get(name="Test Site 2")
-        site_3 = Site.objects.get(name="Test Site 3")
-        site_4 = Site.objects.get(name="Test Site 4")
-        site_5 = Site.objects.get(name="Test Site 5")
-        location_0 = Location.objects.get(name="Test Location 0")
-        location_1 = Location.objects.get(name="Test Location 1")
-        location_2 = Location.objects.get(name="Test Location 2")
-        location_3 = Location.objects.get(name="Test Location 3")
+        site_0 = self.site.objects.get(name="Test Site 0")
+        site_1 = self.site.objects.get(name="Test Site 1")
+        site_2 = self.site.objects.get(name="Test Site 2")
+        site_3 = self.site.objects.get(name="Test Site 3")
+        site_4 = self.site.objects.get(name="Test Site 4")
+        site_5 = self.site.objects.get(name="Test Site 5")
+        location_0 = self.location.objects.get(name="Test Location 0")
+        location_1 = self.location.objects.get(name="Test Location 1")
+        location_2 = self.location.objects.get(name="Test Location 2")
+        location_3 = self.location.objects.get(name="Test Location 3")
 
-        Device.objects.create(
+        self.device.objects.create(
             device_type=device_type,
             name="Device 1",
             site=site_0,
             location=location_0,
         )
-        Device.objects.create(
+        self.device.objects.create(
             device_type=device_type,
             name="Device 2",
             site=site_1,
             location=location_1,
         )
-        Device.objects.create(
+        self.device.objects.create(
             device_type=device_type,
             name="Device 3",
             site=site_5,
         )
         self.power_panels = [
-            PowerPanel.objects.create(name="site1-powerpanel1", site=site_1),
-            PowerPanel.objects.create(name="site1-powerpanel2", site=site_1),
-            PowerPanel.objects.create(name="site1-powerpanel3", site=site_1, location=location_2),
+            self.power_panel.objects.create(name="site1-powerpanel1", site=site_1),
+            self.power_panel.objects.create(name="site1-powerpanel2", site=site_1),
+            self.power_panel.objects.create(name="site1-powerpanel3", site=site_1, location=location_2),
         ]
         self.rack_groups = [
-            RackGroup.objects.create(site=site_1, name="Rack Group 1", slug="rack-group-1"),
-            RackGroup.objects.create(site=site_2, name="Rack Group 2", slug="rack-group-2"),
-            RackGroup.objects.create(site=site_3, name="Rack Group 3", slug="rack-group-3", location=location_3),
+            self.rack_group.objects.create(site=site_1, name="Rack Group 1", slug="rack-group-1"),
+            self.rack_group.objects.create(site=site_2, name="Rack Group 2", slug="rack-group-2"),
+            self.rack_group.objects.create(site=site_3, name="Rack Group 3", slug="rack-group-3", location=location_3),
         ]
         self.racks = [
-            Rack.objects.create(site=site_1, name="Rack 1"),
-            Rack.objects.create(site=site_2, name="Rack 2"),
-            Rack.objects.create(site=site_3, name="Rack 3", location=location_3),
+            self.rack.objects.create(site=site_1, name="Rack 1"),
+            self.rack.objects.create(site=site_2, name="Rack 2"),
+            self.rack.objects.create(site=site_3, name="Rack 3", location=location_3),
         ]
 
         self.prefixes = [
-            Prefix.objects.create(
+            self.prefix.objects.create(
                 network="1.1.1.0", broadcast="172.31.255.255", prefix_length=25, site=site_1, type="container"
             ),
-            Prefix.objects.create(
+            self.prefix.objects.create(
                 network="1.1.1.1", broadcast="172.31.255.255", prefix_length=25, site=site_2, type="container"
             ),
-            Prefix.objects.create(
+            self.prefix.objects.create(
                 network="1.1.1.2",
                 broadcast="172.31.255.255",
                 prefix_length=25,
@@ -203,63 +205,333 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         ]
 
         self.vlan_groups = [
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1, description="A"),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=site_2, description="B"),
-            VLANGroup.objects.create(
+            self.vlan_group.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1, description="A"),
+            self.vlan_group.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=site_2, description="B"),
+            self.vlan_group.objects.create(
                 name="VLAN Group 3", slug="vlan-group-3", site=site_3, location=location_2, description="C"
             ),
         ]
 
         self.vlans = [
-            VLAN.objects.create(name="VLAN 1", vid=1, site=site_1),
-            VLAN.objects.create(name="VLAN 2", vid=2, site=site_2),
-            VLAN.objects.create(name="VLAN 3", vid=3, site=site_3, location=location_2),
+            self.vlan.objects.create(name="VLAN 1", vid=1, site=site_1),
+            self.vlan.objects.create(name="VLAN 2", vid=2, site=site_2),
+            self.vlan.objects.create(name="VLAN 3", vid=3, site=site_3, location=location_2),
         ]
 
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        self.computed_field.objects.create(
+            slug="cpf1",
+            label="Computed Field One",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=self.region_ct,
+        )
+        self.computed_field.objects.create(
+            slug="cpf2",
+            label="Computed Field Two",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=self.site_ct,
+        )
+        self.computed_field.objects.create(
+            slug="cpf3",
+            label="Computed Field Three",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=self.location_ct,
+        )
+        custom_fields = [
+            self.custom_field.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
+            self.custom_field.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"),
+            self.custom_field.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"),
+        ]
+        for custom_field in custom_fields:
+            custom_field.content_types.set(
+                [
+                    self.content_type.objects.get_for_model(self.site),
+                    self.content_type.objects.get_for_model(self.region),
+                ]
+            )
+        sites[0]._custom_field_data = {"field_1": "ABC", "field_2": "Bar"}
+        sites[0].save()
+        sites[1]._custom_field_data = {"field_1": "abc", "field_2": "foo"}
+        sites[1].save()
+        regions[0]._custom_field_data = {"field_1": "DEF", "field_2": "Bar"}
+        regions[0].save()
+        regions[1]._custom_field_data = {"field_1": "def", "field_2": "foo"}
+        regions[1].save()
+
+        self.configcontexts = (
+            self.config_context.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777}),
+            self.config_context.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789}),
+            self.config_context.objects.create(name="context 3", weight=99, data={"d": 1}),
+        )
+        self.configcontexts[0].regions.add(regions[0], regions[1])
+        self.configcontexts[0].sites.add(sites[0], sites[1])
+        self.configcontexts[1].regions.add(regions[2], regions[3])
+        self.configcontexts[1].locations.add(locations[0])
+        self.configcontexts[2].sites.add(sites[2], sites[3])
+        self.configcontexts[2].locations.add(locations[1])
+
+        self.custom_link.objects.create(
+            content_type=self.site_ct,
+            name="CL-1",
+            text="customlink text 1",
+            target_url="http://test-1.com/test1",
+            weight=100,
+            new_window=False,
+        )
+        self.custom_link.objects.create(
+            content_type=self.site_ct,
+            name="CL-2",
+            text="customlink text 2",
+            target_url="http://test-2.com/test2",
+            weight=100,
+            new_window=False,
+        )
+        self.custom_link.objects.create(
+            content_type=self.location_ct,
+            name="CL-3",
+            text="customlink text 3",
+            target_url="http://test-3.com/test3",
+            weight=100,
+            new_window=False,
+        )
+        self.dynamic_group.objects.create(
+            name="DG-1",
+            slug="dg-1",
+            filter={"region": ["test-region-0", "test-region-1"]},
+            content_type=self.device_ct,
+        ),
+        self.dynamic_group.objects.create(
+            name="DG-2",
+            slug="dg-2",
+            filter={"site": ["test-site-0", "test-site-1"], "region": ["test-region-2", "test-region-3"]},
+            content_type=self.device_ct,
+        ),
+        self.dynamic_group.objects.create(
+            name="DG-3",
+            slug="dg-3",
+            filter={"location": ["test-location-0", "test-location-1"]},
+            content_type=self.device_ct,
+        )
+        self.export_template.objects.create(
+            name="Export Template 1",
+            content_type=self.region_ct,
+            template_code="TESTING",
+        )
+        self.export_template.objects.create(
+            name="Export Template 2",
+            content_type=self.site_ct,
+            template_code="TESTING",
+        )
+        self.export_template.objects.create(
+            name="Export Template 3",
+            content_type=self.location_ct,
+            template_code="TESTING",
+        )
+        self.image_attachment.objects.create(
+            content_type=self.site_ct,
+            object_id=sites[0].pk,
+            name="Image Attachment 1",
+            image="http://example.com/image1.png",
+            image_height=100,
+            image_width=100,
+        )
+        self.image_attachment.objects.create(
+            content_type=self.site_ct,
+            object_id=sites[1].pk,
+            name="Image Attachment 2",
+            image="http://example.com/image2.png",
+            image_height=100,
+            image_width=100,
+        )
+        self.image_attachment.objects.create(
+            content_type=self.location_ct,
+            object_id=locations[0].pk,
+            name="Image Attachment 3",
+            image="http://example.com/image3.png",
+            image_height=100,
+            image_width=100,
+        )
+        jh_1 = self.job_hook.objects.create(
+            name="JobHook1",
+            job=self.job.objects.get(job_class_name="TestJobHookReceiverLog"),
+            type_create=True,
+            type_update=True,
+            type_delete=True,
+        )
+        jh_1.content_types.set([self.region_ct])
+        jh_2 = self.job_hook.objects.create(
+            name="JobHook2",
+            job=self.job.objects.get(job_class_name="TestJobHookReceiverChange"),
+            type_create=True,
+            type_update=True,
+            type_delete=False,
+        )
+        jh_2.content_types.set([self.site_ct])
+        jh_3 = self.job_hook.objects.create(
+            name="JobHook3",
+            enabled=False,
+            job=self.job.objects.get(job_class_name="TestJobHookReceiverFail"),
+            type_delete=True,
+        )
+        jh_3.content_types.set([self.location_ct])
+        self.note.objects.create(
+            note="Location has been placed on maintenance.",
+            assigned_object_type=self.region_ct,
+            assigned_object_id=regions[0].pk,
+        )
+        self.note.objects.create(
+            note="Location maintenance has ended.",
+            assigned_object_type=self.site_ct,
+            assigned_object_id=sites[0].pk,
+        )
+        self.note.objects.create(
+            note="Location is under duress.",
+            assigned_object_type=self.location_ct,
+            assigned_object_id=locations[1].pk,
+        )
+        o2m = self.relationship.objects.create(
+            name="Site to Location o2m",
+            slug="site-to-location-o2m",
+            source_type=self.site_ct,
+            destination_type=self.location_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        self.relationship_association.objects.create(
+            relationship=o2m,
+            source_id=sites[0].id,
+            source_type_id=self.site_ct.id,
+            destination_id=locations[0].id,
+            destination_type_id=self.location_ct.id,
+        )
+        self.relationship_association.objects.create(
+            relationship=o2m,
+            source_id=sites[0].id,
+            source_type_id=self.site_ct.id,
+            destination_id=locations[1].id,
+            destination_type_id=self.location_ct.id,
+        )
+        m2m = self.relationship.objects.create(
+            name="Region to Site m2m",
+            slug="region-to-site-m2m",
+            source_type=self.region_ct,
+            destination_type=self.site_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        self.relationship_association.objects.create(
+            relationship=m2m,
+            source_id=regions[0].id,
+            source_type_id=self.region_ct.id,
+            destination_id=sites[0].id,
+            destination_type_id=self.site_ct.id,
+        )
+        self.relationship_association.objects.create(
+            relationship=m2m,
+            source_id=regions[1].id,
+            source_type_id=self.region_ct.id,
+            destination_id=sites[1].id,
+            destination_type_id=self.site_ct.id,
+        )
+        o2o = self.relationship.objects.create(
+            name="Region to Location o2o",
+            slug="region-to-location-o2o",
+            source_type=self.region_ct,
+            destination_type=self.location_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        self.relationship_association.objects.create(
+            relationship=o2o,
+            source_id=regions[2].id,
+            source_type_id=self.region_ct.id,
+            destination_id=locations[2].id,
+            destination_type_id=self.location_ct.id,
+        )
+        self.relationship_association.objects.create(
+            relationship=o2o,
+            source_id=regions[3].id,
+            source_type_id=self.region_ct.id,
+            destination_id=locations[3].id,
+            destination_type_id=self.location_ct.id,
+        )
+        self.webhooks = (
+            self.web_hook(
+                name="test-1",
+                type_create=True,
+                payload_url="http://example.com/test1",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+            self.web_hook(
+                name="test-2",
+                type_update=True,
+                payload_url="http://example.com/test2",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+            self.web_hook(
+                name="test-3",
+                type_delete=True,
+                payload_url="http://example.com/test3",
+                http_method="POST",
+                http_content_type="application/json",
+                ssl_verification=True,
+            ),
+        )
+
+        for webhook in self.webhooks:
+            webhook.save()
+            webhook.content_types.set([self.site_ct, self.region_ct])
+
+        cluster_type = self.cluster_type.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         self.clusters = (
-            Cluster.objects.create(
-                name="Cluster 1", cluster_type=cluster_type, site=Site.objects.get(name="Test Site 0")
+            self.cluster.objects.create(
+                name="Cluster 1", cluster_type=cluster_type, site=self.site.objects.get(name="Test Site 0")
             ),
-            Cluster.objects.create(
-                name="Cluster 2", cluster_type=cluster_type, site=Site.objects.get(name="Test Site 1")
+            self.cluster.objects.create(
+                name="Cluster 2", cluster_type=cluster_type, site=self.site.objects.get(name="Test Site 1")
             ),
-            Cluster.objects.create(
+            self.cluster.objects.create(
                 name="Cluster 3",
                 cluster_type=cluster_type,
-                site=Site.objects.get(name="Test Site 0"),
-                location=Location.objects.get(name="Test Location 0"),
+                site=self.site.objects.get(name="Test Site 0"),
+                location=self.location.objects.get(name="Test Location 0"),
             ),
-            Cluster.objects.create(
+            self.cluster.objects.create(
                 name="Cluster 4",
                 cluster_type=cluster_type,
-                site=Site.objects.get(name="Test Site 0"),
-                location=Location.objects.get(name="Test Location 0"),
+                site=self.site.objects.get(name="Test Site 0"),
+                location=self.location.objects.get(name="Test Location 0"),
             ),
         )
 
     def test_region_and_site_data_migration(self):
 
         with self.subTest("Testing Region and Site correctly migrate to Locations"):
-            Site = self.apps.get_model("dcim", "site")
-            LocationType = self.apps.get_model("dcim", "locationtype")
-            Location = self.apps.get_model("dcim", "location")
 
             # Test Location Types are created and the hierarchy is correct
-            self.assertEquals(len(LocationType.objects.filter(name="Region")), 1)
-            self.assertEquals(len(LocationType.objects.filter(name="Site")), 1)
-            self.assertEquals(LocationType.objects.get(name="Site").parent, LocationType.objects.get(name="Region"))
+            self.assertEquals(len(self.location_type.objects.filter(name="Region")), 1)
+            self.assertEquals(len(self.location_type.objects.filter(name="Site")), 1)
             self.assertEquals(
-                LocationType.objects.get(name="Test Location Type 0").parent, LocationType.objects.get(name="Site")
+                self.location_type.objects.get(name="Site").parent, self.location_type.objects.get(name="Region")
             )
             self.assertEquals(
-                LocationType.objects.get(name="Test Location Type 1").parent, LocationType.objects.get(name="Site")
+                self.location_type.objects.get(name="Test Location Type 0").parent,
+                self.location_type.objects.get(name="Site"),
+            )
+            self.assertEquals(
+                self.location_type.objects.get(name="Test Location Type 1").parent,
+                self.location_type.objects.get(name="Site"),
             )
             # Global Region is created
             self.assertEquals(
                 len(
-                    Location.objects.filter(name="Global Region", location_type=LocationType.objects.get(name="Region"))
+                    self.location.objects.filter(
+                        name="Global Region", location_type=self.location_type.objects.get(name="Region")
+                    )
                 ),
                 1,
             )
@@ -268,8 +540,8 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             for i in range(10):
                 self.assertEquals(
                     len(
-                        Location.objects.filter(
-                            name=f"Test Region {i}", location_type=LocationType.objects.get(name="Region")
+                        self.location.objects.filter(
+                            name=f"Test Region {i}", location_type=self.location_type.objects.get(name="Region")
                         )
                     ),
                     1,
@@ -277,109 +549,231 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             # For each site, a new location of LocationType "Site" is created and its parent, if not None, is
             # mapped to a Region LocationType location with the same name as its assigned Region.
             for i in range(10):
-                site_locations = Location.objects.filter(
-                    name=f"Test Site {i}", location_type=LocationType.objects.get(name="Site")
+                site_locations = self.location.objects.filter(
+                    name=f"Test Site {i}", location_type=self.location_type.objects.get(name="Site")
                 )
-                old_site = Site.objects.get(name=f"Test Site {i}")
+                old_site = self.site.objects.get(name=f"Test Site {i}")
                 self.assertEquals(len(site_locations), 1)
                 if old_site.region:
                     self.assertEquals(site_locations.first().parent.name, old_site.region.name)
 
             # Check that top level locations have Site locations as their parent, and they are matching up correctly
-            old_top_level_locations = Location.objects.filter(site__isnull=False)
+            old_top_level_locations = self.location.objects.filter(site__isnull=False)
             for location in old_top_level_locations:
                 self.assertEquals(location.parent.name, location.site.name)
 
         with self.subTest("Testing Circuits app model migration"):
-            CircuitTermination = self.apps.get_model("circuits", "circuittermination")
-            cts = CircuitTermination.objects.all().select_related("site", "location")
+            cts = self.circuit_termination.objects.all().select_related("site", "location")
             for ct in cts:
                 self.assertEquals(ct.site.name, ct.location.name)
 
         with self.subTest("Testing DCIM app model migration"):
-            Device = self.apps.get_model("dcim", "device")
-            PowerPanel = self.apps.get_model("dcim", "powerpanel")
-            RackGroup = self.apps.get_model("dcim", "rackgroup")
-            Rack = self.apps.get_model("dcim", "rack")
-            device_1 = Device.objects.get(name="Device 1")
+            device_1 = self.device.objects.get(name="Device 1")
             self.assertEquals(device_1.location.name, "Test Location 0")
-            device_2 = Device.objects.get(name="Device 2")
+            device_2 = self.device.objects.get(name="Device 2")
             self.assertEquals(device_2.location.name, "Test Location 1")
-            device_3 = Device.objects.get(name="Device 3")
+            device_3 = self.device.objects.get(name="Device 3")
             self.assertEquals(device_3.location.name, "Test Site 5")
             self.assertEquals(device_3.location.location_type.name, "Site")
-            powerpanel_1 = PowerPanel.objects.get(name="site1-powerpanel1")
+            powerpanel_1 = self.power_panel.objects.get(name="site1-powerpanel1")
             self.assertEquals(powerpanel_1.location.name, "Test Site 1")
             self.assertEquals(powerpanel_1.location.location_type.name, "Site")
-            powerpanel_2 = PowerPanel.objects.get(name="site1-powerpanel2")
+            powerpanel_2 = self.power_panel.objects.get(name="site1-powerpanel2")
             self.assertEquals(powerpanel_2.location.name, "Test Site 1")
             self.assertEquals(powerpanel_2.location.location_type.name, "Site")
-            powerpanel_3 = PowerPanel.objects.get(name="site1-powerpanel3")
+            powerpanel_3 = self.power_panel.objects.get(name="site1-powerpanel3")
             self.assertEquals(powerpanel_3.location.name, "Test Location 2")
             self.assertEquals(powerpanel_3.location.location_type.name, "Test Location Type 2")
-            rackgroup_1 = RackGroup.objects.get(name="Rack Group 1")
+            rackgroup_1 = self.rack_group.objects.get(name="Rack Group 1")
             self.assertEquals(rackgroup_1.location.name, "Test Site 1")
             self.assertEquals(rackgroup_1.location.location_type.name, "Site")
-            rackgroup_2 = RackGroup.objects.get(name="Rack Group 2")
+            rackgroup_2 = self.rack_group.objects.get(name="Rack Group 2")
             self.assertEquals(rackgroup_2.location.name, "Test Site 2")
             self.assertEquals(rackgroup_2.location.location_type.name, "Site")
-            rackgroup_3 = RackGroup.objects.get(name="Rack Group 3")
+            rackgroup_3 = self.rack_group.objects.get(name="Rack Group 3")
             self.assertEquals(rackgroup_3.location.name, "Test Location 3")
             self.assertEquals(rackgroup_3.location.location_type.name, "Test Location Type 3")
-            rack_1 = Rack.objects.get(name="Rack 1")
+            rack_1 = self.rack.objects.get(name="Rack 1")
             self.assertEquals(rack_1.location.name, "Test Site 1")
             self.assertEquals(rack_1.location.location_type.name, "Site")
-            rack_2 = Rack.objects.get(name="Rack 2")
+            rack_2 = self.rack.objects.get(name="Rack 2")
             self.assertEquals(rack_2.location.name, "Test Site 2")
             self.assertEquals(rack_2.location.location_type.name, "Site")
-            rack_3 = Rack.objects.get(name="Rack 3")
+            rack_3 = self.rack.objects.get(name="Rack 3")
             self.assertEquals(rack_3.location.name, "Test Location 3")
             self.assertEquals(rack_3.location.location_type.name, "Test Location Type 3")
 
         with self.subTest("Testing Extras app model migration"):
-            pass
+            cpf_1 = self.computed_field.objects.get(slug="cpf1")
+            self.assertEquals(cpf_1.content_type.model, self.location_ct.model)
+            cpf_2 = self.computed_field.objects.get(slug="cpf2")
+            self.assertEquals(cpf_2.content_type.model, self.location_ct.model)
+            cpf_3 = self.computed_field.objects.get(slug="cpf3")
+            self.assertEquals(cpf_3.content_type.model, self.location_ct.model)
+            cf_loc_1 = self.location.objects.get(name="Test Site 0")
+            self.assertEquals(cf_loc_1._custom_field_data, {"field_1": "ABC", "field_2": "Bar"})
+            cf_loc_2 = self.location.objects.get(name="Test Site 1")
+            self.assertEquals(cf_loc_2._custom_field_data, {"field_1": "abc", "field_2": "foo"})
+            cf_loc_3 = self.location.objects.get(name="Test Region 0")
+            self.assertEquals(cf_loc_3._custom_field_data, {"field_1": "DEF", "field_2": "Bar"})
+            cf_loc_4 = self.location.objects.get(name="Test Region 1")
+            self.assertEquals(cf_loc_4._custom_field_data, {"field_1": "def", "field_2": "foo"})
+            cc_1 = self.config_context.objects.get(name="context 1")
+            self.assertIn(self.location.objects.get(name="Test Region 0"), cc_1.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Region 1"), cc_1.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Site 0"), cc_1.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Site 1"), cc_1.locations.all())
+            cc_2 = self.config_context.objects.get(name="context 2")
+            self.assertIn(self.location.objects.get(name="Test Region 2"), cc_2.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Region 3"), cc_2.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Location 0"), cc_2.locations.all())
+            cc_3 = self.config_context.objects.get(name="context 3")
+            self.assertIn(self.location.objects.get(name="Test Site 2"), cc_3.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Site 3"), cc_3.locations.all())
+            self.assertIn(self.location.objects.get(name="Test Location 1"), cc_3.locations.all())
+            cl_1 = self.custom_link.objects.get(name="CL-1")
+            self.assertEquals(cl_1.content_type.model, self.location_ct.model)
+            cl_2 = self.custom_link.objects.get(name="CL-2")
+            self.assertEquals(cl_2.content_type.model, self.location_ct.model)
+            cl_3 = self.custom_link.objects.get(name="CL-3")
+            self.assertEquals(cl_3.content_type.model, self.location_ct.model)
+            dg_1 = self.dynamic_group.objects.get(name="DG-1")
+            self.assertEquals(dg_1.filter, {"location": ["test-region-0", "test-region-1"]})
+            dg_2 = self.dynamic_group.objects.get(name="DG-2")
+            self.assertEquals(
+                dg_2.filter, {"location": ["test-region-2", "test-region-3", "test-site-0", "test-site-1"]}
+            )
+            dg_3 = self.dynamic_group.objects.get(name="DG-3")
+            self.assertEquals(dg_3.filter, {"location": ["test-location-0", "test-location-1"]})
+            et_1 = self.export_template.objects.get(name="Export Template 1")
+            self.assertEquals(et_1.content_type.model, self.location_ct.model)
+            et_2 = self.export_template.objects.get(name="Export Template 2")
+            self.assertEquals(et_2.content_type.model, self.location_ct.model)
+            et_3 = self.export_template.objects.get(name="Export Template 3")
+            self.assertEquals(et_3.content_type.model, self.location_ct.model)
+            ia_1 = self.image_attachment.objects.get(name="Image Attachment 1")
+            image_location_1 = self.location.objects.get(id=ia_1.object_id)
+            self.assertEquals(ia_1.content_type.model, self.location_ct.model)
+            self.assertEquals(image_location_1.location_type.name, "Site")
+            self.assertEquals(image_location_1.name, "Test Site 0")
+            ia_2 = self.image_attachment.objects.get(name="Image Attachment 2")
+            image_location_2 = self.location.objects.get(id=ia_2.object_id)
+            self.assertEquals(ia_2.content_type.model, self.location_ct.model)
+            self.assertEquals(image_location_2.location_type.name, "Site")
+            self.assertEquals(image_location_2.name, "Test Site 1")
+            ia_3 = self.image_attachment.objects.get(name="Image Attachment 3")
+            image_location_3 = self.location.objects.get(id=ia_3.object_id)
+            self.assertEquals(ia_3.content_type.model, self.location_ct.model)
+            self.assertEquals(image_location_3.location_type.name, "Test Location Type 0")
+            self.assertEquals(image_location_3.name, "Test Location 0")
+            jh_1 = self.job_hook.objects.get(name="JobHook1")
+            self.assertEquals(
+                [self.location_ct.model, self.region_ct.model], list(jh_1.content_types.values_list("model", flat=True))
+            )
+            jh_2 = self.job_hook.objects.get(name="JobHook2")
+            self.assertEquals(
+                [self.location_ct.model, self.site_ct.model], list(jh_2.content_types.values_list("model", flat=True))
+            )
+            jh_3 = self.job_hook.objects.get(name="JobHook3")
+            self.assertEquals([self.location_ct.model], list(jh_3.content_types.values_list("model", flat=True)))
+            nt_1 = self.note.objects.get(note="Location has been placed on maintenance.")
+            note_location_1 = self.location.objects.get(id=nt_1.assigned_object_id)
+            self.assertEquals(nt_1.assigned_object_type.model, self.location_ct.model)
+            self.assertEquals(note_location_1.location_type.name, "Region")
+            self.assertEquals(note_location_1.name, "Test Region 0")
+            nt_2 = self.note.objects.get(note="Location maintenance has ended.")
+            self.assertEquals(nt_2.assigned_object_type.model, self.location_ct.model)
+            note_location_2 = self.location.objects.get(id=nt_2.assigned_object_id)
+            self.assertEquals(note_location_2.location_type.name, "Site")
+            self.assertEquals(note_location_2.name, "Test Site 0")
+            nt_3 = self.note.objects.get(note="Location is under duress.")
+            note_location_3 = self.location.objects.get(id=nt_3.assigned_object_id)
+            self.assertEquals(nt_3.assigned_object_type.model, self.location_ct.model)
+            self.assertEquals(note_location_3.location_type.name, "Test Location Type 1")
+            self.assertEquals(note_location_3.name, "Test Location 1")
+
+            o2m = self.relationship.objects.get(name="Site to Location o2m")
+            self.assertEquals(o2m.source_type.model, self.location_ct.model)
+            self.assertEquals(o2m.destination_type.model, self.location_ct.model)
+            o2m_rs_1 = self.relationship_association.objects.get(
+                relationship=o2m, destination_id=self.location.objects.get(name="Test Location 0").id
+            )
+            o2m_rs_2 = self.relationship_association.objects.get(
+                relationship=o2m, destination_id=self.location.objects.get(name="Test Location 1").id
+            )
+            self.assertEquals(o2m_rs_1.source_id, self.location.objects.get(name="Test Site 0").id)
+            self.assertEquals(o2m_rs_2.destination_id, self.location.objects.get(name="Test Location 1").id)
+
+            m2m = self.relationship.objects.get(name="Region to Site m2m")
+            self.assertEquals(m2m.source_type.model, self.location_ct.model)
+            self.assertEquals(m2m.destination_type.model, self.location_ct.model)
+            m2m_rs_1 = self.relationship_association.objects.filter(relationship=m2m)[0]
+            m2m_rs_2 = self.relationship_association.objects.filter(relationship=m2m)[1]
+            self.assertEquals(m2m_rs_1.source_id, self.location.objects.get(name="Test Region 0").id)
+            self.assertEquals(m2m_rs_1.destination_id, self.location.objects.get(name="Test Site 0").id)
+            self.assertEquals(m2m_rs_2.source_id, self.location.objects.get(name="Test Region 1").id)
+            self.assertEquals(m2m_rs_2.destination_id, self.location.objects.get(name="Test Site 1").id)
+
+            o2o = self.relationship.objects.get(name="Region to Location o2o")
+            self.assertEquals(o2o.source_type.model, self.location_ct.model)
+            self.assertEquals(o2o.destination_type.model, self.location_ct.model)
+            o2o_rs_1 = self.relationship_association.objects.filter(relationship=o2o)[0]
+            o2o_rs_2 = self.relationship_association.objects.filter(relationship=o2o)[1]
+            self.assertEquals(o2o_rs_1.source_id, self.location.objects.get(name="Test Region 2").id)
+            self.assertEquals(o2o_rs_1.destination_id, self.location.objects.get(name="Test Location 2").id)
+            self.assertEquals(o2o_rs_2.source_id, self.location.objects.get(name="Test Region 3").id)
+            self.assertEquals(o2o_rs_2.destination_id, self.location.objects.get(name="Test Location 3").id)
+
+            wb_1 = self.web_hook.objects.get(name="test-1")
+            self.assertEquals(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                list(wb_1.content_types.values_list("model", flat=True)),
+            )
+            wb_2 = self.web_hook.objects.get(name="test-2")
+            self.assertEquals(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                list(wb_2.content_types.values_list("model", flat=True)),
+            )
+            wb_3 = self.web_hook.objects.get(name="test-3")
+            self.assertEquals(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                list(wb_3.content_types.values_list("model", flat=True)),
+            )
 
         with self.subTest("Testing IPAM app model migration"):
-            Prefix = self.apps.get_model("ipam", "prefix")
-            VLANGroup = self.apps.get_model("ipam", "vlangroup")
-            VLAN = self.apps.get_model("ipam", "vlan")
-            prefix_1 = Prefix.objects.get(network="1.1.1.0")
+            prefix_1 = self.prefix.objects.get(network="1.1.1.0")
             self.assertEquals(prefix_1.location.name, "Test Site 1")
             self.assertEquals(prefix_1.location.location_type.name, "Site")
-            prefix_2 = Prefix.objects.get(network="1.1.1.1")
+            prefix_2 = self.prefix.objects.get(network="1.1.1.1")
             self.assertEquals(prefix_2.location.name, "Test Site 2")
             self.assertEquals(prefix_2.location.location_type.name, "Site")
-            prefix_3 = Prefix.objects.get(network="1.1.1.2")
+            prefix_3 = self.prefix.objects.get(network="1.1.1.2")
             self.assertEquals(prefix_3.location.name, "Test Location 2")
             self.assertEquals(prefix_3.location.location_type.name, "Test Location Type 2")
-            vlangroup_1 = VLANGroup.objects.get(name="VLAN Group 1")
+            vlangroup_1 = self.vlan_group.objects.get(name="VLAN Group 1")
             self.assertEquals(vlangroup_1.location.name, "Test Site 1")
             self.assertEquals(vlangroup_1.location.location_type.name, "Site")
-            vlangroup_2 = VLANGroup.objects.get(name="VLAN Group 2")
+            vlangroup_2 = self.vlan_group.objects.get(name="VLAN Group 2")
             self.assertEquals(vlangroup_2.location.name, "Test Site 2")
             self.assertEquals(vlangroup_2.location.location_type.name, "Site")
-            vlangroup_3 = VLANGroup.objects.get(name="VLAN Group 3")
+            vlangroup_3 = self.vlan_group.objects.get(name="VLAN Group 3")
             self.assertEquals(vlangroup_3.location.name, "Test Location 2")
             self.assertEquals(vlangroup_3.location.location_type.name, "Test Location Type 2")
-            vlan_1 = VLAN.objects.get(name="VLAN 1")
+            vlan_1 = self.vlan.objects.get(name="VLAN 1")
             self.assertEquals(vlan_1.location.name, "Test Site 1")
             self.assertEquals(vlan_1.location.location_type.name, "Site")
-            vlan_2 = VLAN.objects.get(name="VLAN 2")
+            vlan_2 = self.vlan.objects.get(name="VLAN 2")
             self.assertEquals(vlan_2.location.name, "Test Site 2")
             self.assertEquals(vlan_2.location.location_type.name, "Site")
-            vlan_3 = VLAN.objects.get(name="VLAN 3")
+            vlan_3 = self.vlan.objects.get(name="VLAN 3")
             self.assertEquals(vlan_3.location.name, "Test Location 2")
             self.assertEquals(vlan_3.location.location_type.name, "Test Location Type 2")
 
         with self.subTest("Testing Virtualization app model migration"):
-            Cluster = self.apps.get_model("virtualization", "cluster")
-            clusters = Cluster.objects.filter(name__in=["Cluster 1", "Cluster 2"]).select_related("site", "location")
-            for cluster in clusters:
-                self.assertEquals(cluster.site.name, cluster.location.name)
+            site_clusters = self.cluster.objects.filter(name__in=["Cluster 1", "Cluster 2"])
+            self.assertEquals(site_clusters[0].site.name, site_clusters[0].location.name)
+            self.assertEquals(site_clusters[1].site.name, site_clusters[1].location.name)
 
-            clusters = Cluster.objects.filter(name__in=["Cluster 3", "Cluster 4"]).select_related("site", "location")
-            for cluster in clusters:
-                self.assertEquals(
-                    cluster.location.name,
-                    "Test Location 0",
-                )
+            loc_clusters = self.cluster.objects.filter(name__in=["Cluster 3", "Cluster 4"])
+            self.assertEquals(loc_clusters[0].location.name, "Test Location 0")
+            self.assertEquals(loc_clusters[1].location.name, "Test Location 0")
