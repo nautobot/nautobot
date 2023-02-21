@@ -372,6 +372,7 @@ class PrefixFactory(PrimaryModelFactory):
                     children__max_count=4,
                     is_ipv6=is_ipv6,
                     vrf=self.vrf,
+                    has_rir=False,
                     **kwargs,
                 )
 

@@ -287,9 +287,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "date_allocated",
             "tags",
         ]
-        help_texts = {
-            "rir": "Regional Internet Registry responsible for this prefix",
-        }
         widgets = {
             "date_allocated": DateTimePicker(),
         }

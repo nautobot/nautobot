@@ -286,6 +286,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         blank=True,
         null=True,
         verbose_name="RIR",
+        help_text="Regional Internet Registry responsible for this prefix",
     )
     date_allocated = models.DateTimeField(
         blank=True,
