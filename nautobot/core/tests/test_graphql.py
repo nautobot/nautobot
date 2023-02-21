@@ -1496,7 +1496,7 @@ query {
                     expected_count = qs.filter(qs_filter).count()
                     matched = max(matched, len(device["frontports"]))
                     self.assertEqual(len(device["frontports"]), expected_count)
-                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_frontport_filter_third_level(self):
@@ -1529,7 +1529,7 @@ query {
                         expected_count = qs.filter(qs_filter).count()
                         matched = max(matched, len(device["frontports"]))
                         self.assertEqual(len(device["frontports"]), expected_count)
-                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_front_ports_cable_peer(self):
@@ -1707,7 +1707,7 @@ query {
                     expected_count = qs.filter(qs_filter).count()
                     matched = max(matched, len(device["interfaces"]))
                     self.assertEqual(len(device["interfaces"]), expected_count)
-                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter_third_level(self):
@@ -1748,7 +1748,7 @@ query {
                         expected_count = qs.filter(qs_filter).count()
                         matched = max(matched, len(device["interfaces"]))
                         self.assertEqual(len(device["interfaces"]), expected_count)
-                self.assertNotEqual(matched, 0, msg="At least one object matched GraphQL query")
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
