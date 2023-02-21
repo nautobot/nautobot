@@ -44,22 +44,25 @@
                         {% render_form filter_form %}
                       </div>
                     </div>
-		    {% if filter_form.custom_fields %}
+
+                    {% if filter_form.custom_fields %}
                     <div class="panel panel-default">
                       <div class="panel-heading"><strong>Custom Fields</strong></div>
                       <div class="panel-body">
                         {% render_custom_fields filter_form %}
                       </div>
                     </div>
-		    {% endif %}
-		    {% if filter_form.relationships %}
+                    {% endif %}
+
+                    {% if filter_form.relationships %}
                     <div class="panel panel-default">
                       <div class="panel-heading"><strong>Relationships</strong></div>
                       <div class="panel-body">
                         {% render_relationships filter_form %}
                       </div>
                     </div>
-		    {% endif %}
+                    {% endif %}
+
                 </div>
                 <div class="tab-pane" id="children-form">
                     {% if children.errors %}
