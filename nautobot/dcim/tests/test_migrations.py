@@ -7,9 +7,10 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
     migrate_from = [("dcim", "0029_change_tree_manager_on_tree_models")]
     migrate_to = [("dcim", "0030_migrate_region_and_site_data_to_locations")]
 
-    def populateDataBeforeMigration(self, apps):
+    def populateDataBeforeMigration(self, installed_apps):
         """Populate Site/Site-related and Region/Region-related Data before migrating them to Locations"""
         # Needed models
+        apps = installed_apps
         self.content_type = apps.get_model("contenttypes", "ContentType")
         self.region = apps.get_model("dcim", "region")
         self.site = apps.get_model("dcim", "site")
@@ -301,13 +302,13 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             slug="dg-1",
             filter={"region": ["test-region-0", "test-region-1"]},
             content_type=self.device_ct,
-        ),
+        )
         self.dynamic_group.objects.create(
             name="DG-2",
             slug="dg-2",
             filter={"site": ["test-site-0", "test-site-1"], "region": ["test-region-2", "test-region-3"]},
             content_type=self.device_ct,
-        ),
+        )
         self.dynamic_group.objects.create(
             name="DG-3",
             slug="dg-3",
@@ -513,21 +514,21 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         with self.subTest("Testing Region and Site correctly migrate to Locations"):
 
             # Test Location Types are created and the hierarchy is correct
-            self.assertEquals(len(self.location_type.objects.filter(name="Region")), 1)
-            self.assertEquals(len(self.location_type.objects.filter(name="Site")), 1)
-            self.assertEquals(
+            self.assertEqual(len(self.location_type.objects.filter(name="Region")), 1)
+            self.assertEqual(len(self.location_type.objects.filter(name="Site")), 1)
+            self.assertEqual(
                 self.location_type.objects.get(name="Site").parent, self.location_type.objects.get(name="Region")
             )
-            self.assertEquals(
+            self.assertEqual(
                 self.location_type.objects.get(name="Test Location Type 0").parent,
                 self.location_type.objects.get(name="Site"),
             )
-            self.assertEquals(
+            self.assertEqual(
                 self.location_type.objects.get(name="Test Location Type 1").parent,
                 self.location_type.objects.get(name="Site"),
             )
             # Global Region is created
-            self.assertEquals(
+            self.assertEqual(
                 len(
                     self.location.objects.filter(
                         name="Global Region", location_type=self.location_type.objects.get(name="Region")
@@ -538,7 +539,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
 
             # For each region, a new location of LocationType "Region" is created
             for i in range(10):
-                self.assertEquals(
+                self.assertEqual(
                     len(
                         self.location.objects.filter(
                             name=f"Test Region {i}", location_type=self.location_type.objects.get(name="Region")
@@ -553,71 +554,71 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                     name=f"Test Site {i}", location_type=self.location_type.objects.get(name="Site")
                 )
                 old_site = self.site.objects.get(name=f"Test Site {i}")
-                self.assertEquals(len(site_locations), 1)
+                self.assertEqual(len(site_locations), 1)
                 if old_site.region:
-                    self.assertEquals(site_locations.first().parent.name, old_site.region.name)
+                    self.assertEqual(site_locations.first().parent.name, old_site.region.name)
 
             # Check that top level locations have Site locations as their parent, and they are matching up correctly
             old_top_level_locations = self.location.objects.filter(site__isnull=False)
             for location in old_top_level_locations:
-                self.assertEquals(location.parent.name, location.site.name)
+                self.assertEqual(location.parent.name, location.site.name)
 
         with self.subTest("Testing Circuits app model migration"):
             cts = self.circuit_termination.objects.all().select_related("site", "location")
             for ct in cts:
-                self.assertEquals(ct.site.name, ct.location.name)
+                self.assertEqual(ct.site.name, ct.location.name)
 
         with self.subTest("Testing DCIM app model migration"):
             device_1 = self.device.objects.get(name="Device 1")
-            self.assertEquals(device_1.location.name, "Test Location 0")
+            self.assertEqual(device_1.location.name, "Test Location 0")
             device_2 = self.device.objects.get(name="Device 2")
-            self.assertEquals(device_2.location.name, "Test Location 1")
+            self.assertEqual(device_2.location.name, "Test Location 1")
             device_3 = self.device.objects.get(name="Device 3")
-            self.assertEquals(device_3.location.name, "Test Site 5")
-            self.assertEquals(device_3.location.location_type.name, "Site")
+            self.assertEqual(device_3.location.name, "Test Site 5")
+            self.assertEqual(device_3.location.location_type.name, "Site")
             powerpanel_1 = self.power_panel.objects.get(name="site1-powerpanel1")
-            self.assertEquals(powerpanel_1.location.name, "Test Site 1")
-            self.assertEquals(powerpanel_1.location.location_type.name, "Site")
+            self.assertEqual(powerpanel_1.location.name, "Test Site 1")
+            self.assertEqual(powerpanel_1.location.location_type.name, "Site")
             powerpanel_2 = self.power_panel.objects.get(name="site1-powerpanel2")
-            self.assertEquals(powerpanel_2.location.name, "Test Site 1")
-            self.assertEquals(powerpanel_2.location.location_type.name, "Site")
+            self.assertEqual(powerpanel_2.location.name, "Test Site 1")
+            self.assertEqual(powerpanel_2.location.location_type.name, "Site")
             powerpanel_3 = self.power_panel.objects.get(name="site1-powerpanel3")
-            self.assertEquals(powerpanel_3.location.name, "Test Location 2")
-            self.assertEquals(powerpanel_3.location.location_type.name, "Test Location Type 2")
+            self.assertEqual(powerpanel_3.location.name, "Test Location 2")
+            self.assertEqual(powerpanel_3.location.location_type.name, "Test Location Type 2")
             rackgroup_1 = self.rack_group.objects.get(name="Rack Group 1")
-            self.assertEquals(rackgroup_1.location.name, "Test Site 1")
-            self.assertEquals(rackgroup_1.location.location_type.name, "Site")
+            self.assertEqual(rackgroup_1.location.name, "Test Site 1")
+            self.assertEqual(rackgroup_1.location.location_type.name, "Site")
             rackgroup_2 = self.rack_group.objects.get(name="Rack Group 2")
-            self.assertEquals(rackgroup_2.location.name, "Test Site 2")
-            self.assertEquals(rackgroup_2.location.location_type.name, "Site")
+            self.assertEqual(rackgroup_2.location.name, "Test Site 2")
+            self.assertEqual(rackgroup_2.location.location_type.name, "Site")
             rackgroup_3 = self.rack_group.objects.get(name="Rack Group 3")
-            self.assertEquals(rackgroup_3.location.name, "Test Location 3")
-            self.assertEquals(rackgroup_3.location.location_type.name, "Test Location Type 3")
+            self.assertEqual(rackgroup_3.location.name, "Test Location 3")
+            self.assertEqual(rackgroup_3.location.location_type.name, "Test Location Type 3")
             rack_1 = self.rack.objects.get(name="Rack 1")
-            self.assertEquals(rack_1.location.name, "Test Site 1")
-            self.assertEquals(rack_1.location.location_type.name, "Site")
+            self.assertEqual(rack_1.location.name, "Test Site 1")
+            self.assertEqual(rack_1.location.location_type.name, "Site")
             rack_2 = self.rack.objects.get(name="Rack 2")
-            self.assertEquals(rack_2.location.name, "Test Site 2")
-            self.assertEquals(rack_2.location.location_type.name, "Site")
+            self.assertEqual(rack_2.location.name, "Test Site 2")
+            self.assertEqual(rack_2.location.location_type.name, "Site")
             rack_3 = self.rack.objects.get(name="Rack 3")
-            self.assertEquals(rack_3.location.name, "Test Location 3")
-            self.assertEquals(rack_3.location.location_type.name, "Test Location Type 3")
+            self.assertEqual(rack_3.location.name, "Test Location 3")
+            self.assertEqual(rack_3.location.location_type.name, "Test Location Type 3")
 
         with self.subTest("Testing Extras app model migration"):
             cpf_1 = self.computed_field.objects.get(slug="cpf1")
-            self.assertEquals(cpf_1.content_type.model, self.location_ct.model)
+            self.assertEqual(cpf_1.content_type.model, self.location_ct.model)
             cpf_2 = self.computed_field.objects.get(slug="cpf2")
-            self.assertEquals(cpf_2.content_type.model, self.location_ct.model)
+            self.assertEqual(cpf_2.content_type.model, self.location_ct.model)
             cpf_3 = self.computed_field.objects.get(slug="cpf3")
-            self.assertEquals(cpf_3.content_type.model, self.location_ct.model)
+            self.assertEqual(cpf_3.content_type.model, self.location_ct.model)
             cf_loc_1 = self.location.objects.get(name="Test Site 0")
-            self.assertEquals(cf_loc_1._custom_field_data, {"field_1": "ABC", "field_2": "Bar"})
+            self.assertEqual(cf_loc_1._custom_field_data, {"field_1": "ABC", "field_2": "Bar"})
             cf_loc_2 = self.location.objects.get(name="Test Site 1")
-            self.assertEquals(cf_loc_2._custom_field_data, {"field_1": "abc", "field_2": "foo"})
+            self.assertEqual(cf_loc_2._custom_field_data, {"field_1": "abc", "field_2": "foo"})
             cf_loc_3 = self.location.objects.get(name="Test Region 0")
-            self.assertEquals(cf_loc_3._custom_field_data, {"field_1": "DEF", "field_2": "Bar"})
+            self.assertEqual(cf_loc_3._custom_field_data, {"field_1": "DEF", "field_2": "Bar"})
             cf_loc_4 = self.location.objects.get(name="Test Region 1")
-            self.assertEquals(cf_loc_4._custom_field_data, {"field_1": "def", "field_2": "foo"})
+            self.assertEqual(cf_loc_4._custom_field_data, {"field_1": "def", "field_2": "foo"})
             cc_1 = self.config_context.objects.get(name="context 1")
             self.assertIn(self.location.objects.get(name="Test Region 0"), cc_1.locations.all())
             self.assertIn(self.location.objects.get(name="Test Region 1"), cc_1.locations.all())
@@ -632,148 +633,148 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertIn(self.location.objects.get(name="Test Site 3"), cc_3.locations.all())
             self.assertIn(self.location.objects.get(name="Test Location 1"), cc_3.locations.all())
             cl_1 = self.custom_link.objects.get(name="CL-1")
-            self.assertEquals(cl_1.content_type.model, self.location_ct.model)
+            self.assertEqual(cl_1.content_type.model, self.location_ct.model)
             cl_2 = self.custom_link.objects.get(name="CL-2")
-            self.assertEquals(cl_2.content_type.model, self.location_ct.model)
+            self.assertEqual(cl_2.content_type.model, self.location_ct.model)
             cl_3 = self.custom_link.objects.get(name="CL-3")
-            self.assertEquals(cl_3.content_type.model, self.location_ct.model)
+            self.assertEqual(cl_3.content_type.model, self.location_ct.model)
             dg_1 = self.dynamic_group.objects.get(name="DG-1")
-            self.assertEquals(dg_1.filter, {"location": ["test-region-0", "test-region-1"]})
+            self.assertEqual(dg_1.filter, {"location": ["test-region-0", "test-region-1"]})
             dg_2 = self.dynamic_group.objects.get(name="DG-2")
-            self.assertEquals(
+            self.assertEqual(
                 dg_2.filter, {"location": ["test-region-2", "test-region-3", "test-site-0", "test-site-1"]}
             )
             dg_3 = self.dynamic_group.objects.get(name="DG-3")
-            self.assertEquals(dg_3.filter, {"location": ["test-location-0", "test-location-1"]})
+            self.assertEqual(dg_3.filter, {"location": ["test-location-0", "test-location-1"]})
             et_1 = self.export_template.objects.get(name="Export Template 1")
-            self.assertEquals(et_1.content_type.model, self.location_ct.model)
+            self.assertEqual(et_1.content_type.model, self.location_ct.model)
             et_2 = self.export_template.objects.get(name="Export Template 2")
-            self.assertEquals(et_2.content_type.model, self.location_ct.model)
+            self.assertEqual(et_2.content_type.model, self.location_ct.model)
             et_3 = self.export_template.objects.get(name="Export Template 3")
-            self.assertEquals(et_3.content_type.model, self.location_ct.model)
+            self.assertEqual(et_3.content_type.model, self.location_ct.model)
             ia_1 = self.image_attachment.objects.get(name="Image Attachment 1")
             image_location_1 = self.location.objects.get(id=ia_1.object_id)
-            self.assertEquals(ia_1.content_type.model, self.location_ct.model)
-            self.assertEquals(image_location_1.location_type.name, "Site")
-            self.assertEquals(image_location_1.name, "Test Site 0")
+            self.assertEqual(ia_1.content_type.model, self.location_ct.model)
+            self.assertEqual(image_location_1.location_type.name, "Site")
+            self.assertEqual(image_location_1.name, "Test Site 0")
             ia_2 = self.image_attachment.objects.get(name="Image Attachment 2")
             image_location_2 = self.location.objects.get(id=ia_2.object_id)
-            self.assertEquals(ia_2.content_type.model, self.location_ct.model)
-            self.assertEquals(image_location_2.location_type.name, "Site")
-            self.assertEquals(image_location_2.name, "Test Site 1")
+            self.assertEqual(ia_2.content_type.model, self.location_ct.model)
+            self.assertEqual(image_location_2.location_type.name, "Site")
+            self.assertEqual(image_location_2.name, "Test Site 1")
             ia_3 = self.image_attachment.objects.get(name="Image Attachment 3")
             image_location_3 = self.location.objects.get(id=ia_3.object_id)
-            self.assertEquals(ia_3.content_type.model, self.location_ct.model)
-            self.assertEquals(image_location_3.location_type.name, "Test Location Type 0")
-            self.assertEquals(image_location_3.name, "Test Location 0")
+            self.assertEqual(ia_3.content_type.model, self.location_ct.model)
+            self.assertEqual(image_location_3.location_type.name, "Test Location Type 0")
+            self.assertEqual(image_location_3.name, "Test Location 0")
             jh_1 = self.job_hook.objects.get(name="JobHook1")
-            self.assertEquals(
+            self.assertEqual(
                 [self.location_ct.model, self.region_ct.model], list(jh_1.content_types.values_list("model", flat=True))
             )
             jh_2 = self.job_hook.objects.get(name="JobHook2")
-            self.assertEquals(
+            self.assertEqual(
                 [self.location_ct.model, self.site_ct.model], list(jh_2.content_types.values_list("model", flat=True))
             )
             jh_3 = self.job_hook.objects.get(name="JobHook3")
-            self.assertEquals([self.location_ct.model], list(jh_3.content_types.values_list("model", flat=True)))
+            self.assertEqual([self.location_ct.model], list(jh_3.content_types.values_list("model", flat=True)))
             nt_1 = self.note.objects.get(note="Location has been placed on maintenance.")
             note_location_1 = self.location.objects.get(id=nt_1.assigned_object_id)
-            self.assertEquals(nt_1.assigned_object_type.model, self.location_ct.model)
-            self.assertEquals(note_location_1.location_type.name, "Region")
-            self.assertEquals(note_location_1.name, "Test Region 0")
+            self.assertEqual(nt_1.assigned_object_type.model, self.location_ct.model)
+            self.assertEqual(note_location_1.location_type.name, "Region")
+            self.assertEqual(note_location_1.name, "Test Region 0")
             nt_2 = self.note.objects.get(note="Location maintenance has ended.")
-            self.assertEquals(nt_2.assigned_object_type.model, self.location_ct.model)
+            self.assertEqual(nt_2.assigned_object_type.model, self.location_ct.model)
             note_location_2 = self.location.objects.get(id=nt_2.assigned_object_id)
-            self.assertEquals(note_location_2.location_type.name, "Site")
-            self.assertEquals(note_location_2.name, "Test Site 0")
+            self.assertEqual(note_location_2.location_type.name, "Site")
+            self.assertEqual(note_location_2.name, "Test Site 0")
             nt_3 = self.note.objects.get(note="Location is under duress.")
             note_location_3 = self.location.objects.get(id=nt_3.assigned_object_id)
-            self.assertEquals(nt_3.assigned_object_type.model, self.location_ct.model)
-            self.assertEquals(note_location_3.location_type.name, "Test Location Type 1")
-            self.assertEquals(note_location_3.name, "Test Location 1")
+            self.assertEqual(nt_3.assigned_object_type.model, self.location_ct.model)
+            self.assertEqual(note_location_3.location_type.name, "Test Location Type 1")
+            self.assertEqual(note_location_3.name, "Test Location 1")
 
             o2m = self.relationship.objects.get(name="Site to Location o2m")
-            self.assertEquals(o2m.source_type.model, self.location_ct.model)
-            self.assertEquals(o2m.destination_type.model, self.location_ct.model)
+            self.assertEqual(o2m.source_type.model, self.location_ct.model)
+            self.assertEqual(o2m.destination_type.model, self.location_ct.model)
             o2m_rs_1 = self.relationship_association.objects.get(
                 relationship=o2m, destination_id=self.location.objects.get(name="Test Location 0").id
             )
             o2m_rs_2 = self.relationship_association.objects.get(
                 relationship=o2m, destination_id=self.location.objects.get(name="Test Location 1").id
             )
-            self.assertEquals(o2m_rs_1.source_id, self.location.objects.get(name="Test Site 0").id)
-            self.assertEquals(o2m_rs_2.destination_id, self.location.objects.get(name="Test Location 1").id)
+            self.assertEqual(o2m_rs_1.source_id, self.location.objects.get(name="Test Site 0").id)
+            self.assertEqual(o2m_rs_2.destination_id, self.location.objects.get(name="Test Location 1").id)
 
             m2m = self.relationship.objects.get(name="Region to Site m2m")
-            self.assertEquals(m2m.source_type.model, self.location_ct.model)
-            self.assertEquals(m2m.destination_type.model, self.location_ct.model)
+            self.assertEqual(m2m.source_type.model, self.location_ct.model)
+            self.assertEqual(m2m.destination_type.model, self.location_ct.model)
             m2m_rs_1 = self.relationship_association.objects.filter(relationship=m2m)[0]
             m2m_rs_2 = self.relationship_association.objects.filter(relationship=m2m)[1]
-            self.assertEquals(m2m_rs_1.source_id, self.location.objects.get(name="Test Region 0").id)
-            self.assertEquals(m2m_rs_1.destination_id, self.location.objects.get(name="Test Site 0").id)
-            self.assertEquals(m2m_rs_2.source_id, self.location.objects.get(name="Test Region 1").id)
-            self.assertEquals(m2m_rs_2.destination_id, self.location.objects.get(name="Test Site 1").id)
+            self.assertEqual(m2m_rs_1.source_id, self.location.objects.get(name="Test Region 0").id)
+            self.assertEqual(m2m_rs_1.destination_id, self.location.objects.get(name="Test Site 0").id)
+            self.assertEqual(m2m_rs_2.source_id, self.location.objects.get(name="Test Region 1").id)
+            self.assertEqual(m2m_rs_2.destination_id, self.location.objects.get(name="Test Site 1").id)
 
             o2o = self.relationship.objects.get(name="Region to Location o2o")
-            self.assertEquals(o2o.source_type.model, self.location_ct.model)
-            self.assertEquals(o2o.destination_type.model, self.location_ct.model)
+            self.assertEqual(o2o.source_type.model, self.location_ct.model)
+            self.assertEqual(o2o.destination_type.model, self.location_ct.model)
             o2o_rs_1 = self.relationship_association.objects.filter(relationship=o2o)[0]
             o2o_rs_2 = self.relationship_association.objects.filter(relationship=o2o)[1]
-            self.assertEquals(o2o_rs_1.source_id, self.location.objects.get(name="Test Region 2").id)
-            self.assertEquals(o2o_rs_1.destination_id, self.location.objects.get(name="Test Location 2").id)
-            self.assertEquals(o2o_rs_2.source_id, self.location.objects.get(name="Test Region 3").id)
-            self.assertEquals(o2o_rs_2.destination_id, self.location.objects.get(name="Test Location 3").id)
+            self.assertEqual(o2o_rs_1.source_id, self.location.objects.get(name="Test Region 2").id)
+            self.assertEqual(o2o_rs_1.destination_id, self.location.objects.get(name="Test Location 2").id)
+            self.assertEqual(o2o_rs_2.source_id, self.location.objects.get(name="Test Region 3").id)
+            self.assertEqual(o2o_rs_2.destination_id, self.location.objects.get(name="Test Location 3").id)
 
             wb_1 = self.web_hook.objects.get(name="test-1")
-            self.assertEquals(
+            self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
                 list(wb_1.content_types.values_list("model", flat=True)),
             )
             wb_2 = self.web_hook.objects.get(name="test-2")
-            self.assertEquals(
+            self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
                 list(wb_2.content_types.values_list("model", flat=True)),
             )
             wb_3 = self.web_hook.objects.get(name="test-3")
-            self.assertEquals(
+            self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
                 list(wb_3.content_types.values_list("model", flat=True)),
             )
 
         with self.subTest("Testing IPAM app model migration"):
             prefix_1 = self.prefix.objects.get(network="1.1.1.0")
-            self.assertEquals(prefix_1.location.name, "Test Site 1")
-            self.assertEquals(prefix_1.location.location_type.name, "Site")
+            self.assertEqual(prefix_1.location.name, "Test Site 1")
+            self.assertEqual(prefix_1.location.location_type.name, "Site")
             prefix_2 = self.prefix.objects.get(network="1.1.1.1")
-            self.assertEquals(prefix_2.location.name, "Test Site 2")
-            self.assertEquals(prefix_2.location.location_type.name, "Site")
+            self.assertEqual(prefix_2.location.name, "Test Site 2")
+            self.assertEqual(prefix_2.location.location_type.name, "Site")
             prefix_3 = self.prefix.objects.get(network="1.1.1.2")
-            self.assertEquals(prefix_3.location.name, "Test Location 2")
-            self.assertEquals(prefix_3.location.location_type.name, "Test Location Type 2")
+            self.assertEqual(prefix_3.location.name, "Test Location 2")
+            self.assertEqual(prefix_3.location.location_type.name, "Test Location Type 2")
             vlangroup_1 = self.vlan_group.objects.get(name="VLAN Group 1")
-            self.assertEquals(vlangroup_1.location.name, "Test Site 1")
-            self.assertEquals(vlangroup_1.location.location_type.name, "Site")
+            self.assertEqual(vlangroup_1.location.name, "Test Site 1")
+            self.assertEqual(vlangroup_1.location.location_type.name, "Site")
             vlangroup_2 = self.vlan_group.objects.get(name="VLAN Group 2")
-            self.assertEquals(vlangroup_2.location.name, "Test Site 2")
-            self.assertEquals(vlangroup_2.location.location_type.name, "Site")
+            self.assertEqual(vlangroup_2.location.name, "Test Site 2")
+            self.assertEqual(vlangroup_2.location.location_type.name, "Site")
             vlangroup_3 = self.vlan_group.objects.get(name="VLAN Group 3")
-            self.assertEquals(vlangroup_3.location.name, "Test Location 2")
-            self.assertEquals(vlangroup_3.location.location_type.name, "Test Location Type 2")
+            self.assertEqual(vlangroup_3.location.name, "Test Location 2")
+            self.assertEqual(vlangroup_3.location.location_type.name, "Test Location Type 2")
             vlan_1 = self.vlan.objects.get(name="VLAN 1")
-            self.assertEquals(vlan_1.location.name, "Test Site 1")
-            self.assertEquals(vlan_1.location.location_type.name, "Site")
+            self.assertEqual(vlan_1.location.name, "Test Site 1")
+            self.assertEqual(vlan_1.location.location_type.name, "Site")
             vlan_2 = self.vlan.objects.get(name="VLAN 2")
-            self.assertEquals(vlan_2.location.name, "Test Site 2")
-            self.assertEquals(vlan_2.location.location_type.name, "Site")
+            self.assertEqual(vlan_2.location.name, "Test Site 2")
+            self.assertEqual(vlan_2.location.location_type.name, "Site")
             vlan_3 = self.vlan.objects.get(name="VLAN 3")
-            self.assertEquals(vlan_3.location.name, "Test Location 2")
-            self.assertEquals(vlan_3.location.location_type.name, "Test Location Type 2")
+            self.assertEqual(vlan_3.location.name, "Test Location 2")
+            self.assertEqual(vlan_3.location.location_type.name, "Test Location Type 2")
 
         with self.subTest("Testing Virtualization app model migration"):
             site_clusters = self.cluster.objects.filter(name__in=["Cluster 1", "Cluster 2"])
-            self.assertEquals(site_clusters[0].site.name, site_clusters[0].location.name)
-            self.assertEquals(site_clusters[1].site.name, site_clusters[1].location.name)
+            self.assertEqual(site_clusters[0].site.name, site_clusters[0].location.name)
+            self.assertEqual(site_clusters[1].site.name, site_clusters[1].location.name)
 
             loc_clusters = self.cluster.objects.filter(name__in=["Cluster 3", "Cluster 4"])
-            self.assertEquals(loc_clusters[0].location.name, "Test Location 0")
-            self.assertEquals(loc_clusters[1].location.name, "Test Location 0")
+            self.assertEqual(loc_clusters[0].location.name, "Test Location 0")
+            self.assertEqual(loc_clusters[1].location.name, "Test Location 0")
