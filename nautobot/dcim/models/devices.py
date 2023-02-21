@@ -757,7 +757,9 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                 [x.instantiate(self) for x in self.device_type.console_server_port_templates.all()]
             )
             PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.power_port_templates.all()])
-            PowerOutlet.objects.bulk_create([x.instantiate(self) for x in self.device_type.power_outlet_templates.all()])
+            PowerOutlet.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.power_outlet_templates.all()]
+            )
             Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interface_templates.all()])
             RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rear_port_templates.all()])
             FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.front_port_templates.all()])

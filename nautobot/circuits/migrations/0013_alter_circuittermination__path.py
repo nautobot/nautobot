@@ -8,14 +8,20 @@ import nautobot.core.models.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0033_created_datetime'),
-        ('circuits', '0012_created_datetime'),
+        ("dcim", "0033_created_datetime"),
+        ("circuits", "0012_created_datetime"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='circuittermination',
-            name='_path',
-            field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='circuit_terminations', to='dcim.cablepath'),
+            model_name="circuittermination",
+            name="_path",
+            field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="circuit_terminations",
+                to="dcim.cablepath",
+            ),
         ),
     ]

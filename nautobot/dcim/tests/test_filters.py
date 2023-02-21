@@ -1632,6 +1632,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         Device.objects.filter(pk=devices[0].pk).update(virtual_chassis=virtual_chassis_1, vc_position=1, vc_priority=1)
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis_1, vc_position=2, vc_priority=2)
         virtual_chassis_2 = VirtualChassis.objects.create(name="vc2", master=devices[2])
+        Device.objects.filter(pk=devices[2].pk).update(virtual_chassis=virtual_chassis_2, vc_position=1, vc_priority=1)
 
     def test_face(self):
         # TODO: Not a generic_filter_test because this is a single-value filter

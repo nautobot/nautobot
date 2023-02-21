@@ -1243,7 +1243,9 @@ class PowerOutletTemplateForm(NautobotModelForm):
 
         # Limit power_port_template choices to current DeviceType
         if hasattr(self.instance, "device_type"):
-            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(device_type=self.instance.device_type)
+            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(
+                device_type=self.instance.device_type
+            )
 
 
 class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
@@ -1618,7 +1620,9 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
 
 
 class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
-    power_port_template = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False)
+    power_port_template = forms.ModelChoiceField(
+        queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False
+    )
 
     class Meta:
         model = PowerOutletTemplate

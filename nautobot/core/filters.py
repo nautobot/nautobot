@@ -5,7 +5,6 @@ import uuid
 
 from django import forms as django_forms
 from django.conf import settings
-from django.core.validators import MaxValueValidator
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
 import django_filters
@@ -59,7 +58,7 @@ def multivalue_field_factory(field_class):
             "to_python": to_python,
             "validate": validate,
             "widget": django_forms.SelectMultiple,
-        }
+        },
     )
 
 

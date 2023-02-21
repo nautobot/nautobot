@@ -194,9 +194,7 @@ class CSVModelChoiceField(django_forms.ModelChoiceField):
         try:
             return super().to_python(value)
         except MultipleObjectsReturned:
-            raise ValidationError(
-                f'"{value}" is not a unique value for this field; multiple objects were found'
-            )
+            raise ValidationError(f'"{value}" is not a unique value for this field; multiple objects were found')
 
 
 class CSVContentTypeField(CSVModelChoiceField):
