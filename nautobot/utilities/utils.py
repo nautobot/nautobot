@@ -105,8 +105,8 @@ def get_route_for_model(model, action, api=False):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    # Because ContentType is not a core model in nautobot, running a 'ContentType. meta.app label'
-    # would return "contenttypes" rather than "extras".
+    # The `contenttypes` app doesn't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in our `extras` app.
     if model is ContentType:
         app_label = "extras"
     else:
