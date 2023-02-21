@@ -518,6 +518,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="devices",
         default=None,
         blank=True,
         null=True,
@@ -993,6 +994,7 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="device_redundancy_groups",
         default=None,
         blank=True,
         null=True,

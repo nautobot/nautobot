@@ -77,6 +77,8 @@
 | RearPort              | `frontports`                            | `front_ports`                                  |
 | RearPortTemplate      | `frontport_templates`                   | `front_port_templates`                         |
 | Region                | `level`                                 | `tree_depth`                                   |
+| SecretsGroup          | `device_set`                            | `devices`                                      |
+|                       | `deviceredundancygroup_set`             | `device_redundancy_groups`                     |
 | Service               | `ipaddresses`                           | `ip_addresses`                                 |
 | Tenant                | `group`                                 | `tenant_group`                                 |
 |                       | `rackreservations`                      | `rack_reservations`                            |

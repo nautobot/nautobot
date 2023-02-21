@@ -358,4 +358,28 @@ class Migration(migrations.Migration):
             name="rack",
             unique_together={("rack_group", "facility_id"), ("rack_group", "name")},
         ),
+        migrations.AlterField(
+            model_name="device",
+            name="secrets_group",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="devices",
+                to="extras.secretsgroup",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="deviceredundancygroup",
+            name="secrets_group",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="device_redundancy_groups",
+                to="extras.secretsgroup",
+            ),
+        ),
     ]
