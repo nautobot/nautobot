@@ -7,6 +7,7 @@ from django.test import RequestFactory, TestCase
 
 from example_plugin.models import ExampleModel
 
+from nautobot.circuits import models as circuits_models
 from nautobot.core import constants, exceptions, forms, settings_funcs, testing
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
@@ -472,10 +473,7 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
         with self.subTest("Test DatePicker"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "created")
-            self.assertIsInstance(form_field.widget, forms.DatePicker)
-
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "created")
+            form_field = filtering.get_filterset_parameter_form_field(circuits_models.Circuit, "install_date")
             self.assertIsInstance(form_field.widget, forms.DatePicker)
 
         with self.subTest("Test Invalid parameter"):

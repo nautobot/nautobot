@@ -386,6 +386,7 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
+# TODO(timizuo): NaturalKeyOrPKMultipleChoiceFilter is not currently handling pk Integer field properly; resolve this in issue #3336
 class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter that supports filtering on values matching the `pk` field and another
