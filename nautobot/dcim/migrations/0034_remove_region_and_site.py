@@ -6,30 +6,30 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0033_created_datetime'),
+        ("dcim", "0033_created_datetime"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='site',
-            name='region',
+            model_name="site",
+            name="region",
         ),
         migrations.RemoveField(
-            model_name='site',
-            name='status',
+            model_name="site",
+            name="status",
         ),
         migrations.RemoveField(
-            model_name='site',
-            name='tags',
+            model_name="site",
+            name="tags",
         ),
         migrations.RemoveField(
-            model_name='site',
-            name='tenant',
+            model_name="site",
+            name="tenant",
         ),
         migrations.DeleteModel(
-            name='Region',
+            name="Region",
         ),
         migrations.DeleteModel(
-            name='Site',
+            name="Site",
         ),
     ]
