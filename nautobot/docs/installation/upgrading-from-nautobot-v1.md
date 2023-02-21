@@ -70,10 +70,10 @@
 | PowerPort             | `poweroutlets`                          | `power_outlets`                                |
 | PowerPortTemplate     | `poweroutlet_templates`                 | `power_outlet_templates`                       |
 | Rack                  | `group`                                 | `rack_group`                                   |
-|                       | `powerfeeds`                            | `power_feeds`                                  |
+|                       | `powerfeed_set`                         | `power_feeds`                                  |
 |                       | `reservations`                          | `rack_reservations`                            |
 | RackGroup             | `level`                                 | `tree_depth`                                   |
-|                       | `powerpanels`                           | `power_panels`                                 |
+|                       | `powerpanel_set`                        | `power_panels`                                 |
 | RearPort              | `frontports`                            | `front_ports`                                  |
 | RearPortTemplate      | `frontport_templates`                   | `front_port_templates`                         |
 | Region                | `level`                                 | `tree_depth`                                   |
