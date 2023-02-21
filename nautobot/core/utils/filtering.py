@@ -110,6 +110,7 @@ def get_filterset_parameter_form_field(model, parameter):
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
     if isinstance(field, NumberFilter):
+        # TODO(Glenn): This is wrong for MultiValueDecimalFilter and MultiValueFloatFilter filters!
         form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
         related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model

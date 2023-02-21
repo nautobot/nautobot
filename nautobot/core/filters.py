@@ -28,25 +28,39 @@ def multivalue_field_factory(field_class):
     filter values while maintaining the field's built-in validation. Example: GET /api/dcim/devices/?name=foo&name=bar
     """
 
-    class NewField(field_class):
-        widget = django_forms.SelectMultiple
+    def to_python(self, value):
+        if not value:
+            return []
 
-        def to_python(self, value):
-            if not value:
-                return []
+        # Make it a list if it's a string.
+        if isinstance(value, str):
+            value = [value]
 
-            # Make it a list if it's a string.
-            if isinstance(value, str):
-                value = [value]
+        return [
+            # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+            field_class.to_python(self, v)
+            for v in value
+            if v
+        ]
 
-            return [
-                # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v)  # pylint: disable=bad-super-call
-                for v in value
-                if v
-            ]
+    def validate(self, value):
+        for v in value:
+            field_class.validate(self, v)
 
-    return type(f"MultiValue{field_class.__name__}", (NewField,), {})
+    def run_validators(self, value):
+        for v in value:
+            field_class.run_validators(self, v)
+
+    return type(
+        f"MultiValue{field_class.__name__}",
+        (field_class,),
+        {
+            "run_validators": run_validators,
+            "to_python": to_python,
+            "validate": validate,
+            "widget": django_forms.SelectMultiple,
+        }
+    )
 
 
 #
@@ -74,19 +88,17 @@ class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.Mul
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.IntegerField)
 
-    class MultiValueMaxValueValidator(MaxValueValidator):
-        """As django.core.validators.MaxValueValidator, but apply to a list of values rather than a single value."""
-
-        def compare(self, values, limit_value):
-            return any(int(value) > limit_value for value in values)
-
-    def get_max_validator(self):
-        """Like django_filters.NumberFilter, limit the maximum value for any single entry as an anti-DoS measure."""
-        return self.MultiValueMaxValueValidator(1e50)
-
 
 class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
+
+
+class MultiValueFloatFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+    field_class = multivalue_field_factory(django_forms.FloatField)
+
+
+class MultiValueDecimalFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+    field_class = multivalue_field_factory(django_forms.DecimalField)
 
 
 class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
@@ -98,7 +110,9 @@ class MACAddressFilter(django_filters.CharFilter):
 
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.MACAddressField)
+    # Don't use multivalue_field_factory(forms.MACAddressField) because that will reject partial substrings like
+    # "aa:" or ":01:02", which would prevent us from using filters like `mac_address__isw` to their potential.
+    field_class = forms.MultiValueCharField
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
@@ -525,9 +539,9 @@ class BaseFilterSet(django_filters.FilterSet):
             models.CharField: {"filter_class": MultiValueCharFilter},
             models.DateField: {"filter_class": MultiValueDateFilter},
             models.DateTimeField: {"filter_class": MultiValueDateTimeFilter},
-            models.DecimalField: {"filter_class": MultiValueNumberFilter},
+            models.DecimalField: {"filter_class": MultiValueDecimalFilter},
             models.EmailField: {"filter_class": MultiValueCharFilter},
-            models.FloatField: {"filter_class": MultiValueNumberFilter},
+            models.FloatField: {"filter_class": MultiValueFloatFilter},
             models.IntegerField: {"filter_class": MultiValueNumberFilter},
             # Ref: https://github.com/carltongibson/django-filter/issues/1107
             models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": "icontains"}},
@@ -552,6 +566,8 @@ class BaseFilterSet(django_filters.FilterSet):
             (
                 MultiValueDateFilter,
                 MultiValueDateTimeFilter,
+                MultiValueDecimalFilter,
+                MultiValueFloatFilter,
                 MultiValueNumberFilter,
                 MultiValueTimeFilter,
             ),
