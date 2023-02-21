@@ -8,9 +8,18 @@ The below best practices apply to test code as well as feature code, and there a
 
 Abstract base classes are classes that do not inherit from a specific class. They are a great way to define an interface with useful abstract methods and attributes while providing great flexibility when it comes to implementations. For an example of abstract base classes, see `PathEndPoint` in `dcim` app.
 
-### Naming convention for related_name
+### Foreign Key `related_name` for Abstract Classes
 
-When it comes to writing an abstract base class and naming the reverse relation in a many-to-many or a many-to-one relationship, to ensure data consistency throughout the app, we recommend you to set your `related_name` attribute to **"%(app_label)s_%(class)s_related"** on your model's relationship field (models.ForeignKey, etc).
++/- 2.0.0
+
+If an abstract base class defines a foreign key to a concrete model class, Django's default `related_name` functionality doesn't provide great options - the best you could normally do for a `related_name` on a `ForeignKey` from an abstract base class, for example, would be `"%(class)ss"` (potentially resulting in related names like `"devices"` or, less optimally, `"ipaddresss"`) or `"%(app_label)s_%(class)s_related"` (resulting in related names like `"dcim_device_related"` or `"ipam_ipaddress_related"`, which while at least consistent, are rather clunky).
+
+Fortunately, Nautobot provides a `ForeignKeyWithAutoRelatedName` model field class that solves this problem. On any concrete subclass of an abstract base class that uses `ForeignKeyWithAutoRelatedName` instead of `ForeignKey`, the `related_name` will be automatically set based on the concrete subclass's `verbose_name_plural` value (which in many cases Django is clever enough to automatically derive from the class name, but can also be specified directly on your `Meta` class if needed). Thus, if your model's `verbose_name_plural` is "IP addresses", the `related_name` for the `ForeignKeyWithAutoRelatedName` will automatically be `ip_addresses`.
+
+!!! note
+    At this time we _only_ recommend using `ForeignKeyWithAutoRelatedName` for this abstract model case; for foreign keys between concrete models, it's still best to use a regular `ForeignKey` with an explicitly specified `related_name` string.
+
+Nautobot doesn't currently have a similar class provided for `ManyToManyField`; in this case you'll probably be best, for now, to just use `related_name="%(app_label)s_%(class)s_related"` for any abstract base class's ManyToManyField if a reverse relation is desired.
 
 ## Base Classes
 
