@@ -479,10 +479,3 @@ class Migration(migrations.Migration):
             reverse_code=migrations.operations.special.RunPython.noop,
         ),
     ]
-    run_before = [
-        ("circuits", "0011_remove_site_foreign_key_from_circuit_termination_class"),
-        ("dcim", "0032_remove_site_foreign_key_from_dcim_models"),
-        ("extras", "0064_remove_site_and_region_attributes_from_config_context"),
-        ("ipam", "0018_remove_site_foreign_key_from_ipam_models"),
-        ("virtualization", "0015_rename_foreignkey_fields"),
-    ]

@@ -1,5 +1,6 @@
 from nautobot.core.tests.test_migration import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
+from netaddr import IPNetwork
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
@@ -131,40 +132,108 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         )
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
-        device_type = Device.objects.create(name="Device Type 1", manufacturer=manufacturer)
+        device_type = DeviceType.objects.create(
+            comments="Device type 1",
+            model="Model 1",
+            slug="model-1",
+            part_number="Part Number 1",
+            u_height=1,
+            is_full_depth=True,
+            manufacturer=manufacturer,
+        )
+        site_0 = Site.objects.get(name="Test Site 0")
+        site_1 = Site.objects.get(name="Test Site 1")
+        site_2 = Site.objects.get(name="Test Site 2")
+        site_3 = Site.objects.get(name="Test Site 3")
+        site_4 = Site.objects.get(name="Test Site 4")
+        site_5 = Site.objects.get(name="Test Site 5")
+        location_0 = Location.objects.get(name="Test Location 0")
+        location_1 = Location.objects.get(name="Test Location 1")
+        location_2 = Location.objects.get(name="Test Location 2")
+        location_3 = Location.objects.get(name="Test Location 3")
 
         Device.objects.create(
             device_type=device_type,
             name="Device 1",
-            site=Site.objects.get(name="Test Site 0"),
-            location=Location.objects.get(name="Test Location 0"),
+            site=site_0,
+            location=location_0,
         )
         Device.objects.create(
             device_type=device_type,
             name="Device 2",
-            site=Site.objects.get(name="Test Site 1"),
-            location=Location.objects.get(name="Test Location 1"),
+            site=site_1,
+            location=location_1,
         )
         Device.objects.create(
             device_type=device_type,
             name="Device 3",
-            site=Site.objects.get(name="Test Site 5"),
+            site=site_5,
         )
+        self.power_panels = [
+            PowerPanel.objects.create(name="site1-powerpanel1", site=site_1),
+            PowerPanel.objects.create(name="site1-powerpanel2", site=site_1),
+            PowerPanel.objects.create(name="site1-powerpanel3", site=site_1, location=location_2),
+        ]
+        self.rack_groups = [
+            RackGroup.objects.create(site=site_1, name="Rack Group 1", slug="rack-group-1"),
+            RackGroup.objects.create(site=site_2, name="Rack Group 2", slug="rack-group-2"),
+            RackGroup.objects.create(site=site_3, name="Rack Group 3", slug="rack-group-3", location=location_3),
+        ]
+        self.racks = [
+            Rack.objects.create(site=site_1, name="Rack 1"),
+            Rack.objects.create(site=site_2, name="Rack 2"),
+            Rack.objects.create(site=site_3, name="Rack 3", location=location_3),
+        ]
+
+        self.prefixes = [
+            Prefix.objects.create(
+                network="1.1.1.0", broadcast="172.31.255.255", prefix_length=25, site=site_1, type="container"
+            ),
+            Prefix.objects.create(
+                network="1.1.1.1", broadcast="172.31.255.255", prefix_length=25, site=site_2, type="container"
+            ),
+            Prefix.objects.create(
+                network="1.1.1.2",
+                broadcast="172.31.255.255",
+                prefix_length=25,
+                site=site_3,
+                location=location_2,
+                type="container",
+            ),
+        ]
+
+        self.vlan_groups = [
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1, description="A"),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=site_2, description="B"),
+            VLANGroup.objects.create(
+                name="VLAN Group 3", slug="vlan-group-3", site=site_3, location=location_2, description="C"
+            ),
+        ]
+
+        self.vlans = [
+            VLAN.objects.create(name="VLAN 1", vid=1, site=site_1),
+            VLAN.objects.create(name="VLAN 2", vid=2, site=site_2),
+            VLAN.objects.create(name="VLAN 3", vid=3, site=site_3, location=location_2),
+        ]
 
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         self.clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type, site=Site.objects.get(name="Test Site 0")),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type, site=Site.objects.get(name="Test Site 1")),
+            Cluster.objects.create(
+                name="Cluster 1", cluster_type=cluster_type, site=Site.objects.get(name="Test Site 0")
+            ),
+            Cluster.objects.create(
+                name="Cluster 2", cluster_type=cluster_type, site=Site.objects.get(name="Test Site 1")
+            ),
             Cluster.objects.create(
                 name="Cluster 3",
-                type=cluster_type,
+                cluster_type=cluster_type,
                 site=Site.objects.get(name="Test Site 0"),
                 location=Location.objects.get(name="Test Location 0"),
             ),
             Cluster.objects.create(
                 name="Cluster 4",
-                type=cluster_type,
+                cluster_type=cluster_type,
                 site=Site.objects.get(name="Test Site 0"),
                 location=Location.objects.get(name="Test Location 0"),
             ),
@@ -229,6 +298,9 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
 
         with self.subTest("Testing DCIM app model migration"):
             Device = self.apps.get_model("dcim", "device")
+            PowerPanel = self.apps.get_model("dcim", "powerpanel")
+            RackGroup = self.apps.get_model("dcim", "rackgroup")
+            Rack = self.apps.get_model("dcim", "rack")
             device_1 = Device.objects.get(name="Device 1")
             self.assertEquals(device_1.location.name, "Test Location 0")
             device_2 = Device.objects.get(name="Device 2")
@@ -236,15 +308,71 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             device_3 = Device.objects.get(name="Device 3")
             self.assertEquals(device_3.location.name, "Test Site 5")
             self.assertEquals(device_3.location.location_type.name, "Site")
+            powerpanel_1 = PowerPanel.objects.get(name="site1-powerpanel1")
+            self.assertEquals(powerpanel_1.location.name, "Test Site 1")
+            self.assertEquals(powerpanel_1.location.location_type.name, "Site")
+            powerpanel_2 = PowerPanel.objects.get(name="site1-powerpanel2")
+            self.assertEquals(powerpanel_2.location.name, "Test Site 1")
+            self.assertEquals(powerpanel_2.location.location_type.name, "Site")
+            powerpanel_3 = PowerPanel.objects.get(name="site1-powerpanel3")
+            self.assertEquals(powerpanel_3.location.name, "Test Location 2")
+            self.assertEquals(powerpanel_3.location.location_type.name, "Test Location Type 2")
+            rackgroup_1 = RackGroup.objects.get(name="Rack Group 1")
+            self.assertEquals(rackgroup_1.location.name, "Test Site 1")
+            self.assertEquals(rackgroup_1.location.location_type.name, "Site")
+            rackgroup_2 = RackGroup.objects.get(name="Rack Group 2")
+            self.assertEquals(rackgroup_2.location.name, "Test Site 2")
+            self.assertEquals(rackgroup_2.location.location_type.name, "Site")
+            rackgroup_3 = RackGroup.objects.get(name="Rack Group 3")
+            self.assertEquals(rackgroup_3.location.name, "Test Location 3")
+            self.assertEquals(rackgroup_3.location.location_type.name, "Test Location Type 3")
+            rack_1 = Rack.objects.get(name="Rack 1")
+            self.assertEquals(rack_1.location.name, "Test Site 1")
+            self.assertEquals(rack_1.location.location_type.name, "Site")
+            rack_2 = Rack.objects.get(name="Rack 2")
+            self.assertEquals(rack_2.location.name, "Test Site 2")
+            self.assertEquals(rack_2.location.location_type.name, "Site")
+            rack_3 = Rack.objects.get(name="Rack 3")
+            self.assertEquals(rack_3.location.name, "Test Location 3")
+            self.assertEquals(rack_3.location.location_type.name, "Test Location Type 3")
 
         with self.subTest("Testing Extras app model migration"):
             pass
 
         with self.subTest("Testing IPAM app model migration"):
-            pass
+            Prefix = self.apps.get_model("ipam", "prefix")
+            VLANGroup = self.apps.get_model("ipam", "vlangroup")
+            VLAN = self.apps.get_model("ipam", "vlan")
+            prefix_1 = Prefix.objects.get(network="1.1.1.0")
+            self.assertEquals(prefix_1.location.name, "Test Site 1")
+            self.assertEquals(prefix_1.location.location_type.name, "Site")
+            prefix_2 = Prefix.objects.get(network="1.1.1.1")
+            self.assertEquals(prefix_2.location.name, "Test Site 2")
+            self.assertEquals(prefix_2.location.location_type.name, "Site")
+            prefix_3 = Prefix.objects.get(network="1.1.1.2")
+            self.assertEquals(prefix_3.location.name, "Test Location 2")
+            self.assertEquals(prefix_3.location.location_type.name, "Test Location Type 2")
+            vlangroup_1 = VLANGroup.objects.get(name="VLAN Group 1")
+            self.assertEquals(vlangroup_1.location.name, "Test Site 1")
+            self.assertEquals(vlangroup_1.location.location_type.name, "Site")
+            vlangroup_2 = VLANGroup.objects.get(name="VLAN Group 2")
+            self.assertEquals(vlangroup_2.location.name, "Test Site 2")
+            self.assertEquals(vlangroup_2.location.location_type.name, "Site")
+            vlangroup_3 = VLANGroup.objects.get(name="VLAN Group 3")
+            self.assertEquals(vlangroup_3.location.name, "Test Location 2")
+            self.assertEquals(vlangroup_3.location.location_type.name, "Test Location Type 2")
+            vlan_1 = VLAN.objects.get(name="VLAN 1")
+            self.assertEquals(vlan_1.location.name, "Test Site 1")
+            self.assertEquals(vlan_1.location.location_type.name, "Site")
+            vlan_2 = VLAN.objects.get(name="VLAN 2")
+            self.assertEquals(vlan_2.location.name, "Test Site 2")
+            self.assertEquals(vlan_2.location.location_type.name, "Site")
+            vlan_3 = VLAN.objects.get(name="VLAN 3")
+            self.assertEquals(vlan_3.location.name, "Test Location 2")
+            self.assertEquals(vlan_3.location.location_type.name, "Test Location Type 2")
 
         with self.subTest("Testing Virtualization app model migration"):
-            Cluster = self.apps.get_model("virtualizaiton", "cluster")
+            Cluster = self.apps.get_model("virtualization", "cluster")
             clusters = Cluster.objects.filter(name__in=["Cluster 1", "Cluster 2"]).select_related("site", "location")
             for cluster in clusters:
                 self.assertEquals(cluster.site.name, cluster.location.name)

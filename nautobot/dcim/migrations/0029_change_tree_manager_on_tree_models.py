@@ -9,6 +9,8 @@ class Migration(migrations.Migration):
     dependencies = [
         ("circuits", "0009_circuittermination_location"),
         ("dcim", "0028_rename_foreignkey_fields"),
+        ("ipam", "0015_prefix_add_type"),
+        ("virtualization", "0015_rename_foreignkey_fields"),
     ]
 
     operations = [
