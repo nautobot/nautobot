@@ -75,7 +75,7 @@ class DynamicGroup(OrganizationalModel):
     # to dynamically change the widget if we decide we do want to support this field.
     #
     # Type: tuple
-    exclude_filter_fields = ("q", "cf_", "cr_", "cpf_", "comments")  # Must be a tuple
+    exclude_filter_fields = ("q", "cpf_", "comments")  # Must be a tuple
 
     class Meta:
         ordering = ["content_type", "name"]
