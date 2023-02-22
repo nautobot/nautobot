@@ -1623,6 +1623,8 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
     power_port_template = forms.ModelChoiceField(
         queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False
     )
+    # Provided for backwards compatibility with netbox/devicetype-library
+    power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False)
 
     class Meta:
         model = PowerOutletTemplate
@@ -1632,8 +1634,17 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
             "label",
             "type",
             "power_port_template",
+            "power_port",
             "feed_leg",
         ]
+
+    def is_valid(self):
+        """
+        Map an input of "power_port" to the model's expected "power_port_template" for devicetype-library compatibility.
+        """
+        if self.data["power_port"] and not self.data["power_port_template"]:
+            self.data["power_port_template"] = self.data["power_port"]
+        return super().is_valid()
 
 
 class InterfaceTemplateImportForm(ComponentTemplateImportForm):
@@ -1655,6 +1666,8 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
     rear_port_template = forms.ModelChoiceField(
         queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False
     )
+    # Provided for backwards compatibility with netbox/devicetype-library
+    rear_port = forms.ModelChoiceField(queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False)
 
     class Meta:
         model = FrontPortTemplate
@@ -1663,8 +1676,17 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "type",
             "rear_port_template",
+            "rear_port",
             "rear_port_position",
         ]
+
+    def is_valid(self):
+        """
+        Map an input of "rear_port" to the model's expected "rear_port_template" for devicetype-library compatibility.
+        """
+        if self.data["rear_port"] and not self.data["rear_port_template"]:
+            self.data["rear_port_template"] = self.data["rear_port"]
+        return super().is_valid()
 
 
 class RearPortTemplateImportForm(ComponentTemplateImportForm):

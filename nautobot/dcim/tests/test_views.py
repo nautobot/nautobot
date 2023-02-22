@@ -774,6 +774,9 @@ class DeviceTypeTestCase(
         """
         Custom import test for YAML-based imports (versus CSV)
         """
+        # TODO: Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
+        #       (not "rear_port_template"). This is intentional as we are testing for backwards compatibility with
+        #       the netbox/devicetype-library repository.
         IMPORT_DATA = """
 manufacturer: Generic
 model: TEST-1000
