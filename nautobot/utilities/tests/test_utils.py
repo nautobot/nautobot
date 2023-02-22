@@ -1,6 +1,7 @@
 import pickle
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -234,6 +235,8 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(get_route_for_model(Site, "detail", api=True), "dcim-api:site-detail")
         self.assertEqual(get_route_for_model(ContentType, "list", api=True), "extras-api:contenttype-list")
         self.assertEqual(get_route_for_model(ContentType, "detail", api=True), "extras-api:contenttype-detail")
+        self.assertEqual(get_route_for_model(Group, "list", api=True), "users-api:group-list")
+        self.assertEqual(get_route_for_model(Group, "detail", api=True), "users-api:group-detail")
         self.assertEqual(
             get_route_for_model("example_plugin.examplemodel", "list", api=True),
             "plugins-api:example_plugin-api:examplemodel-list",

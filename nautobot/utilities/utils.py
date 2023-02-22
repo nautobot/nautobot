@@ -12,6 +12,7 @@ import django_filters
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
@@ -105,10 +106,12 @@ def get_route_for_model(model, action, api=False):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    # The `contenttypes` app doesn't provide REST API endpoints,
-    # but Nautobot provides one for the ContentType model in our `extras` app.
+    # The `contenttypes` and `auth` app doesn't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in our `extras` and Group model in `users` app.
     if model is ContentType:
         app_label = "extras"
+    elif model is Group:
+        app_label = "users"
     else:
         app_label = model._meta.app_label
     prefix = f"{app_label}{suffix}:{model._meta.model_name}"
