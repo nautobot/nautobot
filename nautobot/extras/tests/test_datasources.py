@@ -665,7 +665,11 @@ class GitTest(TransactionTestCase):
                                     "weight": 1500,
                                     "description": "NTP servers for region NYC",
                                     "is_active": True,
-                                    "config_context_schema": "Config Context Schema 1",
+                                    # Changing this from `config_context_schema` to `schema` to assert that schema can
+                                    # be used inplace of `config_context_schema`.
+                                    # TODO(timizuo): Replace `schema` with `config_context_schema` when `schema`
+                                    #  backwards-compatibility is removed.
+                                    "schema": "Config Context Schema 1",
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                             },

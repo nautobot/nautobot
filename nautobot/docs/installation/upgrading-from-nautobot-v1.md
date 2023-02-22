@@ -587,3 +587,7 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 |                                      | `versioned_serializer_selector`                             | `nautobot.core.api.utils`              |
 | `nautobot.utilities.validators`      | `*`                                                         | `nautobot.core.models.validators`      |
 | `nautobot.utilities.views`           | `*`                                                         | `nautobot.core.views.mixins`           |
+
+## Git Data Source Changes
+
+The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.

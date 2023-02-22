@@ -535,6 +535,13 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     context_metadata.setdefault("description", "")
     context_metadata.setdefault("is_active", True)
 
+    # Context Metadata `schema` has been updated to `config_context_schema`,
+    # but for backwards compatibility `schema` is still supported.
+    schema = context_metadata.pop("schema", None)
+    if schema:
+        logger.warning("`schema` is deprecated use `config_context_schema` instead.")
+        context_metadata["config_context_schema"] = schema
+
     # Translate relationship queries/filters to lists of related objects
     relations = {}
     for key, model_class in [
