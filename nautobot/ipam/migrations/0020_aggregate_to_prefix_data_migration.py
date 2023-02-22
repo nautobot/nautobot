@@ -5,6 +5,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import migrations
 from django.utils.timezone import make_aware
 
+from nautobot.core.models.utils import serialize_object, serialize_object_v2
+from nautobot.extras import choices as extras_choices
+from nautobot.extras import constants
 from nautobot.ipam import choices
 
 
@@ -71,7 +74,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
                 date_allocated=date_allocated,
             )
 
-        # update any object changes for prior aggregate instance
+        # update any object changes related to prior aggregate instance
         ObjectChange.objects.filter(changed_object_type=aggregate_ct, changed_object_id=instance.pk).update(
             changed_object_type=prefix_ct, changed_object_id=prefix.pk
         )
@@ -79,12 +82,24 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
             related_object_type=prefix_ct, related_object_id=prefix.pk
         )
 
+        # create an object change to document migration
+        ObjectChange.objects.create(
+            changed_object=prefix,
+            object_repr=str(prefix)[: constants.CHANGELOG_MAX_OBJECT_REPR],
+            action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE,
+            object_data=serialize_object(prefix, extra=None, exclude=None),
+            object_data_v2=serialize_object_v2(prefix),
+            related_object=None,
+            change_context=extras_choices.ObjectChangeEventContextChoices.CONTEXT_ORM,
+            change_context_detail="Migrated from Aggregate",
+        )
+
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ("ipam", "0019_prefix_add_rir_and_date_allocated"),
-        ("extras", "0001_initial_part_1"),
+        ("extras", "0039_objectchange__add_change_context"),
     ]
 
     operations = [
