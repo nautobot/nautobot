@@ -410,7 +410,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Test that it's a dict with or without certain key fields.
         self.assertIsInstance(fields, dict)
         self.assertNotEqual(fields, {})
-        self.assertNotIn("q", fields)
+        self.assertNotIn("comments", fields)
         self.assertIn("name", fields)
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
@@ -512,7 +512,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         filter_fields = group.get_filter_fields()
         self.assertIsInstance(filter_fields, dict)
         self.assertNotEqual(filter_fields, {})
-        self.assertNotIn("q", filter_fields)
+        self.assertNotIn("comments", filter_fields)
         self.assertIn("name", filter_fields)
 
     def test_generate_filter_form(self):
