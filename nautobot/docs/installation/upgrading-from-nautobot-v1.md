@@ -92,8 +92,8 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim.Location` model. This means that any references to the removed models in the code now use the `dcim.Location` model instead with `LocationType` "Site" and "Region".
 
-!!! note
-    Nautobot App developers please check out this [migration guide](../plugins/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide) to migrate your apps and models from `Site` and `Region` to `Location`.
+!!! important
+    If you are an Nautobot App developer, please review the [Region and Site Related Data Model Migration Guide](../plugins/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide) to learn how to migrate your apps and models from `Site` and `Region` to `Location`.
 
 | Removed Model     | Replaced With  |
 |-------------------|----------------|
