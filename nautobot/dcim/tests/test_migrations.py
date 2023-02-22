@@ -708,8 +708,12 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             m2m = self.relationship.objects.get(name="Region to Site m2m")
             self.assertEqual(m2m.source_type.model, self.location_ct.model)
             self.assertEqual(m2m.destination_type.model, self.location_ct.model)
-            m2m_rs_1 = self.relationship_association.objects.filter(relationship=m2m)[0]
-            m2m_rs_2 = self.relationship_association.objects.filter(relationship=m2m)[1]
+            m2m_rs_1 = self.relationship_association.objects.get(
+                relationship=m2m, source_id=self.location.objects.get(name="Test Region 0").id
+            )
+            m2m_rs_2 = self.relationship_association.objects.get(
+                relationship=m2m, source_id=self.location.objects.get(name="Test Region 1").id
+            )
             self.assertEqual(m2m_rs_1.source_id, self.location.objects.get(name="Test Region 0").id)
             self.assertEqual(m2m_rs_1.destination_id, self.location.objects.get(name="Test Site 0").id)
             self.assertEqual(m2m_rs_2.source_id, self.location.objects.get(name="Test Region 1").id)
@@ -718,8 +722,12 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             o2o = self.relationship.objects.get(name="Region to Location o2o")
             self.assertEqual(o2o.source_type.model, self.location_ct.model)
             self.assertEqual(o2o.destination_type.model, self.location_ct.model)
-            o2o_rs_1 = self.relationship_association.objects.filter(relationship=o2o)[0]
-            o2o_rs_2 = self.relationship_association.objects.filter(relationship=o2o)[1]
+            o2o_rs_1 = self.relationship_association.objects.get(
+                relationship=o2o, source_id=self.location.objects.get(name="Test Region 2").id
+            )
+            o2o_rs_2 = self.relationship_association.objects.get(
+                relationship=o2o, source_id=self.location.objects.get(name="Test Region 3").id
+            )
             self.assertEqual(o2o_rs_1.source_id, self.location.objects.get(name="Test Region 2").id)
             self.assertEqual(o2o_rs_1.destination_id, self.location.objects.get(name="Test Location 2").id)
             self.assertEqual(o2o_rs_2.source_id, self.location.objects.get(name="Test Region 3").id)
