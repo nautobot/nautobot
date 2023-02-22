@@ -1314,8 +1314,8 @@ query {
             f'region: ["{self.region1.slug}", "{self.region2.slug}"]': _count(
                 {"region": [self.region1.slug, self.region2.slug]}
             ),
-            'face: "front"': _count({"face": "front"}),
-            'face: "rear"': _count({"face": "rear"}),
+            'face: "front"': _count({"face": ["front"]}),
+            'face: "rear"': _count({"face": ["rear"]}),
             f'status: "{self.device_statuses[0].slug}"': _count({"status": [self.device_statuses[0].slug]}),
             f'status: ["{self.device_statuses[1].slug}"]': _count({"status": [self.device_statuses[1].slug]}),
             f'status: ["{self.device_statuses[0].slug}", "{self.device_statuses[1].slug}"]': _count(

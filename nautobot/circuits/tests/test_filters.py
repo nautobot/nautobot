@@ -402,7 +402,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_term_side(self):
-        params = {"term_side": "A"}
+        params = {"term_side": ["A"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
 
     def test_port_speed(self):

@@ -1405,7 +1405,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         with self.subTest():
             self.assertEqual(Rack.objects.exclude(outer_unit="").count(), 3)
         with self.subTest():
-            params = {"outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER}
+            params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
@@ -1719,13 +1719,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 
     def test_subdevice_role(self):
         with self.subTest():
-            params = {"subdevice_role": SubdeviceRoleChoices.ROLE_PARENT}
+            params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_PARENT]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
             )
         with self.subTest():
-            params = {"subdevice_role": SubdeviceRoleChoices.ROLE_CHILD}
+            params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_CHILD]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD),
@@ -2160,11 +2160,10 @@ class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
     def test_feed_leg(self):
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A),
         )
 
     def test_power_port_template(self):
@@ -2181,11 +2180,10 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
     test_names = ["Interface 1", "Interface 2"]
 
     def test_type(self):
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
+        params = {"type": [InterfaceTypeChoices.TYPE_1GE_FIXED]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=InterfaceTypeChoices.TYPE_1GE_FIXED),
         )
 
     def test_mgmt_only(self):
@@ -2211,11 +2209,10 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     test_names = ["Front Port 1", "Front Port 2"]
 
     def test_type(self):
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
 
     def test_rear_port_position(self):
@@ -2254,11 +2251,10 @@ class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
     def test_type(self):
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
 
     def test_positions(self):
@@ -2522,7 +2518,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_face(self):
-        params = {"face": DeviceFaceChoices.FACE_FRONT}
+        params = {"face": [DeviceFaceChoices.FACE_FRONT]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_position(self):
@@ -3231,7 +3227,7 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
 
     def test_feed_leg(self):
         # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_connected(self):
@@ -3547,7 +3543,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 17)
 
     def test_mode(self):
-        params = {"mode": InterfaceModeChoices.MODE_ACCESS}
+        params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_description(self):
@@ -3857,8 +3853,7 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
-        # 2.0 TODO: Test for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_description(self):
@@ -3977,7 +3972,7 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # 2.0 TODO: Test for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_positions(self):
@@ -4640,7 +4635,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_length_unit(self):
-        params = {"length_unit": CableLengthUnitChoices.UNIT_FOOT}
+        params = {"length_unit": [CableLengthUnitChoices.UNIT_FOOT]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_type(self):
@@ -4891,15 +4886,15 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_type(self):
-        params = {"type": PowerFeedTypeChoices.TYPE_PRIMARY}
+        params = {"type": [PowerFeedTypeChoices.TYPE_PRIMARY]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_supply(self):
-        params = {"supply": PowerFeedSupplyChoices.SUPPLY_AC}
+        params = {"supply": [PowerFeedSupplyChoices.SUPPLY_AC]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_phase(self):
-        params = {"phase": PowerFeedPhaseChoices.PHASE_3PHASE}
+        params = {"phase": [PowerFeedPhaseChoices.PHASE_3PHASE]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_voltage(self):
@@ -5039,13 +5034,13 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
 
     def test_failover_strategy(self):
         with self.subTest():
-            params = {"failover_strategy": "active-active"}
+            params = {"failover_strategy": ["active-active"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-active"),
             )
         with self.subTest():
-            params = {"failover_strategy": "active-passive"}
+            params = {"failover_strategy": ["active-passive"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive"),

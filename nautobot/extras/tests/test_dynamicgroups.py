@@ -941,7 +941,7 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_operator(self):
-        params = {"operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION}
+        params = {"operator": [DynamicGroupOperatorChoices.OPERATOR_INTERSECTION]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_weight(self):

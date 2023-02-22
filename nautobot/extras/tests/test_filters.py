@@ -932,7 +932,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_log_level(self):
-        params = {"log_level": "success"}
+        params = {"log_level": ["success"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_grouping(self):
@@ -1084,7 +1084,7 @@ class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
         ).validated_save()
 
     def test_type(self):
-        params = {"type": "one-to-many"}
+        params = {"type": ["one-to-many"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_source_type(self):
