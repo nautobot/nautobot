@@ -92,6 +92,8 @@ The `region` and `site` fields are being removed in the `filter` data of `Dynami
 
 Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../installation/upgrading-from-nautobot-v1.md) guide.
 
+Check out this [migration guide](../plugins/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide) to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
+
 #### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
 
 `nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../installation/upgrading-from-nautobot-v1.md#python-code-location-changes).
