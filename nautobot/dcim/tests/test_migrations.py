@@ -401,16 +401,16 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         )
         self.relationship_association.objects.create(
             relationship=o2m,
-            source_id=sites[0].id,
+            source_id=self.site.objects.get(name="Test Site 0").id,
             source_type_id=self.site_ct.id,
-            destination_id=locations[0].id,
+            destination_id=self.location.objects.get(name="Test Location 0").id,
             destination_type_id=self.location_ct.id,
         )
         self.relationship_association.objects.create(
             relationship=o2m,
-            source_id=sites[0].id,
+            source_id=self.site.objects.get(name="Test Site 0").id,
             source_type_id=self.site_ct.id,
-            destination_id=locations[1].id,
+            destination_id=self.location.objects.get(name="Test Location 1").id,
             destination_type_id=self.location_ct.id,
         )
         m2m = self.relationship.objects.create(
@@ -422,16 +422,16 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         )
         self.relationship_association.objects.create(
             relationship=m2m,
-            source_id=regions[0].id,
+            source_id=self.region.objects.get(name="Test Region 0").id,
             source_type_id=self.region_ct.id,
-            destination_id=sites[0].id,
+            destination_id=self.site.objects.get(name="Test Site 0").id,
             destination_type_id=self.site_ct.id,
         )
         self.relationship_association.objects.create(
             relationship=m2m,
-            source_id=regions[1].id,
+            source_id=self.region.objects.get(name="Test Region 1").id,
             source_type_id=self.region_ct.id,
-            destination_id=sites[1].id,
+            destination_id=self.site.objects.get(name="Test Site 1").id,
             destination_type_id=self.site_ct.id,
         )
         o2o = self.relationship.objects.create(
@@ -443,16 +443,16 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         )
         self.relationship_association.objects.create(
             relationship=o2o,
-            source_id=regions[2].id,
+            source_id=self.region.objects.get(name="Test Region 2").id,
             source_type_id=self.region_ct.id,
-            destination_id=locations[2].id,
+            destination_id=self.location.objects.get(name="Test Location 2").id,
             destination_type_id=self.location_ct.id,
         )
         self.relationship_association.objects.create(
             relationship=o2o,
-            source_id=regions[3].id,
+            source_id=self.region.objects.get(name="Test Region 3").id,
             source_type_id=self.region_ct.id,
-            destination_id=locations[3].id,
+            destination_id=self.location.objects.get(name="Test Location 3").id,
             destination_type_id=self.location_ct.id,
         )
         self.webhooks = (

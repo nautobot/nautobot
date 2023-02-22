@@ -8,7 +8,7 @@ from django.utils.timezone import make_aware
 
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.factory import RackFactory, RackReservationFactory
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ObjectChange
 from nautobot.users.filters import (
@@ -88,16 +88,16 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         cls.users[1].groups.set([groups[1]])
         cls.users[2].groups.set([groups[2]])
 
-        site = Site.objects.first()
+        location = Location.objects.first()
         cls.object_changes = [
             ObjectChange.objects.create(
                 user=cls.users[num],
                 user_name=cls.users[num].username,
                 request_id=uuid.uuid4(),
                 action=ObjectChangeActionChoices.ACTION_CREATE,
-                changed_object=site,
-                object_repr=str(site),
-                object_data={"name": site.name, "slug": site.slug},
+                changed_object=location,
+                object_repr=str(location),
+                object_data={"name": location.name, "slug": location.slug},
             )
             for num in range(3)
         ]

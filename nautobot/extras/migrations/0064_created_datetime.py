@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0064_remove_site_and_region_attributes_from_config_context"),
+        ("extras", "0063_jobresult__add_celery_fields"),
     ]
 
     operations = [

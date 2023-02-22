@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("dcim", "0030_migrate_region_and_site_data_to_locations"),
-        ("extras", "0063_jobresult__add_celery_fields"),
+        ("extras", "0064_created_datetime"),
     ]
 
     operations = [
