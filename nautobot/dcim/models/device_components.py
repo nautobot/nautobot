@@ -652,7 +652,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.enabled,
             self.mac_address,
             self.mtu,
-            self.mgmt_only,
+            str(self.mgmt_only),
             self.description,
             self.get_mode_display(),
             self.get_status_display(),
@@ -1063,6 +1063,6 @@ class InventoryItem(TreeModel, ComponentModel):
             self.part_id,
             self.serial,
             self.asset_tag,
-            self.discovered,
+            str(self.discovered),
             self.description,
         )
