@@ -246,6 +246,9 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |                          | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
 |                          | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<slug>`                                      |
 | Location                 | `tag`                     | `tags`                           | `/dcim/locations/?tags=<slug>`                                            |
+| ObjectPermission      | `group`                   | `groups`                         | `/users/permissions/?groups=<slug>`                                       |
+|                       | `group_id`                | `groups_id`                      | `/users/permissions/?groups_id=<id>`                                      |
+|                       | `user`                    | `users`                          | `/users/permissions/?user=<uuid/username>`                                |
 | PowerFeed                | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
 |                          | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<slug>`                                          |
 | PowerOutlet              | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
@@ -261,6 +264,8 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | SecretsGroupAssociation  | `group`                   | `secrets_group`                  | `/extras/secrets-groups-associations/?secrets_group=<uuid/slug>`          |
 | Site                     | `tag`                     | `tags`                           | `/dcim/sites/?tags=<slug>`                                                |
 | Tenant                   | `tag`                     | `tags`                           | `/tenancy/tenants/?tags=<slug>`                                           |
+| User                  | `group`                   | `groups`                         | `/users/users/?groups=<slug>`                                             |
+|                       | `group_id`                | `groups_id`                      | `/users/users/?groups_id=<id>`                                            |
 | VirtualMachine           | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
 |                          | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
 |                          | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
@@ -422,7 +427,8 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                          | `site`                |                                                                                                 |
 |                          | `site_id`             |                                                                                                 |
 | Provider                 | `region`              |                                                                                                 |
-|                          | `region_id`           |                                                                                                 |
+|                          ObjectPermission   | `user_id`             | instead of `/users/users/?user_id=<uuid>`, use `users=<uuid>`                                 |
+|                    |`region_id`           |                                                                                                 |
 |                          | `site`                |                                                                                                 |
 |                          | `site_id`             |                                                                                                 |
 | ProviderNetwork          | `provider_id`         |                                                                                                 |

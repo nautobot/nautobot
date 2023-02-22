@@ -43,6 +43,7 @@ class User(BaseModel, AbstractUser):
 
     class Meta:
         db_table = "auth_user"
+        ordering = ["username"]
 
     def get_config(self, path, default=None):
         """
