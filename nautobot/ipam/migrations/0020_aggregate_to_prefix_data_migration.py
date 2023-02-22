@@ -13,7 +13,9 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
     Prefix = apps.get_model("ipam", "Prefix")
     Aggregate = apps.get_model("ipam", "Aggregate")
     Status = apps.get_model("extras", "Status")
+    ObjectChange = apps.get_model("extras", "ObjectChange")
     ContentType = apps.get_model("contenttypes", "ContentType")
+    aggregate_ct = ContentType.objects.get_for_model(Aggregate)
     prefix_ct = ContentType.objects.get_for_model(Prefix)
 
     try:
@@ -57,7 +59,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
                 print(" ".join(error_message), flush=True)
 
         else:
-            Prefix.objects.create(
+            prefix = Prefix.objects.create(
                 network=instance.network,
                 broadcast=instance.broadcast,
                 prefix_length=instance.prefix_length,
@@ -69,11 +71,20 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
                 date_allocated=date_allocated,
             )
 
+        # update any object changes for prior aggregate instance
+        ObjectChange.objects.filter(changed_object_type=aggregate_ct, changed_object_id=instance.pk).update(
+            changed_object_type=prefix_ct, changed_object_id=prefix.pk
+        )
+        ObjectChange.objects.filter(related_object_type=aggregate_ct, related_object_id=instance.pk).update(
+            related_object_type=prefix_ct, related_object_id=prefix.pk
+        )
+
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ("ipam", "0019_prefix_add_rir_and_date_allocated"),
+        ("extras", "0001_initial_part_1"),
     ]
 
     operations = [
