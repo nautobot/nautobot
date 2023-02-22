@@ -1,3 +1,7 @@
+from unittest import skipIf
+
+from django.db import connection
+
 from nautobot.core.tests.test_migration import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -509,6 +513,10 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             ),
         )
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_region_and_site_data_migration(self):
 
         with self.subTest("Testing Region and Site correctly migrate to Locations"):
