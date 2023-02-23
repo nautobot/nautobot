@@ -364,7 +364,7 @@ class LocationView(generic.ObjectView):
             .count(),
         }
         rack_groups = (
-            RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
+            RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
             .restrict(request.user, "view")
             .filter(location__in=related_locations)
         )
@@ -424,7 +424,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("location")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -438,12 +438,12 @@ class RackGroupView(generic.ObjectView):
         # Racks
         racks = (
             Rack.objects.restrict(request.user, "view")
-            .filter(group__in=instance.descendants(include_self=True))
+            .filter(rack_group__in=instance.descendants(include_self=True))
             .select_related("role", "location", "tenant")
         )
 
         rack_table = tables.RackTable(racks)
-        rack_table.columns.hide("group")
+        rack_table.columns.hide("rack_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -472,7 +472,7 @@ class RackGroupBulkImportView(generic.BulkImportView):
 
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("location")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
     filterset = filters.RackGroupFilterSet
     table = tables.RackGroupTable
 
@@ -484,7 +484,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 class RackListView(generic.ObjectListView):
     queryset = (
-        Rack.objects.select_related("location", "group", "tenant", "role", "status")
+        Rack.objects.select_related("location", "rack_group", "tenant", "role", "status")
         .prefetch_related("devices__device_type")
         .annotate(device_count=count_related(Device, "rack"))
     )
@@ -546,7 +546,7 @@ class RackElevationListView(generic.ObjectListView):
 
 
 class RackView(generic.ObjectView):
-    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "group", "role")
+    queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
 
     def get_extra_context(self, request, instance):
         # Get 0U and child devices located within the rack
@@ -556,10 +556,10 @@ class RackView(generic.ObjectView):
 
         peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
 
-        if instance.group:
-            peer_racks = peer_racks.filter(group=instance.group)
+        if instance.rack_group:
+            peer_racks = peer_racks.filter(rack_group=instance.rack_group)
         else:
-            peer_racks = peer_racks.filter(group__isnull=True)
+            peer_racks = peer_racks.filter(rack_group__isnull=True)
         next_rack = peer_racks.filter(name__gt=instance.name).order_by("name").first()
         prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
 
@@ -597,14 +597,14 @@ class RackBulkImportView(generic.BulkImportView):
 
 
 class RackBulkEditView(generic.BulkEditView):
-    queryset = Rack.objects.select_related("location", "group", "tenant", "role")
+    queryset = Rack.objects.select_related("location", "rack_group", "tenant", "role")
     filterset = filters.RackFilterSet
     table = tables.RackTable
     form = forms.RackBulkEditForm
 
 
 class RackBulkDeleteView(generic.BulkDeleteView):
-    queryset = Rack.objects.select_related("location", "group", "tenant", "role")
+    queryset = Rack.objects.select_related("location", "rack_group", "tenant", "role")
     filterset = filters.RackFilterSet
     table = tables.RackTable
 
@@ -678,8 +678,8 @@ class RackReservationBulkDeleteView(generic.BulkDeleteView):
 
 class ManufacturerListView(generic.ObjectListView):
     queryset = Manufacturer.objects.annotate(
-        devicetype_count=count_related(DeviceType, "manufacturer"),
-        inventoryitem_count=count_related(InventoryItem, "manufacturer"),
+        device_type_count=count_related(DeviceType, "manufacturer"),
+        inventory_item_count=count_related(InventoryItem, "manufacturer"),
         platform_count=count_related(Platform, "manufacturer"),
     )
     filterset = filters.ManufacturerFilterSet
@@ -727,7 +727,7 @@ class ManufacturerBulkImportView(generic.BulkImportView):
 
 
 class ManufacturerBulkDeleteView(generic.BulkDeleteView):
-    queryset = Manufacturer.objects.annotate(devicetype_count=count_related(DeviceType, "manufacturer"))
+    queryset = Manufacturer.objects.annotate(device_type_count=count_related(DeviceType, "manufacturer"))
     table = tables.ManufacturerTable
 
 
@@ -738,7 +738,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 class DeviceTypeListView(generic.ObjectListView):
     queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        instance_count=count_related(Device, "device_type")
+        device_count=count_related(Device, "device_type")
     )
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
@@ -847,7 +847,7 @@ class DeviceTypeImportView(generic.ObjectImportView):
 
 class DeviceTypeBulkEditView(generic.BulkEditView):
     queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        instance_count=count_related(Device, "device_type")
+        device_count=count_related(Device, "device_type")
     )
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
@@ -856,7 +856,7 @@ class DeviceTypeBulkEditView(generic.BulkEditView):
 
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
     queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        instance_count=count_related(Device, "device_type")
+        device_count=count_related(Device, "device_type")
     )
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
@@ -1158,7 +1158,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 class PlatformListView(generic.ObjectListView):
     queryset = Platform.objects.annotate(
         device_count=count_related(Device, "platform"),
-        vm_count=count_related(VirtualMachine, "platform"),
+        virtual_machine_count=count_related(VirtualMachine, "platform"),
     )
     filterset = filters.PlatformFilterSet
     table = tables.PlatformTable
@@ -1234,7 +1234,7 @@ class DeviceListView(generic.ObjectListView):
 class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
         "location",
-        "rack__group",
+        "rack__rack_group",
         "tenant__tenant_group",
         "role",
         "platform",
@@ -2938,7 +2938,7 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 
 class PowerPanelListView(generic.ObjectListView):
     queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        powerfeed_count=count_related(PowerFeed, "power_panel")
+        power_feed_count=count_related(PowerFeed, "power_panel")
     )
     filterset = filters.PowerPanelFilterSet
     filterset_form = forms.PowerPanelFilterForm
@@ -2983,7 +2983,7 @@ class PowerPanelBulkEditView(generic.BulkEditView):
 
 class PowerPanelBulkDeleteView(generic.BulkDeleteView):
     queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        powerfeed_count=count_related(PowerFeed, "power_panel")
+        power_feed_count=count_related(PowerFeed, "power_panel")
     )
     filterset = filters.PowerPanelFilterSet
     table = tables.PowerPanelTable
@@ -3042,8 +3042,8 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     form_class = forms.DeviceRedundancyGroupForm
     queryset = (
         DeviceRedundancyGroup.objects.select_related("status")
-        .prefetch_related("members")
-        .annotate(member_count=count_related(Device, "device_redundancy_group"))
+        .prefetch_related("devices")
+        .annotate(device_count=count_related(Device, "device_redundancy_group"))
     )
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
@@ -3052,8 +3052,8 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve" and instance:
-            members = instance.members_sorted.restrict(request.user)
-            members_table = tables.DeviceTable(members)
-            members_table.columns.show("device_redundancy_group_priority")
-            context["members_table"] = members_table
+            devices = instance.devices_sorted.restrict(request.user)
+            devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("device_redundancy_group_priority")
+            context["devices_table"] = devices_table
         return context

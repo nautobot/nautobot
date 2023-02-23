@@ -401,7 +401,7 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
 
-        rack = Rack.objects.create(name="Rack 1", location=location, group=rack_group)
+        rack = Rack.objects.create(name="Rack 1", location=location, rack_group=rack_group)
 
         RackReservation.objects.create(rack=rack, user=user2, units=[1, 2, 3], description="Reservation 1")
         RackReservation.objects.create(rack=rack, user=user2, units=[4, 5, 6], description="Reservation 2")
@@ -515,7 +515,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Rack X",
             "facility_id": "Facility X",
             "location": cls.locations[1].pk,
-            "group": rackgroups[1].pk,
+            "rack_group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="planned").pk,
             "role": rackroles[1].pk,
@@ -535,7 +535,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "location,group,name,width,u_height,status",
+            "location,rack_group,name,width,u_height,status",
             f"{cls.locations[0].name},,Rack 4,19,42,planned",
             f"{cls.locations[0].name},Rack Group 1,Rack 5,19,42,active",
             f"{cls.locations[1].name},Rack Group 2,Rack 6,19,42,reserved",
@@ -543,7 +543,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "location": cls.locations[1].pk,
-            "group": rackgroups[1].pk,
+            "rack_group": rackgroups[1].pk,
             "tenant": None,
             "status": statuses.get(slug="deprecated").pk,
             "role": rackroles[1].pk,
@@ -774,6 +774,9 @@ class DeviceTypeTestCase(
         """
         Custom import test for YAML-based imports (versus CSV)
         """
+        # TODO: Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
+        #       (not "rear_port_template"). This is intentional as we are testing for backwards compatibility with
+        #       the netbox/devicetype-library repository.
         IMPORT_DATA = """
 manufacturer: Generic
 model: TEST-1000
@@ -871,45 +874,45 @@ device-bays:
         self.assertEqual(dt.comments, "test comment")
 
         # Verify all of the components were created
-        self.assertEqual(dt.consoleporttemplates.count(), 3)
+        self.assertEqual(dt.console_port_templates.count(), 3)
         cp1 = ConsolePortTemplate.objects.first()
         self.assertEqual(cp1.name, "Console Port 1")
         self.assertEqual(cp1.type, ConsolePortTypeChoices.TYPE_DE9)
 
-        self.assertEqual(dt.consoleserverporttemplates.count(), 3)
+        self.assertEqual(dt.console_server_port_templates.count(), 3)
         csp1 = ConsoleServerPortTemplate.objects.first()
         self.assertEqual(csp1.name, "Console Server Port 1")
         self.assertEqual(csp1.type, ConsolePortTypeChoices.TYPE_RJ45)
 
-        self.assertEqual(dt.powerporttemplates.count(), 3)
+        self.assertEqual(dt.power_port_templates.count(), 3)
         pp1 = PowerPortTemplate.objects.first()
         self.assertEqual(pp1.name, "Power Port 1")
         self.assertEqual(pp1.type, PowerPortTypeChoices.TYPE_IEC_C14)
 
-        self.assertEqual(dt.poweroutlettemplates.count(), 3)
+        self.assertEqual(dt.power_outlet_templates.count(), 3)
         po1 = PowerOutletTemplate.objects.first()
         self.assertEqual(po1.name, "Power Outlet 1")
         self.assertEqual(po1.type, PowerOutletTypeChoices.TYPE_IEC_C13)
-        self.assertEqual(po1.power_port, pp1)
+        self.assertEqual(po1.power_port_template, pp1)
         self.assertEqual(po1.feed_leg, PowerOutletFeedLegChoices.FEED_LEG_A)
 
-        self.assertEqual(dt.interfacetemplates.count(), 3)
+        self.assertEqual(dt.interface_templates.count(), 3)
         iface1 = InterfaceTemplate.objects.first()
         self.assertEqual(iface1.name, "Interface 1")
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
         self.assertTrue(iface1.mgmt_only)
 
-        self.assertEqual(dt.rearporttemplates.count(), 3)
+        self.assertEqual(dt.rear_port_templates.count(), 3)
         rp1 = RearPortTemplate.objects.first()
         self.assertEqual(rp1.name, "Rear Port 1")
 
-        self.assertEqual(dt.frontporttemplates.count(), 3)
+        self.assertEqual(dt.front_port_templates.count(), 3)
         fp1 = FrontPortTemplate.objects.first()
         self.assertEqual(fp1.name, "Front Port 1")
-        self.assertEqual(fp1.rear_port, rp1)
+        self.assertEqual(fp1.rear_port_template, rp1)
         self.assertEqual(fp1.rear_port_position, 1)
 
-        self.assertEqual(dt.devicebaytemplates.count(), 3)
+        self.assertEqual(dt.device_bay_templates.count(), 3)
         db1 = DeviceBayTemplate.objects.first()
         self.assertEqual(db1.name, "Device Bay 1")
 
@@ -1089,7 +1092,7 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
             "device_type": devicetype.pk,
             "name": "Power Outlet Template X",
             "type": PowerOutletTypeChoices.TYPE_IEC_C13,
-            "power_port": powerports[0].pk,
+            "power_port_template": powerports[0].pk,
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
         }
 
@@ -1097,7 +1100,7 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
             "device_type": devicetype.pk,
             "name_pattern": "Power Outlet Template [4-6]",
             "type": PowerOutletTypeChoices.TYPE_IEC_C13,
-            "power_port": powerports[0].pk,
+            "power_port_template": powerports[0].pk,
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
         }
 
@@ -1164,19 +1167,19 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 1",
-            rear_port=rearports[0],
+            rear_port_template=rearports[0],
             rear_port_position=1,
         )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 2",
-            rear_port=rearports[1],
+            rear_port_template=rearports[1],
             rear_port_position=1,
         )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 3",
-            rear_port=rearports[2],
+            rear_port_template=rearports[2],
             rear_port_position=1,
         )
 
@@ -1184,7 +1187,7 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": devicetype.pk,
             "name": "Front Port X",
             "type": PortTypeChoices.TYPE_8P8C,
-            "rear_port": rearports[3].pk,
+            "rear_port_template": rearports[3].pk,
             "rear_port_position": 1,
         }
 
@@ -1192,7 +1195,7 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": devicetype.pk,
             "name_pattern": "Front Port [4-6]",
             "type": PortTypeChoices.TYPE_8P8C,
-            "rear_port_set": [f"{rp.pk}:1" for rp in rearports[3:6]],
+            "rear_port_template_set": [f"{rp.pk}:1" for rp in rearports[3:6]],
         }
 
         cls.bulk_edit_data = {
@@ -1315,7 +1318,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1")
 
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0], group=rack_group),
+            Rack.objects.create(name="Rack 1", location=locations[0], rack_group=rack_group),
             Rack.objects.create(name="Rack 2", location=locations[1]),
         )
 

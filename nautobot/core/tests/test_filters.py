@@ -185,7 +185,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseMixin):
     class LocationFilterSet(filters.BaseFilterSet):
         power_panels = filters.NaturalKeyOrPKMultipleChoiceFilter(
-            field_name="powerpanels",
+            field_name="power_panels",
             queryset=dcim_models.PowerPanel.objects.all(),
             to_field_name="name",
         )
@@ -248,7 +248,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
         kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
-        expected_result = dcim_models.Location.objects.filter(powerpanels__isnull=True)
+        expected_result = dcim_models.Location.objects.filter(power_panels__isnull=True)
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
@@ -257,8 +257,8 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.filter(
-            powerpanels__isnull=True
-        ) | dcim_models.Location.objects.filter(powerpanels__name__in=["test-power-panel1"])
+            power_panels__isnull=True
+        ) | dcim_models.Location.objects.filter(power_panels__name__in=["test-power-panel1"])
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
@@ -267,8 +267,8 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.filter(
-            powerpanels__isnull=True
-        ) | dcim_models.Location.objects.filter(powerpanels__pk__in=[self.power_panel2.pk])
+            power_panels__isnull=True
+        ) | dcim_models.Location.objects.filter(power_panels__pk__in=[self.power_panel2.pk])
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
@@ -276,7 +276,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
         kwargs = {"power_panels__n": ["test-power-panel1"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
-        expected_result = dcim_models.Location.objects.exclude(powerpanels__name__in=["test-power-panel1"])
+        expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel1"])
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
@@ -284,7 +284,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
         kwargs = {"power_panels__n": [self.power_panel2.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
-        expected_result = dcim_models.Location.objects.exclude(powerpanels__pk__in=[self.power_panel2.pk])
+        expected_result = dcim_models.Location.objects.exclude(power_panels__pk__in=[self.power_panel2.pk])
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
@@ -292,8 +292,8 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
-        expected_result = dcim_models.Location.objects.exclude(powerpanels__name__in=["test-power-panel1"]).exclude(
-            powerpanels__name__in=["test-power-panel2"]
+        expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel1"]).exclude(
+            power_panels__name__in=["test-power-panel2"]
         )
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
@@ -302,7 +302,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
-        expected_result = dcim_models.Location.objects.exclude(powerpanels__name__in=["test-power-panel3"])
+        expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel3"])
 
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
@@ -340,7 +340,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(uuid_obj),
-            {"powerpanels": str(uuid_obj)},
+            {"power_panels": str(uuid_obj)},
         )
 
         # Test model instance (pk)
@@ -350,7 +350,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(instance),
-            {"powerpanels": str(instance.pk)},
+            {"power_panels": str(instance.pk)},
         )
 
         # Test string (name in this case)
@@ -360,7 +360,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(name),
-            {"powerpanels__name": name},
+            {"power_panels__name": name},
         )
 
 
@@ -373,6 +373,8 @@ class TestModel(django_models.Model):
     choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
     datefield = django_models.DateField()
     datetimefield = django_models.DateTimeField()
+    decimalfield = django_models.DecimalField(max_digits=9, decimal_places=6)
+    floatfield = django_models.FloatField()
     integerfield = django_models.IntegerField()
     macaddressfield = core_fields.MACAddressCharField()
     textfield = django_models.TextField()
@@ -410,6 +412,8 @@ class BaseFilterSetTest(TestCase):
                 "choicefield",
                 "datefield",
                 "datetimefield",
+                "decimalfield",
+                "floatfield",
                 "integerfield",
                 "macaddressfield",
                 "modelchoicefield",
@@ -669,6 +673,36 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["integerfield__gt"].exclude, False)
         self.assertEqual(self.filters["integerfield__gte"].lookup_expr, "gte")
         self.assertEqual(self.filters["integerfield__gte"].exclude, False)
+
+    def test_multi_value_decimal_filter(self):
+        self.assertIsInstance(self.filters["decimalfield"], filters.MultiValueDecimalFilter)
+        self.assertEqual(self.filters["decimalfield"].lookup_expr, "exact")
+        self.assertEqual(self.filters["decimalfield"].exclude, False)
+        self.assertEqual(self.filters["decimalfield__n"].lookup_expr, "exact")
+        self.assertEqual(self.filters["decimalfield__n"].exclude, True)
+        self.assertEqual(self.filters["decimalfield__lt"].lookup_expr, "lt")
+        self.assertEqual(self.filters["decimalfield__lt"].exclude, False)
+        self.assertEqual(self.filters["decimalfield__lte"].lookup_expr, "lte")
+        self.assertEqual(self.filters["decimalfield__lte"].exclude, False)
+        self.assertEqual(self.filters["decimalfield__gt"].lookup_expr, "gt")
+        self.assertEqual(self.filters["decimalfield__gt"].exclude, False)
+        self.assertEqual(self.filters["decimalfield__gte"].lookup_expr, "gte")
+        self.assertEqual(self.filters["decimalfield__gte"].exclude, False)
+
+    def test_multi_value_float_filter(self):
+        self.assertIsInstance(self.filters["floatfield"], filters.MultiValueFloatFilter)
+        self.assertEqual(self.filters["floatfield"].lookup_expr, "exact")
+        self.assertEqual(self.filters["floatfield"].exclude, False)
+        self.assertEqual(self.filters["floatfield__n"].lookup_expr, "exact")
+        self.assertEqual(self.filters["floatfield__n"].exclude, True)
+        self.assertEqual(self.filters["floatfield__lt"].lookup_expr, "lt")
+        self.assertEqual(self.filters["floatfield__lt"].exclude, False)
+        self.assertEqual(self.filters["floatfield__lte"].lookup_expr, "lte")
+        self.assertEqual(self.filters["floatfield__lte"].exclude, False)
+        self.assertEqual(self.filters["floatfield__gt"].lookup_expr, "gt")
+        self.assertEqual(self.filters["floatfield__gt"].exclude, False)
+        self.assertEqual(self.filters["floatfield__gte"].lookup_expr, "gte")
+        self.assertEqual(self.filters["floatfield__gte"].exclude, False)
 
     def test_multi_value_time_filter(self):
         self.assertIsInstance(self.filters["timefield"], filters.MultiValueTimeFilter)
@@ -1143,7 +1177,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     """Tests for `BaseFilterTestCase.get_filterset_test_values()`."""
 
     queryset = dcim_models.Location.objects.filter(name__startswith="getfiltersettest")
-    exception_message = "Cannot find valid test data for Location field description"
+    exception_message = "Cannot find enough valid test data for Location field description"
 
     @classmethod
     def setUpTestData(cls):

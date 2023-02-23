@@ -373,14 +373,14 @@ class CreatedUpdatedFilterTest(APITestCase):
         self.rackrole1 = Role.objects.get_for_model(Rack).first()
         self.rack1 = Rack.objects.create(
             location=self.location1,
-            group=self.rackgroup1,
+            rack_group=self.rackgroup1,
             role=self.rackrole1,
             name="Test Rack 1",
             u_height=42,
         )
         self.rack2 = Rack.objects.create(
             location=self.location1,
-            group=self.rackgroup1,
+            rack_group=self.rackgroup1,
             role=self.rackrole1,
             name="Test Rack 2",
             u_height=42,

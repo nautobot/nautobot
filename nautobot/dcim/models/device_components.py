@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 
-from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
@@ -59,7 +59,7 @@ class ComponentModel(PrimaryModel):
     An abstract model inherited by any model which has a parent Device.
     """
 
-    device = models.ForeignKey(to="dcim.Device", on_delete=models.CASCADE, related_name="%(class)ss")
+    device = ForeignKeyWithAutoRelatedName(to="dcim.Device", on_delete=models.CASCADE)
     name = models.CharField(max_length=64, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
@@ -154,12 +154,11 @@ class PathEndpoint(models.Model):
     `connected_endpoint()` is a convenience method for returning the destination of the associated CablePath, if any.
     """
 
-    _path = models.ForeignKey(
+    _path = ForeignKeyWithAutoRelatedName(
         to="dcim.CablePath",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_related",
     )
 
     class Meta:
@@ -448,7 +447,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name="poweroutlets",
+        related_name="power_outlets",
     )
     # todoindex:
     feed_leg = models.CharField(
@@ -796,7 +795,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         return self.type == InterfaceTypeChoices.TYPE_LAG
 
     @property
-    def count_ipaddresses(self):
+    def ip_address_count(self):
         return self.ip_addresses.count()
 
     @property
@@ -816,7 +815,7 @@ class FrontPort(CableTermination, ComponentModel):
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
-    rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="frontports")
+    rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="front_ports")
     rear_port_position = models.PositiveSmallIntegerField(
         default=1,
         validators=[
@@ -905,12 +904,12 @@ class RearPort(CableTermination, ComponentModel):
         super().clean()
 
         # Check that positions count is greater than or equal to the number of associated FrontPorts
-        frontport_count = self.frontports.count()
-        if self.positions < frontport_count:
+        front_port_count = self.front_ports.count()
+        if self.positions < front_port_count:
             raise ValidationError(
                 {
                     "positions": f"The number of positions cannot be less than the number of mapped front ports "
-                    f"({frontport_count})"
+                    f"({front_port_count})"
                 }
             )
 

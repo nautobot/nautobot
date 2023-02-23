@@ -47,7 +47,7 @@ class RackGroupTable(BaseTable):
 class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(order_by=("_name",), linkify=True)
-    group = tables.Column(linkify=True)
+    rack_group = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
@@ -58,7 +58,7 @@ class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "pk",
             "name",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -73,7 +73,7 @@ class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "pk",
             "name",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -99,7 +99,7 @@ class RackDetailTable(RackTable):
             "pk",
             "name",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -118,7 +118,7 @@ class RackDetailTable(RackTable):
             "pk",
             "name",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
