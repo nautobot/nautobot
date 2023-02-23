@@ -1,1 +1,1 @@
-Fix the issue with the ContentType reverse return, i.e get_route_for_model(ContentType, api=True...).
+Fixed missing `get_route_for_model()` logic for the `ContentType` and `Group` models.
