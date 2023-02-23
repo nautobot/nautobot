@@ -33,7 +33,10 @@ For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be cust
     data models of their own that implement a `status` field. Proceed at your
     own risk!
 
-Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `dcim_device_related`).
+Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's verbose plural name (e.g. `devices`).
+
++/- 2.0.0
+    The related name for Statuses was changed to be based on the model's `verbose_name_plural` instead of the pattern `%(app_label)s_%(model)s_related`. For example, `Status.devices` and not `Status.dcim_device_related`.
 
 ### `StatusField` model field
 

@@ -5,7 +5,10 @@
     data models of their own that implement a `role` field. Proceed at your
     own risk!
 
-Any model that is intended to have a `role` field must inherit from either of these two mixins: `nautobot.extras.models.roles.RoleModelMixin` or `nautobot.extras.models.roles.RoleRequiredRoleModelMixin`. The `RoleModelMixin` adds a nullable `role` field, while the `RoleRequiredRoleModelMixin` adds a required `role` field. This abstract model will add an `nautobot.extras.models.roles.RoleField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `dcim_device_related`).
+Any model that is intended to have a `role` field must inherit from either of these two mixins: `nautobot.extras.models.roles.RoleModelMixin` or `nautobot.extras.models.roles.RoleRequiredRoleModelMixin`. The `RoleModelMixin` adds a nullable `role` field, while the `RoleRequiredRoleModelMixin` adds a required `role` field. This abstract model will add an `nautobot.extras.models.roles.RoleField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's verbose plural name (e.g. `devices`).
+
++/- 2.0.0
+    The related name for Roles was changed to be based on the model's `verbose_name_plural` instead of the pattern `%(app_label)s_%(model)s_related`. For example, `Role.devices` and not `Role.dcim_device_related`.
 
 ## `RoleField` model field
 

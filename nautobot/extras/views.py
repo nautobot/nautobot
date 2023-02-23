@@ -275,7 +275,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.dcim_device_related.select_related(
+            data=instance.devices.select_related(
                 "tenant",
                 "location",
                 "rack",
@@ -301,7 +301,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
-            data=instance.virtualization_virtualmachine_related.select_related(
+            data=instance.virtual_machines.select_related(
                 "cluster",
                 "role",
                 "tenant",
@@ -1819,7 +1819,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
         if self.action == "retrieve":
             context["content_types"] = instance.content_types.order_by("app_label", "model")
 
-            devices = instance.dcim_device_related.select_related(
+            devices = instance.devices.select_related(
                 "status",
                 "location",
                 "tenant",
@@ -1827,25 +1827,25 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "rack",
                 "device_type",
             )
-            ipaddress = instance.ipam_ipaddress_related.select_related(
+            ipaddress = instance.ip_addresses.select_related(
                 "vrf",
                 "tenant",
                 "assigned_object_type",
             )
-            prefixes = instance.ipam_prefix_related.select_related(
+            prefixes = instance.prefixes.select_related(
                 "location",
                 "status",
                 "tenant",
                 "vlan",
                 "vrf",
             )
-            virtual_machines = instance.virtualization_virtualmachine_related.select_related(
+            virtual_machines = instance.virtual_machines.select_related(
                 "cluster",
                 "role",
                 "status",
                 "tenant",
             )
-            vlans = instance.ipam_vlan_related.select_related(
+            vlans = instance.vlans.select_related(
                 "vlan_group",
                 "location",
                 "status",

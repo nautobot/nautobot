@@ -61,7 +61,8 @@ class StatusField(ForeignKeyLimitedByContentTypes):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Status)
-        super().__init__(**kwargs)
+        kwargs.setdefault("on_delete", models.PROTECT)
+        super().__init__(*args, **kwargs)
 
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
@@ -123,10 +124,7 @@ class StatusModel(models.Model):
     Abstract base class for any model which may have statuses.
     """
 
-    status = StatusField(
-        on_delete=models.PROTECT,
-        related_name="%(app_label)s_%(class)s_related",  # e.g. dcim_device_related
-    )
+    status = StatusField()
 
     class Meta:
         abstract = True
