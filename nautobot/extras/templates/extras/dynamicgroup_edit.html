@@ -31,36 +31,37 @@
                         the Content Type for this Dynamic Group. Fields that are not a dropdown are
                         expected to have string inputs and do not support multiple values.
                     </span>
+
+                        <div class="panel panel-default">
+                          <div class="panel-heading"><strong>Object Fields</strong></div>
+                          <div class="panel-body">
+                            {% render_form filter_form %}
+                          </div>
+                        </div>
+
+                        {% if filter_form.custom_fields %}
+                        <div class="panel panel-default">
+                          <div class="panel-heading"><strong>Custom Fields</strong></div>
+                          <div class="panel-body">
+                            {% render_custom_fields filter_form %}
+                          </div>
+                        </div>
+                        {% endif %}
+
+                        {% if filter_form.relationships %}
+                        <div class="panel panel-default">
+                          <div class="panel-heading"><strong>Relationships</strong></div>
+                          <div class="panel-body">
+                            {% render_relationships filter_form %}
+                          </div>
+                        </div>
+                        {% endif %}
+
                     {% else %}
                     <span class="help-block">
                         Filtering criteria will be available after initially saving this group and
                         returning to this page.
                     </span>
-                    {% endif %}
-
-                    <div class="panel panel-default">
-                      <div class="panel-heading"><strong>Object Fields</strong></div>
-                      <div class="panel-body">
-                        {% render_form filter_form %}
-                      </div>
-                    </div>
-
-                    {% if filter_form.custom_fields %}
-                    <div class="panel panel-default">
-                      <div class="panel-heading"><strong>Custom Fields</strong></div>
-                      <div class="panel-body">
-                        {% render_custom_fields filter_form %}
-                      </div>
-                    </div>
-                    {% endif %}
-
-                    {% if filter_form.relationships %}
-                    <div class="panel panel-default">
-                      <div class="panel-heading"><strong>Relationships</strong></div>
-                      <div class="panel-body">
-                        {% render_relationships filter_form %}
-                      </div>
-                    </div>
                     {% endif %}
                 </div>
                 <div class="tab-pane" id="children-form">
