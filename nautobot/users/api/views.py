@@ -3,7 +3,6 @@ from django.contrib.auth.models import Group
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
-from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
@@ -36,11 +35,6 @@ class UserViewSet(ModelViewSet):
     queryset = RestrictedQuerySet(model=get_user_model()).prefetch_related("groups").order_by("username")
     serializer_class = serializers.UserSerializer
     filterset_class = filters.UserFilterSet
-
-    @action(methods=["GET"], detail=False, url_path="my-profile")
-    def my_profile(self, request):
-        serializer = self.serializer_class(instance=request.user, context={"request": request})
-        return Response(serializer.data)
 
 
 @extend_schema_view(

@@ -1,28 +1,16 @@
 import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap"
-import { faSignIn, faSignOut } from "@fortawesome/free-solid-svg-icons";
+import { faRightToBracket } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link, NavLink } from "react-router-dom"
-import {useState, useEffect} from "react"
 import useSWR from "swr"
 
 import { nautobot_url } from "src/index"
 
 
-const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => {
-  if(res.status !== 200){
-    throw new Error(res.json());
-  }
-  return res.json();
-});
+const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
-  const { data, error } = useSWR([nautobot_url + "/api/get-menu/"], fetcher)
-  const { data: profileData, error: profileError } = useSWR(nautobot_url + "/api/users/users/my-profile/", fetcher)
-  const [ isLoggedIn, setIsLoggedIn] = useState(false)
-  useEffect(() => {
-    setIsLoggedIn(profileData ? true : false)
-  }, [profileData, profileError, isLoggedIn]);
-
+  const { data, error } = useSWR(nautobot_url + "/api/get-menu/", fetcher)
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
 
@@ -62,18 +50,10 @@ export default function BSNavBar() {
         </Navbar.Collapse>
         <Navbar.Collapse className="justify-content-end">
           <Navbar.Text>
-            {
-                isLoggedIn ?
-                    <Link to="/logout/" onClick={() => setIsLoggedIn(false)}>
-                      <FontAwesomeIcon icon={faSignOut} />
-                      {" Logout"}
-                    </Link>
-                :
-                    <Link to="/login/">
-                      <FontAwesomeIcon icon={faSignIn} />
-                      {" Login"}
-                    </Link>
-            }
+            <Link to="/login/">
+              <FontAwesomeIcon icon={faRightToBracket} />
+              {" Login"}
+            </Link>
           </Navbar.Text>
         </Navbar.Collapse>
       </Container>
