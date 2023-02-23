@@ -45,43 +45,50 @@ The following data is available as context for Jinja2 templates:
 
 ### Default Request Body
 
-If no body template is specified, the request body will be populated with a JSON object containing the context data. For example, a newly created site might appear as follows:
+If no body template is specified, the request body will be populated with a JSON object containing the context data. For example, a newly created Location might appear as follows:
 
 ```no-highlight
 {
     "event": "created",
-    "timestamp": "2020-02-25 15:10:26.010582+00:00",
-    "model": "site",
-    "username": "jstretch",
-    "request_id": "fdbca812-3142-4783-b364-2e2bd5c16c6a",
+    "timestamp": "2023-02-14 12:34:56.000000+00:00",
+    "model": "location",
+    "username": "admin",
+    "request_id": "fab0a4fb-52ba-4cb4-9756-4e6a3ac05332",
     "data": {
-        "id": 19,
-        "name": "Site 1",
-        "slug": "site-1",
-        "status":
-            "value": "active",
-            "label": "Active",
-            "id": 1
+        "id": "5e4f9a91-372b-46df-a50a-c26357475bee",
+        "display": "Campus A",
+        "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
+        "name": "Campus A",
+        "slug": "campus-a",
+        "status": {
+            "display": "Active",
+            "id": "363a431c-c784-40b5-8513-758cafd174ad",
+            "url": "/api/extras/statuses/363a431c-c784-40b5-8513-758cafd174ad/",
+            "name": "Active",
+            "slug": "active",
+            "created": "2023-02-14T00:00:00Z",
+            "last_updated": "2023-02-14T19:40:13.216150Z"
         },
-        "region": null,
         ...
     },
     "snapshots": {
         "prechange": null,
         "postchange": {
-            "created": "2020-02-25",
-            "last_updated": "2020-02-25 15:10:26.010582+00:00",
-            "name": "Site 1",
-            "slug": "site-1",
+            "id": "5e4f9a91-372b-46df-a50a-c26357475bee",
+            "asn": null,
+            "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
+            "name": "Campus A",
+            "slug": "campus-a",
             ...
         },
         "differences": {
             "removed": null,
             "added": {
-                "created": "2020-02-25",
-                "last_updated": "2020-02-25 15:10:26.010582+00:00",
-                "name": "Site 1",
-                "slug": "site-1",
+                "id": "5e4f9a91-372b-46df-a50a-c26357475bee",
+                "asn": null,
+                "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
+                "name": "Campus A",
+                "slug": "campus-a",
                 ...
             }
         }

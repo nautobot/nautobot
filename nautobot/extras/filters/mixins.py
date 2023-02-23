@@ -136,9 +136,9 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
 
 class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
-    created = django_filters.DateFilter()
-    created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
-    created__lte = django_filters.DateFilter(field_name="created", lookup_expr="lte")
+    created = django_filters.DateTimeFilter()
+    created__gte = django_filters.DateTimeFilter(field_name="created", lookup_expr="gte")
+    created__lte = django_filters.DateTimeFilter(field_name="created", lookup_expr="lte")
     last_updated = django_filters.DateTimeFilter()
     last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")

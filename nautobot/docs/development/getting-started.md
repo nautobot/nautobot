@@ -42,10 +42,14 @@ ls nautobot/
 Example output:
 
 ```no-highlight
-CHANGELOG.md     README.md    docs        nautobot.code-workspace  site
-CONTRIBUTING.md  contrib      manage.py   poetry.lock              tasks.py
-LICENSE.txt      development  mkdocs.yml  pyproject.toml           upgrade.sh
-NOTICE           dist         nautobot    scripts
+CHANGELOG.md            development             nautobot.code-workspace
+CODE_OF_CONDUCT.md      docker                  poetry.lock
+CONTRIBUTING.md         docs                    pyproject.toml
+LICENSE.txt             examples                renovate.json
+NOTICE                  install.sh              scripts
+README.md               invoke.yml.example      tasks.py
+SECURITY.md             mkdocs.yml
+changes                 nautobot
 ```
 
 ### About Remote Repos

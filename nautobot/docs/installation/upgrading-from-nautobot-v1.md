@@ -11,6 +11,7 @@
 
 | Model        | Field          | Changes                                           |
 |--------------|----------------|---------------------------------------------------|
+| (all)        | `created`      | Changed from DateField to DateTimeField           |
 | JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
 |              | `log_object`   | No longer accepts `null` values, use `""` instead |
 | Prefix       | `is_pool`      | Replaced by new field `type`, valid choices are "Container", "Network" and "Pool" |
@@ -129,6 +130,7 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 
 | Model                 | Field          | Changes                                                                                                  |
 |-----------------------|----------------|----------------------------------------------------------------------------------------------------------|
+| (all)                 | `created`      | Now is a date/time (`"2023-02-14T19:57:45.320232Z"`) rather than only a date                             |
 | Cable                 | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Circuit               | `status`       | Now uses a nested Status serializer, rather than `{"value": "<slug>", "label": "<name>"}`                |
 | Device                | `location`     | Now `location` has changed to a required field on this model Serializer                                  |
@@ -240,12 +242,15 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |                       | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
 |                       | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<slug>`                                      |
 | Location              | `tag`                     | `tags`                           | `/dcim/locations/?tags=<slug>`                                            |
+| ObjectPermission      | `group`                   | `groups`                         | `/users/permissions/?groups=<slug>`                                       |
+|                       | `group_id`                | `groups_id`                      | `/users/permissions/?groups_id=<id>`                                      |
+|                       | `user`                    | `users`                          | `/users/permissions/?user=<uuid/username>`                                |
 | PowerFeed             | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
 |                       | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<slug>`                                          |
 | PowerOutlet           | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
 | PowerPanel            | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<slug>`                                         |
 | PowerPort             | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
-| Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container|network|pool>`                           |
+| Prefix                | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
 | Provider              | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
 | ProviderNetwork       | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
 | Rack                  | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
@@ -254,6 +259,8 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |                       | `tag`                     | `tags`                           | `/dcim/rear-ports/?tags=<slug>`                                           |
 | Site                  | `tag`                     | `tags`                           | `/dcim/sites/?tags=<slug>`                                                |
 | Tenant                | `tag`                     | `tags`                           | `/tenancy/tenants/?tags=<slug>`                                           |
+| User                  | `group`                   | `groups`                         | `/users/users/?groups=<slug>`                                             |
+|                       | `group_id`                | `groups_id`                      | `/users/users/?groups_id=<id>`                                            |
 | VirtualMachine        | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
 |                       | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
 |                       | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
@@ -264,6 +271,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 | Model                 | Enhanced Filter Field | Changes                                                    | UI and Rest API endpoints Available in v2.X  |
 |-----------------------|-----------------------|------------------------------------------------------------|----------------------------------------------|
+| (all)                 | `created[__(gte|lte)]`| Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`|
 | Circuit               | `circuit_type`        | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`|
 |                       | `provider`            | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`|
 |                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`|
@@ -412,6 +420,7 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                    | `site`                |                                                                                               |
 |                    | `site_id`             |                                                                                               |
 | Provider           | `region`              |                                                                                               |
+| ObjectPermission   | `user_id`             | instead of `/users/users/?user_id=<uuid>`, use `users=<uuid>`                                 |
 |                    | `region_id`           |                                                                                               |
 |                    | `site`                |                                                                                               |
 |                    | `site_id`             |                                                                                               |

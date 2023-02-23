@@ -54,7 +54,7 @@ curl -s http://nautobot/api/ipam/ip-addresses/c557df87-9a63-4555-bfd1-21cea2f6aa
   "description": "Example IP address",
   "tags": [],
   "custom_fields": {},
-  "created": "2020-08-04",
+  "created": "2020-08-04T00:00:00Z",
   "last_updated": "2020-08-04T14:12:39.666885Z"
 }
 ```
@@ -452,7 +452,7 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
         "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
         "name": "Reserved",
         "slug": "reserved",
-        "created": "2019-12-09",
+        "created": "2019-12-09T01:02:03.456789Z",
         "last_updated": "2019-12-09T16:38:50.363404Z"
     },
     "role": {
@@ -465,7 +465,7 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
     "description": "Example prefix",
     "tags": [],
     "custom_fields": {},
-    "created": "2018-12-10",
+    "created": "2018-12-10T00:00:00Z",
     "last_updated": "2019-03-01T20:02:46.173540Z"
 }
 ```
@@ -588,7 +588,7 @@ http://nautobot/api/ipam/prefixes/ \
       "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
       "name": "Active",
       "slug": "active",
-      "created": "2019-12-09",
+      "created": "2019-12-09T16:38:50.363404Z",
       "last_updated": "2019-12-09T16:38:50.363404Z"
   },
   "role": null,
@@ -596,7 +596,7 @@ http://nautobot/api/ipam/prefixes/ \
   "description": "",
   "tags": [],
   "custom_fields": {},
-  "created": "2020-08-04",
+  "created": "2020-08-04T20:08:39.007125Z",
   "last_updated": "2020-08-04T20:08:39.007125Z"
 }
 ```
@@ -677,7 +677,7 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
       "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
       "name": "Reserved",
       "slug": "reserved",
-      "created": "2019-12-09",
+      "created": "2019-12-09T00:00:00Z",
       "last_updated": "2019-12-09T16:38:50.363404Z"
   },
   "role": null,
@@ -685,7 +685,7 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
   "description": "",
   "tags": [],
   "custom_fields": {},
-  "created": "2020-08-04",
+  "created": "2020-08-04T00:00:00Z",
   "last_updated": "2020-08-04T20:14:55.709430Z"
 }
 ```
