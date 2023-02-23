@@ -296,6 +296,9 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3"),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE"),
         )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = interfaces[:3]
+        cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN1", location=location),

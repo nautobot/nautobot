@@ -3,7 +3,6 @@ import logging
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
@@ -17,7 +16,6 @@ from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    get_filterable_params_from_filter_params,
     normalize_querydict,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -33,11 +31,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
-
-    def get_filter_params(self, view, request):
-        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params, view.filterset_class)
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -163,21 +156,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             form = data["form"]
         else:
             if view.action == "list":
-                filter_params = self.get_filter_params(view, request)
                 if view.filterset_class is not None:
-                    filterset = view.filterset_class(filter_params, view.queryset)
-                    filterset_filters = filterset.get_filters()
-                    view.queryset = filterset.qs
-                    if not filterset.is_valid():
-                        messages.error(
-                            request,
-                            mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-                        )
-                        view.queryset = view.queryset.none()
-
+                    view.queryset = view.filter_queryset(view.get_queryset())
+                    filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
-                        for field_name, values in filter_params.items()
+                        for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(request.GET, label_suffix="")

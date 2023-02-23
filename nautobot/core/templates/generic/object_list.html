@@ -266,7 +266,28 @@
                 }
             }
         }
+    })
+    // On change of input field in default filter form
+    // Replicate that change into dynamic filter form and vice-versa
+    $("#default-filter form input, #advanced-filter input").on("change", function (e){
+        let field_name = $(this).attr("name");
+        let field_value = $(this).val();
+        let form_id = $(this).parents("form").attr("id");
+        let default_filters_field_dom = $(`#default-filter form input[name=${field_name}]`);
+        let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td input[name=${field_name}]`);
 
+        // Only apply logic if fields with same name attr are on both advanced and default filter form
+        if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+            // Only change field value if both fields do not have equal values
+            if (default_filters_field_dom.val() !== advanced_filters_field_dom.val()){
+                if(form_id === "dynamic-filter-form"){
+                    default_filters_field_dom.val(field_value);
+                }
+                else {
+                    advanced_filters_field_dom.val(field_value);
+                }
+            }
+        }
     })
 </script>
 {% endblock %}
