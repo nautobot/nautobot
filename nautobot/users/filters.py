@@ -110,7 +110,7 @@ class ObjectPermissionFilterSet(BaseFilterSet):
     groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group",
+        label="Group (ID)",
     )
     groups = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",

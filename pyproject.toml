@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.17"
+Django = "~3.2.18"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -114,7 +114,9 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.4.0"
+# Note: netutils is limited in scope, dependencies, and observes semver, as such
+#       we permit a looser (^) version constraint here.
+netutils = "^1.4.0"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter
