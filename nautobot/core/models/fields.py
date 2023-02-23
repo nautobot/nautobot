@@ -138,9 +138,10 @@ class ForeignKeyWithAutoRelatedName(models.ForeignKey):
     """
     Extend base ForeignKey functionality to create a smarter default `related_name`.
 
-    For example, "ip_addresses" instead of "ipaddresss".
+    For example, "ip_addresses" instead of "ipaddress_set", "ipaddresss", or "ipam_ipaddress_related".
 
-    Primarily useful for cases of abstract base classes that define ForeignKeys, such as dcim.ComponentModel.
+    Primarily useful for cases of abstract base classes that define ForeignKeys, such as
+    `nautobot.dcim.models.device_components.ComponentModel`.
     """
 
     def __init__(self, *args, related_name=None, **kwargs):
