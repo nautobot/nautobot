@@ -1,10 +1,11 @@
+import uuid
 from unittest import skipIf
 
 from django.db import connection
 
 from nautobot.core.tests.test_migration import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
@@ -40,9 +41,10 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         self.job = apps.get_model("extras", "job")
         self.job_hook = apps.get_model("extras", "jobhook")
         self.note = apps.get_model("extras", "note")
-        self.web_hook = apps.get_model("extras", "webhook")
+        self.object_change = apps.get_model("extras", "objectchange")
         self.relationship = apps.get_model("extras", "relationship")
         self.relationship_association = apps.get_model("extras", "relationshipassociation")
+        self.web_hook = apps.get_model("extras", "webhook")
         self.prefix = apps.get_model("ipam", "prefix")
         self.vlan_group = apps.get_model("ipam", "vlangroup")
         self.vlan = apps.get_model("ipam", "vlan")
@@ -50,11 +52,30 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         self.cluster = apps.get_model("virtualization", "cluster")
         self.status = apps.get_model("extras", "status")
         self.tag = apps.get_model("extras", "tag")
+        self.user = apps.get_model("users", "user")
 
         self.region_ct = self.content_type.objects.get_for_model(self.region)
         self.site_ct = self.content_type.objects.get_for_model(self.site)
         self.location_ct = self.content_type.objects.get_for_model(self.location)
         self.device_ct = self.content_type.objects.get_for_model(self.device)
+
+        self.statuses = (
+            self.status.objects.create(name="Active", slug="active"),
+            self.status.objects.create(name="Planned", slug="planned"),
+            self.status.objects.create(name="Failed", slug="failed"),
+        )
+        for status in self.statuses:
+            status.content_types.add(self.site_ct)
+            status.content_types.add(self.region_ct)
+
+        self.tags = (
+            self.tag.objects.create(name="Tag 1", slug="tag-1"),
+            self.tag.objects.create(name="Tag 2", slug="tag-2"),
+            self.tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in self.tags:
+            tag.content_types.add(self.site_ct)
+            tag.content_types.add(self.region_ct)
 
         regions = []
         for i in range(10):
@@ -396,6 +417,41 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             assigned_object_type=self.location_ct,
             assigned_object_id=locations[1].pk,
         )
+        user = self.user.objects.create(username="user1")
+        site = self.site.objects.get(name="Test Site 0")
+        region = self.region.objects.get(name="Test Region 0")
+        self.object_change.objects.create(
+            user=user,
+            user_name=user.username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            changed_object_type=self.site_ct,
+            changed_object_id=site.id,
+            object_repr=str(site),
+            object_data={"name": site.name, "slug": site.slug},
+        )
+        self.object_change.objects.create(
+            user=user,
+            user_name=user.username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object_type=self.region_ct,
+            changed_object_id=region.id,
+            object_repr=str(region),
+            object_data={"name": region.name, "slug": region.slug},
+        )
+        self.object_change.objects.create(
+            user=user,
+            user_name=user.username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object_type=self.site_ct,
+            changed_object_id=site.id,
+            object_repr=str(site),
+            object_data={"name": site.name, "slug": site.slug},
+            related_object_type=self.region_ct,
+            related_object_id=region.id,
+        )
         o2m = self.relationship.objects.create(
             name="Site to Location o2m",
             slug="site-to-location-o2m",
@@ -677,14 +733,16 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(image_location_3.name, "Test Location 0")
             jh_1 = self.job_hook.objects.get(name="JobHook1")
             self.assertEqual(
-                [self.location_ct.model, self.region_ct.model], list(jh_1.content_types.values_list("model", flat=True))
+                [self.location_ct.model, self.region_ct.model],
+                sorted(list(jh_1.content_types.values_list("model", flat=True))),
             )
             jh_2 = self.job_hook.objects.get(name="JobHook2")
             self.assertEqual(
-                [self.location_ct.model, self.site_ct.model], list(jh_2.content_types.values_list("model", flat=True))
+                [self.location_ct.model, self.site_ct.model],
+                sorted(list(jh_2.content_types.values_list("model", flat=True))),
             )
             jh_3 = self.job_hook.objects.get(name="JobHook3")
-            self.assertEqual([self.location_ct.model], list(jh_3.content_types.values_list("model", flat=True)))
+            self.assertEqual([self.location_ct.model], sorted(list(jh_3.content_types.values_list("model", flat=True))))
             nt_1 = self.note.objects.get(note="Location has been placed on maintenance.")
             note_location_1 = self.location.objects.get(id=nt_1.assigned_object_id)
             self.assertEqual(nt_1.assigned_object_type.model, self.location_ct.model)
@@ -700,6 +758,49 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(nt_3.assigned_object_type.model, self.location_ct.model)
             self.assertEqual(note_location_3.location_type.name, "Test Location Type 1")
             self.assertEqual(note_location_3.name, "Test Location 1")
+
+            oc_1 = self.object_change.objects.get(action=ObjectChangeActionChoices.ACTION_CREATE, user__isnull=False)
+            self.assertEqual(oc_1.changed_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_1.changed_object_id, self.location.objects.get(name="Test Site 0").id)
+            oc_2 = self.object_change.objects.get(action=ObjectChangeActionChoices.ACTION_UPDATE, user__isnull=False)
+            self.assertEqual(oc_2.changed_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_2.changed_object_id, self.location.objects.get(name="Test Region 0").id)
+            oc_3 = self.object_change.objects.get(action=ObjectChangeActionChoices.ACTION_DELETE, user__isnull=False)
+            self.assertEqual(oc_3.changed_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_3.changed_object_id, self.location.objects.get(name="Test Site 0").id)
+            self.assertEqual(oc_3.related_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_3.related_object_id, self.location.objects.get(name="Test Region 0").id)
+
+            # Assert that the new ObjectChange instances also exist and has the right data
+            region_object_changes = self.object_change.objects.filter(change_context_detail="Migrated from Region")
+            # Assert that for every new Region LocationType location created, there is a new object change documenting the migration
+            self.assertEqual(
+                len(region_object_changes),
+                len(
+                    self.location.objects.filter(location_type=self.location_type.objects.get(name="Region")).exclude(
+                        name="Global Region"
+                    )
+                ),
+            )
+            for object_change in region_object_changes:
+                self.assertEqual(object_change.changed_object_type.model, self.location_ct.model)
+                self.assertEqual(
+                    object_change.object_data["name"],
+                    self.location.objects.get(id=object_change.changed_object_id).name,
+                )
+
+            site_object_changes = self.object_change.objects.filter(change_context_detail="Migrated from Site")
+            # Assert that for every new Site LocationType location created, there is a new object change documenting the migration
+            self.assertEqual(
+                len(site_object_changes),
+                len(self.location.objects.filter(location_type=self.location_type.objects.get(name="Site"))),
+            )
+            for object_change in site_object_changes:
+                self.assertEqual(object_change.changed_object_type.model, self.location_ct.model)
+                self.assertEqual(
+                    object_change.object_data["name"],
+                    self.location.objects.get(id=object_change.changed_object_id).name,
+                )
 
             o2m = self.relationship.objects.get(name="Site to Location o2m")
             self.assertEqual(o2m.source_type.model, self.location_ct.model)
@@ -741,20 +842,52 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(o2o_rs_2.source_id, self.location.objects.get(name="Test Region 3").id)
             self.assertEqual(o2o_rs_2.destination_id, self.location.objects.get(name="Test Location 3").id)
 
+            status_1 = self.status.objects.get(name="Active")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(status_1.content_types.values_list("model", flat=True))),
+            )
+            status_2 = self.status.objects.get(name="Planned")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(status_2.content_types.values_list("model", flat=True))),
+            )
+            status_3 = self.status.objects.get(name="Failed")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(status_3.content_types.values_list("model", flat=True))),
+            )
+
+            tag_1 = self.tag.objects.get(name="Tag 1")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(tag_1.content_types.values_list("model", flat=True))),
+            )
+            tag_2 = self.tag.objects.get(name="Tag 2")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(tag_2.content_types.values_list("model", flat=True))),
+            )
+            tag_3 = self.tag.objects.get(name="Tag 3")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(tag_3.content_types.values_list("model", flat=True))),
+            )
+
             wb_1 = self.web_hook.objects.get(name="test-1")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
-                list(wb_1.content_types.values_list("model", flat=True)),
+                sorted(list(wb_1.content_types.values_list("model", flat=True))),
             )
             wb_2 = self.web_hook.objects.get(name="test-2")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
-                list(wb_2.content_types.values_list("model", flat=True)),
+                sorted(list(wb_2.content_types.values_list("model", flat=True))),
             )
             wb_3 = self.web_hook.objects.get(name="test-3")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
-                list(wb_3.content_types.values_list("model", flat=True)),
+                sorted(list(wb_3.content_types.values_list("model", flat=True))),
             )
 
         with self.subTest("Testing IPAM app model migration"):
