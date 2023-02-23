@@ -69,6 +69,11 @@ class DynamicGroup(OrganizationalModel):
     #
     # Currently this means skipping "computed fields" and "comments".
     #
+    # - Computed fields are skipped because they are generated at call time and
+    #   therefore cannot be queried
+    # - Comments are skipped because they are TextFields that require an exact
+    #   match and are better covered by the search (`q`) field.
+    #
     # Type: tuple
     exclude_filter_fields = ("cpf_", "comments")  # Must be a tuple
 
