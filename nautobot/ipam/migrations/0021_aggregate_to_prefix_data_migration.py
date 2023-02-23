@@ -73,15 +73,15 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
 
         else:
             prefix = Prefix.objects.create(
-                network=instance.network,
                 broadcast=instance.broadcast,
-                prefix_length=instance.prefix_length,
-                status=prefix_default_status,
-                type=PrefixTypeChoices.TYPE_CONTAINER,
-                tenant=instance.tenant,
-                description=instance.description,
-                rir=instance.rir,
                 date_allocated=date_allocated,
+                description=instance.description,
+                network=instance.network,
+                prefix_length=instance.prefix_length,
+                rir=instance.rir,
+                status=prefix_default_status,
+                tenant=instance.tenant,
+                type=PrefixTypeChoices.TYPE_CONTAINER,
             )
 
         # move tags from aggregate to prefix
@@ -126,7 +126,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0019_prefix_add_rir_and_date_allocated"),
+        ("ipam", "0020_prefix_add_rir_and_date_allocated"),
         ("extras", "0039_objectchange__add_change_context"),
     ]
 
