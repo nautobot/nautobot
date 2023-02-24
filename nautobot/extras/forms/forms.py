@@ -226,7 +226,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, *kwargs)
 
-        if settings.DYNAMIC_GROUP_CONFIG_CONTEXT_ENABLED:
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
                 queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
             )
@@ -297,7 +297,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, *kwargs)
 
-        if settings.DYNAMIC_GROUP_CONFIG_CONTEXT_ENABLED:
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
                 queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
             )
