@@ -92,7 +92,7 @@ def handle_rackgroup_location_change(instance, created, raw=False, **kwargs):
                 rackgroup.location = instance.location
                 rackgroup.save()
 
-        for rack in Rack.objects.filter(group=instance):
+        for rack in Rack.objects.filter(rack_group=instance):
             if rack.location not in descendants:
                 if not racks_permitted:
                     raise ValidationError(

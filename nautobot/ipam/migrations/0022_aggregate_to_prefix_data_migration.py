@@ -130,7 +130,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0020_prefix_add_rir_and_date_allocated"),
+        ("ipam", "0021_prefix_add_rir_and_date_allocated"),
         ("extras", "0039_objectchange__add_change_context"),
     ]
 

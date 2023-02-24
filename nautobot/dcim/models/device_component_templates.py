@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, NaturalOrderingField
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
@@ -44,7 +44,7 @@ __all__ = (
 
 
 class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
-    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.CASCADE, related_name="%(class)ss")
+    device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
     name = models.CharField(max_length=64)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
@@ -195,12 +195,12 @@ class PowerOutletTemplate(ComponentTemplateModel):
     """
 
     type = models.CharField(max_length=50, choices=PowerOutletTypeChoices, blank=True)
-    power_port = models.ForeignKey(
+    power_port_template = models.ForeignKey(
         to="dcim.PowerPortTemplate",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name="poweroutlet_templates",
+        related_name="power_outlet_templates",
     )
     feed_leg = models.CharField(
         max_length=50,
@@ -217,12 +217,12 @@ class PowerOutletTemplate(ComponentTemplateModel):
         super().clean()
 
         # Validate power port assignment
-        if self.power_port and self.power_port.device_type != self.device_type:
-            raise ValidationError(f"Parent power port ({self.power_port}) must belong to the same device type")
+        if self.power_port_template and self.power_port_template.device_type != self.device_type:
+            raise ValidationError(f"Parent power port ({self.power_port_template}) must belong to the same device type")
 
     def instantiate(self, device):
-        if self.power_port:
-            power_port = PowerPort.objects.get(device=device, name=self.power_port.name)
+        if self.power_port_template:
+            power_port = PowerPort.objects.get(device=device, name=self.power_port_template.name)
         else:
             power_port = None
         return self.instantiate_model(
@@ -283,10 +283,10 @@ class FrontPortTemplate(ComponentTemplateModel):
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
-    rear_port = models.ForeignKey(
+    rear_port_template = models.ForeignKey(
         to="dcim.RearPortTemplate",
         on_delete=models.CASCADE,
-        related_name="frontport_templates",
+        related_name="front_port_templates",
     )
     rear_port_position = models.PositiveSmallIntegerField(
         default=1,
@@ -300,28 +300,28 @@ class FrontPortTemplate(ComponentTemplateModel):
         ordering = ("device_type", "_name")
         unique_together = (
             ("device_type", "name"),
-            ("rear_port", "rear_port_position"),
+            ("rear_port_template", "rear_port_position"),
         )
 
     def clean(self):
         super().clean()
 
         # Validate rear port assignment
-        if self.rear_port.device_type != self.device_type:
-            raise ValidationError(f"Rear port ({self.rear_port}) must belong to the same device type")
+        if self.rear_port_template.device_type != self.device_type:
+            raise ValidationError(f"Rear port ({self.rear_port_template}) must belong to the same device type")
 
         # Validate rear port position assignment
-        if self.rear_port_position > self.rear_port.positions:
+        if self.rear_port_position > self.rear_port_template.positions:
             raise ValidationError(
                 (
                     f"Invalid rear port position ({self.rear_port_position}); "
-                    f"rear port {self.rear_port.name} has only {self.rear_port.positions} positions"
+                    f"rear port {self.rear_port_template.name} has only {self.rear_port_template.positions} positions"
                 )
             )
 
     def instantiate(self, device):
-        if self.rear_port:
-            rear_port = RearPort.objects.get(device=device, name=self.rear_port.name)
+        if self.rear_port_template:
+            rear_port = RearPort.objects.get(device=device, name=self.rear_port_template.name)
         else:
             rear_port = None
         return self.instantiate_model(

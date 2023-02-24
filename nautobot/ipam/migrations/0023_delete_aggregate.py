@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0021_aggregate_to_prefix_data_migration"),
+        ("ipam", "0022_aggregate_to_prefix_data_migration"),
     ]
 
     operations = [

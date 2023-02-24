@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0019_created_datetime"),
+        ("ipam", "0020_related_name_changes"),
     ]
 
     operations = [

@@ -1,0 +1,1 @@
+Added FK fields migrated_location to Site and Region models before data migration is applied.

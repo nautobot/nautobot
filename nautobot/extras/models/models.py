@@ -22,7 +22,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
@@ -157,23 +157,21 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         blank=True,
         null=True,
     )
-    local_config_context_schema = models.ForeignKey(
+    local_config_context_schema = ForeignKeyWithAutoRelatedName(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_related",
         help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    local_config_context_data_owner_content_type = models.ForeignKey(
+    local_config_context_data_owner_content_type = ForeignKeyWithAutoRelatedName(
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("config_context_owners"),
         default=None,
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_related",
     )
     local_config_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     local_config_context_data_owner = GenericForeignKey(

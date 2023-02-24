@@ -1,0 +1,25 @@
+Changed `related_name` values for path endpoints on `CablePath` for consistency and readability (`dcim_interface_related` to `interfaces`, `circuits_circuittermination_related` to `circuit_terminations`, etc.)
+Changed `related_name` values for device components on `Device` for consistency and readability (`consoleports` to `console_ports`, `devicebays` to `device_bays`, etc.)
+Changed `related_name` values for device component templates on `DeviceType` for consistency and readability (`consoleporttemplates` to `console_port_templates`, `devicebaytemplates` to `device_bay_templates`, etc.)
+Changed `DeviceType.instances` to `devices` and renamed the corresponding query filters.
+Changed `DeviceRedundancyGroup.members` to `devices`.
+Changed `FrontPortTemplate.rear_port` to `rear_port_template`.
+Changed `Location.powerpanels` to `power_panels`.
+Changed `PowerOutletTemplate.power_port` to `power_port_template`.
+Changed `PowerPanel.powerfeeds` to `power_feeds`.
+Changed `PowerPort.poweroutlets` to `power_outlets`.
+Changed `PowerPortTemplate.poweroutlet_templates` to `power_outlet_templates`.
+Changed `Rack.powerfeed_set` to `power_feeds`.
+Changed `Rack.group` and `Rack.reservations` to `rack_group` and `rack_reservations` and renamed the corresponding query filters.
+Changed `RackGroup.powerpanel_set` to `power_panels`.
+Changed `RearPort.frontports` to `front_ports`.
+Changed `RearPortTemplate.frontport_templates` to `front_port_templates`.
+Changed `SecretsGroup.device_set` and `SecretsGroup.deviceredundancygroup_set` to `devices` and `device_redundancy_groups`.
+Changed `Tenant.rackreservations` to `rack_reservations`.
+Changed `User.rackreservation_set` to `rack_reservations`.
+Changed REST API field on `Interface` from `count_ipaddresses` to `ip_address_count`.
+Changed REST API fields on `Manufacturer` from `devicetype_count` and `inventoryitem_count` to `device_type_count` and `inventory_item_count`.
+Changed REST API field on `Platform` from `virtualmachine_count` to `virtual_machine_count`.
+Changed REST API field on `PowerPanel` from `powerfeed_count` to `power_feed_count`.
+Changed REST API field on `Rack` from `powerfeed_count` to `power_feed_count`.
+Changed `RackReservation` `group` filter to `rack_group`.

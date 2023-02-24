@@ -247,6 +247,8 @@ class RIRFilterForm(NautobotFilterForm):
 
 class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
     vrf = DynamicModelChoiceField(
+        empty_label="Global",
+        null_option="Global",
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",

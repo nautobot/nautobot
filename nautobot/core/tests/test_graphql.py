@@ -745,7 +745,7 @@ class GraphQLQueryTest(TestCase):
             PowerPort.objects.create(device=cls.device1, name="Power Port 2"),
         ]
 
-        cls.device1_frontports = [
+        cls.device1_front_ports = [
             FrontPort.objects.create(
                 device=cls.device1,
                 name="Front Port 1",
@@ -1467,13 +1467,13 @@ query {
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_frontport_filter_second_level(self):
+    def test_query_front_port_filter_second_level(self):
         """Test "second-level" filtering of FrontPorts within a Devices query."""
 
         filters = (
             (
-                f'name: "{self.device1_frontports[0].name}"',
-                Q(name=self.device1_frontports[0].name),
+                f'name: "{self.device1_front_ports[0].name}"',
+                Q(name=self.device1_front_ports[0].name),
             ),
             (
                 f'device: "{self.device1.name}"',
@@ -1488,24 +1488,24 @@ query {
         for filterv, qs_filter in filters:
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
                 matched = 0
-                query = "query { devices{ id, frontports(" + filterv + "){ id }}}"
+                query = "query { devices{ id, front_ports(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 for device in result.data["devices"]:
                     qs = FrontPort.objects.filter(device_id=device["id"])
                     expected_count = qs.filter(qs_filter).count()
-                    matched = max(matched, len(device["frontports"]))
-                    self.assertEqual(len(device["frontports"]), expected_count)
+                    matched = max(matched, len(device["front_ports"]))
+                    self.assertEqual(len(device["front_ports"]), expected_count)
                 self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_frontport_filter_third_level(self):
+    def test_query_front_port_filter_third_level(self):
         """Test "third-level" filtering of FrontPorts within Devices within Locations."""
 
         filters = (
             (
-                f'name: "{self.device1_frontports[0].name}"',
-                Q(name=self.device1_frontports[0].name),
+                f'name: "{self.device1_front_ports[0].name}"',
+                Q(name=self.device1_front_ports[0].name),
             ),
             (
                 f'device: "{self.device1.name}"',
@@ -1520,15 +1520,15 @@ query {
         for filterv, qs_filter in filters:
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
                 matched = 0
-                query = "query { locations{ devices{ id, frontports(" + filterv + "){ id }}}}"
+                query = "query { locations{ devices{ id, front_ports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 for location in result.data["locations"]:
                     for device in location["devices"]:
                         qs = FrontPort.objects.filter(device_id=device["id"])
                         expected_count = qs.filter(qs_filter).count()
-                        matched = max(matched, len(device["frontports"]))
-                        self.assertEqual(len(device["frontports"]), expected_count)
+                        matched = max(matched, len(device["front_ports"]))
+                        self.assertEqual(len(device["front_ports"]), expected_count)
                 self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
