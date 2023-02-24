@@ -9,6 +9,7 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
@@ -193,7 +194,6 @@ def extras_features(*features):
     """
 
     def wrapper(model_class):
-        # Initialize the model_features store if not already defined
         if "model_features" not in registry:
             registry["model_features"] = {f: collections.defaultdict(list) for f in EXTRAS_FEATURES}
         for feature in features:
@@ -205,6 +205,92 @@ def extras_features(*features):
         return model_class
 
     return wrapper
+
+
+def update_registry_with_new_apps():
+    """
+    Updates the registry with new apps.
+
+    This function updates the registry for CustomField, Relationship, RelationshipAssociation, and Role models.
+    """
+    from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role
+
+    lookup_confs = [
+        {
+            "model": CustomField,
+            "lookup_by": "field",
+            "field_names": ["_custom_field_data"],
+        },
+        {
+            "model": Relationship,
+            "lookup_by": "field",
+            "field_names": ["source_for_associations", "destination_for_associations"],
+            "extras": {"related_model": RelationshipAssociation},
+        },
+        {"model": Role, "lookup_by": "related_model", "related_model": Role},
+    ]
+
+    app_models = apps.get_models()
+    for lookup_conf in lookup_confs:
+        if lookup_conf["lookup_by"] == "field":
+            result = lookup_by_field(
+                app_models=app_models,
+                field_names=lookup_conf["field_names"],
+                extras=lookup_conf.get("extras"),
+            )
+        else:
+            result = lookup_by_related_model(app_models=app_models, related_model=lookup_conf["related_model"])
+        registry_items = {key: list(value) for key, value in result.items()}
+        feature_name = lookup_conf["model"]._meta.model_name
+        registry["model_features"][feature_name] = registry_items
+
+
+def lookup_by_field(app_models, field_names, extras=None):
+    """
+    Find all models that have fields with the specified names, and return them grouped by app.
+
+    Args:
+        app_models: A list of model classes to search through.
+        field_names: A list of names of fields to look for.
+        extras: Optional dictionary of attributes to filter the fields by.
+
+    Return:
+        A dictionary where the keys are app labels and the values are sets of model names.
+    """
+    apps_and_models = {}
+    for model_class in app_models:
+        app_label, model_name = model_class._meta.label_lower.split(".")
+        for field_name in field_names:
+            try:
+                field = model_class._meta.get_field(field_name)
+                if extras is None or (
+                    extras and all([getattr(field, item, None) == value for item, value in extras.items()])
+                ):
+                    apps_and_models.setdefault(app_label, set()).add(model_name)
+            except FieldDoesNotExist:
+                pass
+    return apps_and_models
+
+
+def lookup_by_related_model(app_models, related_model):
+    """
+    Find all models that have a field with a related_model attribute equal to the specified model, and return them
+    grouped by app.
+
+    Args:
+        app_models: A list of model classes to search through.
+        related_model: The related model to look for.
+
+    Return:
+        A dictionary where the keys are app labels and the values are sets of model names.
+    """
+    apps_and_models = {}
+    for model_class in app_models:
+        app_label, model_name = model_class._meta.label_lower.split(".")
+        for field in model_class._meta.fields:
+            if getattr(field, "related_model", None) == related_model:
+                apps_and_models.setdefault(app_label, set()).add(model_name)
+    return apps_and_models
 
 
 def generate_signature(request_body, secret):

@@ -9,7 +9,6 @@ from health_check.plugins import plugin_dir
 from nautobot.core.apps import NautobotConfig
 from nautobot.core.signals import nautobot_database_ready
 
-
 logger = logging.getLogger("nautobot.extras.apps")
 
 
@@ -59,3 +58,6 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
+        from nautobot.extras.utils import update_registry_with_new_apps
+
+        update_registry_with_new_apps()
