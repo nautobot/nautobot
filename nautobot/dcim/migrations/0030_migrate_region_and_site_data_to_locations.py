@@ -196,6 +196,12 @@ def create_site_location_type_locations(
 
 
 def reassign_model_instances_to_locations(apps, model):
+    """
+    Helper function to reassign Region and Site related models to corresponding Locations
+    Args:
+        apps: Installed Apps
+        model: could be "region" or "site"
+    """
     ContentType = apps.get_model("contenttypes", "ContentType")
     Location = apps.get_model("dcim", "location")
     LocationType = apps.get_model("dcim", "locationtype")
