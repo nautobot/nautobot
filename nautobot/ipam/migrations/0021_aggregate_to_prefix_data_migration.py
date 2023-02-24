@@ -84,6 +84,10 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
                 type=PrefixTypeChoices.TYPE_CONTAINER,
             )
 
+        # update `migrated_to_prefix` ForeignKey reference on Aggregate to assist with app migrations
+        instance.migrated_to_prefix = prefix
+        instance.save()
+
         # move tags from aggregate to prefix
         for tagged_item in TaggedItem.objects.filter(content_type=aggregate_ct, object_id=instance.pk):
             if TaggedItem.objects.filter(

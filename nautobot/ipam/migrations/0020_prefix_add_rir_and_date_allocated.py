@@ -27,4 +27,15 @@ class Migration(migrations.Migration):
                 to="ipam.rir",
             ),
         ),
+        migrations.AddField(
+            model_name="aggregate",
+            name="migrated_to_prefix",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="migrated_aggregates",
+                to="ipam.prefix",
+            ),
+        ),
     ]
