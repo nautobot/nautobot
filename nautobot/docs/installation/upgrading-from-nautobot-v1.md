@@ -612,3 +612,35 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 |                                      | `versioned_serializer_selector`                             | `nautobot.core.api.utils`              |
 | `nautobot.utilities.validators`      | `*`                                                         | `nautobot.core.models.validators`      |
 | `nautobot.utilities.views`           | `*`                                                         | `nautobot.core.views.mixins`           |
+
+## Logging Changes
+
+Where applicable, `logging.getLogger("module_name")` is repalced to `logging.getLogger(__name__)` or `logging.getLogger(__name__ + ".MyFeature")`.
+
+Below is a table documenting changes in logger names that could potentially affect existing deployments with expectations around specific logger names used for specific purposes.
+
+| Old Logger Name                          | New Logger Name                                       |
+|------------------------------------------|-------------------------------------------------------|
+| `nautobot.authentication`                | `nautobot.core.authentication`                        |
+| `nautobot.datasources.git`               | `nautobot.extras.datasources.git`                     |
+| `nautobot.datasources.utils`             | `nautobot.extras.datasources.utils`                   |
+| `nautobot.dcim.cable`                    | `nautobot.dcim.signals.cable`                         |
+| `nautobot.dcim.cable`                    | `nautobot.dcim.signals.cable`                         |
+| `nautobot.graphql.generators`            | `nautobot.core.graphql.generators`                    |
+| `nautobot.graphql.schema`                | `nautobot.core.graphql.schema`                        |
+| `nautobot.jobs`                          | `nautobot.extras.jobs`                                |
+| `nautobot.jobs.*`                        | `nautobot.extras.jobs.*`                              |
+| `nautobot.releases`                      | `nautobot.core.releases`                              |
+| `nautobot.releases`                      | `nautobot.utilities.tasks`                            |
+| `nautobot.plugins`                       | `nautobot.extras.templatetags.plugins`                |
+| `nautobot.plugins`                       | `nautobot.extras.plugins.utils`                       |
+| `nautobot.views.ObjectEditView`          | `nautobot.core.views.generic.ObjectEditView`          |
+| `nautobot.views.ObjectDeleteView`        | `nautobot.core.views.generic.ObjectDeleteView`        |
+| `nautobot.views.BulkCreateView`          | `nautobot.core.views.generic.BulkCreateView`          |
+| `nautobot.views.ObjectImportView`        | `nautobot.core.views.generic.ObjectImportView`        |
+| `nautobot.views.BulkImportView`          | `nautobot.core.views.generic.BulkImportView`          |
+| `nautobot.views.BulkEditView`            | `nautobot.core.views.generic.BulkEditView`            |
+| `nautobot.views.BulkRenameView`          | `nautobot.core.views.generic.BulkRenameView`          |
+| `nautobot.views.BulkDeleteView`          | `nautobot.core.views.generic.BulkDeleteView`          |
+| `nautobot.views.ComponentCreateView`     | `nautobot.core.views.generic.ComponentCreateView`     |
+| `nautobot.views.BulkComponentCreateView` | `nautobot.core.views.generic.BulkComponentCreateView` |
