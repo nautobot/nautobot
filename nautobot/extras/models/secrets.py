@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
     "custom_links",
     "custom_validators",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -113,6 +114,7 @@ class Secret(PrimaryModel):
     "custom_links",
     "custom_validators",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )

@@ -12,6 +12,7 @@ EXTRAS_FEATURES = [
     "export_template_owners",
     "export_templates",
     "graphql",
+    "job_buttons",
     "job_results",
     "locations",
     "relationships",

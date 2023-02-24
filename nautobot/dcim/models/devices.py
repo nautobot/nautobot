@@ -54,6 +54,7 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -87,6 +88,7 @@ class Manufacturer(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -332,7 +334,13 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+)
 class DeviceRole(OrganizationalModel):
     """
     Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
@@ -375,7 +383,13 @@ class DeviceRole(OrganizationalModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+)
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
@@ -444,6 +458,7 @@ class Platform(OrganizationalModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "job_buttons",
     "locations",
     "relationships",
     "statuses",
@@ -960,6 +975,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -1034,6 +1050,7 @@ class VirtualChassis(PrimaryModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "statuses",
     "webhooks",

@@ -195,6 +195,7 @@ class PathEndpoint(models.Model):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -234,7 +235,15 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features(
+    "cable_terminations",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+    "webhooks",
+)
 class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
@@ -277,6 +286,7 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -410,7 +420,15 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features(
+    "cable_terminations",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+    "webhooks",
+)
 class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical power outlet (output) within a Device which provides power to a PowerPort.
@@ -542,6 +560,7 @@ class BaseInterface(RelationshipModel, StatusModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "statuses",
     "webhooks",
@@ -782,7 +801,15 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 #
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features(
+    "cable_terminations",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+    "webhooks",
+)
 class FrontPort(CableTermination, ComponentModel):
     """
     A pass-through port on the front of a Device.
@@ -846,7 +873,15 @@ class FrontPort(CableTermination, ComponentModel):
             )
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features(
+    "cable_terminations",
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+    "webhooks",
+)
 class RearPort(CableTermination, ComponentModel):
     """
     A pass-through port on the rear of a Device.
@@ -899,7 +934,14 @@ class RearPort(CableTermination, ComponentModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "graphql",
+    "job_buttons",
+    "relationships",
+    "webhooks",
+)
 class DeviceBay(ComponentModel):
     """
     An empty space within a Device which can house a child device
@@ -963,6 +1005,7 @@ class DeviceBay(ComponentModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )

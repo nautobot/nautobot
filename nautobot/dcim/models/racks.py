@@ -45,6 +45,7 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "locations",
     "relationships",
 )
@@ -149,6 +150,7 @@ class RackGroup(MPTTModel, OrganizationalModel):
     "custom_fields",
     "custom_validators",
     "graphql",
+    "job_buttons",
     "relationships",
 )
 class RackRole(OrganizationalModel):
@@ -191,6 +193,7 @@ class RackRole(OrganizationalModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "job_buttons",
     "locations",
     "relationships",
     "statuses",
@@ -624,6 +627,7 @@ class Rack(PrimaryModel, StatusModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "job_buttons",
     "relationships",
     "webhooks",
 )

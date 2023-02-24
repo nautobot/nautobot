@@ -71,11 +71,11 @@ class CustomFieldTypeChoices(ChoiceSet):
 
 
 #
-# CustomLinks
+# Button Classes
 #
 
 
-class CustomLinkButtonClassChoices(ChoiceSet):
+class ButtonClassChoices(ChoiceSet):
 
     CLASS_DEFAULT = "default"
     CLASS_PRIMARY = "primary"

@@ -30,6 +30,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
+    JobButton,
     JobHook,
     JobResult,
     JobLogEntry,
@@ -743,6 +744,36 @@ class JobResultTable(BaseTable):
             "actions",
         )
         default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary", "actions")
+
+
+class JobButtonTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    job = tables.Column(linkify=True)
+    confirmation = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = JobButton
+        fields = (
+            "pk",
+            "name",
+            "content_type",
+            "text",
+            "job",
+            "group_name",
+            "weight",
+            "button_class",
+            "confirmation",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_type",
+            "group_name",
+            "weight",
+            "job",
+            "confirmation",
+        )
 
 
 #

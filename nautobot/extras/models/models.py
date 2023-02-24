@@ -26,7 +26,7 @@ from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import (
-    CustomLinkButtonClassChoices,
+    ButtonClassChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
@@ -331,8 +331,8 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     button_class = models.CharField(
         max_length=30,
-        choices=CustomLinkButtonClassChoices,
-        default=CustomLinkButtonClassChoices.CLASS_DEFAULT,
+        choices=ButtonClassChoices,
+        default=ButtonClassChoices.CLASS_DEFAULT,
         help_text="The class of the first link in a group will be used for the dropdown button",
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")

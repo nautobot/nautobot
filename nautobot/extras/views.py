@@ -22,6 +22,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
 from nautobot.core.views import generic
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
@@ -42,6 +43,7 @@ from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
+from .api import serializers
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -61,6 +63,7 @@ from .models import (
     GraphQLQuery,
     ImageAttachment,
     Job as JobModel,
+    JobButton,
     JobHook,
     JobLogEntry,
     ObjectChange,
@@ -1565,6 +1568,49 @@ class JobLogEntryTableView(View):
         log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
+
+
+#
+# Job Button
+#
+
+
+class JobButtonUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.JobButtonFilterSet
+    filterset_form_class = forms.JobButtonFilterForm
+    form_class = forms.JobButtonForm
+    lookup_field = "pk"
+    queryset = JobButton.objects.all()
+    serializer_class = serializers.JobButtonSerializer
+    table_class = tables.JobButtonTable
+
+
+class JobButtonRunView(ObjectPermissionRequiredMixin, View):
+    """
+    View to run the Job linked to the Job Button.
+    """
+
+    def get_required_permission(self):
+        return "extras.run_job"
+
+    def post(self, request, pk):
+        post_data = request.POST
+        job_button = JobButton.objects.get(pk=pk)
+        job_model = job_button.job
+        result = JobResult.enqueue_job(
+            func=run_job,
+            name=job_model.class_path,
+            obj_type=get_job_content_type(),
+            user=request.user,
+            data={
+                "obj": post_data["obj"],
+            },
+            request=copy_safe_request(request),
+            commit=True,
+        )
+        msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
+        messages.info(request=request, message=mark_safe(msg))
+        return redirect(post_data["redirect_path"])
 
 
 #

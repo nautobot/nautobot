@@ -42,6 +42,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -913,6 +914,21 @@ class JobResultViewSet(
         logs = job_result.logs.all()
         serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+
+#
+# Job Button
+#
+
+
+class JobButtonViewSet(ModelViewSet, NotesViewSetMixin):
+    """
+    Manage Job Buttons through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobButton.objects.all()
+    serializer_class = serializers.JobButtonSerializer
+    filterset_class = filters.JobButtonFilterSet
 
 
 #

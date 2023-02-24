@@ -25,7 +25,13 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
+from nautobot.extras.choices import (
+    ButtonClassChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    JobSourceChoices,
+    LogLevelChoices,
+)
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
@@ -36,6 +42,8 @@ from nautobot.extras.constants import (
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
@@ -805,6 +813,56 @@ class JobResult(BaseModel, CustomFieldModel):
             else:
                 log_level = logging.INFO
             logger.log(log_level, message)
+
+
+#
+# Job Button
+#
+
+
+@extras_features("graphql")
+class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
+    """
+    A predefined button that includes all necessary information to run a Nautobot Job based on a single object as a source.
+    The button text field accepts Jinja2 template code to be rendered with an object as context.
+    """
+
+    content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("job_buttons"),
+    )
+    name = models.CharField(max_length=100, unique=True)
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Buttons which render as empty text will not be displayed.",
+    )
+    job = models.ForeignKey(
+        to="extras.Job",
+        on_delete=models.CASCADE,
+        help_text="Job this button will run",
+    )
+    weight = models.PositiveSmallIntegerField(default=100)
+    group_name = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Buttons with the same group will appear as a dropdown menu",
+    )
+    button_class = models.CharField(
+        max_length=30,
+        choices=ButtonClassChoices,
+        default=ButtonClassChoices.CLASS_DEFAULT,
+    )
+    confirmation = models.BooleanField(help_text="Enable confirmation pop-up box", default=True)
+
+    class Meta:
+        ordering = ["group_name", "weight", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:jobbutton", kwargs={"pk": self.pk})
 
 
 class ScheduledJobs(models.Model):

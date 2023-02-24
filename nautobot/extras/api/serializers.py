@@ -50,6 +50,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -1040,6 +1041,32 @@ class JobLogEntrySerializer(BaseModelSerializer):
     @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.created.isoformat()
+
+
+#
+# Job Button
+#
+
+
+class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("job_buttons").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = JobButton
+        fields = (
+            "url",
+            "job",
+            "name",
+            "content_type",
+            "text",
+            "weight",
+            "group_name",
+            "button_class",
+            "confirmation",
+        )
 
 
 #

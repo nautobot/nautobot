@@ -5,6 +5,7 @@ from .datasources import GitRepository
 from .groups import DynamicGroup, DynamicGroupMembership
 from .jobs import (
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -50,6 +51,7 @@ __all__ = (
     "HealthCheckTestModel",
     "ImageAttachment",
     "Job",
+    "JobButton",
     "JobHook",
     "JobLogEntry",
     "JobResult",

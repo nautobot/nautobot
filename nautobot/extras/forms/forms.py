@@ -59,6 +59,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobResult,
     Note,
@@ -118,6 +119,8 @@ __all__ = (
     "GraphQLQueryFilterForm",
     "ImageAttachmentForm",
     "JobForm",
+    "JobButtonForm",
+    "JobButtonFilterForm",
     "JobEditForm",
     "JobFilterForm",
     "JobHookForm",
@@ -988,6 +991,41 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+
+
+#
+# Job Button
+#
+
+
+class JobButtonForm(BootstrapMixin, forms.ModelForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("job_buttons").get_query()).order_by("app_label", "model"),
+        label="Content Type",
+    )
+
+    class Meta:
+        model = JobButton
+        fields = (
+            "content_type",
+            "name",
+            "text",
+            "job",
+            "weight",
+            "group_name",
+            "button_class",
+            "confirmation",
+        )
+
+
+class JobButtonFilterForm(BootstrapMixin, forms.Form):
+    model = JobButton
+    q = forms.CharField(required=False, label="Search")
+    content_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("job_buttons").get_query()).order_by("app_label", "model"),
+        required=False,
+        label="Content Type",
+    )
 
 
 #
