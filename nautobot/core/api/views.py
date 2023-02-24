@@ -198,7 +198,7 @@ class ModelViewSetMixin:
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+        logger = logging.getLogger(__name__ + ".ModelViewSet")
 
         # If using 'brief' mode, find and return the nested serializer for this model, if one exists
         if self.brief:
@@ -259,7 +259,7 @@ class ModelViewSetMixin:
         self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+        logger = logging.getLogger(__name__ + ".ModelViewSet")
 
         try:
             return super().dispatch(request, *args, **kwargs)
@@ -298,7 +298,7 @@ class ModelViewSet(
 
     def perform_create(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+        logger = logging.getLogger(__name__ + ".ModelViewSet")
         logger.info(f"Creating new {model._meta.verbose_name}")
 
         # Enforce object-level permissions on save()
@@ -311,7 +311,7 @@ class ModelViewSet(
 
     def perform_update(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+        logger = logging.getLogger(__name__ + ".ModelViewSet")
         logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
 
         # Enforce object-level permissions on save()
@@ -324,7 +324,7 @@ class ModelViewSet(
 
     def perform_destroy(self, instance):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+        logger = logging.getLogger(__name__ + ".ModelViewSet")
         logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)

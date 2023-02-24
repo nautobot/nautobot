@@ -69,7 +69,7 @@ __all__ = [
     "TextVar",
 ]
 
-logger = logging.getLogger("nautobot.jobs")
+logger = logging.getLogger(__name__)
 
 
 class BaseJob:
@@ -103,7 +103,7 @@ class BaseJob:
         """
 
     def __init__(self):
-        self.logger = logging.getLogger(f"nautobot.jobs.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
         self.request = None
         self.active_test = "main"
