@@ -74,6 +74,7 @@ The metadata used to create the config context has the following options and is 
 
 +/- 2.0.0
     The key for specifying Config Context Schemas was renamed from `schema` to `config_context_schema`.
+
 There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
 
 Here is an example `_metadata` key defined:
