@@ -388,7 +388,6 @@ def reassign_model_instances_to_locations(apps, model):
         model_loc.tags = _NautobotTaggableManager(
             through=extras_models.TaggedItem, model=Location, instance=model_loc, prefetch_cache_name="tags"
         )
-        model_loc.save()
 
         # create an object change to document migration
         ObjectChange.objects.create(
