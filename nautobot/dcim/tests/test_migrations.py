@@ -617,6 +617,8 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                     name=f"Test Site {i}", location_type=self.location_type.objects.get(name="Site")
                 )
                 old_site = self.site.objects.get(name=f"Test Site {i}")
+                # Check if the migrated_location field is correctly populated by the data migration.
+                self.assertEqual(old_site.migrated_location, site_locations)
                 self.assertEqual(len(site_locations), 1)
                 if old_site.region:
                     self.assertEqual(site_locations.first().parent.name, old_site.region.name)
@@ -629,6 +631,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         with self.subTest("Testing Circuits app model migration"):
             cts = self.circuit_termination.objects.all().select_related("site", "location")
             for ct in cts:
+                self.assertEqual(ct.site.migrated_location, ct.location)
                 self.assertEqual(ct.site.name, ct.location.name)
 
         with self.subTest("Testing DCIM app model migration"):
