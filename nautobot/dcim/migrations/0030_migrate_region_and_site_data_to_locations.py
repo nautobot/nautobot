@@ -72,6 +72,7 @@ def create_region_location_type_locations(region_class, location_class, region_l
     # Cache the REGION_TO_LOCATION_LOOKUP for later use
     for region in regions:
         region.migrated_location = region_lt_locations.get(name=region.name)
+    region_class.objects.bulk_update(regions, ["migrated_location"], 1000)
 
 
 def create_site_location_type_locations(
@@ -172,6 +173,7 @@ def create_site_location_type_locations(
     # Cache the SITE_TO_LOCATION_LOOKUP for later use
     for site in sites:
         site.migrated_location = site_lt_locations.get(name=site.name)
+    site_class.objects.bulk_update(sites, ["migrated_location"], 1000)
 
     for site in sites:
         location = site.migrated_location
@@ -232,7 +234,7 @@ def reassign_model_instances_to_locations(apps, model):
         # Circuits App
         cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
         for ct in cts:
-            ct.location = ct.site.migrate_location
+            ct.location = ct.site.migrated_location
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
 
         # DCIM App
@@ -243,17 +245,17 @@ def reassign_model_instances_to_locations(apps, model):
 
         powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
         for powerpanel in powerpanels:
-            powerpanel.location = powerpanel.site.migrate_location
+            powerpanel.location = powerpanel.site.migrated_location
         PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
 
         rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
         for rackgroup in rackgroups:
-            rackgroup.location = rackgroup.site.migrate_location
+            rackgroup.location = rackgroup.site.migrated_location
         RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
 
         racks = Rack.objects.filter(location__isnull=True).select_related("site")
         for rack in racks:
-            rack.location = rack.site.migrate_location
+            rack.location = rack.site.migrated_location
         Rack.objects.bulk_update(racks, ["location"], 1000)
 
         # Extras App
@@ -266,7 +268,7 @@ def reassign_model_instances_to_locations(apps, model):
         for ia in image_attachments:
             ia.content_type = location_ct
             site = model_class.objects.get(id=ia.object_id)
-            ia.object_id = ia.site.migrated_location.id
+            ia.object_id = site.migrated_location.id
         ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
 
         # Below models' site attribute is not required, so we need to check each instance if the site field is not null
@@ -319,11 +321,10 @@ def reassign_model_instances_to_locations(apps, model):
     for cc in ccs:
         if model == "region":
             model_name_list = list(cc.regions.all().values_list("name", flat=True))
-            model_locs = list(cc.regions.all().values_list("migrated_location", flat=True))
         else:
             model_name_list = list(cc.sites.all().values_list("name", flat=True))
-            model_locs = list(cc.sites.all().values_list("migrated_location", flat=True))
 
+        model_locs = list(Location.objects.filter(name__in=model_name_list, location_type=model_lt))
         if len(model_locs) < len(model_name_list):
             logger.warning(
                 f'There is a mismatch between the number of {model_lt.name}s ({len(model_name_list)}) and the number of "{model_lt.name}" LocationType locations ({len(model_locs)})'
@@ -336,9 +337,9 @@ def reassign_model_instances_to_locations(apps, model):
     for cf in custom_fields:
         cf.content_types.add(location_ct)
 
-    model_locs = model_class.objects.all().values_list("migrated_location", flat=True)
-    for model in model_class.objects.all():
-        model.migrated_location._custom_field_data = model._custom_field_data
+    model_locs = Location.objects.filter(location_type=model_lt)
+    for model_loc in model_locs:
+        model_loc._custom_field_data = model_class.objects.get(migrated_location=model_loc)._custom_field_data
     Location.objects.bulk_update(model_locs, ["_custom_field_data"], 1000)
 
     # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options

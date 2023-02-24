@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("circuits", "0011_remove_site_foreign_key_from_circuit_termination_class"),
-        ("dcim", "0033_created_datetime"),
+        ("dcim", "0034_fixup_fks_and_related_names"),
         ("django_celery_results", "0006_taskresult_date_created"),
         ("extras", "0065_remove_site_and_region_attributes_from_config_context"),
         ("ipam", "0018_remove_site_foreign_key_from_ipam_models"),

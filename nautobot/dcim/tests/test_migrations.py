@@ -9,7 +9,7 @@ from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionCh
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
-    migrate_from = [("dcim", "0029_change_tree_manager_on_tree_models")]
+    migrate_from = [("dcim", "0029_add_tree_managers_and_foreign_keys_pre_data_migration")]
     migrate_to = [("dcim", "0030_migrate_region_and_site_data_to_locations")]
 
     def populateDataBeforeMigration(self, installed_apps):
@@ -617,9 +617,9 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                     name=f"Test Site {i}", location_type=self.location_type.objects.get(name="Site")
                 )
                 old_site = self.site.objects.get(name=f"Test Site {i}")
-                # Check if the migrated_location field is correctly populated by the data migration.
-                self.assertEqual(old_site.migrated_location, site_locations)
                 self.assertEqual(len(site_locations), 1)
+                # Check if the migrated_location field is correctly populated by the data migration.
+                self.assertEqual(old_site.migrated_location, site_locations[0])
                 if old_site.region:
                     self.assertEqual(site_locations.first().parent.name, old_site.region.name)
 
