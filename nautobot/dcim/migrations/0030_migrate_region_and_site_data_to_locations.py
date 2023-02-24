@@ -195,6 +195,231 @@ def create_site_location_type_locations(
     location_type_class.objects.filter(parent__isnull=True).exclude(name=exclude_lt).update(parent=site_lt)
 
 
+def reassign_model_instances_to_locations(apps, model):
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    Location = apps.get_model("dcim", "location")
+    LocationType = apps.get_model("dcim", "locationtype")
+    location_ct = ContentType.objects.get_for_model(Location)
+    model_class = apps.get_model("dcim", f"{model}")
+    model_ct = ContentType.objects.get_for_model(model_class)
+    if model == "region":
+        model_lt = LocationType.objects.get(name="Region")
+        model_record = REGION_TO_LOCATION_LOOKUP
+    else:
+        model_lt = LocationType.objects.get(name="Site")
+        model_record = SITE_TO_LOCATION_LOOKUP
+
+        # Only Site Related models
+        CircuitTermination = apps.get_model("circuits", "circuittermination")
+        Device = apps.get_model("dcim", "device")
+        PowerPanel = apps.get_model("dcim", "powerpanel")
+        RackGroup = apps.get_model("dcim", "rackgroup")
+        Rack = apps.get_model("dcim", "rack")
+        CustomLink = apps.get_model("extras", "customlink")
+        ImageAttachment = apps.get_model("extras", "imageattachment")
+        Prefix = apps.get_model("ipam", "prefix")
+        VLANGroup = apps.get_model("ipam", "vlangroup")
+        VLAN = apps.get_model("ipam", "vlan")
+        Cluster = apps.get_model("virtualization", "cluster")
+
+        model_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
+
+        # Circuits App
+        cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
+        for ct in cts:
+            ct.location = model_record.get(ct.site)
+        CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
+
+        # DCIM App
+        devices = Device.objects.filter(location__isnull=True).select_related("site")
+        for device in devices:
+            device.location = model_record.get(device.site)
+        Device.objects.bulk_update(devices, ["location"], 1000)
+
+        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
+        for powerpanel in powerpanels:
+            powerpanel.location = model_record.get(powerpanel.site)
+        PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
+
+        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
+        for rackgroup in rackgroups:
+            rackgroup.location = model_record.get(rackgroup.site)
+        RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
+
+        racks = Rack.objects.filter(location__isnull=True).select_related("site")
+        for rack in racks:
+            rack.location = model_record.get(rack.site)
+        Rack.objects.bulk_update(racks, ["location"], 1000)
+
+        # Extras App
+        custom_links = CustomLink.objects.filter(content_type=model_ct)
+        for cf in custom_links:
+            cf.content_type = location_ct
+        CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
+
+        image_attachments = ImageAttachment.objects.filter(content_type=model_ct)
+        for ia in image_attachments:
+            ia.content_type = location_ct
+            site = model_class.objects.get(id=ia.object_id)
+            ia.object_id = model_record.get(site).id
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
+
+        # Below models' site attribute is not required, so we need to check each instance if the site field is not null
+        # if so we reassign it to Site Location and if not we leave it alone
+
+        # IPAM App
+        prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        for prefix in prefixes:
+            prefix.location = model_record.get(prefix.site)
+        Prefix.objects.bulk_update(prefixes, ["location"], 1000)
+
+        vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        for vlangroup in vlangroups:
+            vlangroup.location = model_record.get(vlangroup.site)
+        VLANGroup.objects.bulk_update(vlangroups, ["location"], 1000)
+
+        vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        for vlan in vlans:
+            vlan.location = model_record.get(vlan.site)
+        VLAN.objects.bulk_update(vlans, ["location"], 1000)
+
+        # Virtualization App
+        clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        for cluster in clusters:
+            cluster.location = model_record.get(cluster.site)
+        Cluster.objects.bulk_update(clusters, ["location"], 1000)
+
+    # Region and Site Related models
+    ComputedField = apps.get_model("extras", "computedfield")
+    ConfigContext = apps.get_model("extras", "configcontext")
+    CustomField = apps.get_model("extras", "customfield")
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")
+    ExportTemplate = apps.get_model("extras", "exporttemplate")
+    JobHook = apps.get_model("extras", "jobhook")
+    Note = apps.get_model("extras", "note")
+    ObjectChange = apps.get_model("extras", "objectchange")
+    Relationship = apps.get_model("extras", "relationship")
+    RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
+    WebHook = apps.get_model("extras", "webhook")
+
+    computed_fields = ComputedField.objects.filter(content_type=model_ct)
+    for cf in computed_fields:
+        cf.content_type = location_ct
+    ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
+
+    if model == "region":
+        ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", f"{model}s")
+    else:
+        ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", f"{model}s")
+    for cc in ccs:
+        if model == "region":
+            model_name_list = list(cc.regions.all().values_list("name", flat=True))
+        else:
+            model_name_list = list(cc.sites.all().values_list("name", flat=True))
+
+        model_locs = list(Location.objects.filter(name__in=model_name_list, location_type=model_lt))
+        if len(model_locs) < len(model_name_list):
+            logger.warning(
+                f'There is a mismatch between the number of {model_lt.name}s ({len(model_name_list)}) and the number of "{model_lt.name}" LocationType locations ({len(model_locs)})'
+                f" found in this ConfigContext {cc.name}"
+            )
+        cc.locations.add(*model_locs)
+        cc.save()
+
+    custom_fields = CustomField.objects.filter(content_types__in=[model_ct])
+    for cf in custom_fields:
+        cf.content_types.add(location_ct)
+
+    model_locs = model_record.values()
+    for old_model, location in model_record.items():
+        location._custom_field_data = old_model._custom_field_data
+    Location.objects.bulk_update(model_locs, ["_custom_field_data"], 1000)
+
+    # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
+
+    dynamic_groups = DynamicGroup.objects.all()
+    for dg in dynamic_groups:
+        if f"{model}" in dg.filter:
+            dg.filter.setdefault("location", []).extend(dg.filter.pop(f"{model}"))
+        dg.save()
+
+    export_templates = ExportTemplate.objects.filter(content_type=model_ct)
+    for et in export_templates:
+        et.content_type = location_ct
+    ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
+
+    job_hooks = JobHook.objects.filter(content_types__in=[model_ct])
+    for jh in job_hooks:
+        jh.content_types.add(location_ct)
+
+    notes = Note.objects.filter(assigned_object_type=model_ct)
+    for note in notes:
+        note.assigned_object_type = location_ct
+        old_model = model_class.objects.get(id=note.assigned_object_id)
+        note.assigned_object_id = model_record.get(old_model).id
+    Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
+
+    object_changes_changed = ObjectChange.objects.filter(changed_object_type=model_ct)
+    for oc in object_changes_changed:
+        oc.changed_object_type = location_ct
+        old_model = model_class.objects.get(id=oc.changed_object_id)
+        oc.changed_object_id = model_record.get(old_model).id
+    ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type", "changed_object_id"], 1000)
+
+    object_changes_related = ObjectChange.objects.filter(related_object_type=model_ct)
+    for oc in object_changes_related:
+        oc.related_object_type = location_ct
+        old_model = model_class.objects.get(id=oc.related_object_id)
+        oc.related_object_id = model_record.get(old_model).id
+    ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type", "related_object_id"], 1000)
+
+    # make tag manager available in migration
+    # https://github.com/jazzband/django-taggit/issues/101
+    # https://github.com/jazzband/django-taggit/issues/454
+    for model_loc in model_record.values():
+        model_loc.tags = _NautobotTaggableManager(
+            through=extras_models.TaggedItem, model=Location, instance=model_loc, prefetch_cache_name="tags"
+        )
+        model_loc.save()
+
+        # create an object change to document migration
+        ObjectChange.objects.create(
+            action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE,
+            change_context=extras_choices.ObjectChangeEventContextChoices.CONTEXT_ORM,
+            change_context_detail=f"Migrated from {model_lt.name}",
+            changed_object_id=model_loc.pk,
+            changed_object_type=location_ct,
+            object_data=serialize_object(model_loc),
+            request_id=uuid.uuid4(),
+        )
+
+    src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=model_ct)
+    src_relationship_associations.update(source_type=location_ct)
+    for relationship_association in src_relationship_associations:
+        src_model = model_class.objects.get(id=relationship_association.source_id)
+        src_loc = model_record.get(src_model)
+        relationship_association.source = src_loc
+        relationship_association.source_id = src_loc.id
+    RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
+    src_relationships = Relationship.objects.filter(source_type=model_ct)
+    src_relationships.update(source_type=location_ct)
+
+    dst_relationship_associations = RelationshipAssociation.objects.filter(relationship__destination_type=model_ct)
+    dst_relationship_associations.update(destination_type=location_ct)
+    for relationship_association in dst_relationship_associations:
+        dst_model = model_class.objects.get(id=relationship_association.destination_id)
+        dst_loc = model_record.get(dst_model)
+        relationship_association.destination = dst_loc
+        relationship_association.destination_id = dst_loc.pk
+    RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
+    dst_relationships = Relationship.objects.filter(destination_type=model_ct)
+    dst_relationships.update(destination_type=location_ct)
+
+    web_hooks = WebHook.objects.filter(content_types__in=[model_ct])
+    for wh in web_hooks:
+        wh.content_types.add(location_ct)
+
+
 def migrate_site_and_region_data_to_locations(apps, schema_editor):
     """
     Create Location objects based on existing data and move Site related objects to be associated with new Location objects.
@@ -204,9 +429,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
     LocationType = apps.get_model("dcim", "locationtype")
     Location = apps.get_model("dcim", "location")
     ContentType = apps.get_model("contenttypes", "ContentType")
-    ObjectChange = apps.get_model("extras", "objectchange")
     TaggedItem = apps.get_model("extras", "TaggedItem")
-    region_ct = ContentType.objects.get_for_model(Region)
     site_ct = ContentType.objects.get_for_model(Site)
     location_ct = ContentType.objects.get_for_model(Location)
 
@@ -214,25 +437,8 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
     if Region.objects.exists():
         region_lt = LocationType.objects.create(name="Region", nestable=True)
         create_region_location_type_locations(region_class=Region, location_class=Location, region_lt=region_lt)
-        # make tag manager available in migration
-        # https://github.com/jazzband/django-taggit/issues/101
-        # https://github.com/jazzband/django-taggit/issues/454
-        for region_loc in Location.objects.filter(location_type=region_lt):
-            region_loc.tags = _NautobotTaggableManager(
-                through=extras_models.TaggedItem, model=Location, instance=region_loc, prefetch_cache_name="tags"
-            )
-            region_loc.save()
+        reassign_model_instances_to_locations(apps, "region")
 
-            # create an object change to document migration
-            ObjectChange.objects.create(
-                action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE,
-                change_context=extras_choices.ObjectChangeEventContextChoices.CONTEXT_ORM,
-                change_context_detail="Migrated from Region",
-                changed_object_id=region_loc.pk,
-                changed_object_type=location_ct,
-                object_data=serialize_object(region_loc),
-                request_id=uuid.uuid4(),
-            )
         if Site.objects.exists():  # Both Site and Region instances exist
             site_lt = LocationType.objects.create(name="Site", parent=LocationType.objects.get(name="Region"))
             if Site.objects.filter(region__isnull=True).exists():
@@ -254,23 +460,8 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
                 exclude_lt="Region",
                 region_lt=region_lt,
             )
-            # make tag manager available in migration
-            for site_loc in SITE_TO_LOCATION_LOOKUP.values():
-                site_loc.tags = _NautobotTaggableManager(
-                    through=extras_models.TaggedItem, model=Location, instance=site_loc, prefetch_cache_name="tags"
-                )
-                site_loc.save()
+            reassign_model_instances_to_locations(apps, "site")
 
-                # create an object change to document migration
-                ObjectChange.objects.create(
-                    action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE,
-                    change_context=extras_choices.ObjectChangeEventContextChoices.CONTEXT_ORM,
-                    change_context_detail="Migrated from Site",
-                    changed_object_id=site_loc.pk,
-                    changed_object_type=location_ct,
-                    object_data=serialize_object(site_loc),
-                    request_id=uuid.uuid4(),
-                )
     elif Site.objects.exists():  # Only Site instances exist, we make Site the top level LocationType
         site_lt = LocationType.objects.create(name="Site")
         add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
@@ -284,307 +475,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             site_lt=site_lt,
             exclude_lt="Site",
         )
-        # make tag manager available in migration
-        for site_loc in SITE_TO_LOCATION_LOOKUP.values():
-            site_loc.tags = _NautobotTaggableManager(
-                through=extras_models.TaggedItem, model=Location, instance=site_loc, prefetch_cache_name="tags"
-            )
-            site_loc.save()
-
-            # create an object change to document migration
-            ObjectChange.objects.create(
-                action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE,
-                change_context=extras_choices.ObjectChangeEventContextChoices.CONTEXT_ORM,
-                change_context_detail="Migrated from Site",
-                changed_object_id=site_loc.pk,
-                changed_object_type=location_ct,
-                object_data=serialize_object(site_loc),
-                request_id=uuid.uuid4(),
-            )
-
-    # Reassign Region Models to Locations of Region LocationType
-    if Region.objects.exists():
-        # Extras App
-        ComputedField = apps.get_model("extras", "computedfield")
-        computed_fields = ComputedField.objects.filter(content_type=region_ct)
-        for cf in computed_fields:
-            cf.content_type = location_ct
-        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
-
-        ConfigContext = apps.get_model("extras", "configcontext")
-        ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", "regions")
-        for cc in ccs:
-            region_name_list = list(cc.regions.all().values_list("name", flat=True))
-            region_locs = list(Location.objects.filter(name__in=region_name_list, location_type=region_lt))
-            if len(region_locs) < len(region_name_list):
-                logger.warning(
-                    f'There is a mismatch between the number of Regions ({len(region_name_list)}) and the number of "Region" LocationType locations ({len(region_locs)})'
-                    f" found in this ConfigContext {cc.name}"
-                )
-            cc.locations.add(*region_locs)
-            cc.save()
-
-        CustomField = apps.get_model("extras", "customfield")
-        custom_fields = CustomField.objects.filter(content_types__in=[region_ct])
-        for cf in custom_fields:
-            cf.content_types.add(location_ct)
-
-        region_locs = REGION_TO_LOCATION_LOOKUP.values()
-        for region, location in REGION_TO_LOCATION_LOOKUP.items():
-            location._custom_field_data = region._custom_field_data
-        Location.objects.bulk_update(region_locs, ["_custom_field_data"], 1000)
-
-        # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
-
-        DynamicGroup = apps.get_model("extras", "DynamicGroup")
-        dynamic_groups = DynamicGroup.objects.all()
-        for dg in dynamic_groups:
-            if "region" in dg.filter:
-                dg.filter.setdefault("location", []).extend(dg.filter.pop("region"))
-            dg.save()
-
-        ExportTemplate = apps.get_model("extras", "exporttemplate")
-        export_templates = ExportTemplate.objects.filter(content_type=region_ct)
-        for et in export_templates:
-            et.content_type = location_ct
-        ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
-
-        JobHook = apps.get_model("extras", "jobhook")
-        job_hooks = JobHook.objects.filter(content_types__in=[region_ct])
-        for jh in job_hooks:
-            jh.content_types.add(location_ct)
-
-        Note = apps.get_model("extras", "note")
-        notes = Note.objects.filter(assigned_object_type=region_ct)
-        for note in notes:
-            note.assigned_object_type = location_ct
-            region = Region.objects.get(id=note.assigned_object_id)
-            note.assigned_object_id = REGION_TO_LOCATION_LOOKUP.get(region).id
-        Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
-
-        object_changes_changed = ObjectChange.objects.filter(changed_object_type=region_ct)
-        for oc in object_changes_changed:
-            oc.changed_object_type = location_ct
-            region = Region.objects.get(id=oc.changed_object_id)
-            oc.changed_object_id = REGION_TO_LOCATION_LOOKUP.get(region).id
-        ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type", "changed_object_id"], 1000)
-
-        object_changes_related = ObjectChange.objects.filter(related_object_type=region_ct)
-        for oc in object_changes_related:
-            oc.related_object_type = location_ct
-            region = Region.objects.get(id=oc.related_object_id)
-            oc.related_object_id = REGION_TO_LOCATION_LOOKUP.get(region).id
-        ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type", "related_object_id"], 1000)
-
-        Relationship = apps.get_model("extras", "relationship")
-        RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
-
-        src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=region_ct)
-        src_relationship_associations.update(source_type=location_ct)
-        for relationship_association in src_relationship_associations:
-            src_region = Region.objects.get(id=relationship_association.source_id)
-            src_loc = REGION_TO_LOCATION_LOOKUP.get(src_region)
-            relationship_association.source = src_loc
-            relationship_association.source_id = src_loc.id
-        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
-        src_relationships = Relationship.objects.filter(source_type=region_ct)
-        src_relationships.update(source_type=location_ct)
-
-        dst_relationship_associations = RelationshipAssociation.objects.filter(relationship__destination_type=region_ct)
-        dst_relationship_associations.update(destination_type=location_ct)
-        for relationship_association in dst_relationship_associations:
-            dst_region = Region.objects.get(id=relationship_association.destination_id)
-            dst_loc = REGION_TO_LOCATION_LOOKUP.get(dst_region)
-            relationship_association.destination = dst_loc
-            relationship_association.destination_id = dst_loc.pk
-        RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
-        dst_relationships = Relationship.objects.filter(destination_type=region_ct)
-        dst_relationships.update(destination_type=location_ct)
-
-        WebHook = apps.get_model("extras", "webhook")
-        web_hooks = WebHook.objects.filter(content_types__in=[region_ct])
-        for wh in web_hooks:
-            wh.content_types.add(location_ct)
-
-    # Reassign Site Models to Locations of Site LocationType
-    if Site.objects.exists():  # Iff Site instances exist
-        CircuitTermination = apps.get_model("circuits", "circuittermination")
-        Device = apps.get_model("dcim", "device")
-        PowerPanel = apps.get_model("dcim", "powerpanel")
-        RackGroup = apps.get_model("dcim", "rackgroup")
-        Rack = apps.get_model("dcim", "rack")
-        ComputedField = apps.get_model("extras", "computedfield")
-        ConfigContext = apps.get_model("extras", "configcontext")
-        CustomField = apps.get_model("extras", "customfield")
-        CustomLink = apps.get_model("extras", "customlink")
-        DynamicGroup = apps.get_model("extras", "DynamicGroup")
-        ExportTemplate = apps.get_model("extras", "exporttemplate")
-        ImageAttachment = apps.get_model("extras", "imageattachment")
-        JobHook = apps.get_model("extras", "jobhook")
-        Note = apps.get_model("extras", "note")
-        WebHook = apps.get_model("extras", "webhook")
-        Relationship = apps.get_model("extras", "relationship")
-        RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
-        Prefix = apps.get_model("ipam", "prefix")
-        VLANGroup = apps.get_model("ipam", "vlangroup")
-        VLAN = apps.get_model("ipam", "vlan")
-        Cluster = apps.get_model("virtualization", "cluster")
-
-        site_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
-
-        # Circuits App
-        cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
-        for ct in cts:
-            ct.location = SITE_TO_LOCATION_LOOKUP.get(ct.site)
-        CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
-
-        # DCIM App
-        devices = Device.objects.filter(location__isnull=True).select_related("site")
-        for device in devices:
-            device.location = SITE_TO_LOCATION_LOOKUP.get(device.site)
-        Device.objects.bulk_update(devices, ["location"], 1000)
-
-        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
-        for powerpanel in powerpanels:
-            powerpanel.location = SITE_TO_LOCATION_LOOKUP.get(powerpanel.site)
-        PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
-
-        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
-        for rackgroup in rackgroups:
-            rackgroup.location = SITE_TO_LOCATION_LOOKUP.get(rackgroup.site)
-        RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
-
-        racks = Rack.objects.filter(location__isnull=True).select_related("site")
-        for rack in racks:
-            rack.location = SITE_TO_LOCATION_LOOKUP.get(rack.site)
-        Rack.objects.bulk_update(racks, ["location"], 1000)
-
-        # Extras App
-        computed_fields = ComputedField.objects.filter(content_type=site_ct)
-        for cf in computed_fields:
-            cf.content_type = location_ct
-        ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
-
-        ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", "sites")
-        for cc in ccs:
-            site_name_list = list(cc.sites.all().values_list("name", flat=True))
-            site_locs = list(Location.objects.filter(name__in=site_name_list, location_type=site_lt))
-            if len(site_locs) < len(site_name_list):
-                logger.warning(
-                    f'There is a mismatch between the number of Sites ({len(site_name_list)}) and the number of "Site" LocationType locations ({len(site_locs)})'
-                    f" found in this ConfigContext {cc.name}"
-                )
-            cc.locations.add(*site_locs)
-            cc.save()
-
-        CustomField = apps.get_model("extras", "customfield")
-        custom_fields = CustomField.objects.filter(content_types__in=[site_ct])
-        for cf in custom_fields:
-            cf.content_types.add(location_ct)
-
-        site_locs = SITE_TO_LOCATION_LOOKUP.values()
-        for site, location in SITE_TO_LOCATION_LOOKUP.items():
-            location._custom_field_data = site._custom_field_data
-        Location.objects.bulk_update(site_locs, ["_custom_field_data"], 1000)
-
-        custom_links = CustomLink.objects.filter(content_type=site_ct)
-        for cf in custom_links:
-            cf.content_type = location_ct
-        CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
-
-        dynamic_groups = DynamicGroup.objects.all()
-        for dg in dynamic_groups:
-            if "site" in dg.filter:
-                dg.filter.setdefault("location", []).extend(dg.filter.pop("site"))
-            dg.save()
-
-        export_templates = ExportTemplate.objects.filter(content_type=site_ct)
-        for et in export_templates:
-            et.content_type = location_ct
-        ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
-
-        image_attachments = ImageAttachment.objects.filter(content_type=site_ct)
-        for ia in image_attachments:
-            ia.content_type = location_ct
-            site = Site.objects.get(id=ia.object_id)
-            ia.object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
-        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
-
-        job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
-        for jh in job_hooks:
-            jh.content_types.add(location_ct)
-
-        notes = Note.objects.filter(assigned_object_type=site_ct)
-        for note in notes:
-            note.assigned_object_type = location_ct
-            site = Site.objects.get(id=note.assigned_object_id)
-            note.assigned_object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
-        Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
-
-        object_changes_changed = ObjectChange.objects.filter(changed_object_type=site_ct)
-        for oc in object_changes_changed:
-            oc.changed_object_type = location_ct
-            site = Site.objects.get(id=oc.changed_object_id)
-            oc.changed_object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
-        ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type", "changed_object_id"], 1000)
-
-        object_changes_related = ObjectChange.objects.filter(related_object_type=site_ct)
-        for oc in object_changes_related:
-            oc.related_object_type = location_ct
-            site = Site.objects.get(id=oc.related_object_id)
-            oc.related_object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
-        ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type", "related_object_id"], 1000)
-
-        src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=site_ct)
-        src_relationship_associations.update(source_type=location_ct)
-        for relationship_association in src_relationship_associations:
-            src_site = Site.objects.get(id=relationship_association.source_id)
-            src_loc = SITE_TO_LOCATION_LOOKUP.get(src_site)
-            relationship_association.source = src_loc
-            relationship_association.source_id = src_loc.id
-        RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
-        src_relationships = Relationship.objects.filter(source_type=site_ct)
-        src_relationships.update(source_type=location_ct)
-
-        dst_relationship_associations = RelationshipAssociation.objects.filter(relationship__destination_type=site_ct)
-        dst_relationship_associations.update(destination_type=location_ct)
-        for relationship_association in dst_relationship_associations:
-            dst_site = Site.objects.get(id=relationship_association.destination_id)
-            dst_loc = SITE_TO_LOCATION_LOOKUP.get(dst_site)
-            relationship_association.destination = dst_loc
-            relationship_association.destination_id = dst_loc.pk
-        RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
-        dst_relationships = Relationship.objects.filter(destination_type=site_ct)
-        dst_relationships.update(destination_type=location_ct)
-
-        web_hooks = WebHook.objects.filter(content_types__in=[site_ct])
-        for wh in web_hooks:
-            wh.content_types.add(location_ct)
-
-        # Below models' site attribute is not required, so we need to check each instance if the site field is not null
-        # if so we reassign it to Site Location and if not we leave it alone
-
-        # IPAM App
-        prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
-        for prefix in prefixes:
-            prefix.location = SITE_TO_LOCATION_LOOKUP.get(prefix.site)
-        Prefix.objects.bulk_update(prefixes, ["location"], 1000)
-
-        vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
-        for vlangroup in vlangroups:
-            vlangroup.location = SITE_TO_LOCATION_LOOKUP.get(vlangroup.site)
-        VLANGroup.objects.bulk_update(vlangroups, ["location"], 1000)
-
-        vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
-        for vlan in vlans:
-            vlan.location = SITE_TO_LOCATION_LOOKUP.get(vlan.site)
-        VLAN.objects.bulk_update(vlans, ["location"], 1000)
-
-        # Virtualization App
-        clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
-        for cluster in clusters:
-            cluster.location = SITE_TO_LOCATION_LOOKUP.get(cluster.site)
-        Cluster.objects.bulk_update(clusters, ["location"], 1000)
+        reassign_model_instances_to_locations(apps, "site")
 
 
 class Migration(migrations.Migration):
