@@ -289,10 +289,15 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Tag (slug)",
     )
-    dynamic_groups = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DynamicGroup.objects.all(),
-        label="Dynamic Groups (slug or ID)",
-    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, *kwargs)
+
+        if settings.DYNAMIC_GROUP_CONFIG_CONTEXT_ENABLED:
+            self.fields["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                queryset=DynamicGroup.objects.all(),
+                label="Dynamic Groups (slug or ID)",
+            )
 
     class Meta:
         model = ConfigContext
