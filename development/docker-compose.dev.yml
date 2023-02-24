@@ -6,7 +6,6 @@
 version: "3.4"
 services:
   nautobot:
-    command: nautobot-server ourrunserver 0.0.0.0:8080 --insecure  # TODO revert to runserver and remove this
     volumes:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
       - ../:/source
