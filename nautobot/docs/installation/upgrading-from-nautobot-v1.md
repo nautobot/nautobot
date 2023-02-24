@@ -29,7 +29,7 @@
 |                         | `interface`                             | `dcim_interface_related`                       |
 |                         | `powerfeed`                             | `dcim_powerfeed_related`                       |
 |                         | `poweroutlet`                           | `dcim_poweroutlet_related`                     |
-|                         | `powerport`                             | `dcim_powerport_related`                                   |
+|                         | `powerport`                             | `dcim_powerport_related`                       |
 | Circuit                 | `termination_a`                         | `circuit_termination_a`                        |
 |                         | `termination_z`                         | `circuit_termination_z`                        |
 |                         | `terminations`                          | `circuit_terminations`                         |
@@ -201,17 +201,17 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 | Device                  | `device_role`          | `role`                        |
 |                         | `local_context_data`   | `local_config_context_data`   |
 |                         | `local_context_schema` | `local_config_context_schema` |
-| FrontPortTemplate     | `rear_port`            | `rear_port_template`          |
-| Interface             | `count_ipaddresses`    | `ip_address_count`            |
+| FrontPortTemplate       | `rear_port`            | `rear_port_template`          |
+| Interface               | `count_ipaddresses`    | `ip_address_count`            |
 | InventoryItem           | `_depth`               | `tree_depth`                  |
-| Location              | `virtualmachine_count` | `virtual_machine_count`       |
-| Manufacturer          | `devicetype_count`     | `device_type_count`           |
-|                       | `inventoryitem_count`  | `inventory_item_count`        |
-| Platform              | `virtualmachine_count` | `virtual_machine_count`       |
-| PowerOutletTemplate   | `power_port`           | `power_port_template`         |
-| PowerPanel            | `powerfeed_count`      | `power_feed_count`            |
-| Rack                  | `group`                | `rack_group`                  |
-|                       | `powerfeed_count`      | `power_feed_count`            |
+| Location                | `virtualmachine_count` | `virtual_machine_count`       |
+| Manufacturer            | `devicetype_count`     | `device_type_count`           |
+|                         | `inventoryitem_count`  | `inventory_item_count`        |
+| Platform                | `virtualmachine_count` | `virtual_machine_count`       |
+| PowerOutletTemplate     | `power_port`           | `power_port_template`         |
+| PowerPanel              | `powerfeed_count`      | `power_feed_count`            |
+| Rack                    | `group`                | `rack_group`                  |
+|                         | `powerfeed_count`      | `power_feed_count`            |
 | JobResult               | `schedule`             | `scheduled_job`               |
 | RackGroup               | `_depth`               | `tree_depth`                  |
 | Region                  | `_depth`               | `tree_depth`                  |
