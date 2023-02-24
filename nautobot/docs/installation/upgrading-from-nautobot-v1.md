@@ -36,8 +36,10 @@
 |                       | `type`                                  | `circuit_type`                                 |
 | Cluster               | `group`                                 | `cluster_group`                                |
 |                       | `type`                                  | `cluster_type`                                 |
-| ConfigContextSchema   | `device_set`                            | `dcim_device_related`                          |
-|                       | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
+| ConfigContextSchema   | `device_set`                            | `devices`                                      |
+|                       | `virtualmachine_set`                    | `virtual_machines`                             |
+| ContentType           | `dcim_device_related`                   | `devices`                                      |
+|                       | `virtualization_virtualmachine_related` | `virtual_machines`                             |
 | Device                | `consoleports`                          | `console_ports`                                |
 |                       | `consoleserverports`                    | `console_server_ports`                         |
 |                       | `devicebays`                            | `device_bays`                                  |
@@ -80,6 +82,19 @@
 | SecretsGroup          | `device_set`                            | `devices`                                      |
 |                       | `deviceredundancygroup_set`             | `device_redundancy_groups`                     |
 | Service               | `ipaddresses`                           | `ip_addresses`                                 |
+| Status                | `circuits_circuit_related`              | `circuits`                                     |
+|                       | `dcim_cable_related`                    | `cables`                                       |
+|                       | `dcim_device_related`                   | `devices`                                      |
+|                       | `dcim_deviceredundancygroup_related`    | `device_redundancy_groups`                     |
+|                       | `dcim_interface_related`                | `interfaces`                                   |
+|                       | `dcim_location_related`                 | `locations`                                    |
+|                       | `dcim_powerfeed_related`                | `power_feeds`                                  |
+|                       | `dcim_rack_related`                     | `racks`                                        |
+|                       | `ipam_ipaddress_related`                | `ip_addresses`                                 |
+|                       | `ipam_prefix_related`                   | `prefixes`                                     |
+|                       | `ipam_vlan_related`                     | `vlans`                                        |
+|                       | `virtualization_virtualmachine_related` | `virtual_machines`                             |
+|                       | `virtualization_vminterface_related`    | `vm_interfaces`                                |
 | Tenant                | `group`                                 | `tenant_group`                                 |
 |                       | `rackreservations`                      | `rack_reservations`                            |
 | TenantGroup           | `level`                                 | `tree_depth`                                   |
