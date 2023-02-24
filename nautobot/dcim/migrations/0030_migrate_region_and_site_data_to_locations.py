@@ -13,6 +13,8 @@ from nautobot.extras import models as extras_models
 from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
+REGION_TO_LOCATION_LOOKUP = {}
+SITE_TO_LOCATION_LOOKUP = {}
 
 
 def add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct):
@@ -66,6 +68,12 @@ def create_region_location_type_locations(region_class, location_class, region_l
             logger.error(
                 f"{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
             )
+
+    region_lt_locations = location_class.objects.filter(location_type=region_lt)
+    regions = region_class.objects.all()
+    # Cache the REGION_TO_LOCATION_LOOKUP for later use
+    for region in regions:
+        REGION_TO_LOCATION_LOOKUP[region] = region_lt_locations.get(name=region.name)
 
 
 def create_site_location_type_locations(
@@ -161,21 +169,25 @@ def create_site_location_type_locations(
                 f"{e.args[0]} \nPlease consider changing the slug attribute of this Site instance to resolve this conflict."
             )
 
-    # Set existing top level locations to have site locations as their parents
     site_lt_locations = location_class.objects.filter(location_type=site_lt)
-    for site in site_class.objects.all():
-        for location in site_lt_locations:
-            # move tags from Site to Location
-            for tagged_item in tagged_item_class.objects.filter(content_type=site_ct, object_id=site.pk):
-                if tagged_item_class.objects.filter(
-                    content_type=location_ct, object_id=location.pk, tag_id=tagged_item.tag_id
-                ).exists():
-                    tagged_item.delete()
-                else:
-                    tagged_item.content_type = location_ct
-                    tagged_item.object_id = location.pk
-                    tagged_item.save()
+    sites = site_class.objects.all()
+    # Cache the SITE_TO_LOCATION_LOOKUP for later use
+    for site in sites:
+        SITE_TO_LOCATION_LOOKUP[site] = site_lt_locations.get(name=site.name)
 
+    for site, location in SITE_TO_LOCATION_LOOKUP.items():
+        # move tags from Site to Location
+        for tagged_item in tagged_item_class.objects.filter(content_type=site_ct, object_id=site.pk):
+            if tagged_item_class.objects.filter(
+                content_type=location_ct, object_id=location.pk, tag_id=tagged_item.tag_id
+            ).exists():
+                tagged_item.delete()
+            else:
+                tagged_item.content_type = location_ct
+                tagged_item.object_id = location.pk
+                tagged_item.save()
+
+    # Set existing top level locations to have site locations as their parents
     top_level_locations = location_class.objects.filter(site__isnull=False).select_related("site")
     for location in top_level_locations:
         location.parent = site_lt_locations.get(name=location.site.name)
@@ -239,7 +251,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
                 exclude_lt="Region",
                 region_lt=region_lt,
             )
-            for site_loc in Location.objects.filter(location_type=site_lt):
+            for site_loc in SITE_TO_LOCATION_LOOKUP.values():
                 site_loc.tags = _NautobotTaggableManager(
                     through=extras_models.TaggedItem, model=Location, instance=site_loc, prefetch_cache_name="tags"
                 )
@@ -268,7 +280,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             site_lt=site_lt,
             exclude_lt="Site",
         )
-        for site_loc in Location.objects.filter(location_type=site_lt):
+        for site_loc in SITE_TO_LOCATION_LOOKUP.values():
             site_loc.tags = _NautobotTaggableManager(
                 through=extras_models.TaggedItem, model=Location, instance=site_loc, prefetch_cache_name="tags"
             )
@@ -312,9 +324,8 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for cf in custom_fields:
             cf.content_types.add(location_ct)
 
-        region_locs = Location.objects.filter(location_type=region_lt).exclude(name="Global Region")
-        for location in region_locs:
-            region = Region.objects.get(name=location.name)
+        region_locs = REGION_TO_LOCATION_LOOKUP.values()
+        for region, location in REGION_TO_LOCATION_LOOKUP.items():
             location._custom_field_data = region._custom_field_data
         Location.objects.bulk_update(region_locs, ["_custom_field_data"], 1000)
 
@@ -343,24 +354,21 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for note in notes:
             note.assigned_object_type = location_ct
             region = Region.objects.get(id=note.assigned_object_id)
-            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
-            note.assigned_object_id = region_loc.id
+            note.assigned_object_id = REGION_TO_LOCATION_LOOKUP.get(region).id
         Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
 
         object_changes_changed = ObjectChange.objects.filter(changed_object_type=region_ct)
         for oc in object_changes_changed:
             oc.changed_object_type = location_ct
             region = Region.objects.get(id=oc.changed_object_id)
-            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
-            oc.changed_object_id = region_loc.id
+            oc.changed_object_id = REGION_TO_LOCATION_LOOKUP.get(region).id
         ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type", "changed_object_id"], 1000)
 
         object_changes_related = ObjectChange.objects.filter(related_object_type=region_ct)
         for oc in object_changes_related:
             oc.related_object_type = location_ct
             region = Region.objects.get(id=oc.related_object_id)
-            region_loc = Location.objects.get(name=region.name, location_type=region_lt)
-            oc.related_object_id = region_loc.id
+            oc.related_object_id = REGION_TO_LOCATION_LOOKUP.get(region).id
         ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type", "related_object_id"], 1000)
 
         Relationship = apps.get_model("extras", "relationship")
@@ -370,7 +378,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         src_relationship_associations.update(source_type=location_ct)
         for relationship_association in src_relationship_associations:
             src_region = Region.objects.get(id=relationship_association.source_id)
-            src_loc = Location.objects.get(name=src_region.name, location_type=region_lt)
+            src_loc = REGION_TO_LOCATION_LOOKUP.get(src_region)
             relationship_association.source = src_loc
             relationship_association.source_id = src_loc.id
         RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
@@ -381,7 +389,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         dst_relationship_associations.update(destination_type=location_ct)
         for relationship_association in dst_relationship_associations:
             dst_region = Region.objects.get(id=relationship_association.destination_id)
-            dst_loc = Location.objects.get(name=dst_region.name, location_type=region_lt)
+            dst_loc = REGION_TO_LOCATION_LOOKUP.get(dst_region)
             relationship_association.destination = dst_loc
             relationship_association.destination_id = dst_loc.pk
         RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
@@ -422,28 +430,28 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         # Circuits App
         cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
         for ct in cts:
-            ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
+            ct.location = SITE_TO_LOCATION_LOOKUP.get(ct.site)
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
 
         # DCIM App
         devices = Device.objects.filter(location__isnull=True).select_related("site")
         for device in devices:
-            device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
+            device.location = SITE_TO_LOCATION_LOOKUP.get(device.site)
         Device.objects.bulk_update(devices, ["location"], 1000)
 
         powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
         for powerpanel in powerpanels:
-            powerpanel.location = Location.objects.get(name=powerpanel.site.name, location_type=site_lt)
+            powerpanel.location = SITE_TO_LOCATION_LOOKUP.get(powerpanel.site)
         PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
 
         rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
         for rackgroup in rackgroups:
-            rackgroup.location = Location.objects.get(name=rackgroup.site.name, location_type=site_lt)
+            rackgroup.location = SITE_TO_LOCATION_LOOKUP.get(rackgroup.site)
         RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
 
         racks = Rack.objects.filter(location__isnull=True).select_related("site")
         for rack in racks:
-            rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
+            rack.location = SITE_TO_LOCATION_LOOKUP.get(rack.site)
         Rack.objects.bulk_update(racks, ["location"], 1000)
 
         # Extras App
@@ -469,9 +477,8 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for cf in custom_fields:
             cf.content_types.add(location_ct)
 
-        site_locs = Location.objects.filter(location_type=site_lt)
-        for location in site_locs:
-            site = Site.objects.get(name=location.name)
+        site_locs = SITE_TO_LOCATION_LOOKUP.values()
+        for site, location in SITE_TO_LOCATION_LOOKUP.items():
             location._custom_field_data = site._custom_field_data
         Location.objects.bulk_update(site_locs, ["_custom_field_data"], 1000)
 
@@ -495,8 +502,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for ia in image_attachments:
             ia.content_type = location_ct
             site = Site.objects.get(id=ia.object_id)
-            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
-            ia.object_id = site_loc.id
+            ia.object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
         ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
 
         job_hooks = JobHook.objects.filter(content_types__in=[site_ct])
@@ -507,31 +513,28 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         for note in notes:
             note.assigned_object_type = location_ct
             site = Site.objects.get(id=note.assigned_object_id)
-            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
-            note.assigned_object_id = site_loc.id
+            note.assigned_object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
         Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
 
         object_changes_changed = ObjectChange.objects.filter(changed_object_type=site_ct)
         for oc in object_changes_changed:
             oc.changed_object_type = location_ct
             site = Site.objects.get(id=oc.changed_object_id)
-            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
-            oc.changed_object_id = site_loc.id
+            oc.changed_object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
         ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type", "changed_object_id"], 1000)
 
         object_changes_related = ObjectChange.objects.filter(related_object_type=site_ct)
         for oc in object_changes_related:
             oc.related_object_type = location_ct
             site = Site.objects.get(id=oc.related_object_id)
-            site_loc = Location.objects.get(name=site.name, location_type=site_lt)
-            oc.related_object_id = site_loc.id
+            oc.related_object_id = SITE_TO_LOCATION_LOOKUP.get(site).id
         ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type", "related_object_id"], 1000)
 
         src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=site_ct)
         src_relationship_associations.update(source_type=location_ct)
         for relationship_association in src_relationship_associations:
             src_site = Site.objects.get(id=relationship_association.source_id)
-            src_loc = Location.objects.get(name=src_site.name, location_type=site_lt)
+            src_loc = SITE_TO_LOCATION_LOOKUP.get(src_site)
             relationship_association.source = src_loc
             relationship_association.source_id = src_loc.id
         RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
@@ -542,7 +545,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         dst_relationship_associations.update(destination_type=location_ct)
         for relationship_association in dst_relationship_associations:
             dst_site = Site.objects.get(id=relationship_association.destination_id)
-            dst_loc = Location.objects.get(name=dst_site.name, location_type=site_lt)
+            dst_loc = SITE_TO_LOCATION_LOOKUP.get(dst_site)
             relationship_association.destination = dst_loc
             relationship_association.destination_id = dst_loc.pk
         RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
@@ -559,23 +562,23 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
         # IPAM App
         prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for prefix in prefixes:
-            prefix.location = Location.objects.get(name=prefix.site.name, location_type=site_lt)
+            prefix.location = SITE_TO_LOCATION_LOOKUP.get(prefix.site)
         Prefix.objects.bulk_update(prefixes, ["location"], 1000)
 
         vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for vlangroup in vlangroups:
-            vlangroup.location = Location.objects.get(name=vlangroup.site.name, location_type=site_lt)
+            vlangroup.location = SITE_TO_LOCATION_LOOKUP.get(vlangroup.site)
         VLANGroup.objects.bulk_update(vlangroups, ["location"], 1000)
 
         vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for vlan in vlans:
-            vlan.location = Location.objects.get(name=vlan.site.name, location_type=site_lt)
+            vlan.location = SITE_TO_LOCATION_LOOKUP.get(vlan.site)
         VLAN.objects.bulk_update(vlans, ["location"], 1000)
 
         # Virtualization App
         clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
         for cluster in clusters:
-            cluster.location = Location.objects.get(name=cluster.site.name, location_type=site_lt)
+            cluster.location = SITE_TO_LOCATION_LOOKUP.get(cluster.site)
         Cluster.objects.bulk_update(clusters, ["location"], 1000)
 
 
