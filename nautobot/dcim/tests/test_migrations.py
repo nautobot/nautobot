@@ -8,7 +8,7 @@ from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoi
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
-    migrate_from = [("dcim", "0029_change_tree_manager_on_tree_models")]
+    migrate_from = [("dcim", "0029_add_tree_managers_and_foreign_keys_pre_data_migration")]
     migrate_to = [("dcim", "0030_migrate_region_and_site_data_to_locations")]
 
     def populateDataBeforeMigration(self, installed_apps):
