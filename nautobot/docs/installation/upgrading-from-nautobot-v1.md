@@ -248,7 +248,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | Location                | `tag`                     | `tags`                           | `/dcim/locations/?tags=<slug>`                                            |
 | ObjectPermission        | `group`                   | `groups`                         | `/users/permissions/?groups=<slug>`                                       |
 |                         | `group_id`                | `groups_id`                      | `/users/permissions/?groups_id=<id>`                                      |
-|                         | `user`                    | `users`                          | `/users/permissions/?user=<uuid/username>`                                |
+|                         | `user`                    | `users`                          | `/users/permissions/?users=<uuid/username>`                               |
 | PowerFeed               | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
 |                         | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<slug>`                                          |
 | PowerOutlet             | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
