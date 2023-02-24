@@ -1,0 +1,1 @@
+Added `index_together` to `Relationship` and `RelationshipAssociation` models for the commonly-used compound field lookups used when constructing filtersets

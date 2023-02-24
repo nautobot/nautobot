@@ -1,0 +1,1 @@
+Changed `RelationshipModelFilterSetMixin` to perform a single OR query including `select_related` for `source_type` and `destination_type` vs. two single queries for each source/destination types.
