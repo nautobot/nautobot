@@ -1,9 +1,9 @@
 from prometheus_client.metrics_core import GaugeMetricFamily
 
-from example_plugin.models import ExampleModel
-
 
 def metric_example():
+    from example_plugin.models import ExampleModel
+
     gauges = GaugeMetricFamily("nautobot_example_metric_count", "Nautobot Example Count Metric", labels=["name"])
 
     # This is very slow on larger tables. Shouldn't matter for the example plugin.
