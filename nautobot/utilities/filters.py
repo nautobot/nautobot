@@ -10,7 +10,6 @@ from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
 
 import django_filters
-from django_filters import MultipleChoiceFilter
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
@@ -719,12 +718,13 @@ class BaseFilterSet(django_filters.FilterSet):
 
     @classmethod
     def filter_for_lookup(cls, field, lookup_type):
-        filter_class, params = super().filter_for_lookup(field, lookup_type)
+        """Override filter_for_lookup method to set ChoiceField Filter to MultipleChoiceFilter.
 
+        Note: Any CharField or IntegerField with choices set is a ChoiceField.
+        """
         if lookup_type == "exact" and getattr(field, "choices", None):
-            return MultipleChoiceFilter, {"choices": field.choices}
-
-        return filter_class, params
+            return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+        return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)
