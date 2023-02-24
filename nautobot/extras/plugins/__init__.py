@@ -35,7 +35,7 @@ registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
-registry["plugin_metrics"] = []
+registry["app_metrics"] = []
 
 
 #
@@ -439,7 +439,7 @@ def register_metrics(function_list):
     for metric in function_list:
         if not callable(metric):
             raise TypeError(f"{metric} is not a callable.")
-        registry["plugin_metrics"].append(metric)
+        registry["app_metrics"].append(metric)
 
 
 class FilterExtension:
