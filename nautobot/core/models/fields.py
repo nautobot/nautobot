@@ -157,7 +157,7 @@ class ForeignKeyWithAutoRelatedName(models.ForeignKey):
             self.remote_field.related_name = related_name
 
 
-class ForeignKeyLimitedByContentTypes(models.ForeignKey):
+class ForeignKeyLimitedByContentTypes(ForeignKeyWithAutoRelatedName):
     """
     An abstract model field that automatically restricts ForeignKey options based on content_types.
 
