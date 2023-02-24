@@ -1590,6 +1590,8 @@ class JobButtonRunView(ObjectPermissionRequiredMixin, View):
     View to run the Job linked to the Job Button.
     """
 
+    queryset = JobButton.objects.all()
+
     def get_required_permission(self):
         return "extras.run_job"
 
