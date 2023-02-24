@@ -194,6 +194,7 @@ def extras_features(*features):
     """
 
     def wrapper(model_class):
+        # Initialize the model_features store if not already defined
         if "model_features" not in registry:
             registry["model_features"] = {f: collections.defaultdict(list) for f in EXTRAS_FEATURES}
         for feature in features:
@@ -211,7 +212,7 @@ def update_registry_with_new_apps():
     """
     Updates the registry with new apps.
 
-    This function updates the registry for CustomField, Relationship, RelationshipAssociation, and Role models.
+    This function updates the registry model features for models.
     """
     from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role
 
