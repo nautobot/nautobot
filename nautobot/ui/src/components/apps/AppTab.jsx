@@ -1,8 +1,6 @@
 import React from "react"
 import { Tab } from "react-bootstrap"
 
-import { nautobot_url } from "src/index"
-
 
 class RenderTabContent extends React.Component {
     constructor(props) {
@@ -16,7 +14,7 @@ class RenderTabContent extends React.Component {
 
     componentDidMount() {
         const fetchTabHTML = async () => {
-            const resp = await fetch(nautobot_url + this.tab.url, { credentials: "include" });
+            const resp = await fetch(this.tab.url, { credentials: "include" });
             const payload = await resp.text();
 
             var parser = new DOMParser();

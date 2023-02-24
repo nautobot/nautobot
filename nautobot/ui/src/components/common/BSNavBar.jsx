@@ -4,13 +4,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link, NavLink } from "react-router-dom"
 import useSWR from "swr"
 
-import { nautobot_url } from "src/index"
-
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
-  const { data, error } = useSWR(nautobot_url + "/api/get-menu/", fetcher)
+  const { data, error } = useSWR("/api/get-menu/", fetcher)
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
 
@@ -19,7 +17,7 @@ export default function BSNavBar() {
       <Container fluid>
         <Link to="/">
           <Navbar.Brand>
-            <img src={nautobot_url + "/static/img/nautobot_logo.svg"} alt="nautobot-logo" height={30} />
+            <img src={"/static/img/nautobot_logo.svg"} alt="nautobot-logo" height={30} />
           </Navbar.Brand>
         </Link>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />

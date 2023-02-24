@@ -21,7 +21,7 @@ services:
     volumes:
       - ../:/source
   nodejs:
-    image: node
+    image: node:slim
     environment:
       PORT: "3000"
       # DEBUG: "express:*" # nodejs web server debug logging
@@ -31,17 +31,9 @@ services:
     user: node
     volumes:
       - ../nautobot/ui/:/opt/node/nautobot
+      - ../examples/:/opt/examples
       - ../:/source
     command: >
       bash -c "npm install && npm run start"  # TODO: running npm install every time is slow, can we persist a volume?
     depends_on:
-      - nautobot
-  nginx:
-    image: nginx
-    ports:
-      - "8888:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - nodejs
       - nautobot
