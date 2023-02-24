@@ -8,7 +8,7 @@ import nautobot.extras.models.statuses
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0065_created_datetime"),
+        ("extras", "0064_created_datetime"),
         ("circuits", "0013_alter_circuittermination__path"),
     ]
 
