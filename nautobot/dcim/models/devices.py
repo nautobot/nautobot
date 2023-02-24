@@ -174,23 +174,23 @@ class DeviceType(PrimaryModel):
         )
 
         # Component templates
-        if self.consoleporttemplates.exists():
+        if self.console_port_templates.exists():
             data["console-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                 }
-                for c in self.consoleporttemplates.all()
+                for c in self.console_port_templates.all()
             ]
-        if self.consoleserverporttemplates.exists():
+        if self.console_server_port_templates.exists():
             data["console-server-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                 }
-                for c in self.consoleserverporttemplates.all()
+                for c in self.console_server_port_templates.all()
             ]
-        if self.powerporttemplates.exists():
+        if self.power_port_templates.exists():
             data["power-ports"] = [
                 {
                     "name": c.name,
@@ -198,52 +198,52 @@ class DeviceType(PrimaryModel):
                     "maximum_draw": c.maximum_draw,
                     "allocated_draw": c.allocated_draw,
                 }
-                for c in self.powerporttemplates.all()
+                for c in self.power_port_templates.all()
             ]
-        if self.poweroutlettemplates.exists():
+        if self.power_outlet_templates.exists():
             data["power-outlets"] = [
                 {
                     "name": c.name,
                     "type": c.type,
-                    "power_port": c.power_port.name if c.power_port else None,
+                    "power_port": c.power_port_template.name if c.power_port_template else None,
                     "feed_leg": c.feed_leg,
                 }
-                for c in self.poweroutlettemplates.all()
+                for c in self.power_outlet_templates.all()
             ]
-        if self.interfacetemplates.exists():
+        if self.interface_templates.exists():
             data["interfaces"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                     "mgmt_only": c.mgmt_only,
                 }
-                for c in self.interfacetemplates.all()
+                for c in self.interface_templates.all()
             ]
-        if self.frontporttemplates.exists():
+        if self.front_port_templates.exists():
             data["front-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
-                    "rear_port": c.rear_port.name,
+                    "rear_port": c.rear_port_template.name,
                     "rear_port_position": c.rear_port_position,
                 }
-                for c in self.frontporttemplates.all()
+                for c in self.front_port_templates.all()
             ]
-        if self.rearporttemplates.exists():
+        if self.rear_port_templates.exists():
             data["rear-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                     "positions": c.positions,
                 }
-                for c in self.rearporttemplates.all()
+                for c in self.rear_port_templates.all()
             ]
-        if self.devicebaytemplates.exists():
+        if self.device_bay_templates.exists():
             data["device-bays"] = [
                 {
                     "name": c.name,
                 }
-                for c in self.devicebaytemplates.all()
+                for c in self.device_bay_templates.all()
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
@@ -281,7 +281,7 @@ class DeviceType(PrimaryModel):
                     }
                 )
 
-        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.devicebaytemplates.count():
+        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
             raise ValidationError(
                 {
                     "subdevice_role": "Must delete all device bay templates associated with this device before "
@@ -416,7 +416,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     creation of a Device.
     """
 
-    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="instances")
+    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="devices")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -497,7 +497,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     device_redundancy_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
         on_delete=models.SET_NULL,
-        related_name="members",
+        related_name="devices",
         blank=True,
         null=True,
         verbose_name="Device Redundancy Group",
@@ -518,6 +518,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="devices",
         default=None,
         blank=True,
         null=True,
@@ -750,16 +751,20 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
         # If this is a new Device, instantiate all of the related components per the DeviceType definition
         if is_new:
-            ConsolePort.objects.bulk_create([x.instantiate(self) for x in self.device_type.consoleporttemplates.all()])
-            ConsoleServerPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.consoleserverporttemplates.all()]
+            ConsolePort.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.console_port_templates.all()]
             )
-            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.powerporttemplates.all()])
-            PowerOutlet.objects.bulk_create([x.instantiate(self) for x in self.device_type.poweroutlettemplates.all()])
-            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interfacetemplates.all()])
-            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rearporttemplates.all()])
-            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.frontporttemplates.all()])
-            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.devicebaytemplates.all()])
+            ConsoleServerPort.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.console_server_port_templates.all()]
+            )
+            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.power_port_templates.all()])
+            PowerOutlet.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.power_outlet_templates.all()]
+            )
+            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interface_templates.all()])
+            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rear_port_templates.all()])
+            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.front_port_templates.all()])
+            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.device_bay_templates.all()])
 
         # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
@@ -780,7 +785,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             self.asset_tag,
             self.get_status_display(),
             self.location.name,
-            self.rack.group.name if self.rack and self.rack.group else None,
+            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
             self.rack.name if self.rack else None,
             self.position,
             self.get_face_display(),
@@ -989,6 +994,7 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="device_redundancy_groups",
         default=None,
         blank=True,
         null=True,
@@ -1006,8 +1012,8 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
         ordering = ("name",)
 
     @property
-    def members_sorted(self):
-        return self.members.order_by("device_redundancy_group_priority")
+    def devices_sorted(self):
+        return self.devices.order_by("device_redundancy_group_priority")
 
     def __str__(self):
         return self.name

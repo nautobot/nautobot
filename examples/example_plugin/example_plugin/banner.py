@@ -39,7 +39,7 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
             # Object changelog view
             content += format_html("<div>Specifically, its changelog.</div>")
         return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
-    elif "table" in context:
+    elif "table" in context and context["table"] is not None:
         # Table view
         content += format_html(
             "<div>You are viewing a table of {}</div>",

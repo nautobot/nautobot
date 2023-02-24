@@ -378,14 +378,14 @@ class CreatedUpdatedFilterTest(APITestCase):
         self.rackrole1 = Role.objects.get_for_model(Rack).first()
         self.rack1 = Rack.objects.create(
             location=self.location1,
-            group=self.rackgroup1,
+            rack_group=self.rackgroup1,
             role=self.rackrole1,
             name="Test Rack 1",
             u_height=42,
         )
         self.rack2 = Rack.objects.create(
             location=self.location1,
-            group=self.rackgroup1,
+            rack_group=self.rackgroup1,
             role=self.rackrole1,
             name="Test Rack 2",
             u_height=42,
@@ -2280,17 +2280,17 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             {
                 "note": "This is a test.",
                 "assigned_object_id": location1.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.location",
             },
             {
                 "note": "This is a test.",
                 "assigned_object_id": location2.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.location",
             },
             {
                 "note": "This is a note on location 1.",
                 "assigned_object_id": location1.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.location",
             },
         ]
         cls.bulk_update_data = {

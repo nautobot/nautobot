@@ -638,21 +638,21 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
         Rack.objects.create(
             location=locations[0],
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 1",
             status=statuses[0],
         )
         Rack.objects.create(
             location=locations[0],
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 2",
             status=statuses[0],
         )
         Rack.objects.create(
             location=locations[0],
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 3",
             status=statuses[0],
@@ -662,21 +662,21 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Test Rack 4",
                 "location": locations[1].pk,
-                "group": rack_groups[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 5",
                 "location": locations[1].pk,
-                "group": rack_groups[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 6",
                 "location": locations[1].pk,
-                "group": rack_groups[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
@@ -813,7 +813,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["devicetype_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["device_type_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
@@ -1073,19 +1073,19 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
             device_type=cls.device_type,
             name="Front Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[0],
+            rear_port_template=rear_port_templates[0],
         )
         FrontPortTemplate.objects.create(
             device_type=cls.device_type,
             name="Front Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[1],
+            rear_port_template=rear_port_templates[1],
         )
         FrontPortTemplate.objects.create(
             device_type=cls.device_type,
             name="Front Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[2],
+            rear_port_template=rear_port_templates[2],
         )
 
         cls.create_data = [
@@ -1093,21 +1093,21 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[3].pk,
+                "rear_port_template": rear_port_templates[3].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[4].pk,
+                "rear_port_template": rear_port_templates[4].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[5].pk,
+                "rear_port_template": rear_port_templates[5].pk,
                 "rear_port_position": 1,
             },
         ]
@@ -1186,7 +1186,7 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtual_machine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
@@ -2329,7 +2329,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["display", "id", "name", "powerfeed_count", "url"]
+    brief_fields = ["display", "id", "name", "power_feed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2378,10 +2378,10 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         rackrole = Role.objects.get_for_model(Rack).first()
 
         racks = (
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 1"),
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 2"),
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 3"),
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 4"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 1"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 2"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 3"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 4"),
         )
 
         power_panels = (

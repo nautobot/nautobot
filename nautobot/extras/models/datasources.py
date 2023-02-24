@@ -107,6 +107,7 @@ class GitRepository(PrimaryModel):
             self.slug,
             self.remote_url,
             self.branch,
+            self.secrets_group.name if self.secrets_group else None,
             self.provided_contents,
         )
 

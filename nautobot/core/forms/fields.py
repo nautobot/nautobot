@@ -194,9 +194,7 @@ class CSVModelChoiceField(django_forms.ModelChoiceField):
         try:
             return super().to_python(value)
         except MultipleObjectsReturned:
-            raise django_forms.ValidationError(
-                f'"{value}" is not a unique value for this field; multiple objects were found'
-            )
+            raise ValidationError(f'"{value}" is not a unique value for this field; multiple objects were found')
 
 
 class CSVContentTypeField(CSVModelChoiceField):
@@ -232,11 +230,11 @@ class CSVContentTypeField(CSVModelChoiceField):
         try:
             app_label, model = value.split(".")
         except ValueError:
-            raise django_forms.ValidationError('Object type must be specified as "<app_label>.<model>"')
+            raise ValidationError('Object type must be specified as "<app_label>.<model>"')
         try:
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
-            raise django_forms.ValidationError("Invalid object type")
+            raise ValidationError("Invalid object type")
 
 
 class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
@@ -308,7 +306,7 @@ class MultiValueCharField(django_forms.CharField):
 
         return [
             # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            self.field_class.to_python(self, v)
             for v in value
             if v
         ]
@@ -333,7 +331,7 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
                 try:
                     model = apps.get_model(v)
                 except (ValueError, LookupError):
-                    raise django_forms.ValidationError(
+                    raise ValidationError(
                         self.error_messages["invalid_choice"],
                         code="invalid_choice",
                         params={"value": v},
@@ -426,7 +424,7 @@ class MACAddressField(django_forms.Field):
         try:
             value = EUI(value.strip())
         except AddrFormatError:
-            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
+            raise ValidationError(self.error_messages["invalid"], code="invalid")
 
         return value
 

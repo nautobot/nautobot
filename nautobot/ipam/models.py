@@ -112,7 +112,7 @@ class VRF(PrimaryModel):
             self.name,
             self.rd,
             self.tenant.name if self.tenant else None,
-            self.enforce_unique,
+            str(self.enforce_unique),
             self.description,
         )
 
@@ -213,7 +213,7 @@ class RIR(OrganizationalModel):
         return (
             self.name,
             self.slug,
-            self.is_private,
+            str(self.is_private),
             self.description,
         )
 
@@ -909,7 +909,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             self.role.name if self.role else None,
             obj_type,
             self.assigned_object_id,
-            is_primary,
+            str(is_primary),
             self.dns_name,
             self.description,
         )

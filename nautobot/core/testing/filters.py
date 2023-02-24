@@ -46,7 +46,8 @@ class FilterTestCases:
 
             if len(test_values) < 2:
                 raise ValueError(
-                    f"Cannot find valid test data for {queryset.model._meta.object_name} field {field_name}"
+                    f"Cannot find enough valid test data for {queryset.model._meta.object_name} field {field_name} "
+                    f"(found {len(test_values)} option(s): {test_values}) but need at least 2 of them"
                 )
             return test_values
 
@@ -80,14 +81,15 @@ class FilterTestCases:
         def test_filters_generic(self):
             """Test all multiple choice filters declared in `self.generic_filter_tests`.
 
-            This test uses `get_filterset_test_values()` to retrieve a valid set of test data and asserts that the filterset
-            filter output matches the corresponding queryset filter. The majority of Nautobot filters use conjoined=False,
-            so the extra logic to support conjoined=True has not been implemented here. TagFilter and similar "AND" filters
-            are not supported.
+            This test uses `get_filterset_test_values()` to retrieve a valid set of test data and asserts
+            that the filterset filter output matches the corresponding queryset filter.
+            The majority of Nautobot filters use conjoined=False, so the extra logic to support conjoined=True has not
+            been implemented here. TagFilter and similar "AND" filters are not supported.
 
             Examples:
-                Multiple tests can be performed for the same filter by adding multiple entries in `generic_filter_tests` with
-                explicit field names. For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
+                Multiple tests can be performed for the same filter by adding multiple entries in
+                `generic_filter_tests` with explicit field names.
+                For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
                     generic_filter_tests = (
                         ["filter_name", "field_name__slug"],
                         ["filter_name", "field_name__id"],
@@ -99,6 +101,9 @@ class FilterTestCases:
                     )
                 This expects a field named `devices` on the model and a filter named `devices` on the filterset.
             """
+            if not self.generic_filter_tests:
+                self.skipTest("No generic_filter_tests defined?")
+
             for test in self.generic_filter_tests:
                 filter_name = test[0]
                 field_name = test[-1]  # default to filter_name if a second list item was not supplied
