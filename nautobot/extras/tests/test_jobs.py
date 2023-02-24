@@ -545,7 +545,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command(job_model.class_path)
+        out, err = self.run_command("--no-color", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         self.assertIn(f"{module}: 1 success, 1 info, 0 warning, 0 failure", out)
         self.assertIn("success: None", out)
@@ -562,7 +562,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command(job_model.class_path)
+        out, err = self.run_command("--no-color", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         self.assertIn(f"{module}: 1 success, 1 info, 0 warning, 0 failure", out)
         self.assertIn("success: Test Status: Status created successfully.", out)
@@ -600,7 +600,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--commit", "--username", "test_user", job_model.class_path)
+        out, err = self.run_command("--no-color", "--commit", "--username", "test_user", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
         self.assertIn(f"{module}: 1 success, 0 info, 0 warning, 0 failure", out)

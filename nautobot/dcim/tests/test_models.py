@@ -130,7 +130,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             mgmt_only=True,
         )
         interface_templates = [interface_template_1, interface_template_2]
-        device_type.interfacetemplates.set(interface_templates)
+        device_type.interface_templates.set(interface_templates)
         # instantiate_model() is run when device is created
         device = Device.objects.create(
             device_type=device_type,
@@ -208,8 +208,8 @@ class RackGroupTestCase(TestCase):
         self.rackgroup_a2 = RackGroup(location=self.location_a, parent=self.rackgroup_a1, name="RackGroup A2")
         self.rackgroup_a2.save()
 
-        self.rack1 = Rack.objects.create(location=self.location_a, group=self.rackgroup_a1, name="Rack 1")
-        self.rack2 = Rack.objects.create(location=self.location_a, group=self.rackgroup_a2, name="Rack 2")
+        self.rack1 = Rack.objects.create(location=self.location_a, rack_group=self.rackgroup_a1, name="Rack 1")
+        self.rack2 = Rack.objects.create(location=self.location_a, rack_group=self.rackgroup_a2, name="Rack 2")
 
         self.powerpanel1 = PowerPanel.objects.create(
             location=self.location_a, rack_group=self.rackgroup_a1, name="Power Panel 1"
@@ -293,7 +293,7 @@ class RackTestCase(TestCase):
             name="TestRack1",
             facility_id="A101",
             location=self.location1,
-            group=self.group1,
+            rack_group=self.group1,
             status=self.status,
             u_height=42,
         )
@@ -452,7 +452,7 @@ class RackTestCase(TestCase):
     def test_rack_location_validation(self):
         # Rack group location and rack location must relate
         location2 = Location.objects.create(name="Location2", location_type=self.location_type_a)
-        rack = Rack(name="Rack", group=self.group1, location=location2, status=self.status)
+        rack = Rack(name="Rack", rack_group=self.group1, location=location2, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             rack.validated_save()
         self.assertIn(
@@ -657,7 +657,7 @@ class DeviceTestCase(TestCase):
         PowerOutletTemplate(
             device_type=self.device_type,
             name="Power Outlet 1",
-            power_port=ppt,
+            power_port_template=ppt,
             feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
         ).save()
 
@@ -680,7 +680,7 @@ class DeviceTestCase(TestCase):
             device_type=self.device_type,
             name="Front Port 1",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rpt,
+            rear_port_template=rpt,
             rear_port_position=2,
         ).save()
 

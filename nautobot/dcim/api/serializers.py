@@ -228,7 +228,7 @@ class LocationSerializer(
     device_count = serializers.IntegerField(read_only=True)
     prefix_count = serializers.IntegerField(read_only=True)
     rack_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
+    virtual_machine_count = serializers.IntegerField(read_only=True)
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -259,7 +259,7 @@ class LocationSerializer(
             "device_count",
             "prefix_count",
             "rack_count",
-            "virtualmachine_count",
+            "virtual_machine_count",
             "vlan_count",
         ]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
@@ -322,13 +322,13 @@ class RackSerializer(
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     location = NestedLocationSerializer()
-    group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
+    rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
-    powerfeed_count = serializers.IntegerField(read_only=True)
+    power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Rack
@@ -337,7 +337,7 @@ class RackSerializer(
             "name",
             "facility_id",
             "location",
-            "group",
+            "rack_group",
             "tenant",
             "status",
             "role",
@@ -352,16 +352,16 @@ class RackSerializer(
             "outer_unit",
             "comments",
             "device_count",
-            "powerfeed_count",
+            "power_feed_count",
         ]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (group, facility_id). This
-        # prevents facility_id from being interpreted as a required field.
-        validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("group", "name"))]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
+        # This prevents facility_id from being interpreted as a required field.
+        validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
 
     def validate(self, data):
-        # Validate uniqueness of (group, facility_id) since we omitted the automatically-created validator from Meta.
+        # Validate uniqueness of (rack_group, facility_id) since we omitted the automatically-created validator above.
         if data.get("facility_id", None):
-            validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("group", "facility_id"))
+            validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "facility_id"))
             validator(data, self)
 
         # Enforce model validation
@@ -428,8 +428,8 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 
 class ManufacturerSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:manufacturer-detail")
-    devicetype_count = serializers.IntegerField(read_only=True)
-    inventoryitem_count = serializers.IntegerField(read_only=True)
+    device_type_count = serializers.IntegerField(read_only=True)
+    inventory_item_count = serializers.IntegerField(read_only=True)
     platform_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -439,8 +439,8 @@ class ManufacturerSerializer(NautobotModelSerializer):
             "name",
             "slug",
             "description",
-            "devicetype_count",
-            "inventoryitem_count",
+            "device_type_count",
+            "inventory_item_count",
             "platform_count",
         ]
 
@@ -542,7 +542,7 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlettemplate-detail")
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
-    power_port = NestedPowerPortTemplateSerializer(required=False)
+    power_port_template = NestedPowerPortTemplateSerializer(required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -553,7 +553,7 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
             "name",
             "label",
             "type",
-            "power_port",
+            "power_port_template",
             "feed_leg",
             "description",
         ]
@@ -599,7 +599,7 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontporttemplate-detail")
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PortTypeChoices)
-    rear_port = NestedRearPortTemplateSerializer()
+    rear_port_template = NestedRearPortTemplateSerializer()
 
     class Meta:
         model = FrontPortTemplate
@@ -609,7 +609,7 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
             "name",
             "label",
             "type",
-            "rear_port",
+            "rear_port_template",
             "rear_port_position",
             "description",
         ]
@@ -639,7 +639,7 @@ class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
+    virtual_machine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Platform
@@ -652,7 +652,7 @@ class PlatformSerializer(NautobotModelSerializer):
             "napalm_args",
             "description",
             "device_count",
-            "virtualmachine_count",
+            "virtual_machine_count",
         ]
 
 
@@ -915,7 +915,7 @@ class InterfaceSerializer(
         many=True,
     )
     cable = NestedCableSerializer(read_only=True)
-    count_ipaddresses = serializers.IntegerField(read_only=True)
+    ip_address_count = serializers.IntegerField(read_only=True)
     parent_interface = NestedInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedInterfaceSerializer(required=False, allow_null=True)
     lag = NestedInterfaceSerializer(required=False, allow_null=True)
@@ -946,7 +946,7 @@ class InterfaceSerializer(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "count_ipaddresses",
+            "ip_address_count",
         ]
 
     def validate(self, data):
@@ -1270,7 +1270,7 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
     location = NestedLocationSerializer()
     rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
-    powerfeed_count = serializers.IntegerField(read_only=True)
+    power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = PowerPanel
@@ -1279,7 +1279,7 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "location",
             "rack_group",
             "name",
-            "powerfeed_count",
+            "power_feed_count",
         ]
 
 

@@ -56,24 +56,24 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     import_target_id = django_filters.ModelMultipleChoiceFilter(
         field_name="import_targets",
         queryset=RouteTarget.objects.all(),
-        label="Import target",
+        label="Import target (ID) - Deprecated (use import_target filter)",
     )
-    import_target = django_filters.ModelMultipleChoiceFilter(
-        field_name="import_targets__name",
+    import_target = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="import_targets",
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
-        label="Import target (name)",
+        label="Import target (ID or name)",
     )
     export_target_id = django_filters.ModelMultipleChoiceFilter(
         field_name="export_targets",
         queryset=RouteTarget.objects.all(),
-        label="Export target",
+        label="Export target (ID) - Deprecated (use export_target filter)",
     )
-    export_target = django_filters.ModelMultipleChoiceFilter(
-        field_name="export_targets__name",
+    export_target = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="export_targets",
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
-        label="Export target (name)",
+        label="Export target (ID or name)",
     )
     tag = TagFilter()
 
@@ -92,24 +92,24 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     importing_vrf_id = django_filters.ModelMultipleChoiceFilter(
         field_name="importing_vrfs",
         queryset=VRF.objects.all(),
-        label="Importing VRF",
+        label="Importing VRF (ID) - Deprecated (use import_vrf filter)",
     )
-    importing_vrf = django_filters.ModelMultipleChoiceFilter(
-        field_name="importing_vrfs__rd",
+    importing_vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="importing_vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="Import VRF (RD)",
+        label="Import VRF (ID or RD)",
     )
     exporting_vrf_id = django_filters.ModelMultipleChoiceFilter(
         field_name="exporting_vrfs",
         queryset=VRF.objects.all(),
-        label="Exporting VRF",
+        label="Exporting VRF (ID) - Deprecated (use export_vrf filter)",
     )
-    exporting_vrf = django_filters.ModelMultipleChoiceFilter(
-        field_name="exporting_vrfs__rd",
+    exporting_vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="exporting_vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="Export VRF (RD)",
+        label="Export VRF (ID or RD)",
     )
     tag = TagFilter()
 
@@ -155,13 +155,11 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
     )
     rir_id = django_filters.ModelMultipleChoiceFilter(
         queryset=RIR.objects.all(),
-        label="RIR (ID)",
+        label="RIR (ID) - Deprecated (use rir filter)",
     )
-    rir = django_filters.ModelMultipleChoiceFilter(
-        field_name="rir__slug",
+    rir = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RIR.objects.all(),
-        to_field_name="slug",
-        label="RIR (slug)",
+        label="RIR (ID or slug)",
     )
     tag = TagFilter()
 
@@ -207,13 +205,12 @@ class PrefixFilterSet(
     mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
-        label="VRF",
+        label="VRF (ID) - Deprecated (use vrf filter)",
     )
-    vrf = django_filters.ModelMultipleChoiceFilter(
-        field_name="vrf__rd",
+    vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="VRF (RD)",
+        label="VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrf",
@@ -337,19 +334,18 @@ class IPAddressFilterSet(
     )
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
-        label="VRF",
+        label="VRF (ID) - Deprecated (use vrf filter)",
     )
-    vrf = django_filters.ModelMultipleChoiceFilter(
-        field_name="vrf__rd",
+    vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="VRF (RD)",
+        label="VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrf",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
-        label="VRF",
+        label="VRF (ID)",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="vrf__rd",
@@ -378,27 +374,25 @@ class IPAddressFilterSet(
         field_name="pk",
         label="Virtual machine (ID)",
     )
-    interface = django_filters.ModelMultipleChoiceFilter(
-        field_name="interface__name",
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
-        label="Interface (name)",
+        label="Interface (ID or name)",
     )
     interface_id = django_filters.ModelMultipleChoiceFilter(
         field_name="interface",
         queryset=Interface.objects.all(),
-        label="Interface (ID)",
+        label="Interface (ID) - Deprecated (use interface filter)",
     )
-    vminterface = django_filters.ModelMultipleChoiceFilter(
-        field_name="vminterface__name",
+    vminterface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
         to_field_name="name",
-        label="VM interface (name)",
+        label="VM interface (ID or name)",
     )
     vminterface_id = django_filters.ModelMultipleChoiceFilter(
         field_name="vminterface",
         queryset=VMInterface.objects.all(),
-        label="VM interface (ID)",
+        label="VM interface (ID) - Deprecated (use vminterface filter)",
     )
     assigned_to_interface = django_filters.BooleanFilter(
         method="_assigned_to_interface",
@@ -517,23 +511,21 @@ class ServiceFilterSet(NautobotFilterSet):
     )
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
-        label="Device (ID)",
+        label="Device (ID) - Deprecated (use device filter)",
     )
-    device = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__name",
+    device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (name)",
+        label="Device (ID or name)",
     )
     virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
-        label="Virtual machine (ID)",
+        label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
-    virtual_machine = django_filters.ModelMultipleChoiceFilter(
-        field_name="virtual_machine__name",
+    virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual machine (name)",
+        label="Virtual machine (ID or name)",
     )
     port = NumericArrayFilter(field_name="ports", lookup_expr="contains")
     tag = TagFilter()

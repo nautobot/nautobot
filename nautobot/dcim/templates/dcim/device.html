@@ -26,8 +26,8 @@
                                     <tr>
                                         <td>Rack</td>
                                         <td>
-                                            {% if object.rack and object.rack_group %}
-                                                {{ object.rack.group|hyperlinked_object }} /
+                                            {% if object.rack and object.rack.rack_group %}
+                                                {{ object.rack.rack_group|hyperlinked_object }} /
                                             {% endif %}
                                             {{ object.rack|hyperlinked_object }}
                                         </td>

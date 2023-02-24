@@ -142,7 +142,7 @@ Breaking (non-backward-compatible) REST API changes also may be introduced in ma
 * Changed field types (for example, changing a single value to a list of values)
 * Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
 
-Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version will continue to be supported for some time before eventually being removed.
+Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version(s) will continue to be supported until the next major release. Upon the next major release, previously deprecated API versions will be removed and the newest behavior will become the default. You will no longer be able to request API versions from the previous major version.
 
 !!! important
     When breaking changes are introduced in a minor release, for compatibility as described above, the default REST API behavior within the remainder of the current major release cycle will continue to be the previous (unchanged) API version. API clients must "opt in" to the new version of the API by explicitly requesting the new API version.
