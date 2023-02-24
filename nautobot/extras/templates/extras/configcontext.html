@@ -215,6 +215,7 @@
                             {% endif %}
                         </td>
                     </tr>
+                    {% if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED %}
                     <tr>
                         <td>Dynamic Groups</td>
                         <td>
@@ -229,6 +230,7 @@
                             {% endif %}
                         </td>
                     </tr>
+                    {% endif %}
                 </table>
             </div>
 {% endblock content_right_page %}
