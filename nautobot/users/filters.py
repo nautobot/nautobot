@@ -68,12 +68,12 @@ class UserFilterSet(BaseFilterSet):
         label="Object Permission (ID or name)",
     )
     has_rack_reservations = RelatedMembershipBooleanFilter(
-        field_name="rackreservation",
-        label="Has Changes",
+        field_name="rack_reservations",
+        label="Has Rack Reservations",
     )
     # TODO(timizuo): Since RackReservation has no natural-key field, NaturalKeyOrPKMultipleChoiceFilter can't be used
     rack_reservations_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="rackreservation",
+        field_name="rack_reservations",
         queryset=RackReservation.objects.all(),
         label="Rack Reservation (ID)",
     )
@@ -110,7 +110,7 @@ class ObjectPermissionFilterSet(BaseFilterSet):
     groups_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group",
+        label="Group (ID)",
     )
     groups = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",

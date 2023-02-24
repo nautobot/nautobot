@@ -88,12 +88,12 @@ class RackElevationSVG:
         return drawing
 
     def _draw_device_front(self, drawing, device, start, end, text):
-        devicebay_details = ""
-        if device.devicebay_count:
-            devicebay_details += f" ({device.get_children().count()}/{device.devicebay_count})"
+        device_bay_details = ""
+        if device.device_bay_count:
+            device_bay_details += f" ({device.get_children().count()}/{device.device_bay_count})"
 
-        device_fullname = str(device) + devicebay_details
-        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
+        device_fullname = str(device) + device_bay_details
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + device_bay_details
 
         color = device.role.color
         reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})

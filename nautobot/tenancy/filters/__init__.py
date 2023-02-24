@@ -126,11 +126,10 @@ class TenantFilterSet(NautobotFilterSet):
     )
     rack_reservations = django_filters.ModelMultipleChoiceFilter(
         queryset=RackReservation.objects.all(),
-        field_name="rackreservations",
         label="Rack reservations (ID)",
     )
     has_rack_reservations = RelatedMembershipBooleanFilter(
-        field_name="rackreservations",
+        field_name="rack_reservations",
         label="Has rack reservations",
     )
     racks = NaturalKeyOrPKMultipleChoiceFilter(

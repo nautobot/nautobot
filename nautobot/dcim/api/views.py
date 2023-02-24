@@ -154,7 +154,7 @@ class LocationViewSet(NautobotModelViewSet):
             prefix_count=count_related(Prefix, "location"),
             vlan_count=count_related(VLAN, "location"),
             circuit_count=count_related(Circuit, "circuit_terminations__location"),
-            virtualmachine_count=count_related(VirtualMachine, "cluster__location"),
+            virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
         )
     )
     serializer_class = serializers.LocationSerializer
@@ -167,7 +167,7 @@ class LocationViewSet(NautobotModelViewSet):
 
 
 class RackGroupViewSet(NautobotModelViewSet):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).select_related("location")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
 
@@ -179,11 +179,11 @@ class RackGroupViewSet(NautobotModelViewSet):
 
 class RackViewSet(NautobotModelViewSet):
     queryset = (
-        Rack.objects.select_related("location", "group__location", "status", "role", "tenant")
+        Rack.objects.select_related("location", "rack_group__location", "status", "role", "tenant")
         .prefetch_related("tags")
         .annotate(
             device_count=count_related(Device, "rack"),
-            powerfeed_count=count_related(PowerFeed, "rack"),
+            power_feed_count=count_related(PowerFeed, "rack"),
         )
     )
     serializer_class = serializers.RackSerializer
@@ -262,8 +262,8 @@ class RackReservationViewSet(NautobotModelViewSet):
 
 class ManufacturerViewSet(NautobotModelViewSet):
     queryset = Manufacturer.objects.annotate(
-        devicetype_count=count_related(DeviceType, "manufacturer"),
-        inventoryitem_count=count_related(InventoryItem, "manufacturer"),
+        device_type_count=count_related(DeviceType, "manufacturer"),
+        inventory_item_count=count_related(InventoryItem, "manufacturer"),
         platform_count=count_related(Platform, "manufacturer"),
     )
     serializer_class = serializers.ManufacturerSerializer
@@ -348,7 +348,7 @@ class DeviceBayTemplateViewSet(NautobotModelViewSet):
 class PlatformViewSet(NautobotModelViewSet):
     queryset = Platform.objects.annotate(
         device_count=count_related(Device, "platform"),
-        virtualmachine_count=count_related(VirtualMachine, "platform"),
+        virtual_machine_count=count_related(VirtualMachine, "platform"),
     )
     serializer_class = serializers.PlatformSerializer
     filterset_class = filters.PlatformFilterSet
@@ -700,7 +700,7 @@ class VirtualChassisViewSet(NautobotModelViewSet):
 
 class PowerPanelViewSet(NautobotModelViewSet):
     queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        powerfeed_count=count_related(PowerFeed, "power_panel")
+        power_feed_count=count_related(PowerFeed, "power_panel")
     )
     serializer_class = serializers.PowerPanelSerializer
     filterset_class = filters.PowerPanelFilterSet
@@ -728,7 +728,7 @@ class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 
 class DeviceRedundancyGroupViewSet(NautobotModelViewSet):
-    queryset = DeviceRedundancyGroup.objects.select_related("status").prefetch_related("members")
+    queryset = DeviceRedundancyGroup.objects.select_related("status").prefetch_related("devices")
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     filterset_class = filters.DeviceRedundancyGroupFilterSet
 

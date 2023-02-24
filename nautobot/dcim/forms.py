@@ -476,7 +476,7 @@ class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 
 
 class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
-    group = DynamicModelChoiceField(
+    rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         query_params={"location": "$location"},
@@ -487,7 +487,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         model = Rack
         fields = [
             "location",
-            "group",
+            "rack_group",
             "name",
             "facility_id",
             "tenant_group",
@@ -520,7 +520,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
 
 
 class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
-    group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
+    rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -544,9 +544,9 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
 
         if data:
 
-            # Limit group queryset by assigned location
+            # Limit rack_group queryset by assigned location
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
+            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
 class RackBulkEditForm(
@@ -557,7 +557,7 @@ class RackBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Rack.objects.all(), widget=forms.MultipleHiddenInput)
-    group = DynamicModelChoiceField(
+    rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         query_params={"location": "$location"},
@@ -590,7 +590,7 @@ class RackBulkEditForm(
         model = Rack
         nullable_fields = [
             "location",
-            "group",
+            "rack_group",
             "tenant",
             "serial",
             "asset_tag",
@@ -612,14 +612,14 @@ class RackFilterForm(
     field_order = [
         "q",
         "location",
-        "group",
+        "rack_group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
@@ -639,7 +639,7 @@ class RackFilterForm(
 class RackElevationFilterForm(RackFilterForm):
     field_order = [
         "q",
-        "group",
+        "rack_group",
         "id",
         "status",
         "role",
@@ -652,7 +652,7 @@ class RackElevationFilterForm(RackFilterForm):
         required=False,
         query_params={
             "location": "$location",
-            "group": "$group",
+            "rack_group": "$rack_group",
         },
     )
 
@@ -673,7 +673,7 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
         queryset=Rack.objects.all(),
         query_params={
             "location": "$location",
-            "group": "$rack_group",
+            "rack_group": "$rack_group",
         },
     )
     units = NumericArrayField(
@@ -732,7 +732,7 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
             # Limit rack queryset by assigned location and group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -755,14 +755,14 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = RackReservation
     field_order = [
         "q",
-        "group",
+        "rack_group",
         "user",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    group = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
@@ -1079,7 +1079,7 @@ class PowerOutletTemplateForm(NautobotModelForm):
             "name",
             "label",
             "type",
-            "power_port",
+            "power_port_template",
             "feed_leg",
             "description",
         ]
@@ -1091,14 +1091,16 @@ class PowerOutletTemplateForm(NautobotModelForm):
 
         super().__init__(*args, **kwargs)
 
-        # Limit power_port choices to current DeviceType
+        # Limit power_port_template choices to current DeviceType
         if hasattr(self.instance, "device_type"):
-            self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=self.instance.device_type)
+            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(
+                device_type=self.instance.device_type
+            )
 
 
 class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerOutletTypeChoices), required=False)
-    power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
+    power_port_template = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
     feed_leg = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletFeedLegChoices),
         required=False,
@@ -1110,7 +1112,7 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
         "name_pattern",
         "label_pattern",
         "type",
-        "power_port",
+        "power_port_template",
         "feed_leg",
         "description",
     )
@@ -1118,9 +1120,9 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit power_port choices to current DeviceType
+        # Limit power_port_template choices to current DeviceType
         device_type = DeviceType.objects.get(pk=self.initial.get("device_type") or self.data.get("device_type"))
-        self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
+        self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
 
 
 class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
@@ -1137,7 +1139,7 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
-    power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
+    power_port_template = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
     feed_leg = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletFeedLegChoices),
         required=False,
@@ -1146,18 +1148,18 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
     description = forms.CharField(required=False)
 
     class Meta:
-        nullable_fields = ["label", "type", "power_port", "feed_leg", "description"]
+        nullable_fields = ["label", "type", "power_port_template", "feed_leg", "description"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit power_port queryset to PowerPortTemplates which belong to the parent DeviceType
+        # Limit power_port_template queryset to PowerPortTemplates which belong to the parent DeviceType
         if "device_type" in self.initial:
             device_type = DeviceType.objects.filter(pk=self.initial["device_type"]).first()
-            self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
+            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
         else:
-            self.fields["power_port"].choices = ()
-            self.fields["power_port"].widget.attrs["disabled"] = True
+            self.fields["power_port_template"].choices = ()
+            self.fields["power_port_template"].widget.attrs["disabled"] = True
 
 
 class InterfaceTemplateForm(NautobotModelForm):
@@ -1214,27 +1216,29 @@ class FrontPortTemplateForm(NautobotModelForm):
             "name",
             "label",
             "type",
-            "rear_port",
+            "rear_port_template",
             "rear_port_position",
             "description",
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
-            "rear_port": StaticSelect2(),
+            "rear_port_template": StaticSelect2(),
         }
 
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
-        # Limit rear_port choices to current DeviceType
+        # Limit rear_port_template choices to current DeviceType
         if hasattr(self.instance, "device_type"):
-            self.fields["rear_port"].queryset = RearPortTemplate.objects.filter(device_type=self.instance.device_type)
+            self.fields["rear_port_template"].queryset = RearPortTemplate.objects.filter(
+                device_type=self.instance.device_type
+            )
 
 
 class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=PortTypeChoices, widget=StaticSelect2())
-    rear_port_set = forms.MultipleChoiceField(
+    rear_port_template_set = forms.MultipleChoiceField(
         choices=[],
         label="Rear ports",
         help_text="Select one rear port assignment for each front port being created.",
@@ -1245,7 +1249,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         "name_pattern",
         "label_pattern",
         "type",
-        "rear_port_set",
+        "rear_port_template_set",
         "description",
     )
 
@@ -1256,34 +1260,34 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
 
         # Determine which rear port positions are occupied. These will be excluded from the list of available mappings.
         occupied_port_positions = [
-            (front_port.rear_port_id, front_port.rear_port_position)
-            for front_port in device_type.frontporttemplates.all()
+            (front_port_template.rear_port_template_id, front_port_template.rear_port_position)
+            for front_port_template in device_type.front_port_templates.all()
         ]
 
         # Populate rear port choices
         choices = []
-        rear_ports = RearPortTemplate.objects.filter(device_type=device_type)
-        for rear_port in rear_ports:
-            for i in range(1, rear_port.positions + 1):
-                if (rear_port.pk, i) not in occupied_port_positions:
+        rear_port_templates = RearPortTemplate.objects.filter(device_type=device_type)
+        for rear_port_template in rear_port_templates:
+            for i in range(1, rear_port_template.positions + 1):
+                if (rear_port_template.pk, i) not in occupied_port_positions:
                     choices.append(
                         (
-                            f"{rear_port.pk}:{i}",
-                            f"{rear_port.name}:{i}",
+                            f"{rear_port_template.pk}:{i}",
+                            f"{rear_port_template.name}:{i}",
                         )
                     )
-        self.fields["rear_port_set"].choices = choices
+        self.fields["rear_port_template_set"].choices = choices
 
     def clean(self):
         super().clean()
 
         # Validate that the number of ports being created equals the number of selected (rear port, position) tuples
         front_port_count = len(self.cleaned_data["name_pattern"])
-        rear_port_count = len(self.cleaned_data["rear_port_set"])
+        rear_port_count = len(self.cleaned_data["rear_port_template_set"])
         if front_port_count != rear_port_count:
             raise forms.ValidationError(
                 {
-                    "rear_port_set": (
+                    "rear_port_template_set": (
                         f"The provided name pattern will create {front_port_count} ports, "
                         f"however {rear_port_count} rear port assignments were selected. These counts must match."
                     )
@@ -1293,10 +1297,10 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
     def get_iterative_data(self, iteration):
 
         # Assign rear port and position from selected set
-        rear_port, position = self.cleaned_data["rear_port_set"][iteration].split(":")
+        rear_port_template, position = self.cleaned_data["rear_port_template_set"][iteration].split(":")
 
         return {
-            "rear_port": rear_port,
+            "rear_port_template": rear_port_template,
             "rear_port_position": int(position),
         }
 
@@ -1466,6 +1470,10 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
 
 
 class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
+    power_port_template = forms.ModelChoiceField(
+        queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False
+    )
+    # Provided for backwards compatibility with netbox/devicetype-library
     power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False)
 
     class Meta:
@@ -1475,9 +1483,18 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "label",
             "type",
+            "power_port_template",
             "power_port",
             "feed_leg",
         ]
+
+    def is_valid(self):
+        """
+        Map an input of "power_port" to the model's expected "power_port_template" for devicetype-library compatibility.
+        """
+        if self.data["power_port"] and not self.data["power_port_template"]:
+            self.data["power_port_template"] = self.data["power_port"]
+        return super().is_valid()
 
 
 class InterfaceTemplateImportForm(ComponentTemplateImportForm):
@@ -1496,6 +1513,10 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
 
 class FrontPortTemplateImportForm(ComponentTemplateImportForm):
     type = forms.ChoiceField(choices=PortTypeChoices.CHOICES)
+    rear_port_template = forms.ModelChoiceField(
+        queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False
+    )
+    # Provided for backwards compatibility with netbox/devicetype-library
     rear_port = forms.ModelChoiceField(queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False)
 
     class Meta:
@@ -1504,9 +1525,18 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "name",
             "type",
+            "rear_port_template",
             "rear_port",
             "rear_port_position",
         ]
+
+    def is_valid(self):
+        """
+        Map an input of "rear_port" to the model's expected "rear_port_template" for devicetype-library compatibility.
+        """
+        if self.data["rear_port"] and not self.data["rear_port_template"]:
+            self.data["rear_port_template"] = self.data["rear_port"]
+        return super().is_valid()
 
 
 class RearPortTemplateImportForm(ComponentTemplateImportForm):
@@ -1585,7 +1615,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         query_params={
             "location": "$location",
-            "group": "$rack_group",
+            "rack_group": "$rack_group",
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
@@ -1843,7 +1873,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm, RoleRequiredR
             # Limit rack queryset by assigned location and group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -1989,7 +2019,7 @@ class DeviceFilterForm(
         null_option="None",
         query_params={
             "location": "$location",
-            "group": "$rack_group",
+            "rack_group": "$rack_group",
         },
     )
     manufacturer = DynamicModelMultipleChoiceField(
@@ -2924,7 +2954,7 @@ class FrontPortCreateForm(ComponentCreateForm):
         # Determine which rear port positions are occupied. These will be excluded from the list of available
         # mappings.
         occupied_port_positions = [
-            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.frontports.all()
+            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.front_ports.all()
         ]
 
         # Populate rear port choices
@@ -3959,7 +3989,7 @@ class VirtualChassisFilterForm(NautobotFilterForm):
         to_field_name="slug",
         required=False,
         null_option="None",
-        query_params={"group": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )
     tag = TagFilterField(model)
 
@@ -3998,7 +4028,7 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
         if data:
 
-            # Limit group queryset by assigned location
+            # Limit rack_group queryset by assigned location
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
@@ -4042,7 +4072,7 @@ class PowerFeedForm(NautobotModelForm):
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        initial_params={"powerpanels": "$power_panel"},
+        initial_params={"power_panels": "$power_panel"},
     )
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
     rack = DynamicModelChoiceField(
@@ -4119,7 +4149,7 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             # Limit rack queryset by location and group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -4153,7 +4183,6 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
-            "rackgroup",
             "comments",
         ]
 

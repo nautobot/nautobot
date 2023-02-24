@@ -2309,7 +2309,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,weight,color,content_types",
-            "test_role1,test-role1,1000,ffffff,dcim.device",
+            'test_role1,test-role1,1000,ffffff,"dcim.device"',
             'test_role2,test-role2,200,ffffff,"dcim.device,dcim.rack"',
             'test_role3,test-role3,100,ffffff,"dcim.device,ipam.prefix"',
             'test_role4,test-role4,50,ffffff,"ipam.ipaddress,ipam.vlan"',

@@ -744,7 +744,7 @@ class GraphQLQueryTest(TestCase):
             PowerPort.objects.create(device=cls.device1, name="Power Port 2"),
         ]
 
-        cls.device1_frontports = [
+        cls.device1_front_ports = [
             FrontPort.objects.create(
                 device=cls.device1,
                 name="Front Port 1",
@@ -1466,41 +1466,41 @@ query {
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_frontport_filter_second_level(self):
+    def test_query_front_port_filter_second_level(self):
         """Test "second-level" filtering of FrontPorts within a Devices query."""
 
         filters = (
-            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'name: "{self.device1_front_ports[0].name}"', 1),
             (f'device: "{self.device1.name}"', 4),
             (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
         for filterv, nbr_expected_results in filters:
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ frontports(" + filterv + "){ id }}}"
+                query = "query { devices{ front_ports(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
+                self.assertEqual(len(result.data["devices"][0]["front_ports"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_frontport_filter_third_level(self):
+    def test_query_front_port_filter_third_level(self):
         """Test "third-level" filtering of FrontPorts within Devices within Locations."""
 
         filters = (
-            (f'name: "{self.device1_frontports[0].name}"', 1),
+            (f'name: "{self.device1_front_ports[0].name}"', 1),
             (f'device: "{self.device1.name}"', 4),
             (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
         for filterv, nbr_expected_results in filters:
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { locations{ devices{ frontports(" + filterv + "){ id }}}}"
+                query = "query { locations{ devices{ front_ports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 for count, _ in enumerate(result.data["locations"]):
                     if result.data["locations"][count]["devices"]:
                         self.assertEqual(
-                            len(result.data["locations"][count]["devices"][0]["frontports"]), nbr_expected_results
+                            len(result.data["locations"][count]["devices"][0]["front_ports"]), nbr_expected_results
                         )
                         break
 

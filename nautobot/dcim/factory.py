@@ -350,7 +350,7 @@ class RackFactory(PrimaryModelFactory):
             "has_asset_tag",
             "has_comments",
             "has_facility_id",
-            "has_group",
+            "has_rack_group",
             "has_outer_depth",
             "has_outer_width",
             "has_role",
@@ -367,8 +367,8 @@ class RackFactory(PrimaryModelFactory):
 
     location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
 
-    has_group = NautobotBoolIterator()
-    group = factory.Maybe("has_group", random_instance(RackGroup), None)  # TODO there's no RackGroupFactory yet...
+    has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
+    rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
 
     has_tenant = factory.Faker("boolean")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
