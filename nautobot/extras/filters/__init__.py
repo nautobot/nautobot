@@ -1,4 +1,5 @@
 import django_filters
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
@@ -290,6 +291,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tag (slug)",
     )
 
+    # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
         super().__init__(*args, *kwargs)
 

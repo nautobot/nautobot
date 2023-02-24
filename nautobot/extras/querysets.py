@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
