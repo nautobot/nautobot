@@ -67,7 +67,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
 
-    def contribute_to_class(self, cls, name, *args, private_only=False, **kwargs):
+    def contribute_to_class(self, cls, *args, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
         attached to any model that is using a `StatusField`.
@@ -79,7 +79,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         `.get_status_display()` and a `.get_status_color()` method without
         having to define it on the model yourself.
         """
-        super().contribute_to_class(cls, name, *args, private_only=private_only, **kwargs)
+        super().contribute_to_class(cls, *args, **kwargs)
 
         def _get_FIELD_display(self, field):
             """
