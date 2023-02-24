@@ -1303,8 +1303,18 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         devices = Device.objects.all()
 
         # Create a device with no components for testing the "has_*" filters
+        device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturers[0],
+            comments="Non-component Device Type",
+            model="Non-component Model",
+            slug="non-component-model",
+            part_number="Part Number 1",
+            u_height=1,
+            is_full_depth=True,
+        )
+
         Device.objects.create(
-            device_type=DeviceType.objects.first(),
+            device_type=device_type,
             location=devices[0].location,
             name="Device 4",
             platform=Platform.objects.first(),
