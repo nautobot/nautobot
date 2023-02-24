@@ -153,7 +153,15 @@ class NautobotAppConfig(NautobotConfig):
         metrics = import_object(f"{self.__module__}.{self.metrics}")
         if metrics is not None:
             register_metrics(metrics)
-            self.features["metrics"] = metrics
+            self.features["metrics"] = []
+            for metric in metrics:
+                # Iterate over all the metric instances in this metric. This is done because a single callable might
+                # return multiple metrics with different names. Note: If a metric is _always_ returned from its
+                # callable, there would be inconsistency in the 'features' dict. This would however be a bad practice on
+                # the metric definition side, as any metric that _could_ exist _should_ always also exist, even if set
+                # to some initial value (ref: https://prometheus.io/docs/practices/instrumentation/#avoid-missing-metrics).
+                for metric_instance in metric():
+                    self.features["metrics"].append(metric_instance.name)
 
         # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
