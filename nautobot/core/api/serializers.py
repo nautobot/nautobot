@@ -7,10 +7,11 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
 )
 from django.db.models import AutoField, ManyToManyField
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.utils import dict_to_filter_params
 from nautobot.core.utils.requests import normalize_querydict
 
@@ -186,7 +187,21 @@ class WritableNestedSerializer(BaseModelSerializer):
     """
     Returns a nested representation of an object on read, but accepts either the nested representation or the
     primary key value on write operations.
+
+    Note that subclasses will always have a read-only `object_type` field, which represents the content-type of this
+    serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
+    PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
+    which of several possible nested serializers are in use for a given attribute.
     """
+
+    object_type = ObjectTypeField()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that the "object_type" field is always included in self.fields."""
+        fields = list(super().get_field_names(declared_fields, info))
+        if "object_type" not in fields:
+            fields.append("object_type")
+        return fields
 
     def get_queryset(self):
         return self.Meta.model.objects
@@ -247,6 +262,52 @@ class WritableNestedSerializer(BaseModelSerializer):
             return queryset.get(pk=pk)
         except ObjectDoesNotExist:
             raise ValidationError(f"Related object not found using the provided ID: {pk}")
+
+
+class PolymorphicProxySerializer(_PolymorphicProxySerializer):
+    """
+    Like the base class from drf-spectacular, this is a pseudo-serializer used to represent multiple possibilities.
+
+    Use with `@extend_schema_field` on the method associated with a SerializerMethodField that can return one of
+    several different possible nested serializers. For example:
+
+        @extend_schema_field(
+            PolymorphicProxySerializer(
+                component_name="some_field",   # must be the same as the serializer field being decorated
+                serializers=[
+                    NestedSomeModelSerializer,
+                    NestedAnotherModelSerializer,
+                ],
+                allow_null=True,  # optional!
+            )
+        )
+        def get_some_field(self, obj):
+            ...
+
+    This has two key enhancements compared to the base class:
+
+    1. You can pass a callable (such as a lambda function) as the `serializers` argument, allowing for deferred
+       loading/initialization of the serializer list.
+    2. Supports `allow_null` as an init parameter, similar to real serializers. This works in combination with
+       nautobot.core.api.schema.NautobotPolymorphicProxySerializerExtension to render nullable fields in the schema.
+    """
+
+    @property
+    def serializers(self):
+        """Return the serializers provided for this instance, evaluating them first if needed."""
+        if callable(self._serializers):
+            self._serializers = self._serializers()
+        return self._serializers
+
+    @serializers.setter
+    def serializers(self, value):
+        """Set the serializers for this instance."""
+        self._serializers = value
+
+    def __init__(self, *args, allow_null=False, **kwargs):
+        """Intercept the `allow_null` parameter that's not understood by the base class."""
+        super().__init__(*args, **kwargs)
+        self.allow_null = allow_null
 
 
 class BulkOperationSerializer(serializers.Serializer):

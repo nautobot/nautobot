@@ -10,9 +10,11 @@ from nautobot.core.api import (
     ContentTypeField,
     SerializedPKRelatedField,
 )
+from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
+    NestedInterfaceSerializer,
     NestedLocationSerializer,
 )
 from nautobot.extras.api.serializers import (
@@ -37,6 +39,7 @@ from nautobot.ipam.models import (
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
+    NestedVMInterfaceSerializer,
 )
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -349,7 +352,17 @@ class IPAddressSerializer(
         ]
         read_only_fields = ["family"]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="assigned_object",
+            resource_type_field_name="object_type",
+            serializers=[
+                NestedInterfaceSerializer,
+                NestedVMInterfaceSerializer,
+            ],
+            allow_null=True,
+        )
+    )
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None

@@ -16,6 +16,14 @@ def array_to_string(array):
     return ", ".join("-".join(map(str, (g[0], g[-1])[: len(g)])) for g in group)
 
 
+def get_all_concrete_subclasses(base_class):
+    """Yield all non-abstract subclasses of the given base_class, recursively."""
+    for subclass in base_class.__subclasses__():
+        yield from get_all_concrete_subclasses(subclass)
+        if not subclass._meta.abstract:
+            yield subclass
+
+
 def is_taggable(obj):
     """
     Return True if the instance can have Tags assigned to it; False otherwise.

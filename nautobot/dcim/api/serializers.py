@@ -12,7 +12,9 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.serializers import PolymorphicProxySerializer
+from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.models.utils import get_all_concrete_subclasses
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
@@ -39,6 +41,7 @@ from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEG
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableTermination,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -52,10 +55,11 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
+    PathEndpoint,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -139,7 +143,16 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
             return f"{obj._cable_peer._meta.app_label}.{obj._cable_peer._meta.model_name}"
         return None
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="cable_peer",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                get_all_concrete_subclasses(CableTermination), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_cable_peer(self, obj):
         """
         Return the appropriate serializer for the cable termination model.
@@ -168,7 +181,14 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
             return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
         return None
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="connected_endpoint",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(PathEndpoint), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_connected_endpoint(self, obj):
         """
         Return the appropriate serializer for the type of connected object.
@@ -1191,11 +1211,29 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
 
         return data
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="termination_a",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                get_all_concrete_subclasses(CableTermination), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_termination_a(self, obj):
         return self._get_termination(obj, "a")
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="termination_b",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                get_all_concrete_subclasses(CableTermination), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_termination_b(self, obj):
         return self._get_termination(obj, "b")
 
@@ -1241,7 +1279,13 @@ class CablePathSerializer(serializers.ModelSerializer):
             "is_split",
         ]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="origin",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(PathEndpoint), prefix="Nested"),
+        )
+    )
     def get_origin(self, obj):
         """
         Return the appropriate serializer for the origin.
@@ -1250,7 +1294,14 @@ class CablePathSerializer(serializers.ModelSerializer):
         context = {"request": self.context["request"]}
         return serializer(obj.origin, context=context).data
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="destination",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(PathEndpoint), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_destination(self, obj):
         """
         Return the appropriate serializer for the destination, if any.
