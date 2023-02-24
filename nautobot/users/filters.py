@@ -49,12 +49,12 @@ class UserFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Group (name)",
     )
-    has_changes = RelatedMembershipBooleanFilter(
-        field_name="changes",
+    has_object_changes = RelatedMembershipBooleanFilter(
+        field_name="object_changes",
         label="Has Changes",
     )
-    changes = django_filters.ModelMultipleChoiceFilter(
-        field_name="changes",
+    object_changes = django_filters.ModelMultipleChoiceFilter(
+        field_name="object_changes",
         queryset=ObjectChange.objects.all(),
         label="Object Changes (ID)",
     )
