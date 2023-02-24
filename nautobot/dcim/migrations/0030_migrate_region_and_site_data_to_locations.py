@@ -178,6 +178,8 @@ def create_site_location_type_locations(
     for site, location in SITE_TO_LOCATION_LOOKUP.items():
         # move tags from Site to Location
         for tagged_item in tagged_item_class.objects.filter(content_type=site_ct, object_id=site.pk):
+            # If a tagged_item already exists for both the Site and the corresponding "Site" LocationType
+            # Location, just delete the tag for the Site instead of changing it.
             if tagged_item_class.objects.filter(
                 content_type=location_ct, object_id=location.pk, tag_id=tagged_item.tag_id
             ).exists():
