@@ -214,6 +214,9 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
     if Region.objects.exists():
         region_lt = LocationType.objects.create(name="Region", nestable=True)
         create_region_location_type_locations(region_class=Region, location_class=Location, region_lt=region_lt)
+        # make tag manager available in migration
+        # https://github.com/jazzband/django-taggit/issues/101
+        # https://github.com/jazzband/django-taggit/issues/454
         for region_loc in Location.objects.filter(location_type=region_lt):
             region_loc.tags = _NautobotTaggableManager(
                 through=extras_models.TaggedItem, model=Location, instance=region_loc, prefetch_cache_name="tags"
@@ -251,6 +254,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
                 exclude_lt="Region",
                 region_lt=region_lt,
             )
+            # make tag manager available in migration
             for site_loc in SITE_TO_LOCATION_LOOKUP.values():
                 site_loc.tags = _NautobotTaggableManager(
                     through=extras_models.TaggedItem, model=Location, instance=site_loc, prefetch_cache_name="tags"
@@ -280,6 +284,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             site_lt=site_lt,
             exclude_lt="Site",
         )
+        # make tag manager available in migration
         for site_loc in SITE_TO_LOCATION_LOOKUP.values():
             site_loc.tags = _NautobotTaggableManager(
                 through=extras_models.TaggedItem, model=Location, instance=site_loc, prefetch_cache_name="tags"
