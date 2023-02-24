@@ -222,13 +222,14 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
+    # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
         super().__init__(*args, *kwargs)
 
-    if settings.DYNAMIC_GROUP_CONFIG_CONTEXT_ENABLED:
-        self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
-            queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
-        )
+        if settings.DYNAMIC_GROUP_CONFIG_CONTEXT_ENABLED:
+            self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
+                queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+            )
 
     data = JSONField(label="")
 

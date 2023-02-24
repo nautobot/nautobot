@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
@@ -342,12 +343,18 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         many=True,
     )
     tags = serializers.SlugRelatedField(queryset=Tag.objects.all(), slug_field="slug", required=False, many=True)
-    dynamic_groups = SerializedPKRelatedField(
-        queryset=DynamicGroup.objects.all(),
-        serializer=NestedDynamicGroupSerializer,
-        required=False,
-        many=True,
-    )
+
+    # Conditional enablement of dynamic groups filtering
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.fields["dynamic_groups"] = SerializedPKRelatedField(
+                queryset=DynamicGroup.objects.all(),
+                serializer=NestedDynamicGroupSerializer,
+                required=False,
+                many=True,
+            )
 
     class Meta:
         model = ConfigContext
