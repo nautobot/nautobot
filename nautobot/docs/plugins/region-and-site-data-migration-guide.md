@@ -48,7 +48,7 @@ nautobot-server migrate example_app
 
 After you make sure that all `Site`/`Region` related models have `location` fields on them, it is time to migrate `Site`/`Region` references in your data to `Location`.
 
-Django doesn't automatically know how to do this; we have to create an empty migration file and write the migration script ourselves. This is also known as a [data migration](https://docs.djangoproject.com/en/4.1/topics/migrations/#data-migrations).
+Django doesn't automatically know how to do this; we have to create an empty migration file and write the migration script ourselves. This is also known as a [data migration](https://docs.djangoproject.com/en/3.2/topics/migrations/#data-migrations).
 
 Create a migration file first by running `nautobot-server makemigrations [app_name] -n [migration_file_name] --empty`, for example:
 
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
 
 !!! warning
     First we need to add a mandatory dependency to a Nautobot 2.0 migration file, namely `("dcim", "0030_migrate_region_and_site_data_to_locations")`. This dependent migration is very important as it creates the `Location` and `LocationType` records corresponding to the existing `Site`/`Region` records, which you will need to reference to migrate your data.
-    **Without it, you data migration might not work!**
+    **Without it, your data migration might not work!**
 
 ```python
     dependencies = [
