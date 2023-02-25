@@ -212,86 +212,68 @@ def update_registry_with_new_apps():
     """
     Updates the registry with new apps.
 
-    This function updates the registry model features for models.
+    This function updates the registry model features.
+
+    Behavior:
+    - Defines a list of dictionaries called lookup_confs. Each dictionary contains:
+        - 'feature_name': the name of the feature to be updated in the registry.
+        - 'field_names': a list of names of fields that must be present in order for the model to be considered
+                        a valid model_feature.
+        - 'field_attributes': optional dictionary of attributes to filter the fields by.
+    - Looks up all the models in the installed apps.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - Groups the results by app and updates the registry model features for each app.
     """
-    from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role
+    RelationshipAssociation = apps.get_model(app_label="extras", model_name="relationshipassociation")
 
     lookup_confs = [
         {
-            "model": CustomField,
-            "lookup_by": "field",
+            "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
         },
         {
-            "model": Relationship,
-            "lookup_by": "field",
+            "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
-            "extras": {"related_model": RelationshipAssociation},
+            "field_attributes": {"related_model": RelationshipAssociation},
         },
-        {"model": Role, "lookup_by": "related_model", "related_model": Role},
     ]
 
     app_models = apps.get_models()
     for lookup_conf in lookup_confs:
-        if lookup_conf["lookup_by"] == "field":
-            result = lookup_by_field(
-                app_models=app_models,
-                field_names=lookup_conf["field_names"],
-                extras=lookup_conf.get("extras"),
-            )
-        else:
-            result = lookup_by_related_model(app_models=app_models, related_model=lookup_conf["related_model"])
-        registry_items = {key: list(value) for key, value in result.items()}
-        feature_name = lookup_conf["model"]._meta.model_name
+        registry_items = lookup_by_field(
+            app_models=app_models,
+            field_names=lookup_conf["field_names"],
+            field_attributes=lookup_conf.get("field_attributes"),
+        )
+        feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
 
 
-def lookup_by_field(app_models, field_names, extras=None):
+def lookup_by_field(app_models, field_names, field_attributes=None):
     """
     Find all models that have fields with the specified names, and return them grouped by app.
 
     Args:
         app_models: A list of model classes to search through.
         field_names: A list of names of fields to look for.
-        extras: Optional dictionary of attributes to filter the fields by.
+        field_attributes: Optional dictionary of attributes to filter the fields by.
 
     Return:
         A dictionary where the keys are app labels and the values are sets of model names.
     """
-    apps_and_models = {}
+    registry_items = {}
+    field_attributes = field_attributes or {}
     for model_class in app_models:
         app_label, model_name = model_class._meta.label_lower.split(".")
         for field_name in field_names:
             try:
                 field = model_class._meta.get_field(field_name)
-                if extras is None or (
-                    extras and all([getattr(field, item, None) == value for item, value in extras.items()])
-                ):
-                    apps_and_models.setdefault(app_label, set()).add(model_name)
+                if all([getattr(field, item, None) == value for item, value in field_attributes.items()]):
+                    registry_items.setdefault(app_label, set()).add(model_name)
             except FieldDoesNotExist:
                 pass
-    return apps_and_models
-
-
-def lookup_by_related_model(app_models, related_model):
-    """
-    Find all models that have a field with a related_model attribute equal to the specified model, and return them
-    grouped by app.
-
-    Args:
-        app_models: A list of model classes to search through.
-        related_model: The related model to look for.
-
-    Return:
-        A dictionary where the keys are app labels and the values are sets of model names.
-    """
-    apps_and_models = {}
-    for model_class in app_models:
-        app_label, model_name = model_class._meta.label_lower.split(".")
-        for field in model_class._meta.fields:
-            if getattr(field, "related_model", None) == related_model:
-                apps_and_models.setdefault(app_label, set()).add(model_name)
-    return apps_and_models
+    registry_items = {key: list(value) for key, value in registry_items.items()}
+    return registry_items
 
 
 def generate_signature(request_body, secret):
