@@ -55,7 +55,6 @@ class RegistryTest(TestCase):
     def test_lookup_by_field(self):
         """Assert lookup_by_field returns the expected values"""
 
-        # Test for model features with field_attributes
         with self.subTest("Test for model features with field_attributes"):
             relationships_registry = lookup_by_field(
                 app_models=apps.get_models(),
