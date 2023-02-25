@@ -444,12 +444,11 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def test_field(self):
         fields = list(self.fields[:2])
         filter_params = [
-            {"field_id": [fields[0].pk, fields[1].pk]},
-            {"field": [fields[0].name, fields[1].pk]},
+            {"custom_field": [fields[0].name, fields[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(field__in=fields).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(custom_field__in=fields).distinct()
             )
 
 
