@@ -439,7 +439,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
             field.content_types.set([content_type])
 
         for num in range(3):
-            CustomFieldChoice.objects.create(field=fields[num], value=f"Custom Field Choice {num}")
+            CustomFieldChoice.objects.create(custom_field=fields[num], value=f"Custom Field Choice {num}")
 
     def test_field(self):
         fields = list(self.fields[:2])
