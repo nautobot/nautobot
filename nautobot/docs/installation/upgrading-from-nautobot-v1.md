@@ -39,14 +39,14 @@
 | ConfigContextSchema     | `schema`                                | `config_context_schema`                        |
 |                         | `device_set`                            | `dcim_device_related`                          |
 |                         | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
-| ContentType             | `computedfield`                         | `computed_fields`                              |
-|                         | `configcontext`                         | `config_contexts`                              |
-|                         | `configcontextschema`                   | `config_context_schemas`                       |
-|                         | `customlink`                            | `custom_links`                                 |
-|                         | `dynamicgroup`                          | `dynamic_groups`                               |
-|                         | `exporttemplate`                        | `export_templates`                             |
-|                         | `imageattachment`                       | `image_attachments`                            |
-|                         | `note`                                  | `notes`                                        |
+| ContentType             | `computedfield_set`                     | `computed_fields`                              |
+|                         | `configcontext_set`                     | `config_contexts`                              |
+|                         | `configcontextschema_set`               | `config_context_schemas`                       |
+|                         | `customlink_set`                        | `custom_links`                                 |
+|                         | `dynamicgroup_set`                      | `dynamic_groups`                               |
+|                         | `exporttemplate_set`                    | `export_templates`                             |
+|                         | `imageattachment_set`                   | `image_attachments`                            |
+|                         | `note_set`                              | `notes`                                        |
 | CustomFieldChoice       | `field`                                 | `custom_field`                                 |
 | CustomField             | `choices`                               | `custom_field_choices`                         |
 | Device                  | `consoleports`                          | `console_ports`                                |
@@ -94,11 +94,11 @@
 | Region                  | `level`                                 | `tree_depth`                                   |
 | Relationship            | `associations`                          | `relationship_associations`                    |
 | Secret                  | `groups`                                | `secrets_groups`                               |
-|                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
+|                         | `secretsgroupassociation_set`           | `secrets_group_associations`                   |
 | SecretsGroup            | `device_set`                            | `devices`                                      |
 |                         | `deviceredundancygroup_set`             | `device_redundancy_groups`                     |
-|                         | `gitrepository`                         | `git_repositories`                             |
-|                         | `secretsgroupassociation`               | `secrets_group_associations`                   |
+|                         | `gitrepository_set`                     | `git_repositories`                             |
+|                         | `secretsgroupassociation_set`           | `secrets_group_associations`                   |
 | SecretsGroupAssociation | `group`                                 | `secrets_group`                                |
 | Service                 | `ipaddresses`                           | `ip_addresses`                                 |
 | Tenant                  | `group`                                 | `tenant_group`                                 |
