@@ -1405,7 +1405,7 @@ class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_feed_leg(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A),

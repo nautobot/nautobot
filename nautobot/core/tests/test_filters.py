@@ -371,7 +371,9 @@ class TestModel(django_models.Model):
 
     charfield = django_models.CharField(max_length=10)
     choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
-    charchoicefield = models.CharField(choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10)
+    charchoicefield = django_models.CharField(
+        choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
+    )
     datefield = django_models.DateField()
     datetimefield = django_models.DateTimeField()
     decimalfield = django_models.DecimalField(max_digits=9, decimal_places=6)
