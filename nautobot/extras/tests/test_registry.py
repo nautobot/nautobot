@@ -59,7 +59,7 @@ class RegistryTest(TestCase):
             relationships_registry = lookup_by_field(
                 app_models=apps.get_models(),
                 field_names=["source_for_associations", "destination_for_associations"],
-                field_attributes={"related_model": RelationshipAssociation}
+                field_attributes={"related_model": RelationshipAssociation},
             )
             self.assertEqual(relationships_registry, registry["model_features"]["relationships"])
 
