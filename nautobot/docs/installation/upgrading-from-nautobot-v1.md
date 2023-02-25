@@ -23,13 +23,13 @@
 
 | Model                   | Renamed Field                           | New Name                                       |
 |-------------------------|-----------------------------------------|------------------------------------------------|
-| CablePath               | `circuittermination`                    | `circuit_terminations`          |
-|                         | `consoleport`                           | `console_ports`                     |
-|                         | `consoleserverport`                     | `console_server_ports`               |
-|                         | `interface`                             | `interfaces`                       |
-|                         | `powerfeed`                             | `power_feeds `                       |
-|                         | `poweroutlet`                           | `power_outlets`                     |
-|                         | `powerport`                             | `power_ports`                       |
+| CablePath               | `circuittermination`                    | `circuit_terminations`                         |
+|                         | `consoleport`                           | `console_ports`                                |
+|                         | `consoleserverport`                     | `console_server_ports`                         |
+|                         | `interface`                             | `interfaces`                                   |
+|                         | `powerfeed`                             | `power_feeds `                                 |
+|                         | `poweroutlet`                           | `power_outlets`                                |
+|                         | `powerport`                             | `power_ports`                                  |
 | Circuit                 | `termination_a`                         | `circuit_termination_a`                        |
 |                         | `termination_z`                         | `circuit_termination_z`                        |
 |                         | `terminations`                          | `circuit_terminations`                         |
@@ -37,8 +37,10 @@
 | Cluster                 | `group`                                 | `cluster_group`                                |
 |                         | `type`                                  | `cluster_type`                                 |
 | ConfigContextSchema     | `schema`                                | `config_context_schema`                        |
-|                         | `device_set`                            | `dcim_device_related`                          |
-|                         | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
+|                         | `device_set`                            | `devices`                                      |
+|                         | `virtualmachine_set`                    | `virtual_machines`                             |
+| ContentType             | `dcim_device_related`                   | `devices`                                      |
+|                         | `virtualization_virtualmachine_related` | `virtual_machines`                             |
 | ContentType             | `computedfield_set`                     | `computed_fields`                              |
 |                         | `configcontext_set`                     | `config_contexts`                              |
 |                         | `configcontextschema_set`               | `config_context_schemas`                       |
@@ -101,6 +103,19 @@
 |                         | `secretsgroupassociation_set`           | `secrets_group_associations`                   |
 | SecretsGroupAssociation | `group`                                 | `secrets_group`                                |
 | Service                 | `ipaddresses`                           | `ip_addresses`                                 |
+| Status                  | `circuits_circuit_related`              | `circuits`                                     |
+|                         | `dcim_cable_related`                    | `cables`                                       |
+|                         | `dcim_device_related`                   | `devices`                                      |
+|                         | `dcim_deviceredundancygroup_related`    | `device_redundancy_groups`                     |
+|                         | `dcim_interface_related`                | `interfaces`                                   |
+|                         | `dcim_location_related`                 | `locations`                                    |
+|                         | `dcim_powerfeed_related`                | `power_feeds`                                  |
+|                         | `dcim_rack_related`                     | `racks`                                        |
+|                         | `ipam_ipaddress_related`                | `ip_addresses`                                 |
+|                         | `ipam_prefix_related`                   | `prefixes`                                     |
+|                         | `ipam_vlan_related`                     | `vlans`                                        |
+|                         | `virtualization_virtualmachine_related` | `virtual_machines`                             |
+|                         | `virtualization_vminterface_related`    | `vm_interfaces`                                |
 | Tenant                  | `group`                                 | `tenant_group`                                 |
 |                         | `rackreservations`                      | `rack_reservations`                            |
 | TenantGroup             | `level`                                 | `tree_depth`                                   |
