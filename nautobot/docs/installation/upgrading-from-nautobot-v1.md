@@ -27,7 +27,7 @@
 |                         | `consoleport`                           | `console_ports`                                |
 |                         | `consoleserverport`                     | `console_server_ports`                         |
 |                         | `interface`                             | `interfaces`                                   |
-|                         | `powerfeed`                             | `power_feeds `                                 |
+|                         | `powerfeed`                             | `power_feeds`                                  |
 |                         | `poweroutlet`                           | `power_outlets`                                |
 |                         | `powerport`                             | `power_ports`                                  |
 | Circuit                 | `termination_a`                         | `circuit_termination_a`                        |
