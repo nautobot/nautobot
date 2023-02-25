@@ -662,7 +662,7 @@ class BaseFilterSetTest(TestCase):
         self.assertEqual(self.filters["timefield__gte"].exclude, False)
 
     def test_multiple_choice_filter(self):
-        for field in ["multiplechoicefield", "charchoicefield"]:
+        for field in ["multiplechoicefield", "charchoicefield", "choicefield"]:
             self.assertIsInstance(self.filters[field], django_filters.MultipleChoiceFilter)
             self.assertEqual(self.filters[field].lookup_expr, "exact")
             self.assertEqual(self.filters[field].exclude, False)
