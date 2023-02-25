@@ -216,10 +216,10 @@ def update_registry_with_new_apps():
 
     Behavior:
     - Defines a list of dictionaries called lookup_confs. Each dictionary contains:
-        - 'feature_name': the name of the feature to be updated in the registry.
-        - 'field_names': a list of names of fields that must be present in order for the model to be considered
+        - 'feature_name': The name of the feature to be updated in the registry.
+        - 'field_names': A list of names of fields that must be present in order for the model to be considered
                         a valid model_feature.
-        - 'field_attributes': optional dictionary of attributes to filter the fields by.
+        - 'field_attributes': Optional dictionary of attributes to filter the fields by.
     - Looks up all the models in the installed apps.
     - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
@@ -255,7 +255,7 @@ def lookup_by_field(app_models, field_names, field_attributes=None):
 
     Args:
         app_models: A list of model classes to search through.
-        field_names: A list of names of fields to look for.
+        field_names: A list of names of fields that must be present in order for the model to be considered
         field_attributes: Optional dictionary of attributes to filter the fields by.
 
     Return:
