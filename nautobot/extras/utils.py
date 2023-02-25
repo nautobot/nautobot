@@ -268,7 +268,7 @@ def lookup_by_field(app_models, field_names, field_attributes=None):
         for field_name in field_names:
             try:
                 field = model_class._meta.get_field(field_name)
-                if all([getattr(field, item, None) == value for item, value in field_attributes.items()]):
+                if all((getattr(field, item, None) == value for item, value in field_attributes.items())):
                     registry_items.setdefault(app_label, set()).add(model_name)
             except FieldDoesNotExist:
                 pass
