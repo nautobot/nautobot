@@ -23,13 +23,13 @@
 
 | Model                   | Renamed Field                           | New Name                                       |
 |-------------------------|-----------------------------------------|------------------------------------------------|
-| CablePath               | `circuittermination`                    | `circuits_circuittermination_related`          |
-|                         | `consoleport`                           | `dcim_consoleport_related`                     |
-|                         | `consoleserverport`                     | `dcim_consoleserverport_related`               |
-|                         | `interface`                             | `dcim_interface_related`                       |
-|                         | `powerfeed`                             | `dcim_powerfeed_related`                       |
-|                         | `poweroutlet`                           | `dcim_poweroutlet_related`                     |
-|                         | `powerport`                             | `dcim_powerport_related`                       |
+| CablePath               | `circuittermination`                    | `circuit_terminations`          |
+|                         | `consoleport`                           | `console_ports`                     |
+|                         | `consoleserverport`                     | `console_server_ports`               |
+|                         | `interface`                             | `interfaces`                       |
+|                         | `powerfeed`                             | `power_feeds `                       |
+|                         | `poweroutlet`                           | `power_outlets`                     |
+|                         | `powerport`                             | `power_ports`                       |
 | Circuit                 | `termination_a`                         | `circuit_termination_a`                        |
 |                         | `termination_z`                         | `circuit_termination_z`                        |
 |                         | `terminations`                          | `circuit_terminations`                         |
