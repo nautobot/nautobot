@@ -2,8 +2,8 @@
 
 from django.test import TestCase
 
-from nautobot.dcim.models import Device, DeviceType, DeviceRole, Interface, Manufacturer, Site
-from nautobot.extras.models.statuses import Status
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.extras.models import Role, Status
 from nautobot.ipam import forms, models
 
 
@@ -63,7 +63,7 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(slug="active")}
+        self.extra_data = {"status": Status.objects.get(slug="active"), "type": "network"}
 
 
 class IPAddressFormTest(BaseNetworkFormTest, TestCase):
@@ -94,14 +94,14 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         """Test primary IP of a device is not lost when adding a new IP to a different interface."""
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         status_active = Status.objects.get_for_model(Device).get(slug="active")
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device = Device.objects.create(
             name="Device 1",
-            site=site,
+            location=location,
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             status=status_active,
         )
         interface1 = Interface.objects.create(device=device, name="eth0")

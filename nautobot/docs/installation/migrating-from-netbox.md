@@ -53,8 +53,11 @@ Depending on the complexity of your scripts, reports, or plugins, and how tightl
 - `ipam.* -> nautobot.ipam.*`
 - `netbox.* -> nautobot.core.*`
 - `tenancy.* -> nautobot.tenancy.*`
-- `utilities.* -> nautobot.utilities.*`
+- `utilities.* -> nautobot.core.*`
 - `virtualization.* -> nautobot.virtualization.*`
+
++/- 2.0.0
+    The equivalent of NetBox's `utilities` module moved from `nautobot.utilities` to `nautobot.core`.
 
 ### Update Your other Integration Code
 

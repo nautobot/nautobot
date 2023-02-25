@@ -1,0 +1,3 @@
+Fixed incorrect `field_class` when filtering `FloatField` and `DecimalField` model fields.
+Fixed inability to provide non-integer values when filtering on `FloatField` and `DecimalField` fields in GraphQL.
+Fixed inability to specify partial substrings in the UI when filtering by MAC address.

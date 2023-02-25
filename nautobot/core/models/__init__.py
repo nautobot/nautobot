@@ -2,7 +2,7 @@ import uuid
 
 from django.db import models
 
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class BaseModel(models.Model):
@@ -45,7 +45,7 @@ class BaseModel(models.Model):
         which in effect enforces model validation prior to saving the instance, without having
         to manually make these calls seperately. This is a slight departure from Django norms,
         but is intended to offer an optional, simplified interface for performing this common
-        workflow. The indended use is for user defined Jobs and scripts run via the `nbshell`
+        workflow. The intended use is for user defined Jobs and scripts run via the `nautobot-server nbshell`
         command.
         """
         self.full_clean()

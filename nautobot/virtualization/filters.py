@@ -1,17 +1,7 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Region, Site
-from nautobot.extras.filters import (
-    CustomFieldModelFilterSetMixin,
-    LocalContextModelFilterSetMixin,
-    NautobotFilterSet,
-    StatusModelFilterSetMixin,
-)
-from nautobot.ipam.models import IPAddress, Service, VLAN
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
@@ -22,7 +12,18 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.utilities.utils import is_uuid
+from nautobot.core.utils.data import is_uuid
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Location, Platform
+from nautobot.extras.filters import (
+    CustomFieldModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
+    NautobotFilterSet,
+    RoleModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+)
+from nautobot.ipam.models import IPAddress, Service, VLAN
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -90,19 +91,21 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         field_name="virtual_machines",
         label="Has virtual machines",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID) - Deprecated (use group filter)",
     )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
+    cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID or slug)",
     )
-    type_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_type_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID) - Deprecated (use type filter)",
     )
-    type = NaturalKeyOrPKMultipleChoiceFilter(
+    cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID or slug)",
     )
@@ -118,6 +121,7 @@ class VirtualMachineFilterSet(
     LocalContextModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -126,22 +130,22 @@ class VirtualMachineFilterSet(
         },
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group",
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster__group",
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID or slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type",
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster__type",
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID or slug)",
     )
@@ -149,40 +153,11 @@ class VirtualMachineFilterSet(
         queryset=Cluster.objects.all(),
         label="Cluster (ID)",
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="cluster__site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="cluster__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__site",
-        queryset=Site.objects.all(),
-        label="Site (ID) - Deprecated (use site filter)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="cluster__site",
-        queryset=Site.objects.all(),
-        label="Site (ID or slug)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         field_name="cluster__location",
         to_field_name="slug",
         label="Location (slug or ID)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID) - Deprecated (use role filter)",
-    )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID or slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

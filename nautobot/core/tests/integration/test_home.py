@@ -1,9 +1,9 @@
 from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, Provider
-from nautobot.dcim.models import PowerFeed, PowerPanel, Site
+from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.models import Location, PowerFeed, PowerPanel
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 class HomeTestCase(SeleniumTestCase):
@@ -12,7 +12,7 @@ class HomeTestCase(SeleniumTestCase):
     fixtures = ["user-data.json"]  # bob/bob
     layout = {
         "Organization": {
-            "Sites": {"model": Site, "permission": "dcim.view_site"},
+            "Locations": {"model": Location, "permission": "dcim.view_location"},
             "Tenant": {"model": Tenant, "permission": "tenancy.view_tenant"},
         },
         "Power": {
@@ -101,7 +101,7 @@ class HomeTestCase(SeleniumTestCase):
         """
         Render homepage with limited permissions.
         """
-        self.add_permissions("dcim.view_site")
+        self.add_permissions("dcim.view_location")
         self.add_permissions("circuits.view_circuit")
         user_permissions = self.user.get_all_permissions()
 
@@ -125,10 +125,10 @@ class HomeTestCase(SeleniumTestCase):
     def test_homepage_render_limit_permissions_with_restricted_ui(self):
         """
         Render homepage with limited permissions and restricted UI.
-        This restricts the user to be able to view ONLY sites and circuits.
+        This restricts the user to be able to view ONLY locations and circuits.
         It then checks the UI for these restrictions.
         """
-        self.add_permissions("dcim.view_site")
+        self.add_permissions("dcim.view_location")
         self.add_permissions("circuits.view_circuit")
         user_permissions = self.user.get_all_permissions()
 

@@ -5,15 +5,15 @@ from nautobot.dcim.choices import DeviceFaceChoices, InterfaceStatusChoices, Int
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
     Platform,
     Rack,
-    Site,
     VirtualChassis,
 )
-from nautobot.extras.models import SecretsGroup, Status
+from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
@@ -28,8 +28,8 @@ class DeviceTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.site = Site.objects.first()
-        cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
 
         # Platforms that have a manufacturer.
         mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
@@ -42,31 +42,31 @@ class DeviceTestCase(TestCase):
         ).first()
         cls.manufacturer = cls.device_type.manufacturer
         cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
-        cls.device_role = DeviceRole.objects.first()
+        cls.device_role = Role.objects.get_for_model(Device).first()
 
         Device.objects.create(
             name="Device 1",
             status=Status.objects.get_for_model(Device).get(slug="active"),
             device_type=cls.device_type,
-            device_role=cls.device_role,
-            site=cls.site,
+            role=cls.device_role,
+            location=cls.location,
             rack=cls.rack,
             position=1,
         )
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         cluster_group = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
-        Cluster.objects.create(name="Cluster 1", type=cluster_type, group=cluster_group)
+        Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
         SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1")
 
     def test_racked_device(self):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1 + self.device_type.u_height,
@@ -81,11 +81,11 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "test",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1,
@@ -100,11 +100,11 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": None,
                 "position": None,
@@ -120,11 +120,11 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": DeviceFaceChoices.FACE_REAR,
                 "platform": None,
@@ -138,11 +138,11 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": self.device_role.pk,
+                "role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "position": 10,
                 "platform": None,
@@ -156,14 +156,14 @@ class DeviceTestCase(TestCase):
 class LabelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
-            device_role=device_role,
-            site=site,
+            role=device_role,
+            location=location,
         )
 
     def test_interface_label_count_valid(self):
@@ -197,20 +197,20 @@ class LabelTestCase(TestCase):
 class TestCableCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
         cls.device_1 = Device.objects.create(
             name="Device 1",
             device_type=device_type,
-            device_role=device_role,
-            site=site,
+            role=device_role,
+            location=location,
         )
         cls.device_2 = Device.objects.create(
             name="Device 2",
             device_type=device_type,
-            device_role=device_role,
-            site=site,
+            role=device_role,
+            location=location,
         )
         cls.interface_1 = Interface.objects.create(
             device=cls.device_1,
@@ -252,28 +252,28 @@ class TestCableCSVForm(TestCase):
 class TestInterfaceCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         cls.devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                location=location,
             ),
         )
 

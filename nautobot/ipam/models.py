@@ -11,15 +11,15 @@ from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Status, StatusModel
-from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import array_to_string, UtilizationData
+from nautobot.core.models.utils import array_to_string
+from nautobot.core.utils.data import UtilizationData
+from nautobot.dcim.models import Device, Interface
+from nautobot.extras.models import RoleModelMixin, Status, StatusModel
+from nautobot.extras.utils import extras_features
+from nautobot.ipam import choices
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.utilities.fields import JSONArrayField
-from .choices import IPAddressRoleChoices, ServiceProtocolChoices
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,
     IPADDRESS_ROLES_NONUNIQUE,
@@ -37,7 +37,6 @@ __all__ = (
     "IPAddress",
     "Prefix",
     "RIR",
-    "Role",
     "RouteTarget",
     "Service",
     "VLAN",
@@ -388,46 +387,6 @@ class Aggregate(PrimaryModel):
 
 @extras_features(
     "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class Role(OrganizationalModel):
-    """
-    A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
-    "Management."
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "weight", "description"]
-
-    class Meta:
-        ordering = ["weight", "name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("ipam:role", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.weight,
-            self.description,
-        )
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
@@ -438,10 +397,10 @@ class Role(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(PrimaryModel, StatusModel):
+class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
-    Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
+    Prefixes can optionally be assigned to Locations and VRFs.
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
     """
@@ -453,12 +412,10 @@ class Prefix(PrimaryModel, StatusModel):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
+    type = models.CharField(
+        max_length=50,
+        choices=choices.PrefixTypeChoices,
+        default=choices.PrefixTypeChoices.TYPE_NETWORK,
     )
     location = models.ForeignKey(
         to="dcim.Location",
@@ -490,46 +447,31 @@ class Prefix(PrimaryModel, StatusModel):
         null=True,
         verbose_name="VLAN",
     )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-        help_text="The primary function of this prefix",
-    )
-    is_pool = models.BooleanField(
-        verbose_name="Is a pool",
-        default=False,
-        help_text="All IP addresses within this prefix are considered usable",
-    )
     description = models.CharField(max_length=200, blank=True)
 
     objects = PrefixQuerySet.as_manager()
 
     csv_headers = [
         "prefix",
+        "type",
         "vrf",
         "tenant",
-        "site",
         "location",
         "vlan_group",
         "vlan",
         "status",
         "role",
-        "is_pool",
         "description",
     ]
     clone_fields = [
-        "site",
         "location",
         "vrf",
         "tenant",
         "vlan",
         "status",
         "role",
-        "is_pool",
         "description",
+        "type",
     ]
     dynamic_group_filter_fields = {
         "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
@@ -571,13 +513,6 @@ class Prefix(PrimaryModel, StatusModel):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def STATUS_CONTAINER(cls):  # pylint: disable=no-self-argument
-        """Return a cached "container" `Status` object for later reference."""
-        if getattr(cls, "__status_container", None) is None:
-            cls.__status_container = Status.objects.get_for_model(Prefix).get(slug="container")
-        return cls.__status_container
-
     def clean(self):
         super().clean()
 
@@ -596,10 +531,6 @@ class Prefix(PrimaryModel, StatusModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
@@ -618,15 +549,14 @@ class Prefix(PrimaryModel, StatusModel):
     def to_csv(self):
         return (
             self.prefix,
+            self.get_type_display(),
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
-            self.vlan.group.name if self.vlan and self.vlan.group else None,
+            self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
             self.role.name if self.role else None,
-            str(self.is_pool),
             self.description,
         )
 
@@ -660,7 +590,7 @@ class Prefix(PrimaryModel, StatusModel):
         Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
         Prefixes belonging to any VRF.
         """
-        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
+        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             return Prefix.objects.net_contained(self.prefix)
         else:
             return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
@@ -670,7 +600,7 @@ class Prefix(PrimaryModel, StatusModel):
         Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
         child IPAddresses belonging to any VRF.
         """
-        if self.vrf is None and self.status == Prefix.STATUS_CONTAINER:
+        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             return IPAddress.objects.net_host_contained(self.prefix)
         else:
             return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
@@ -694,7 +624,13 @@ class Prefix(PrimaryModel, StatusModel):
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
-        if self.family == 6 or self.is_pool or (self.family == 4 and self.prefix.prefixlen >= 31):
+        if any(
+            [
+                self.family == 6,
+                self.type == choices.PrefixTypeChoices.TYPE_POOL,
+                self.family == 4 and self.prefix.prefixlen >= 31,
+            ]
+        ):
             return available_ips
 
         # Omit first and last IP address from the available set
@@ -728,19 +664,25 @@ class Prefix(PrimaryModel, StatusModel):
     def get_utilization(self):
         """Get the child prefix size and parent size.
 
-        For Prefixes with a status of "container", get the number child prefixes. For all others, count child IP addresses.
+        For Prefixes with a type of "container", get the number child prefixes. For all others, count child IP addresses.
 
         Returns:
             UtilizationData (namedtuple): (numerator, denominator)
         """
-        if self.status == Prefix.STATUS_CONTAINER:
+        if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
             prefix_size = self.prefix.size
-            if self.prefix.version == 4 and self.prefix.prefixlen < 31 and not self.is_pool:
+            if all(
+                [
+                    self.prefix.version == 4,
+                    self.prefix.prefixlen < 31,
+                    self.type != choices.PrefixTypeChoices.TYPE_POOL,
+                ]
+            ):
                 prefix_size -= 2
             child_count = prefix_size - self.get_available_ips().size
             return UtilizationData(numerator=child_count, denominator=prefix_size)
@@ -757,7 +699,7 @@ class Prefix(PrimaryModel, StatusModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel, StatusModel):
+class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -790,13 +732,6 @@ class IPAddress(PrimaryModel, StatusModel):
         related_name="ip_addresses",
         blank=True,
         null=True,
-    )
-    role = models.CharField(
-        max_length=50,
-        choices=IPAddressRoleChoices,
-        blank=True,
-        help_text="The functional role of this IP",
-        db_index=True,
     )
     assigned_object_type = models.ForeignKey(
         to=ContentType,
@@ -971,7 +906,7 @@ class IPAddress(PrimaryModel, StatusModel):
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             obj_type,
             self.assigned_object_id,
             str(is_primary),
@@ -1030,9 +965,6 @@ class IPAddress(PrimaryModel, StatusModel):
 
     mask_length = property(fset=_set_mask_length)
 
-    def get_role_class(self):
-        return IPAddressRoleChoices.CSS_CLASSES.get(self.role)
-
 
 @extras_features(
     "custom_fields",
@@ -1049,13 +981,6 @@ class VLANGroup(OrganizationalModel):
     name = models.CharField(max_length=100, db_index=True)
     # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="vlan_groups",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1065,19 +990,19 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "site", "location", "description"]
+    csv_headers = ["name", "slug", "location", "description"]
 
     class Meta:
         ordering = (
-            "site",
+            "location",
             "name",
-        )  # (site, name) may be non-unique
+        )  # (location, name) may be non-unique
         unique_together = [
-            # 2.0 TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
+            # 2.0 TODO: since location is nullable, and NULL != NULL, this means that we can have multiple non-Location VLANGroups
             # with the same name. This should probably be fixed with a custom validate_unique() function!
-            ["site", "name"],
+            ["location", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["site", "slug"],
+            ["location", "slug"],
         ]
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
@@ -1087,10 +1012,6 @@ class VLANGroup(OrganizationalModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
@@ -1107,7 +1028,6 @@ class VLANGroup(OrganizationalModel):
         return (
             self.name,
             self.slug,
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.description,
         )
@@ -1116,7 +1036,7 @@ class VLANGroup(OrganizationalModel):
         """
         Return the first available VLAN ID (1-4094) in the group.
         """
-        vlan_ids = VLAN.objects.filter(group=self).values_list("vid", flat=True)
+        vlan_ids = VLAN.objects.filter(vlan_group=self).values_list("vid", flat=True)
         for i in range(1, 4095):
             if i not in vlan_ids:
                 return i
@@ -1134,23 +1054,16 @@ class VLANGroup(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class VLAN(PrimaryModel, StatusModel):
+class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
-    Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
+    Each VLAN must be assigned to a Location, however VLAN IDs need not be unique within a Location.
     A VLAN may optionally be assigned to a VLANGroup, within which all VLAN IDs and names but be unique.
 
     Like Prefixes, each VLAN is assigned an operational status and optionally a user-defined Role. A VLAN can have zero
     or more Prefixes assigned to it.
     """
 
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1158,7 +1071,7 @@ class VLAN(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    group = models.ForeignKey(
+    vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",
         on_delete=models.PROTECT,
         related_name="vlans",
@@ -1176,19 +1089,11 @@ class VLAN(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = [
-        "site",
         "location",
-        "group",
+        "vlan_group",
         "vid",
         "name",
         "tenant",
@@ -1197,9 +1102,8 @@ class VLAN(PrimaryModel, StatusModel):
         "description",
     ]
     clone_fields = [
-        "site",
         "location",
-        "group",
+        "vlan_group",
         "tenant",
         "status",
         "role",
@@ -1208,15 +1112,15 @@ class VLAN(PrimaryModel, StatusModel):
 
     class Meta:
         ordering = (
-            "site",
-            "group",
+            "location",
+            "vlan_group",
             "vid",
-        )  # (site, group, vid) may be non-unique
+        )  # (location, group, vid) may be non-unique
         unique_together = [
             # 2.0 TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
             # the same vid and name. We should probably fix this with a custom validate_unique() function.
-            ["group", "vid"],
-            ["group", "name"],
+            ["vlan_group", "vid"],
+            ["vlan_group", "name"],
         ]
         verbose_name = "VLAN"
         verbose_name_plural = "VLANs"
@@ -1232,10 +1136,6 @@ class VLAN(PrimaryModel, StatusModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
@@ -1243,24 +1143,22 @@ class VLAN(PrimaryModel, StatusModel):
                 )
 
         # Validate VLAN group
-        if self.group and self.group.site != self.site:
-            raise ValidationError({"group": f"VLAN group must belong to the assigned site ({self.site})."})
-
         if (
-            self.group is not None
+            self.vlan_group is not None
             and self.location is not None
-            and self.group.location is not None
-            and self.group.location not in self.location.ancestors(include_self=True)
+            and self.vlan_group.location is not None
+            and self.vlan_group.location not in self.location.ancestors(include_self=True)
         ):
             raise ValidationError(
-                {"group": f'The assigned group belongs to a location that does not include location "{self.location}".'}
+                {
+                    "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
+                }
             )
 
     def to_csv(self):
         return (
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
-            self.group.name if self.group else None,
+            self.vlan_group.name if self.vlan_group else None,
             self.vid,
             self.name,
             self.tenant.name if self.tenant else None,
@@ -1313,7 +1211,7 @@ class Service(PrimaryModel):
         blank=True,
     )
     name = models.CharField(max_length=100, db_index=True)
-    protocol = models.CharField(max_length=50, choices=ServiceProtocolChoices)
+    protocol = models.CharField(max_length=50, choices=choices.ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(
             validators=[
@@ -1323,7 +1221,7 @@ class Service(PrimaryModel):
         ),
         verbose_name="Port numbers",
     )
-    ipaddresses = models.ManyToManyField(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
         related_name="services",
         blank=True,

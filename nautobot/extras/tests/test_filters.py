@@ -4,18 +4,18 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
     Location,
+    LocationType,
     Manufacturer,
     Platform,
     Rack,
-    Region,
-    Site,
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -42,6 +42,7 @@ from nautobot.extras.filters import (
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
+    RoleFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -66,6 +67,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -76,9 +78,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.testing import FilterTestCases
-from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -91,16 +91,16 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="computed_field_one",
             label="Computed Field One",
-            template="{{ obj.name }} is the name of this site.",
+            template="{{ obj.name }} is the name of this location.",
             fallback_value="An error occurred while rendering this template.",
             weight=100,
         )
         # Field whose template will raise a TemplateError
         ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="bad_computed_field",
             label="Bad Computed Field",
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
@@ -109,7 +109,7 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         )
         # Field whose template will raise a TypeError
         ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="worse_computed_field",
             label="Worse Computed Field",
             template="{{ obj.images | list }}",
@@ -130,7 +130,7 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type(self):
-        params = {"content_type": "dcim.site"}
+        params = {"content_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_template(self):
@@ -153,7 +153,7 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         params = {"q": "dcim"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         # content_type__model
-        params = {"q": "site"}
+        params = {"q": "location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         # template
         params = {"q": "hello"}
@@ -170,14 +170,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = Region.objects.all()[:3]
-        sites = Site.objects.all()[:3]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
 
-        device_roles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-            DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
-        )
+        device_roles = Role.objects.get_for_model(Device)
         cls.device_roles = device_roles
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -206,14 +201,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type),
-            Cluster.objects.create(name="Cluster 3", type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]
 
-        cls.tenants = Tenant.objects.filter(group__isnull=True)[:3]
+        cls.tenants = Tenant.objects.filter(tenant_group__isnull=True)[:3]
 
         for i in range(0, 3):
             is_active = bool(i % 2)
@@ -222,8 +217,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
                 is_active=is_active,
                 data='{"foo": 123}',
             )
-            c.regions.set([regions[i]])
-            c.sites.set([sites[i]])
+            c.locations.set([cls.locations[i]])
             c.roles.set([device_roles[i]])
             c.device_types.set([device_types[i]])
             c.platforms.set([platforms[i]])
@@ -243,45 +237,24 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         params = {"is_active": False}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_region(self):
-        regions = list(Region.objects.all()[:2])
-        filter_params = [
-            {"region_id": [regions[0].pk, regions[1].pk]},
-            {"region": [regions[0].slug, regions[1].pk]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(regions__in=regions).distinct()
-            )
-
-    def test_site(self):
-        sites = list(Site.objects.all()[:2])
-        filter_params = [
-            {"site_id": [sites[0].pk, sites[1].pk]},
-            {"site": [sites[0].pk, sites[1].slug]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(sites__in=sites).distinct()
-            )
+    def test_location(self):
+        params = {"location_id": [self.locations[0].pk, self.locations[1].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["location_id"])
+        )
+        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(locations__slug__in=params["location"])
+        )
 
     def test_role(self):
-        device_roles = self.device_roles[:2]
-        params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
-        params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
-
-    def test_location(self):
-        locations = list(self.locations[:2])
-        filter_params = [
-            {"location_id": [locations[0].pk, locations[1].pk]},
-            {"location": [locations[0].pk, locations[1].slug]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=locations).distinct()
-            )
+        device_role = Role.objects.get_for_model(Device).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        params = {"role": [device_role.pk, vm_role.slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(roles__in=[vm_role, device_role]).distinct(),
+        )
 
     def test_type(self):
         device_types = list(self.device_types[:2])
@@ -379,7 +352,7 @@ class CustomLinkTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
 
         CustomLink.objects.create(
             content_type=obj_type,
@@ -432,7 +405,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        content_type = ContentType.objects.get_for_model(Site)
+        content_type = ContentType.objects.get_for_model(Location)
         fields = [
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=f"field {num}", required=False)
             for num in range(3)
@@ -463,7 +436,7 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        content_types = ContentType.objects.filter(model__in=["site", "rack", "device"])
+        content_types = ContentType.objects.filter(model__in=["location", "rack", "device"])
 
         ExportTemplate.objects.create(
             name="Export Template 1",
@@ -486,7 +459,7 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type(self):
-        params = {"content_type": ContentType.objects.get(model="site").pk}
+        params = {"content_type": ContentType.objects.get(model="location").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_search(self):
@@ -587,7 +560,7 @@ class GraphQLTestCase(FilterTestCases.NameSlugFilterTestCase):
             GraphQLQuery(
                 name="graphql-query-1",
                 slug="graphql-query-1",
-                query="{ query: sites {name} }",
+                query="{ query: locations {name} }",
             ),
             GraphQLQuery(
                 name="graphql-query-2",
@@ -629,7 +602,7 @@ query ($device: String!) {
       }
       napalm_driver
     }
-    site {
+    location {
       name
       slug
       vlans {
@@ -675,7 +648,7 @@ query ($device: String!) {
         color
       }
       tagged_vlans {
-        site {
+        location {
           name
         }
         id
@@ -694,7 +667,7 @@ query ($device: String!) {
             query.save()
 
     def test_query(self):
-        params = {"query": ["sites"]}
+        params = {"query": ["locations"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -705,27 +678,27 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site_ct = ContentType.objects.get(app_label="dcim", model="site")
+        location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1]),
+            Rack.objects.create(name="Rack 1", location=locations[0]),
+            Rack.objects.create(name="Rack 2", location=locations[1]),
         )
 
         ImageAttachment.objects.create(
-            content_type=site_ct,
-            object_id=sites[0].pk,
+            content_type=location_ct,
+            object_id=locations[0].pk,
             name="Image Attachment 1",
             image="http://example.com/image1.png",
             image_height=100,
             image_width=100,
         )
         ImageAttachment.objects.create(
-            content_type=site_ct,
-            object_id=sites[1].pk,
+            content_type=location_ct,
+            object_id=locations[1].pk,
             name="Image Attachment 2",
             image="http://example.com/image2.png",
             image_height=100,
@@ -753,13 +726,13 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type(self):
-        params = {"content_type": "dcim.site"}
+        params = {"content_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type_id_and_object_id(self):
         params = {
-            "content_type_id": ContentType.objects.get(app_label="dcim", model="site").pk,
-            "object_id": [Site.objects.first().pk],
+            "content_type_id": ContentType.objects.get(app_label="dcim", model="location").pk,
+            "object_id": [Location.objects.first().pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -822,8 +795,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 name=job.class_path,
                 user=User.objects.first(),
                 obj_type=ContentType.objects.get_for_model(Job),
-                status=JobResultStatusChoices.STATUS_RUNNING,
-                job_id=job.pk,
+                status=JobResultStatusChoices.STATUS_STARTED,
+                task_id=job.pk,
             )
 
     def test_job_model(self):
@@ -919,7 +892,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 
@@ -964,7 +937,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             User.objects.create(username="user3"),
         )
 
-        site = Site.objects.first()
+        location = Location.objects.first()
         ipaddress = IPAddress.objects.create(address="192.0.2.1/24")
 
         ObjectChange.objects.create(
@@ -972,27 +945,27 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             user_name=users[0].username,
             request_id=uuid.uuid4(),
             action=ObjectChangeActionChoices.ACTION_CREATE,
-            changed_object=site,
-            object_repr=str(site),
-            object_data={"name": site.name, "slug": site.slug},
+            changed_object=location,
+            object_repr=str(location),
+            object_data={"name": location.name, "slug": location.slug},
         )
         ObjectChange.objects.create(
             user=users[0],
             user_name=users[0].username,
             request_id=uuid.uuid4(),
             action=ObjectChangeActionChoices.ACTION_UPDATE,
-            changed_object=site,
-            object_repr=str(site),
-            object_data={"name": site.name, "slug": site.slug},
+            changed_object=location,
+            object_repr=str(location),
+            object_data={"name": location.name, "slug": location.slug},
         )
         ObjectChange.objects.create(
             user=users[1],
             user_name=users[1].username,
             request_id=uuid.uuid4(),
             action=ObjectChangeActionChoices.ACTION_DELETE,
-            changed_object=site,
-            object_repr=str(site),
-            object_data={"name": site.name, "slug": site.slug},
+            changed_object=location,
+            object_repr=str(location),
+            object_data={"name": location.name, "slug": location.slug},
         )
         ObjectChange.objects.create(
             user=users[1],
@@ -1038,11 +1011,11 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_changed_object_type(self):
-        params = {"changed_object_type": "dcim.site"}
+        params = {"changed_object_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_changed_object_type_id(self):
-        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="site").pk}
+        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_search(self):
@@ -1133,12 +1106,12 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, location=location),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -1251,12 +1224,12 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, location=location),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -1569,16 +1542,16 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_color(self):
         """Test the color search field."""
         params = {"color": [ColorChoices.COLOR_GREY]}
-        # This current expected count may change as more `Status` objects are
-        # imported by way of `extras.management.create_custom_statuses`. If as
-        # these objects are imported, and this test fails, this number will need
-        # to be adjusted.
-        expected_count = 4
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Status.objects.filter(color=ColorChoices.COLOR_GREY)
+        )
 
     def test_search(self):
         params = {"q": "active"}
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
+        # pylint: enable=unsupported-binary-operation
         q |= Q(content_types__model__icontains="active")
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
@@ -1605,10 +1578,10 @@ class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
-        params = {"content_types": ["dcim.site"]}
+        params = {"content_types": ["dcim.location"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertQuerysetEqual(filtered_data, Tag.objects.get_for_model(Site))
-        self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Site)[0])
+        self.assertQuerysetEqual(filtered_data, Tag.objects.get_for_model(Location))
+        self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Location)[0])
 
     def test_search(self):
         params = {"q": self.tags[0].slug}
@@ -1647,7 +1620,7 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
                 http_content_type=HTTP_CONTENT_TYPE_JSON,
             ),
         )
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
         for webhook in webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
@@ -1678,3 +1651,48 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = Role.objects.all()
+    filterset = RoleFilterSet
+
+    def test_content_types(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        device_roles = self.queryset.filter(content_types=device_ct)
+        params = {"content_types": ["dcim.device"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
+
+        rack_roles = self.queryset.filter(content_types=rack_ct)
+        params = {"content_types": ["dcim.rack"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, rack_roles)
+
+    def test_color(self):
+        """Test the color search field."""
+        params = {"color": [ColorChoices.COLOR_AMBER]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Role.objects.filter(color=ColorChoices.COLOR_AMBER)
+        )
+
+    def test_weight(self):
+        """Test the weight search field."""
+        instance = self.queryset.filter(weight__isnull=False).first()
+        params = {"weight": [instance.weight]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(weight=instance.weight)
+        )
+
+    def test_search(self):
+        value = self.queryset.first().name
+        params = {"q": value}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(name=value).distinct(),
+        )
+        value = self.queryset.first().pk
+        params = {"q": value}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk=value),
+        )

@@ -1,32 +1,26 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
     VRF,
-)
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
-    count_related,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
 )
 from . import serializers
 
@@ -92,28 +86,13 @@ class AggregateViewSet(NautobotModelViewSet):
 
 
 #
-# Roles
-#
-
-
-class RoleViewSet(NautobotModelViewSet):
-    queryset = Role.objects.annotate(
-        prefix_count=count_related(Prefix, "role"),
-        vlan_count=count_related(VLAN, "role"),
-    )
-    serializer_class = serializers.RoleSerializer
-    filterset_class = filters.RoleFilterSet
-
-
-#
 # Prefixes
 #
 
 
-class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
         "role",
-        "site",
         "status",
         "tenant",
         "vlan",
@@ -296,57 +275,16 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
 #
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]
-    ),
-    create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-)
-class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
         "nat_inside",
         "status",
+        "role",
         "tenant",
         "vrf__tenant",
     ).prefetch_related("tags", "assigned_object", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
-
-    # 2.0 TODO: Remove exception class and overloaded methods below
-    # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
-    class NATOutsideIncompatibleLegacyBehavior(APIException):
-        status_code = 412
-        default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
-        default_code = "precondition_failed"
-
-    def retrieve(self, request, pk=None, *args, **kwargs):
-        try:
-            return super().retrieve(request, pk)
-        except IPAddress.NATOutsideMultipleObjectsReturned:
-            raise self.NATOutsideIncompatibleLegacyBehavior
-
-    def list(self, request, *args, **kwargs):
-        try:
-            return super().list(request)
-        except IPAddress.NATOutsideMultipleObjectsReturned as e:
-            raise self.NATOutsideIncompatibleLegacyBehavior(
-                f"At least one object in the resulting list does not conform to pre-1.3 behavior. Please use API version 1.3. Item: {e.obj}, PK: {e.obj.pk}"
-            )
 
 
 #
@@ -355,7 +293,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -365,11 +303,11 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
-class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
-            "group",
-            "site",
+            "vlan_group",
+            "location",
             "status",
             "role",
             "tenant",
@@ -387,6 +325,6 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
-    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ipaddresses")
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ip_addresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

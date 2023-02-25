@@ -13,19 +13,15 @@
                 </tr>
                 <tr>
                     <td>Type</td>
-                    <td>{{ object.type|hyperlinked_object }}</td>
+                    <td>{{ object.cluster_type|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Group</td>
-                    <td>{{ object.group|hyperlinked_object }}</td>
+                    <td>{{ object.cluster_group|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
                     <td>{{ object.tenant|hyperlinked_object }}</td>
-                </tr>
-                <tr>
-                    <td>Site</td>
-                    <td>{{ object.site|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Location</td>
@@ -64,7 +60,7 @@
             {% if perms.virtualization.change_cluster %}
                 <div class="panel-footer noprint">
                     <div class="pull-right">
-                        <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?site={{ object.site.pk }}" class="btn btn-primary btn-xs">
+                        <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?location={{ object.location.pk }}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add devices
                         </a>

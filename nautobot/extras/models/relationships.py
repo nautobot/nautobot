@@ -11,19 +11,19 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.safestring import mark_safe
 
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery, extras_features
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     widgets,
 )
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
+from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class RelationshipModel(models.Model):
         "extras.RelationshipAssociation",
         content_type_field="source_type",
         object_id_field="source_id",
-        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_site', 'source_ipam_vlan'
+        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_location', 'source_ipam_vlan'
     )
     destination_for_associations = GenericRelation(
         "extras.RelationshipAssociation",

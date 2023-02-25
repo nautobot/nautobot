@@ -173,11 +173,10 @@ STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
 current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
-# We support all major.minor API versions from 1.2 to the present latest version.
-# This will need to be elaborated upon when we move to version 2.0
+# We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-assert current_major == "1", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+assert current_major == "2", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -186,7 +185,7 @@ REST_FRAMEWORK = {
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
     "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
-    "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
+    "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
@@ -197,7 +196,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
-    "DEFAULT_VERSION": "1.2",
+    "DEFAULT_VERSION": "2.0",
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
@@ -207,7 +206,7 @@ REST_FRAMEWORK = {
         # Custom operations
         "bulk_destroy": "bulk_delete",
     },
-    "VIEW_NAME_FUNCTION": "nautobot.utilities.api.get_view_name",
+    "VIEW_NAME_FUNCTION": "nautobot.core.api.utils.get_view_name",
 }
 
 
@@ -244,23 +243,9 @@ SPECTACULAR_SETTINGS = {
         "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
         "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "PrefixTypeChoices": "nautobot.ipam.choices.PrefixTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
-        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
-        #   enum naming encountered a non-optimally resolvable collision for fields named "status"
-        # By explicitly naming the enums ourselves we avoid this warning.
-        "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
-        "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
-        "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
-        "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
-        "IPAddressStatusChoices": "nautobot.ipam.api.serializers.IPAddressSerializer.status_choices",
-        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
-        "PowerFeedStatusChoices": "nautobot.dcim.api.serializers.PowerFeedSerializer.status_choices",
-        "PrefixStatusChoices": "nautobot.ipam.api.serializers.PrefixSerializer.status_choices",
-        "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
-        "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
-        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
         # result in this error:
         #   encountered multiple names for the same choice set
@@ -382,7 +367,6 @@ INSTALLED_APPS = [
     "django_jinja",
     "django_tables2",
     "django_prometheus",
-    "mptt",
     "social_django",
     "taggit",
     "timezone_field",
@@ -390,6 +374,7 @@ INSTALLED_APPS = [
     "nautobot.core",
     "django.contrib.admin",  # Must be after `nautobot.core` for template overrides
     "django_celery_beat",  # Must be after `nautobot.core` for template overrides
+    "django_celery_results",
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
@@ -398,9 +383,7 @@ INSTALLED_APPS = [
     "nautobot.extras",
     "nautobot.tenancy",
     "nautobot.users",
-    "nautobot.utilities",
     "nautobot.virtualization",
-    "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
@@ -523,7 +506,7 @@ CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi
 
 CONSTANCE_ADDITIONAL_FIELDS = {
     "per_page_defaults_field": [
-        "nautobot.utilities.forms.fields.JSONArrayFormField",
+        "nautobot.core.forms.fields.JSONArrayFormField",
         {
             "widget": "django.forms.TextInput",
             "base_field": django.forms.IntegerField(min_value=1),
@@ -666,14 +649,10 @@ CACHEOPS = {
     "auth.*": {"ops": ("fetch", "get")},
     "auth.permission": {"ops": "all"},
     "circuits.*": {"ops": "all"},
-    "dcim.inventoryitem": None,  # MPTT models are exempt due to raw SQL
-    "dcim.region": None,  # MPTT models are exempt due to raw SQL
-    "dcim.rackgroup": None,  # MPTT models are exempt due to raw SQL
     "dcim.*": {"ops": "all"},
     "ipam.*": {"ops": "all"},
     "extras.*": {"ops": "all"},
     "users.*": {"ops": "all"},
-    "tenancy.tenantgroup": None,  # MPTT models are exempt due to raw SQL
     "tenancy.*": {"ops": "all"},
     "virtualization.*": {"ops": "all"},
 }
@@ -682,8 +661,7 @@ CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
 CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
 
-# The django-redis cache is used to establish concurrent locks using Redis. The
-# django-rq settings will use the same instance/database by default.
+# The django-redis cache is used to establish concurrent locks using Redis.
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -697,27 +675,6 @@ CACHES = {
 }
 
 #
-# Django RQ (used for legacy background processesing)
-#
-
-# These defaults utilize the Django caches setting defined for django-redis.
-# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
-RQ_QUEUES = {
-    "default": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "check_releases": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "custom_fields": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "webhooks": {
-        "USE_REDIS_CACHE": "default",
-    },
-}
-
-#
 # Celery (used for background processing)
 #
 
@@ -725,10 +682,25 @@ RQ_QUEUES = {
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
 # Celery results backend URL to tell workers where to publish task results
-CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
+
+# Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.
+CELERY_RESULT_EXTENDED = True
+
+# A value of None or 0 means results will never expire (depending on backend specifications).
+CELERY_RESULT_EXPIRES = None
+
+# If set to True, result messages will be persistent. This means the messages won’t be lost after a broker restart.
+CELERY_RESULT_PERSISTENT = True
 
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
+
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+CELERY_TASK_SEND_SENT_EVENT = True
+
+# Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
+CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
 CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")

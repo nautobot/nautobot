@@ -3,9 +3,9 @@ from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
 from nautobot.extras.models.tags import TaggedItem
-from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg
-from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class ConfigContextQuerySet(RestrictedQuerySet):
@@ -14,27 +14,19 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
         """
 
-        # `device_role` for Device; `role` for VirtualMachine
-        role = getattr(obj, "device_role", None) or obj.role
+        role = obj.role
 
         # `device_type` for Device; `type` for VirtualMachine
         device_type = getattr(obj, "device_type", None)
 
         # Virtualization cluster for VirtualMachine
         cluster = getattr(obj, "cluster", None)
-        cluster_group = getattr(cluster, "group", None)
+        cluster_group = getattr(cluster, "cluster_group", None)
 
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
         # Get the group of the assigned tenant, if any
-        tenant_group = obj.tenant.group if obj.tenant else None
-
-        # Match against the directly assigned region as well as any parent regions.
-        region = getattr(obj.site, "region", None)
-        if region:
-            regions = region.get_ancestors(include_self=True)
-        else:
-            regions = []
+        tenant_group = obj.tenant.tenant_group if obj.tenant else None
 
         # Match against the directly assigned location as well as any parent locations
         location = getattr(obj, "location", None)
@@ -45,8 +37,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
 
         queryset = (
             self.filter(
-                Q(regions__in=regions) | Q(regions=None),
-                Q(sites=obj.site) | Q(sites=None),
                 Q(locations__in=locations) | Q(locations=None),
                 Q(roles=role) | Q(roles=None),
                 Q(device_types=device_type) | Q(device_types=None),
@@ -113,42 +103,25 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         }
         base_query = Q(
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
-            Q(cluster_groups=OuterRef("cluster__group")) | Q(cluster_groups=None),
+            Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
             Q(clusters=OuterRef("cluster")) | Q(clusters=None),
-            Q(tenant_groups=OuterRef("tenant__group")) | Q(tenant_groups=None),
+            Q(tenant_groups=OuterRef("tenant__tenant_group")) | Q(tenant_groups=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
             Q(tags__pk__in=Subquery(TaggedItem.objects.filter(**tag_query_filters).values_list("tag_id", flat=True)))
             | Q(tags=None),
             is_active=True,
         )
-
+        base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
         if self.model._meta.model_name == "device":
-            base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add(
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
-            region_field = "site__region"
+            base_query.add((Q(locations=OuterRef("location")) | Q(locations=None)), Q.AND)
 
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
-            base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
-            region_field = "cluster__site__region"
-
-        base_query.add(
-            (
-                Q(
-                    regions__tree_id=OuterRef(f"{region_field}__tree_id"),
-                    regions__level__lte=OuterRef(f"{region_field}__level"),
-                    regions__lft__lte=OuterRef(f"{region_field}__lft"),
-                    regions__rght__gte=OuterRef(f"{region_field}__rght"),
-                )
-                | Q(regions=None)
-            ),
-            Q.AND,
-        )
+            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(locations=None)), Q.AND)
 
         return base_query
 

@@ -7,7 +7,7 @@ from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 
 from .choices import CircuitTerminationSideChoices
@@ -196,7 +196,7 @@ class Circuit(PrimaryModel, StatusModel):
 
     cid = models.CharField(max_length=100, verbose_name="Circuit ID")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="circuits")
-    type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
+    circuit_type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -210,7 +210,7 @@ class Circuit(PrimaryModel, StatusModel):
     comments = models.TextField(blank=True)
 
     # Cache associated CircuitTerminations
-    termination_a = models.ForeignKey(
+    circuit_termination_a = models.ForeignKey(
         to="circuits.CircuitTermination",
         on_delete=models.SET_NULL,
         related_name="+",
@@ -218,7 +218,7 @@ class Circuit(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    termination_z = models.ForeignKey(
+    circuit_termination_z = models.ForeignKey(
         to="circuits.CircuitTermination",
         on_delete=models.SET_NULL,
         related_name="+",
@@ -230,7 +230,7 @@ class Circuit(PrimaryModel, StatusModel):
     csv_headers = [
         "cid",
         "provider",
-        "type",
+        "circuit_type",
         "status",
         "tenant",
         "install_date",
@@ -240,7 +240,7 @@ class Circuit(PrimaryModel, StatusModel):
     ]
     clone_fields = [
         "provider",
-        "type",
+        "circuit_type",
         "status",
         "tenant",
         "install_date",
@@ -262,7 +262,7 @@ class Circuit(PrimaryModel, StatusModel):
         return (
             self.cid,
             self.provider.name,
-            self.type.name,
+            self.circuit_type.name,
             self.get_status_display(),
             self.tenant.name if self.tenant else None,
             self.install_date,
@@ -284,15 +284,8 @@ class Circuit(PrimaryModel, StatusModel):
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
-    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
+    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="circuit_terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="circuit_terminations",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -323,7 +316,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return f"Termination {self.term_side}: {self.site or self.provider_network}"
+        return f"Termination {self.term_side}: {self.location or self.provider_network}"
 
     def get_absolute_url(self):
         return reverse("circuits:circuittermination", args=[self.pk])
@@ -331,19 +324,13 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     def clean(self):
         super().clean()
 
-        # Must define either site *or* provider network
-        if self.site is None and self.provider_network is None:
-            raise ValidationError("A circuit termination must attach to either a site or a provider network.")
-        if self.site and self.provider_network:
-            raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
+        # Must define either location *or* provider network
+        if self.location is None and self.provider_network is None:
+            raise ValidationError("A circuit termination must attach to either a location or a provider network.")
+        if self.location and self.provider_network:
+            raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
         # If and only if a site is defined, a location *may* also be defined.
         if self.location is not None:
-            if self.provider_network is not None:
-                raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {
@@ -370,6 +357,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     def get_peer_termination(self):
         peer_side = "Z" if self.term_side == "A" else "A"
         try:
-            return CircuitTermination.objects.select_related("site").get(circuit=self.circuit, term_side=peer_side)
+            return CircuitTermination.objects.select_related("location").get(circuit=self.circuit, term_side=peer_side)
         except CircuitTermination.DoesNotExist:
             return None

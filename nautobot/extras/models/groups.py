@@ -11,15 +11,16 @@ from django.db import models
 from django.urls import reverse
 from django.utils.functional import cached_property
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import DynamicModelChoiceField
+from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.forms.widgets import StaticSelect2
-from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
 
 logger = logging.getLogger(__name__)
@@ -229,6 +230,9 @@ class DynamicGroup(OrganizationalModel):
             # Null boolean fields need a special widget that doesn't save `False` when unchecked.
             if isinstance(modelform_field, forms.NullBooleanField):
                 modelform_field.widget = StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+
+            if isinstance(modelform_field, DynamicModelChoiceField):
+                modelform_field = filterset_field.field
 
             # Filter fields should never be required!
             modelform_field.required = False
@@ -478,6 +482,11 @@ class DynamicGroup(OrganizationalModel):
             field_name = f"{field_name}__{to_field_name}"
 
         lookup = f"{field_name}__{filter_field.lookup_expr}"
+        # has_{field_name} boolean filters uses `isnull` lookup expressions
+        # so when we generate queries for those filters we need to negate the value entered
+        # e.g (has_interfaces: True) == (interfaces__isnull: False)
+        if filter_field.lookup_expr == "isnull":
+            value = not value
 
         # Explicitly call generate_query_{filter_method} for a method filter.
         if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):
@@ -488,8 +497,8 @@ class DynamicGroup(OrganizationalModel):
         elif hasattr(filter_field, "generate_query"):
             # Is this a list of strings? Well let's resolve it to related model objects so we can
             # pass it to `generate_query` to get a correct Q object back out. When values are being
-            # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
-            # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
+            # reconstructed from saved filters, lists of slugs are common e.g. (`{"location": ["ams01",
+            # "ams02"]}`, the value being a list of location slugs (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model

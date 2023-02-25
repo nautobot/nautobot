@@ -13,13 +13,13 @@ Generally, passing multiple values for a single parameter will result in a logic
 
 ### Filtering by Choice Field
 
-Some models have fields which are limited to specific choices, such as the `status` field on the Prefix model. To find all available choices for this field, make an authenticated `OPTIONS` request to the model's list endpoint, and use `jq` to extract the relevant parameters:
+Some models have fields which are limited to specific choices, such as the `type` field on the Interface model. To find all available choices for this field, make an authenticated `OPTIONS` request to the model's list endpoint, and use `jq` to extract the relevant parameters:
 
 ```no-highlight
 curl -s -X OPTIONS \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
-http://nautobot/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
+http://nautobot/api/dcim/interfaces/ | jq ".actions.POST.type.choices"
 ```
 
 Example output:
@@ -27,22 +27,26 @@ Example output:
 ```json
 [
   {
-    "value": "container",
-    "display": "Container"
+    "value": "virtual",
+    "display": "Virtual"
   },
   {
-    "value": "active",
-    "display": "Active"
+    "value": "bridge",
+    "display": "Bridge"
   },
   {
-    "value": "reserved",
-    "display": "Reserved"
+    "value": "lag",
+    "display": "Link Aggregation Group (LAG)"
   },
   {
-    "value": "deprecated",
-    "display": "Deprecated"
-  }
-]
+    "value": "100base-tx",
+    "display": "100BASE-TX (10/100ME)"
+  },
+  {
+    "value": "1000base-t",
+    "display": "1000BASE-T (1GE)"
+  },
+...
 ```
 
 !!! note

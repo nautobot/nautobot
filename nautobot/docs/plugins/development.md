@@ -161,6 +161,10 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
+| `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
+
++++ 2.0.0
+    Support for the `searchable_models` attribute was added.
 
 !!! note
     All `required_settings` must be configured in `PLUGINS_CONFIG` in `nautobot_config.py` before the app can be used.
@@ -727,7 +731,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with _not_ `icontains` using the `ic` and `nic` expressions respectively.
 
-The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
+The dynamically-added lookup expressions can be found in the source code at [nautobot/core/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/constants.py) and the mapping logic can be found in [nautobot/core/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
 
 !!! tip
     For developers of apps that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.apps.filters.BaseFilterSet`.
@@ -864,6 +868,18 @@ class AnimalAdmin(NautobotModelAdmin):
 This will display the app and its model in the admin UI. Staff users can create, change, and delete model instances via the admin UI without needing to create a custom view.
 
 ![Nautobot app in the admin UI](../media/plugins/plugin_admin_ui.png)
+
+### Including Models in the Global Search
+
++++ 2.0.0
+
+Simply define a `searchable_models` array on the NautobotAppConfig for your app, listing the lowercase names of the model(s) from your app that you wish to include in the Nautobot global search.
+
+```python
+class AnimalSoundsConfig(NautobotAppConfig):
+    ...
+    searchable_models = ["animal"]
+```
 
 ### Integrating with GraphQL
 

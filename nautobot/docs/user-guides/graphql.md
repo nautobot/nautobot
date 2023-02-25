@@ -78,11 +78,11 @@ Simply querying the `/api/dcim/devices/` API route provides:
           "vc_position": null,
           "vc_priority": null,
           "comments": "",
-          "local_context_data": null,
+          "local_config_context_data": null,
           "tags": [],
           "custom_fields": {},
           "config_context": {},
-          "created": "2021-02-25",
+          "created": "2021-02-25T00:00:00Z",
           "last_updated": "2021-02-25T14:51:57.609598"
         }
       ]

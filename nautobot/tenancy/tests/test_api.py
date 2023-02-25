@@ -1,7 +1,7 @@
 from django.urls import reverse
 
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 
 
 class AppTest(APITestCase):
@@ -15,7 +15,7 @@ class AppTest(APITestCase):
 
 class TenantGroupTest(APIViewTestCases.APIViewTestCase):
     model = TenantGroup
-    brief_fields = ["_depth", "display", "id", "name", "slug", "tenant_count", "url"]
+    brief_fields = ["display", "id", "name", "slug", "tenant_count", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -61,12 +61,12 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Tenant 4",
                 "slug": "tenant-4",
-                "group": TenantGroup.objects.first().pk,
+                "tenant_group": TenantGroup.objects.first().pk,
             },
             {
                 "name": "Tenant 5",
                 "slug": "tenant-5",
-                "group": TenantGroup.objects.last().pk,
+                "tenant_group": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant 6",

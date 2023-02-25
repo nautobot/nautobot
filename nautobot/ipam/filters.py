@@ -4,11 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
@@ -17,14 +13,17 @@ from nautobot.utilities.filters import (
     SearchFilter,
     TagFilter,
 )
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Interface
+from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.ipam import choices
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from .choices import IPAddressRoleChoices
 from .models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -38,7 +37,6 @@ __all__ = (
     "IPAddressFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
-    "RoleFilterSet",
     "RouteTargetFilterSet",
     "ServiceFilterSet",
     "VLANFilterSet",
@@ -178,18 +176,13 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
             return queryset.none()
 
 
-class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
-        model = Role
-        fields = ["id", "name", "slug"]
-
-
 class PrefixFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
@@ -240,21 +233,12 @@ class PrefixFilterSet(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
+    type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
     tag = TagFilter()
 
     class Meta:
         model = Prefix
-        fields = ["id", "is_pool", "prefix"]
+        fields = ["id", "type", "prefix"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -329,7 +313,13 @@ class PrefixFilterSet(
         return queryset.filter(params)
 
 
-class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
+class IPAddressFilterSet(
+    NautobotFilterSet,
+    IPAMFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -408,7 +398,6 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
         method="_assigned_to_interface",
         label="Is assigned to an interface",
     )
-    role = django_filters.MultipleChoiceFilter(choices=IPAddressRoleChoices)
     tag = TagFilter()
 
     class Meta:
@@ -474,6 +463,7 @@ class VLANFilterSet(
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -490,24 +480,11 @@ class VLANFilterSet(
         label="Device (ID)",
         field_name="pk",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Group (ID) - Deprecated (use group filter)",
+        label="VLAN Group (slug or ID)",
     )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=VLANGroup.objects.all(),
-        label="Group (ID or slug)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
+
     tag = TagFilter()
 
     class Meta:
@@ -515,10 +492,12 @@ class VLANFilterSet(
         fields = ["id", "vid", "name"]
 
     def get_for_device(self, queryset, name, value):
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
+        # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
         try:
             device = Device.objects.get(id=value)
-            return queryset.filter(Q(site__isnull=True) | Q(site=device.site))
+            return queryset.filter(Q(location__isnull=True) | Q(location=device.location))
         except Device.DoesNotExist:
             return queryset.none()
 

@@ -5,28 +5,25 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 
+from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
+from nautobot.core.testing import TestCase
 from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Location,
     LocationType,
     Manufacturer,
     RearPort,
-    Region,
-    Site,
 )
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
+from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.forms.fields import MultiValueCharField
-from nautobot.utilities.forms.widgets import MultiValueCharInput
-from nautobot.utilities.testing import TestCase
 
 
 class DynamicGroupTestBase(TestCase):
@@ -35,12 +32,13 @@ class DynamicGroupTestBase(TestCase):
 
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
+        cls.lt = LocationType.objects.get(name="Campus")
 
-        cls.sites = [
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-            Site.objects.create(name="Site 4", slug="site-4"),
+        cls.locations = [
+            Location.objects.create(name="Location 1", slug="location-1", location_type=cls.lt),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=cls.lt),
+            Location.objects.create(name="Location 3", slug="location-3", location_type=cls.lt),
+            Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt),
         ]
 
         cls.manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -49,40 +47,40 @@ class DynamicGroupTestBase(TestCase):
             model="device Type 1",
             slug="device-type-1",
         )
-        cls.device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        cls.device_role = Role.objects.get_for_model(Device).first()
         cls.status_active = Status.objects.get_for_model(Device).get(slug="active")
         cls.status_planned = Status.objects.get_for_model(Device).get(slug="planned")
         cls.status_staged = Status.objects.get_for_model(Device).get(slug="staged")
 
         cls.devices = [
             Device.objects.create(
-                name="device-site-1",
+                name="device-location-1",
                 status=cls.status_active,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
-                site=cls.sites[0],
+                location=cls.locations[0],
             ),
             Device.objects.create(
-                name="device-site-2",
+                name="device-location-2",
                 status=cls.status_active,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
                 serial="abc123",
-                site=cls.sites[1],
+                location=cls.locations[1],
             ),
             Device.objects.create(
-                name="device-site-3",
+                name="device-location-3",
                 status=cls.status_planned,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
-                site=cls.sites[2],
+                location=cls.locations[2],
             ),
             Device.objects.create(
-                name="device-site-4",
+                name="device-location-4",
                 status=cls.status_staged,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 device_type=cls.device_type,
-                site=cls.sites[3],
+                location=cls.locations[3],
             ),
         ]
 
@@ -94,20 +92,20 @@ class DynamicGroupTestBase(TestCase):
                 filter={},
                 content_type=cls.device_ct,
             ),
-            # Site-1 only
+            # Location-1 only
             DynamicGroup.objects.create(
                 name="First Child",
                 slug="first-child",
                 description="The first child group",
-                filter={"site": ["site-1"]},
+                filter={"location": ["location-1"]},
                 content_type=cls.device_ct,
             ),
-            # Site-2 only
+            # Location-2 only
             DynamicGroup.objects.create(
                 name="Second Child",
                 slug="second-child",
                 description="A second child group",
-                filter={"site": ["site-3"]},
+                filter={"location": ["location-3"]},
                 content_type=cls.device_ct,
             ),
             # Empty filter to use for testing nesting.
@@ -208,14 +206,14 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             instance.validated_save()
 
         with self.assertRaises(ValidationError):
-            instance.filter = "site=ams01"
+            instance.filter = "location=ams01"
             instance.validated_save()
 
     def test_clean_filter_not_valid(self):
         """Test that an invalid filter dict raises an error."""
         instance = self.groups[0]
         with self.assertRaises(ValidationError):
-            instance.filter = {"site": -42}
+            instance.filter = {"location": -42}
             instance.validated_save()
 
     def test_clean_valid(self):
@@ -225,7 +223,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         old_filter = group.filter
 
         # Overload the filter and validate that it is the same afterward.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         group.validated_save()
         self.assertEqual(group.filter, new_filter)
@@ -236,8 +234,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_get_for_object(self):
         """Test `DynamicGroup.objects.get_for_object()`."""
-        device1 = self.devices[0]  # site-1
-        device4 = self.devices[-1]  # site-4
+        device1 = self.devices[0]  # location-1
+        device4 = self.devices[-1]  # location-4
 
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
@@ -265,7 +263,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Grab some values we'll used to setup the test case.
         device1 = self.devices[0]
         device2 = self.devices[1]
-        site = device1.site
         status = Status.objects.get(slug="active")
 
         # Create two LocationTypes (My Region > My Site)
@@ -274,7 +271,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         loc_type_site = LocationType.objects.create(name="My Site", slug="my-site", parent=loc_type_region)
         loc_type_site.content_types.add(self.device_ct)
 
-        loc_region = Location.objects.create(name="Location A", location_type=loc_type_region, site=site, status=status)
+        loc_region = Location.objects.create(name="Location A", location_type=loc_type_region, status=status)
         loc_site = Location.objects.create(
             name="Location B", location_type=loc_type_site, parent=loc_region, status=status
         )
@@ -284,7 +281,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device1.validated_save()
 
         # Add Location B to device2
-        device2.site = device1.site
         device2.location = loc_site
         device2.validated_save()
 
@@ -343,7 +339,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Test that we can get a full queryset
         qs = group.get_queryset()
-        devices = group.model.objects.filter(site=device1.site)
+        devices = group.model.objects.filter(location=device1.location)
 
         # Expect a single-member qs/list of Device names (only `device1`)
         expected = [device1.name]
@@ -415,6 +411,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
         self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
+        # See if a DynamicModelChoiceField is properly converted to a MultiMatchModelMultipleChoiceField
+        self.assertIsInstance(fields["cluster"], MultiMatchModelMultipleChoiceField)
+        self.assertIsInstance(fields["cluster"].widget, APISelectMultiple)
 
     def test_map_filter_fields_skip_missing(self):
         """
@@ -455,8 +454,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertTrue(hasattr(filterset, filter_field.method))
         self.assertTrue(hasattr(filterset, "generate_query_" + filter_field.method))
 
-    # 2.0 TODO(jathan): This is done using `DeviceFilterSet.pass_through_ports` at this time and
-    # should be revised as filter fields are vetted.
     def test_filter_method_generate_query(self):
         """
         Test that a filter with a filter method's corresponding `generate_query_{filter_method}` works as intended.
@@ -471,8 +468,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         )
 
         # Test that the filter returns the one device to which we added front/rear ports.
-        expected = ["device-site-1"]
-        filterset = group.filterset_class({"pass_through_ports": True}, Device.objects.all())
+        expected = ["device-location-1"]
+        filterset = group.filterset_class({"has_front_ports": True, "has_rear_ports": True}, Device.objects.all())
         devices = list(filterset.qs.values_list("name", flat=True))
         self.assertEqual(expected, devices)
 
@@ -514,6 +511,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotEqual(filter_fields, {})
         self.assertNotIn("q", filter_fields)
         self.assertIn("name", filter_fields)
+        self.assertIn("rack", filter_fields)
 
     def test_generate_filter_form(self):
         """Test `DynamicGroup.generate_filter_form()`."""
@@ -530,7 +528,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""
-        group1 = self.first_child  # Filter has `site`
+        group1 = self.first_child  # Filter has `location`
         self.assertEqual(group1.get_initial(), group1.filter)
         # Test if MultiValueCharField is properly pre-populated
         group2 = self.groups[6]  # Filter has `name`
@@ -553,12 +551,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filter, old_filter)
 
         # Now we'll do it using a manually crafted dict.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         self.assertEqual(group.filter, new_filter)
 
         # And a bad input
-        bad_filter = {"site": -42}
+        bad_filter = {"location": -42}
         with self.assertRaises(ValidationError):
             group.set_filter(bad_filter)
 
@@ -577,7 +575,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_clean_child_validation(self):
         """Test various ways in which adding a child group should fail."""
         parent = self.parent
-        parent.filter = {"site": ["site-1"]}
+        parent.filter = {"location": ["location-1"]}
         child = self.invalid_filter
 
         # parent.add_child() should fail
@@ -606,9 +604,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_generate_query_for_filter(self):
         """Test `DynamicGroup.generate_query_for_filter()`."""
         group = self.parent  # Any group will do, so why not this one?
-        multi_value = ["site-3"]
+        multi_value = ["location-3"]
         fs = group.filterset_class()
-        multi_field = fs.filters["site"]
+        multi_field = fs.filters["location"]
         multi_query = group.generate_query_for_filter(
             filter_field=multi_field,
             value=multi_value,
@@ -618,33 +616,32 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Assert that both querysets resturn the same results
         group_qs = queryset.filter(multi_query)
-        device_qs = Device.objects.filter(site__slug__in=multi_value)
+        device_qs = Device.objects.filter(location__slug__in=multi_value)
         self.assertQuerySetEqual(group_qs, device_qs)
 
         # Now do a non-multi-value filter.
-        # 2.0 TODO(jathan): When "serial" becomes a multi-value filter, this will need to be revised or removed.
-        solo_field = fs.filters["serial"]
-        solo_value = "abc123"
+        solo_field = fs.filters["has_interfaces"]
+        solo_value = False
         solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
         solo_qs = queryset.filter(solo_query)
-        serial_qs = Device.objects.filter(serial__iexact=solo_value)
-        self.assertQuerySetEqual(solo_qs, serial_qs)
+        interface_qs = Device.objects.filter(interfaces__isnull=True)
+        self.assertQuerySetEqual(solo_qs, interface_qs)
 
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
-        # test a regression w/ nested slug-related values such as `DeviceFilterSet.region` which
-        # filters on `site__region`.
-        parent_region = Region.objects.filter(children__isnull=False).first()
-        nested_value = [parent_region.slug]
-        group.set_filter({"region": nested_value})
+        # test a regression w/ nested slug-related values such as `DeviceFilterSet.macufacturer` which
+        # filters on `device_type__manufacturer`.
+        manufacturer = Manufacturer.objects.first()
+        nested_value = [manufacturer.slug]
+        group.set_filter({"manufacturer": nested_value})
         group.validated_save()
 
         # We are making sure the filterset generated from the slug as an argument results in the same
-        # filtered queryset, and more importantly that the nested filter expression `site__region`
+        # filtered queryset, and more importantly that the nested filter expression `device_type__manufacturer`
         # is automatically used to get the related model name without failing.
-        nested_query = group.generate_query_for_filter(filter_field=fs.filters["region"], value=nested_value)
+        nested_query = group.generate_query_for_filter(filter_field=fs.filters["manufacturer"], value=nested_value)
         nested_qs = queryset.filter(nested_query)
-        region_qs = Device.objects.filter(site__region__slug__in=nested_value)
-        self.assertQuerySetEqual(nested_qs, region_qs)
+        parent_qs = Device.objects.filter(device_type__manufacturer__slug__in=nested_value)
+        self.assertQuerySetEqual(nested_qs, parent_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
@@ -815,7 +812,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group_qs.count(), len(child_set))
 
         # And have the same members...
-        expected = ["device-site-3"]
+        expected = ["device-location-3"]
         self.assertEqual(sorted(group_qs.values_list("name", flat=True)), expected)
 
     def test_delete(self):

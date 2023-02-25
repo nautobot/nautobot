@@ -79,13 +79,6 @@ INTERFACE_TAGGED_VLANS = """
 {% endif %}
 """
 
-MPTT_LINK = """
-{% for i in record.get_ancestors %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
-<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
-"""
-
 
 TREE_LINK = """
 {% load helpers %}
@@ -110,7 +103,7 @@ POWERFEED_CABLETERMINATION = """
 """
 
 RACKGROUP_ELEVATIONS = """
-<a href="{% url 'dcim:rack_elevation_list' %}?site={{ record.site.slug }}&group_id={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
+<a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.slug }}&rack_group_id={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
     <i class="mdi mdi-server"></i>
 </a>
 """

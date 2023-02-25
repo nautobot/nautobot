@@ -6,7 +6,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -19,17 +19,21 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
     ModelViewSet,
     ReadOnlyModelViewSet,
 )
+from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
+from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -49,6 +53,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -61,14 +66,6 @@ from nautobot.extras.models import (
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import (
-    copy_safe_request,
-    count_related,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
-)
 from . import nested_serializers, serializers
 
 
@@ -176,8 +173,7 @@ class ConfigContextQuerySetMixin:
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContext.objects.prefetch_related(
-        "regions",
-        "sites",
+        "locations",
         "roles",
         "device_types",
         "platforms",
@@ -219,54 +215,10 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
 #
 
 
-@extend_schema_view(
-    bulk_partial_update=extend_schema(
-        filters=False,
-        request=serializers.CustomFieldSerializerVersion12(many=True),
-        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
-        versions=["1.2", "1.3"],
-    ),
-    bulk_update=extend_schema(
-        filters=False,
-        request=serializers.CustomFieldSerializerVersion12(many=True),
-        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
-        versions=["1.2", "1.3"],
-    ),
-    create=extend_schema(
-        request=serializers.CustomFieldSerializerVersion12,
-        responses={"201": serializers.CustomFieldSerializerVersion12},
-        versions=["1.2", "1.3"],
-    ),
-    list=extend_schema(
-        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    partial_update=extend_schema(
-        request=serializers.CustomFieldSerializerVersion12,
-        responses={"200": serializers.CustomFieldSerializerVersion12},
-        versions=["1.2", "1.3"],
-    ),
-    retrieve=extend_schema(responses={"200": serializers.CustomFieldSerializerVersion12}, versions=["1.2", "1.3"]),
-    update=extend_schema(
-        request=serializers.CustomFieldSerializerVersion12,
-        responses={"200": serializers.CustomFieldSerializerVersion12},
-        versions=["1.2", "1.3"],
-    ),
-)
 class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.CustomFieldSerializerVersion12),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
 
 
 class CustomFieldChoiceViewSet(ModelViewSet):
@@ -363,7 +315,6 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 
 
 class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
@@ -434,7 +385,6 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
 
 
 class ImageAttachmentViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
@@ -451,7 +401,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
-    job_kwargs = {
+    task_kwargs = {
         "data": data,
         "request": copy_safe_request(request),
         "user": request.user.pk,
@@ -490,7 +440,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
         job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
-        kwargs=job_kwargs,
+        kwargs=task_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
@@ -686,46 +636,6 @@ class JobViewSet(
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
-    # Custom schema for the deprecated 1.2 API version of this endpoint.
-    # For 1.3 and later, the standard autogenerated API schema is correct and does not need to be customized here.
-    @extend_schema(
-        filters=False,
-        responses={"200": serializers.JobClassSerializer(many=True)},
-        versions=["1.2"],
-    )
-    def list(self, request, *args, **kwargs):
-        """List all known Jobs."""
-        if request.major_version > 1 or request.minor_version >= 3:
-            # API version 1.3 or later - standard model-based response
-            return super().list(request, *args, **kwargs)
-
-        # API version 1.2 or earlier - serialize JobClass records
-        if not request.user.has_perm("extras.view_job"):
-            raise PermissionDenied("This user does not have permission to view jobs.")
-        job_content_type = get_job_content_type()
-        results = {
-            r.name: r
-            for r in JobResult.objects.filter(
-                obj_type=job_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
-            )
-            .defer("data")
-            .order_by("created")
-        }
-
-        job_models = Job.objects.restrict(request.user, "view")
-        jobs_list = [
-            job_model.job_class()  # TODO: why do we need to instantiate the job_class?
-            for job_model in job_models
-            if job_model.installed and job_model.job_class is not None
-        ]
-        for job_instance in jobs_list:
-            job_instance.result = results.get(job_instance.class_path, None)
-
-        serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
-
-        return Response(serializer.data)
-
     @extend_schema(
         deprecated=True,
         operation_id="extras_jobs_read_deprecated",
@@ -756,7 +666,7 @@ class JobViewSet(
         job.result = JobResult.objects.filter(
             obj_type=job_content_type,
             name=job.class_path,
-            status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+            status__in=JobResultStatusChoices.READY_STATES,
         ).first()
 
         serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
@@ -1063,7 +973,6 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 
 class NoteViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -1083,7 +992,6 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     Retrieve a list of recent changes.
     """
 
-    metadata_class = ContentTypeMetadata
     queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
@@ -1095,17 +1003,26 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 
 
 class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
     filterset_class = filters.RelationshipFilterSet
 
 
 class RelationshipAssociationViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+# Roles
+#
+
+
+class RoleViewSet(NautobotModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = serializers.RoleSerializer
+    filterset_class = RoleFilterSet
 
 
 #
@@ -1158,56 +1075,15 @@ class StatusViewSet(NautobotModelViewSet):
     filterset_class = filters.StatusFilterSet
 
 
-class StatusViewSetMixin(ModelViewSet):
-    """
-    Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
-    """
-
-    metadata_class = StatusFieldMetadata
-
-
 #
 # Tags
 #
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(
-        filters=False,
-        request=serializers.TagSerializer(many=True),
-        responses={"200": serializers.TagSerializer(many=True)},
-        versions=["1.2"],
-    ),
-    bulk_partial_update=extend_schema(
-        filters=False,
-        request=serializers.TagSerializer(many=True),
-        responses={"200": serializers.TagSerializer(many=True)},
-        versions=["1.2"],
-    ),
-    create=extend_schema(
-        request=serializers.TagSerializer, responses={"201": serializers.TagSerializer}, versions=["1.2"]
-    ),
-    partial_update=extend_schema(
-        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
-    ),
-    update=extend_schema(
-        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
-    ),
-    list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
-)
 class TagViewSet(NautobotModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
-    serializer_class = serializers.TagSerializerVersion13
+    serializer_class = serializers.TagSerializer
     filterset_class = filters.TagFilterSet
-
-    def get_serializer_class(self):
-        serializer_choices = (SerializerForAPIVersions(versions=["1.2"], serializer=serializers.TagSerializer),)
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
 
 
 #

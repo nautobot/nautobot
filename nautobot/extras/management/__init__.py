@@ -4,10 +4,10 @@ from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
 from nautobot.circuits import choices as circuit_choices
+from nautobot.core.choices import ColorChoices
 from nautobot.dcim import choices as dcim_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
-from nautobot.utilities.choices import ColorChoices
 
 
 # List of 2-tuples of (model_path, choiceset)
@@ -16,12 +16,12 @@ CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
+    "dcim.Site": dcim_choices.SiteStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
     "dcim.Rack": dcim_choices.RackStatusChoices,
     "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,
-    "dcim.Site": dcim_choices.SiteStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
@@ -36,7 +36,6 @@ COLOR_MAP = {
     "active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
     "available": ColorChoices.COLOR_GREEN,
     "connected": ColorChoices.COLOR_GREEN,
-    "container": ColorChoices.COLOR_GREY,
     "dhcp": ColorChoices.COLOR_GREEN,
     "decommissioned": ColorChoices.COLOR_GREY,
     "decommissioning": ColorChoices.COLOR_AMBER,
@@ -61,7 +60,6 @@ DESCRIPTION_MAP = {
     "active": "Unit is active",
     "available": "Unit is available",
     "connected": "Cable is connected",
-    "container": "Network contains children",
     "dhcp": "Dynamically assigned IPv4/IPv6 address",
     "decommissioned": "Circuit has been decommissioned",
     "decommissioning": "Unit is being decommissioned",
@@ -74,10 +72,10 @@ DESCRIPTION_MAP = {
     "planned": "Unit has been planned",
     "provisioning": "Circuit is being provisioned",
     "reserved": "Unit is reserved",
-    "retired": "Site or Location has been retired",
+    "retired": "Location has been retired",
     "slaac": "Dynamically assigned IPv6 address",
     "staged": "Unit has been staged",
-    "staging": "Site or Location is in the process of being staged",
+    "staging": "Location is in the process of being staged",
 }
 
 
@@ -94,9 +92,7 @@ def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    app_config = apps.get_app_config("extras")
-    # TODO: why can't/shouldn't we pass `apps` through to create_custom_statuses? We get failures if we do, but why?
-    create_custom_statuses(app_config, **kwargs)
+    create_custom_statuses(apps=apps, **kwargs)
 
 
 def export_statuses_from_choiceset(choiceset, color_map=None, description_map=None):
@@ -127,10 +123,10 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
 
 
 def create_custom_statuses(
-    app_config=None,
+    app_config=None,  # unused
     verbosity=2,
     interactive=True,
-    using=DEFAULT_DB_ALIAS,
+    using=DEFAULT_DB_ALIAS,  # unused
     apps=global_apps,
     models=None,
     **kwargs,
@@ -141,12 +137,14 @@ def create_custom_statuses(
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
     """
+
+    # Only print a newline if we have verbosity!
+    if verbosity > 0:
+        print("\n", end="")
+
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
-
-    if verbosity >= 0:
-        print("\n", end="")
 
     if not models:
         models = CHOICESET_MAP.keys()

@@ -9,21 +9,21 @@ from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
+    Location,
+    LocationType,
     Manufacturer,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
     PowerPort,
     RearPort,
-    Site,
 )
 
 from nautobot.dcim.utils import object_to_path_node
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 
 
 class CablePathTestCase(TestCase):
@@ -40,25 +40,25 @@ class CablePathTestCase(TestCase):
     def setUpTestData(cls):
 
         # Create a single device that will hold all components
-        cls.site = Site.objects.first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
+        device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         cls.device = Device.objects.create(
-            site=cls.site,
+            location=cls.location,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="Test Device",
             status=device_status,
         )
 
-        cls.powerpanel = PowerPanel.objects.create(site=cls.site, name="Power Panel")
+        cls.powerpanel = PowerPanel.objects.create(location=cls.location, name="Power Panel")
 
         provider = Provider.objects.create(name="Provider", slug="provider")
         circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
-        cls.circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Circuit 1")
+        cls.circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Circuit 1")
 
         cls.statuses = Status.objects.get_for_model(Cable)
         cls.status = cls.statuses.get(slug="connected")
@@ -261,7 +261,9 @@ class CablePathTestCase(TestCase):
         [IF1] --C1-- [CT1A]
         """
         interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
 
         # Create cable 1
         cable1 = Cable(
@@ -1184,8 +1186,12 @@ class CablePathTestCase(TestCase):
         """
         interface1 = Interface.objects.create(device=self.device, name="Interface 1")
         interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
-        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
+        circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="Z"
+        )
 
         # Create cable 1
         cable1 = Cable(
@@ -1260,7 +1266,9 @@ class CablePathTestCase(TestCase):
         """
         interface1 = Interface.objects.create(device=self.device, name="Interface 1")
         interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
 
         # Create cable 1
         cable1 = Cable(
@@ -1277,7 +1285,9 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
 
-        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="Z"
+        )
 
         # Create cable 2
         cable2 = Cable(
@@ -1335,8 +1345,12 @@ class CablePathTestCase(TestCase):
         Tests case for circuit termination loop.
         [CT1A][CT1Z]
         """
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
-        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
+        circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="Z"
+        )
         cable1 = Cable(
             termination_a=circuittermination1,
             termination_b=circuittermination2,

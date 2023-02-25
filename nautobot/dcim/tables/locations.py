@@ -1,10 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.dcim.models import Location, LocationType
-from nautobot.dcim.tables.template_code import TREE_LINK
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -12,6 +8,10 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.models import Location, LocationType
+from nautobot.dcim.tables.template_code import TREE_LINK
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 
 __all__ = (
     "LocationTable",
@@ -54,7 +54,6 @@ class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:location_list")
@@ -67,13 +66,22 @@ class LocationTable(StatusTableMixin, BaseTable):
             "name",
             "slug",
             "status",
-            "site",
             "location_type",
             "parent",
             "tenant",
             "description",
-            "tags",
             "actions",
+            "facility",
+            "asn",
+            "time_zone",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "tags",
         )
-        default_columns = ("pk", "name", "status", "site", "tenant", "description", "tags", "actions")
+        default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")
         orderable = False

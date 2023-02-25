@@ -5,7 +5,7 @@ from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
 
 
 class HomeViewTestCase(TestCase):
@@ -97,12 +97,12 @@ class HomeViewTestCase(TestCase):
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
     def test_global_and_model_search_bar(self):
-        self.add_permissions("dcim.view_site", "dcim.view_device")
+        self.add_permissions("dcim.view_location", "dcim.view_device")
 
         # Assert model search bar present in list UI
-        response = self.client.get(reverse("dcim:site_list"))
+        response = self.client.get(reverse("dcim:location_list"))
         self.assertInHTML(
-            '<input type="text" name="q" class="form-control" required placeholder="Search Sites" id="id_q">',
+            '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
             response.content.decode(response.charset),
         )
 
@@ -121,7 +121,7 @@ class SearchFieldsTestCase(TestCase):
 
 class FilterFormsTestCase(TestCase):
     def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
-        self.add_permissions("dcim.view_site", "circuits.view_circuit")
+        self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
             <ul id="tabs" class="nav nav-tabs">
@@ -138,7 +138,7 @@ class FilterFormsTestCase(TestCase):
             </ul>
             """
 
-        response = self.client.get(reverse("dcim:site_list"))
+        response = self.client.get(reverse("dcim:location_list"))
         self.assertInHTML(
             filter_tabs,
             response.content.decode(response.charset),

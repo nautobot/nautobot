@@ -4,16 +4,28 @@ import pytz
 import random
 from faker import Faker
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import (
+    NautobotBoolIterator,
+    OrganizationalModelFactory,
+    PrimaryModelFactory,
+    UniqueFaker,
+    random_instance,
+)
 from nautobot.circuits.models import CircuitTermination
-from nautobot.dcim.choices import DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
+from nautobot.dcim.choices import (
+    DeviceRedundancyGroupFailoverStrategyChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     Manufacturer,
     Platform,
@@ -22,19 +34,20 @@ from nautobot.dcim.models import (
     Region,
     Rack,
     RackGroup,
+    RackReservation,
     PowerPanel,
     Site,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.factory import random_instance, UniqueFaker
 from nautobot.virtualization.models import Cluster
 
 
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 # For a randomly deterministic set of vendor names. Must be a tuple.
 MANUFACTURER_NAMES = (
@@ -77,14 +90,14 @@ class DeviceTypeFactory(PrimaryModelFactory):
     # Slug isn't defined here since it will always inherit from model.
     model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} DeviceType {n + 1}")
 
-    has_part_number = factory.Faker("pybool")
+    has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
 
     # If randomly a subdevice, set u_height to 0.
     is_subdevice_child = factory.Faker("boolean", chance_of_getting_true=33)
     u_height = factory.Maybe("is_subdevice_child", 0, factory.Faker("pyint", min_value=1, max_value=2))
 
-    is_full_depth = factory.Faker("pybool")
+    is_full_depth = NautobotBoolIterator()
 
     # If randomly a subdevice, also set subdevice_role to "child". We might want to reconsider this.
     subdevice_role = factory.Maybe(
@@ -93,7 +106,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
         factory.Faker("random_element", elements=["", SubdeviceRoleChoices.ROLE_PARENT]),
     )
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
@@ -102,37 +115,21 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
         model = DeviceRedundancyGroup
         exclude = ("has_description", "has_comments")
 
-    class Params:
-        unique_name = UniqueFaker("word", part_of_speech="adjective")
-
     # Slug isn't defined here since it will always inherit from name.
-    name = factory.LazyAttribute(lambda o: o.unique_name.title())
-
+    name = factory.LazyFunction(
+        lambda: "".join(word.title() for word in Faker().words(nb=2, part_of_speech="adjective", unique=True))
+    )
     status = random_instance(lambda: Status.objects.get_for_model(DeviceRedundancyGroup), allow_null=False)
 
     failover_strategy = factory.Iterator(
         DeviceRedundancyGroupFailoverStrategyChoices.CHOICES, getter=lambda choice: choice[0]
     )
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
-    has_comments = factory.Faker("pybool")
+    has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
-
-
-class DeviceRoleFactory(OrganizationalModelFactory):
-    class Meta:
-        model = DeviceRole
-        exclude = ("has_description",)
-
-    # Slug isn't defined here since it will always inherit from name.
-    name = factory.Sequence(lambda n: f"Fake Device Role {n}")
-    color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
-    vm_role = factory.Faker("pybool")
-
-    has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class ManufacturerFactory(OrganizationalModelFactory):
@@ -143,7 +140,7 @@ class ManufacturerFactory(OrganizationalModelFactory):
     # Slug isn't defined here since it will always inherit from name.
     name = UniqueFaker("word", ext_word_list=MANUFACTURER_NAMES)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
@@ -153,7 +150,7 @@ class PlatformFactory(OrganizationalModelFactory):
         exclude = ("has_manufacturer", "manufacturer_slug", "has_description", "has_napalm_args")
 
     # This dictates `name` and `napalm_driver`.
-    has_manufacturer = factory.Faker("pybool")
+    has_manufacturer = NautobotBoolIterator()
 
     # Slug isn't defined here since it will always inherit from name.
     name = factory.Maybe(
@@ -171,12 +168,12 @@ class PlatformFactory(OrganizationalModelFactory):
         "",
     )
 
-    has_napalm_args = factory.Faker("pybool")
+    has_napalm_args = NautobotBoolIterator()
     napalm_args = factory.Maybe(
         "has_napalm_args", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), None
     )
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
@@ -188,11 +185,11 @@ class RegionFactory(OrganizationalModelFactory):
             "has_description",
         )
 
-    has_parent = factory.Faker("pybool")
+    has_parent = NautobotBoolIterator()
     parent = factory.Maybe("has_parent", random_instance(Region), None)
     name = factory.Maybe("has_parent", UniqueFaker("city"), UniqueFaker("country"))
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
 
@@ -216,42 +213,42 @@ class SiteFactory(PrimaryModelFactory):
     name = UniqueFaker("street_address")
     status = random_instance(lambda: Status.objects.get_for_model(Site), allow_null=False)
 
-    has_asn = factory.Faker("pybool")
+    has_asn = NautobotBoolIterator()
     asn = factory.Maybe("has_asn", factory.Sequence(lambda n: 65000 + n), None)
 
-    has_region = factory.Faker("pybool")
+    has_region = NautobotBoolIterator()
     region = factory.Maybe("has_region", random_instance(Region), None)
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    has_time_zone = factory.Faker("pybool")
+    has_time_zone = NautobotBoolIterator()
     time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=pytz.common_timezones))
 
-    has_physical_address = factory.Faker("pybool")
+    has_physical_address = NautobotBoolIterator()
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
 
-    has_shipping_address = factory.Faker("pybool")
+    has_shipping_address = NautobotBoolIterator()
     shipping_address = factory.Maybe("has_shipping_address", factory.Faker("address"))
 
     # Faker().latitude()/longitude() sometimes will generate a decimal number with more than 8 digits.
     # Which will make validations for those fields fail.
     # This is a way to formulate the number to make sure it generates no more than 5 digits.
-    has_latitude = factory.Faker("pybool")
+    has_latitude = NautobotBoolIterator()
     latitude = factory.Maybe("has_latitude", factory.LazyFunction(lambda: f"{Faker().latitude():.2f}"), None)
 
-    has_longitude = factory.Faker("pybool")
+    has_longitude = NautobotBoolIterator()
     longitude = factory.Maybe("has_longitude", factory.LazyFunction(lambda: f"{Faker().longitude():.2f}"), None)
 
-    has_contact_name = factory.Faker("pybool")
+    has_contact_name = NautobotBoolIterator()
     contact_name = factory.Maybe("has_contact_name", factory.Faker("name"))
 
-    has_contact_phone = factory.Faker("pybool")
+    has_contact_phone = NautobotBoolIterator()
     # Opt not to use factory.Faker("phone_number") because contact_phone has a 20 char limit
     # whereas factory.Faker("phone_number") generates more than 20 chars
     contact_phone = factory.Maybe("has_contact_phone", factory.Sequence(lambda n: f"1091-65912-{n:04d}"))
 
-    has_contact_email = factory.Faker("pybool")
+    has_contact_email = NautobotBoolIterator()
     contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
 
@@ -262,7 +259,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
 
     name = factory.Iterator(["Root", "Campus", "Building", "Floor", "Elevator", "Room", "Aisle"])
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
     nestable = factory.LazyAttribute(lambda l: bool(l.name in ["Campus", "Root"]))
@@ -330,7 +327,18 @@ class LocationFactory(PrimaryModelFactory):
         model = Location
         exclude = (
             "has_parent",
-            "has_site",
+            "has_asn",
+            "has_comments",
+            "has_facility",
+            "has_tenant",
+            "has_time_zone",
+            "has_physical_address",
+            "has_shipping_address",
+            "has_latitude",
+            "has_longitude",
+            "has_contact_name",
+            "has_contact_phone",
+            "has_contact_email",
             "has_tenant",
             "has_description",
             "_parent",
@@ -338,6 +346,39 @@ class LocationFactory(PrimaryModelFactory):
 
     name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
+
+    has_asn = NautobotBoolIterator()
+    asn = factory.Maybe("has_asn", factory.Sequence(lambda n: 65000 + n), None)
+
+    has_facility = NautobotBoolIterator()
+    facility = factory.Maybe("has_facility", factory.Faker("building_number"), "")
+
+    has_time_zone = NautobotBoolIterator()
+    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=pytz.common_timezones))
+
+    has_physical_address = NautobotBoolIterator()
+    physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
+
+    has_shipping_address = NautobotBoolIterator()
+    shipping_address = factory.Maybe("has_shipping_address", factory.Faker("address"))
+
+    # Faker().latitude()/longitude() sometimes will generate a decimal number with more than 8 digits.
+    # Which will make validations for those fields fail.
+    # This is a way to formulate the number to make sure it generates no more than 5 digits.
+    has_latitude = NautobotBoolIterator()
+    latitude = factory.Maybe("has_latitude", factory.LazyFunction(lambda: f"{Faker().latitude():.2f}"), None)
+
+    has_longitude = NautobotBoolIterator()
+    longitude = factory.Maybe("has_longitude", factory.LazyFunction(lambda: f"{Faker().longitude():.2f}"), None)
+
+    has_contact_name = NautobotBoolIterator()
+    contact_name = factory.Maybe("has_contact_name", factory.Faker("name"))
+
+    has_contact_phone = NautobotBoolIterator()
+    contact_phone = factory.Maybe("has_contact_phone", factory.Faker("phone_number"))
+
+    has_contact_email = NautobotBoolIterator()
+    contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
     @factory.iterator
     def location_type():  # pylint: disable=no-method-argument
@@ -369,11 +410,89 @@ class LocationFactory(PrimaryModelFactory):
             return factory.random.randgen.choice(parents)
         return None
 
-    has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
-    site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
-
-    has_tenant = factory.Faker("pybool")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    has_description = factory.Faker("pybool")
+    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
+
+    has_comments = NautobotBoolIterator()
+    comments = factory.Maybe("has_comments", factory.Faker("sentence", nb_words=5), "")
+
+
+class RackFactory(PrimaryModelFactory):
+    class Meta:
+        model = Rack
+        exclude = (
+            "has_asset_tag",
+            "has_comments",
+            "has_facility_id",
+            "has_rack_group",
+            "has_outer_depth",
+            "has_outer_width",
+            "has_role",
+            "has_serial",
+            "has_tenant",
+            "has_type",
+        )
+
+    name = factory.Sequence(lambda n: f"Rack {n}")
+    status = random_instance(lambda: Status.objects.get_for_model(Rack), allow_null=False)
+
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
+
+    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
+
+    has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
+    rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
+
+    has_tenant = factory.Faker("boolean")
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    has_serial = NautobotBoolIterator()
+    serial = factory.Maybe("has_serial", factory.Faker("uuid4"), "")
+
+    has_asset_tag = NautobotBoolIterator()
+    asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
+
+    has_type = NautobotBoolIterator()
+    type = factory.Maybe("has_type", factory.Faker("random_element", elements=RackTypeChoices.values()), "")
+
+    width = factory.Faker("random_element", elements=RackWidthChoices.values())
+    u_height = factory.Faker("pyint", min_value=10, max_value=100)
+    desc_units = NautobotBoolIterator()
+
+    has_outer_width = NautobotBoolIterator()
+    outer_width = factory.Maybe("has_outer_width", factory.Faker("pyint"), None)
+
+    has_outer_depth = NautobotBoolIterator()
+    outer_depth = factory.Maybe("has_outer_depth", factory.Faker("pyint"), None)
+
+    outer_unit = factory.Maybe(
+        "has_outer_width",
+        factory.Faker("random_element", elements=RackDimensionUnitChoices.values()),
+        factory.Maybe(
+            "has_outer_depth", factory.Faker("random_element", elements=RackDimensionUnitChoices.values()), ""
+        ),
+    )
+
+    has_comments = NautobotBoolIterator()
+    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class RackReservationFactory(PrimaryModelFactory):
+    class Meta:
+        model = RackReservation
+        exclude = ("has_tenant",)
+
+    rack = random_instance(Rack, allow_null=False)
+    units = factory.Sequence(lambda n: [n + 1])
+
+    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    user = random_instance(User, allow_null=False)
+
+    # Note no "has_description" here, RackReservation.description is mandatory.
+    description = factory.Faker("sentence")

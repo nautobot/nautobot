@@ -23,12 +23,8 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
-from nautobot.core.utilities import check_filter_for_display
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.forms import (
+from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms import (
     BootstrapMixin,
     BulkRenameForm,
     ConfirmationForm,
@@ -38,19 +34,20 @@ from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.utilities.forms.forms import DynamicFilterFormSet
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.utilities.utils import (
+from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    csv_format,
-    get_route_for_model,
     get_filterable_params_from_filter_params,
     normalize_querydict,
-    prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
+from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
@@ -985,9 +982,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                pk_list = model.objects.all()
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1251,9 +1248,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                pk_list = model.objects.all()
         else:
             pk_list = request.POST.getlist("pk")
 

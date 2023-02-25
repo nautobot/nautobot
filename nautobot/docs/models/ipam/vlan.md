@@ -12,3 +12,6 @@ As with prefixes, each VLAN may also be assigned a functional role. Prefixes and
 
 +/- 1.5.9
     The maximum `name` length was increased from 64 characters to 255 characters.
+
++/- 2.0.0
+    - Renamed `group` field to `vlan_group`.

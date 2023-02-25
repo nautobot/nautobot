@@ -1,4 +1,6 @@
-from nautobot.utilities.choices import ChoiceSet
+from celery import states
+
+from nautobot.core.choices import ChoiceSet
 
 
 #
@@ -177,26 +179,53 @@ class JobExecutionType(ChoiceSet):
 
 
 class JobResultStatusChoices(ChoiceSet):
+    """
+    These status choices are using the same taxonomy as within Celery core. A Nautobot Job status
+    is equivalent to a Celery task state.
+    """
 
-    STATUS_PENDING = "pending"
-    STATUS_RUNNING = "running"
-    STATUS_COMPLETED = "completed"
-    STATUS_ERRORED = "errored"
-    STATUS_FAILED = "failed"
+    STATUS_FAILURE = states.FAILURE
+    STATUS_PENDING = states.PENDING
+    STATUS_RECEIVED = states.RECEIVED
+    STATUS_RETRY = states.RETRY
+    STATUS_REVOKED = states.REVOKED
+    STATUS_STARTED = states.STARTED
+    STATUS_SUCCESS = states.SUCCESS
 
-    CHOICES = (
-        (STATUS_PENDING, "Pending"),
-        (STATUS_RUNNING, "Running"),
-        (STATUS_COMPLETED, "Completed"),
-        (STATUS_ERRORED, "Errored"),
-        (STATUS_FAILED, "Failed"),
-    )
+    CHOICES = sorted(zip(states.ALL_STATES, states.ALL_STATES))
 
-    TERMINAL_STATE_CHOICES = (
-        STATUS_COMPLETED,
-        STATUS_ERRORED,
-        STATUS_FAILED,
-    )
+    #: Set of all possible states.
+    ALL_STATES = states.ALL_STATES
+    #: Set of states meaning the task returned an exception.
+    EXCEPTION_STATES = states.EXCEPTION_STATES
+    #: State precedence.
+    #: None represents the precedence of an unknown state.
+    #: Lower index means higher precedence.
+    PRECEDENCE = states.PRECEDENCE
+    #: Set of exception states that should propagate exceptions to the user.
+    PROPAGATE_STATES = states.PROPAGATE_STATES
+    #: Set of states meaning the task result is ready (has been executed).
+    READY_STATES = states.READY_STATES
+    #: Set of states meaning the task result is not ready (hasn't been executed).
+    UNREADY_STATES = states.UNREADY_STATES
+
+    @staticmethod
+    def precedence(state):
+        """
+        Get the precedence for a state. Lower index means higher precedence.
+
+        Args:
+            state (str): One of the status choices.
+
+        Returns:
+            int: Precedence value.
+
+        Examples:
+            >>> JobResultStatusChoices.precedence(JobResultStatusChoices.STATUS_SUCCESS)
+            0
+
+        """
+        return states.precedence(state)
 
 
 #

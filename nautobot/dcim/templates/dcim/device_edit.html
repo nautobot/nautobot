@@ -7,7 +7,7 @@
         <div class="panel-heading"><strong>Device</strong></div>
         <div class="panel-body">
             {% render_field form.name %}
-            {% render_field form.device_role %}
+            {% render_field form.role %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -22,8 +22,6 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Location</strong></div>
         <div class="panel-body">
-            {% render_field form.region %}
-            {% render_field form.site %}
             {% render_field form.location %}
             {% render_field form.rack_group %}
             {% render_field form.rack %}
@@ -87,8 +85,8 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Local Config Context Data</strong></div>
         <div class="panel-body">
-            {% render_field form.local_context_schema %}
-            {% render_field form.local_context_data %}
+            {% render_field form.local_config_context_schema %}
+            {% render_field form.local_config_context_data %}
         </div>
     </div>
     <div class="panel panel-default">

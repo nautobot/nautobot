@@ -18,12 +18,12 @@
 
 {% block extra_buttons %}
         {% if perms.ipam.add_prefix and active_tab == 'prefixes' and first_available_prefix %}
-        <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&vrf={{ object.vrf.pk }}&site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
+        <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&vrf={{ object.vrf.pk }}&location={{ object.location.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
                 <i class="mdi mdi-plus-thick" aria-hidden="true"></i> Add Child Prefix
             </a>
         {% endif %}
         {% if perms.ipam.add_ipaddress and active_tab == 'ip-addresses' and first_available_ip %}
-            <a href="{% url 'ipam:ipaddress_add' %}?address={{ first_available_ip }}&vrf={{ object.vrf.pk }}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
+            <a href="{% url 'ipam:ipaddress_add' %}?address={{ first_available_ip }}&vrf={{ object.vrf.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                 Add an IP Address
             </a>
@@ -38,7 +38,7 @@
         <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
             <a href="{% url 'ipam:prefix_prefixes' pk=object.pk %}">Child Prefixes <span class="badge">{{ object.get_child_prefixes.count }}</span></a>
         </li>
-        {% if perms.ipam.view_ipaddress and object.status.slug != 'container' %}
+        {% if perms.ipam.view_ipaddress and object.type != 'container' %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
                 <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
             </li>
@@ -56,6 +56,12 @@
                         <td>IPv{{ object.family }}</td>
                     </tr>
                     <tr>
+                        <td>Type</td>
+                        <td>
+                            {{ object.get_type_display }}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>VRF</td>
                         <td>
                             {% if object.vrf %}
@@ -68,8 +74,8 @@
                     <tr>
                         <td>Tenant</td>
                         <td>
-                            {% if object.tenant and object.tenant.group %}
-                                {{ object.tenant.group|hyperlinked_object }} /
+                            {% if object.tenant and object.tenant.tenant_group %}
+                                {{ object.tenant.tenant_group|hyperlinked_object }} /
                             {% endif %}
                             {{ object.tenant|hyperlinked_object }}
                         </td>
@@ -85,23 +91,14 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Site</td>
-                        <td>
-                            {% if object.site and object.site.region %}
-                                {{ object.site.region|hyperlinked_object }} /
-                            {% endif %}
-                            {{ object.site|hyperlinked_object }}
-                        </td>
-                    </tr>
-                    <tr>
                         <td>Location</td>
                         <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
                     <tr>
                         <td>VLAN</td>
                         <td>
-                            {% if object.vlan and object.vlan.group %}
-                                {{ object.vlan.group|hyperlinked_object }} /
+                            {% if object.vlan and object.vlan.vlan_group %}
+                                {{ object.vlan.vlan_group|hyperlinked_object }} /
                             {% endif %}
                             {{ object.vlan|hyperlinked_object }}
                         </td>
@@ -109,20 +106,16 @@
                     <tr>
                         <td>Status</td>
                         <td>
-                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                            {{ object.status| hyperlinked_object_with_color }}
                         </td>
                     </tr>
                     <tr>
                         <td>Role</td>
-                        <td>{{ object.role|hyperlinked_object }}</td>
+                        <td>{{ object.role | hyperlinked_object_with_color }}</td>
                     </tr>
                     <tr>
                         <td>Description</td>
                         <td>{{ object.description|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>Is a pool</td>
-                        <td>{{ object.is_pool | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Utilization</td>

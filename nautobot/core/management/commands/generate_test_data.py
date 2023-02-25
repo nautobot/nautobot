@@ -41,14 +41,20 @@ class Command(BaseCommand):
         try:
             import factory.random
 
+            from nautobot.circuits.factory import (
+                CircuitFactory,
+                CircuitTerminationFactory,
+                CircuitTypeFactory,
+                ProviderFactory,
+                ProviderNetworkFactory,
+            )
             from nautobot.dcim.factory import (
                 DeviceRedundancyGroupFactory,
-                DeviceRoleFactory,
                 DeviceTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
             )
-            from nautobot.extras.factory import StatusFactory, TagFactory
+            from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.dcim.factory import (
                 RegionFactory,
@@ -60,7 +66,6 @@ class Command(BaseCommand):
             from nautobot.ipam.factory import (
                 AggregateFactory,
                 RIRFactory,
-                RoleFactory,
                 RouteTargetFactory,
                 VLANGroupFactory,
                 VLANFactory,
@@ -75,6 +80,8 @@ class Command(BaseCommand):
         self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
         factory.random.reseed_random(seed)
 
+        self.stdout.write("Creating Roles...")
+        RoleFactory.create_batch(20)
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0)
         StatusFactory.create_batch(10)
@@ -87,25 +94,24 @@ class Command(BaseCommand):
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)
         self.stdout.write("Creating Tenants...")
-        TenantFactory.create_batch(10, has_group=False)
-        TenantFactory.create_batch(10, has_group=True)
+        TenantFactory.create_batch(10, has_tenant_group=False)
+        TenantFactory.create_batch(10, has_tenant_group=True)
         self.stdout.write("Creating Regions...")
         RegionFactory.create_batch(15, has_parent=False)
         RegionFactory.create_batch(5, has_parent=True)
         self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(15)
+        SiteFactory.create_batch(25)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
+        LocationFactory.create_batch(40)  # we need more locations with sites since it can be nested now.
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
         RouteTargetFactory.create_batch(20)
         self.stdout.write("Creating VRFs...")
-        VRFFactory.create_batch(20)
-        self.stdout.write("Creating IP/VLAN Roles...")
-        RoleFactory.create_batch(10)
+        VRFFactory.create_batch(10, has_tenant=True)
+        VRFFactory.create_batch(10, has_tenant=False)
         self.stdout.write("Creating VLANGroups...")
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
@@ -115,17 +121,51 @@ class Command(BaseCommand):
         AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
         AggregateFactory.create_batch(10)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(14)  # All 14 hard-coded Manufacturers for now.
+        ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False)
+        self.stdout.write("Creating Manufacturers without platforms...")
+        ManufacturerFactory.create_batch(4)  # Remaining 4 hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
         DeviceTypeFactory.create_batch(20)
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(10)
-        self.stdout.write("Creating DeviceRoles...")
-        DeviceRoleFactory.create_batch(10)
+        self.stdout.write("Creating CircuitTypes...")
+        CircuitTypeFactory.create_batch(10)
+        self.stdout.write("Creating Providers...")
+        ProviderFactory.create_batch(10)
+        self.stdout.write("Creating ProviderNetworks...")
+        ProviderNetworkFactory.create_batch(10)
+        self.stdout.write("Creating Circuits...")
+        CircuitFactory.create_batch(20)
+        self.stdout.write("Creating Providers without Circuits...")
+        ProviderFactory.create_batch(10)
+        self.stdout.write("Creating CircuitTerminations...")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
+        CircuitTerminationFactory.create_batch(
+            size=2,
+            has_location=True,
+            has_port_speed=True,
+            has_upstream_speed=True,
+            has_xconnect_id=True,
+            has_pp_info=True,
+            has_description=True,
+        )
+        # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
+        # UserFactory.create_batch(10)
+        # RackFactory.create_batch(10)
+        # RackReservationFactory.create_batch(10)
+        # ClusterTypeFactory.create_batch(10)
+        # ClusterGroupFactory.create_batch(10)
+        # ClusterFactory.create_batch(10)
+        # VirtualMachineFactory.create_batch(10)
+        # We need to remove them from there and enable them here instead, but that will require many test updates.
 
     def handle(self, *args, **options):
         if options["flush"]:
@@ -158,7 +198,7 @@ Type 'yes' to continue, or 'no' to cancel: """
                     "--natural-primary",
                     indent=2,
                     format="json",
-                    exclude=["contenttypes", "django_rq", "auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["contenttypes", "auth.permission", "extras.job", "extras.customfield"],
                     output=options["fixture_file"],
                 )
 

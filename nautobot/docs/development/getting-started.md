@@ -42,10 +42,14 @@ ls nautobot/
 Example output:
 
 ```no-highlight
-CHANGELOG.md     README.md    docs        nautobot.code-workspace  site
-CONTRIBUTING.md  contrib      manage.py   poetry.lock              tasks.py
-LICENSE.txt      development  mkdocs.yml  pyproject.toml           upgrade.sh
-NOTICE           dist         nautobot    scripts
+CHANGELOG.md            development             nautobot.code-workspace
+CODE_OF_CONDUCT.md      docker                  poetry.lock
+CONTRIBUTING.md         docs                    pyproject.toml
+LICENSE.txt             examples                renovate.json
+NOTICE                  install.sh              scripts
+README.md               invoke.yml.example      tasks.py
+SECURITY.md             mkdocs.yml
+changes                 nautobot
 ```
 
 ### About Remote Repos
@@ -200,8 +204,9 @@ Available tasks:
   black                  Check Python code style with Black.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
+  build-dependencies
   buildx                 Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
-                         capablility).
+                         capability).
   check-migrations       Check for missing migrations.
   check-schema           Render the REST API schema and check for problems.
   cli                    Launch a bash shell inside the running Nautobot (or other) Docker container.
@@ -217,11 +222,12 @@ Available tasks:
   makemigrations         Perform makemigrations operation in Django.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
-  nbshell                Launch an interactive nbshell session.
-  performance-test       Run Nautobot performance specific unit tests.
+  nbshell                Launch an interactive Nautobot shell.
+  performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
+  serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
@@ -237,11 +243,11 @@ A development environment can be easily started up from the root of the project 
 * `invoke build` - Builds Nautobot docker images
 * `invoke migrate` - Performs database migration operation in Django
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
+* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
@@ -437,7 +443,7 @@ A newly created configuration includes sane defaults. If you need to customize t
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
 * [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
-* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues). The defaults should be fine for development.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis). The defaults should be fine for development.
 * [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
 * [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
@@ -523,9 +529,17 @@ nautobot-server nbshell
 Example output:
 
 ```no-highlight
-### Nautobot interactive shell (localhost)
-### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
-### lsmodels() will show available models. Use help(<model>) for more info.
+# Shell Plus Model Imports
+...
+# Shell Plus Django Imports
+...
+# Django version 3.2.16
+# Nautobot version 2.0.0a0
+# Example Nautobot App version 1.0.0
+Python 3.7.13 (default, May 11 2022, 08:57:12)
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
 >>>
 ```
 
@@ -623,7 +637,10 @@ Before running integration tests, the `selenium` container must be running. If y
 | ----------------------- | --------------------------------- |
 | (automatic)             | `invoke start --service selenium` |
 
-Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.core.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
+
++/- 2.0.0
+    `SeleniumTestCase` was moved from the `nautobot.utilities.testing.integration` module to `nautobot.core.testing.integration`.
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |

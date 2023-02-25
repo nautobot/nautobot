@@ -10,21 +10,21 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
+from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.ipam.models import Prefix, IPAddress
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files
@@ -69,17 +69,17 @@ class PluginTest(TestCase):
         """
         Check that plugin TemplateExtensions are registered.
         """
-        from example_plugin.template_content import SiteContent
+        from example_plugin.template_content import LocationContent
 
-        self.assertIn(SiteContent, registry["plugin_template_extensions"]["dcim.site"])
+        self.assertIn(LocationContent, registry["plugin_template_extensions"]["dcim.location"])
 
     def test_custom_validators_registration(self):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
+        from example_plugin.custom_validators import LocationCustomValidator, RelationshipAssociationCustomValidator
 
-        self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+        self.assertIn(LocationCustomValidator, registry["plugin_custom_validators"]["dcim.location"])
         self.assertIn(
             RelationshipAssociationCustomValidator,
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
@@ -300,7 +300,7 @@ class PluginTest(TestCase):
         cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
-        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
+        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])
 
     def test_secrets_provider(self):
         """
@@ -491,10 +491,11 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-        site = Site(name="this site has a matching name", slug="site1")
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location(name="this location has a matching name", slug="location1", location_type=location_type)
 
         with self.assertRaises(ValidationError):
-            site.clean()
+            location.clean()
 
     def test_relationship_association_validator_raises_exception(self):
         status = Status.objects.get_for_model(IPAddress).first()
@@ -529,26 +530,39 @@ class FilterExtensionTest(TestCase):
         )
 
         Tenant.objects.create(
-            name="Tenant 1", slug="tenant-1", group=tenant_groups[0], description="tenant-1.nautobot.com"
+            name="Tenant 1", slug="tenant-1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"
         )
         Tenant.objects.create(
-            name="Tenant 2", slug="tenant-2", group=tenant_groups[1], description="tenant-2.nautobot.com"
+            name="Tenant 2", slug="tenant-2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"
         )
         Tenant.objects.create(
-            name="Tenant 3", slug="tenant-3", group=tenant_groups[2], description="tenant-3.nautobot.com"
+            name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
         )
-
-        Site.objects.create(name="Site 1", slug="site-1", tenant=Tenant.objects.get(slug="tenant-1"))
-        Site.objects.create(name="Site 2", slug="site-2", tenant=Tenant.objects.get(slug="tenant-2"))
-        Site.objects.create(name="Site 3", slug="site-3", tenant=Tenant.objects.get(slug="tenant-3"))
+        location_type = LocationType.objects.get(name="Campus")
+        Location.objects.create(
+            name="Location 1",
+            slug="location-1",
+            tenant=Tenant.objects.get(slug="tenant-1"),
+            location_type=location_type,
+        )
+        Location.objects.create(
+            name="Location 2",
+            slug="location-2",
+            tenant=Tenant.objects.get(slug="tenant-2"),
+            location_type=location_type,
+        )
+        Location.objects.create(
+            name="Location 3",
+            slug="location-3",
+            tenant=Tenant.objects.get(slug="tenant-3"),
+            location_type=location_type,
+        )
 
         Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
         Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
 
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
+        roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
             manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
@@ -578,23 +592,23 @@ class FilterExtensionTest(TestCase):
         Device.objects.create(
             name="Device 1",
             device_type=DeviceType.objects.get(slug="model-1"),
-            device_role=DeviceRole.objects.get(slug="device-role-1"),
+            role=roles[0],
             tenant=Tenant.objects.get(slug="tenant-1"),
-            site=Site.objects.get(slug="site-1"),
+            location=Location.objects.get(slug="location-1"),
         )
         Device.objects.create(
             name="Device 2",
             device_type=DeviceType.objects.get(slug="model-2"),
-            device_role=DeviceRole.objects.get(slug="device-role-2"),
+            role=roles[1],
             tenant=Tenant.objects.get(slug="tenant-2"),
-            site=Site.objects.get(slug="site-2"),
+            location=Location.objects.get(slug="location-2"),
         )
         Device.objects.create(
             name="Device 3",
             device_type=DeviceType.objects.get(slug="model-2"),
-            device_role=DeviceRole.objects.get(slug="device-role-3"),
+            role=roles[3],
             tenant=Tenant.objects.get(slug="tenant-3"),
-            site=Site.objects.get(slug="site-3"),
+            location=Location.objects.get(slug="location-3"),
         )
 
     def test_basic_custom_filter(self):
@@ -683,7 +697,7 @@ class TestPluginCoreViewOverrides(TestCase):
         self.circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=Status.objects.get_for_model(Circuit).get(slug="active"),
         )
         self.user.is_superuser = True

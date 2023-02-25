@@ -2,30 +2,28 @@ from django.test import TestCase
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
     Manufacturer,
-    Site,
 )
+from nautobot.extras.models import Role
 
 
 class NaturalOrderingTestCase(TestCase):
     def setUp(self):
 
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
-            device_type=devicetype,
-            device_role=devicerole,
-            name="Test Device 1",
-            site=site,
+            device_type=devicetype, role=devicerole, name="Test Device 1", location=location
         )
 
     def test_interface_ordering_numeric(self):

@@ -2,8 +2,8 @@ Jinja2==3.1.2
 Markdown==3.3.7
 mkdocs==1.4.2
 mkdocs-gen-files==0.4.0
-mkdocs-include-markdown-plugin==3.6.1
+mkdocs-include-markdown-plugin==3.9.1
 mkdocs-material==8.5.8
 mkdocs-version-annotations==1.0.0
-mkdocstrings==0.19
-mkdocstrings-python==0.7.1
+mkdocstrings==0.19.1
+mkdocstrings-python==0.8.2

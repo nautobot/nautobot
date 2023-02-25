@@ -1,0 +1,1 @@
+Added Site and Region data migration for ConfigContext class and ensured that "Site" LocationType allows the correct ContentTypes.

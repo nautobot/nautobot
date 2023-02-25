@@ -1,17 +1,14 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
-from django.db.models import Q
 from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
+from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.mptt import TreeManager
 
 __all__ = (
     "Region",
@@ -32,29 +29,26 @@ __all__ = (
     "relationships",
     "webhooks",
 )
-class Region(MPTTModel, OrganizationalModel):
+class Region(TreeModel, OrganizationalModel):
     """
     Sites can be grouped within geographic Regions.
     """
 
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="children",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
-
-    objects = TreeManager()
+    migrated_location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="regions",
+        blank=True,
+        null=True,
+    )
 
     csv_headers = ["name", "slug", "parent", "description"]
 
-    class MPTTMeta:
-        order_insertion_by = ["name"]
+    class Meta:
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -69,16 +63,6 @@ class Region(MPTTModel, OrganizationalModel):
             self.parent.name if self.parent else None,
             self.description,
         )
-
-    def get_site_count(self):
-        return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
-
-    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
-        if object_data_exclude is None:
-            object_data_exclude = []
-        # Remove MPTT-internal fields
-        object_data_exclude += ["level", "lft", "rght", "tree_id"]
-        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
 
 #
@@ -114,6 +98,13 @@ class Site(PrimaryModel, StatusModel):
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="sites",
+        blank=True,
+        null=True,
+    )
+    migrated_location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="sites",
         blank=True,

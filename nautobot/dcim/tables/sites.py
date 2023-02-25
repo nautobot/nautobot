@@ -1,15 +1,15 @@
 import django_tables2 as tables
 
-from nautobot.dcim.models import Region, Site
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     TagColumn,
     ToggleColumn,
 )
-from .template_code import MPTT_LINK
+from nautobot.dcim.models import Region, Site
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
+from .template_code import TREE_LINK
 
 __all__ = (
     "RegionTable",
@@ -24,7 +24,7 @@ __all__ = (
 
 class RegionTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     site_count = tables.Column(verbose_name="Sites")
     actions = ButtonsColumn(Region)
 

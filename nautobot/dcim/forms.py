@@ -7,37 +7,10 @@ from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
 from django.utils.safestring import mark_safe
-from netaddr import EUI
-from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
-from nautobot.extras.forms import (
-    CustomFieldModelBulkEditFormMixin,
-    CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
-    LocalContextFilterForm,
-    LocalContextModelForm,
-    LocalContextModelBulkEditForm,
-    StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
-)
-from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     APISelect,
     APISelectMultiple,
     add_blank_choice,
@@ -62,7 +35,36 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
+from nautobot.extras.forms import (
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
+    NautobotModelForm,
+    NautobotFilterForm,
+    LocalContextFilterForm,
+    LocalContextModelForm,
+    LocalContextModelBulkEditForm,
+    RoleModelBulkEditFormMixin,
+    RoleModelCSVFormMixin,
+    RoleModelFilterFormMixin,
+    RoleRequiredRoleModelCSVFormMixin,
+    StatusModelBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+)
+from nautobot.extras.models import SecretsGroup, Status
+from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
 from .choices import (
     CableLengthUnitChoices,
@@ -103,7 +105,6 @@ from .models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -123,7 +124,6 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -160,20 +160,14 @@ class ConnectCableExcludeIDMixin:
 
 
 class DeviceComponentFilterForm(NautobotFilterForm):
-    field_order = ["q", "region", "site"]
+    field_order = ["q", "location"]
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
-    device_id = DynamicModelMultipleChoiceField(
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
 
 
@@ -198,13 +192,13 @@ class InterfaceCommonForm(forms.Form):
 
         # Validate tagged VLANs; must be a global VLAN or in the same site
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            valid_sites = [None, self.cleaned_data[parent_field].site]
-            invalid_vlans = [str(v) for v in tagged_vlans if v.site not in valid_sites]
+            valid_locations = [None, self.cleaned_data[parent_field].location]
+            invalid_vlans = [str(v) for v in tagged_vlans if v.location not in valid_locations]
 
             if invalid_vlans:
                 raise forms.ValidationError(
                     {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must belong to the same site as "
+                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must belong to the same location as "
                         f"the interface's parent device/VM, or they must be global"
                     }
                 )
@@ -243,24 +237,6 @@ class ComponentForm(BootstrapMixin, forms.Form):
 #
 # Fields
 #
-
-
-class MACAddressField(forms.Field):
-    widget = forms.CharField
-    default_error_messages = {
-        "invalid": "MAC address must be in EUI-48 format",
-    }
-
-    def to_python(self, value):
-        value = super().to_python(value)
-
-        # Validate MAC address format
-        try:
-            value = EUI(value.strip())
-        except AddrFormatError:
-            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
-
-        return value
 
 
 #
@@ -475,38 +451,80 @@ class LocationForm(NautobotModelForm, TenancyForm):
         to_field_name="slug",
         required=False,
     )
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+    comments = CommentField()
 
     class Meta:
         model = Location
         fields = [
             "location_type",
             "parent",
-            "site",
             "name",
             "slug",
             "status",
             "tenant_group",
             "tenant",
             "description",
+            "facility",
+            "asn",
+            "time_zone",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "comments",
             "tags",
         ]
+
+        widgets = {
+            "physical_address": SmallTextarea(
+                attrs={
+                    "rows": 3,
+                }
+            ),
+            "shipping_address": SmallTextarea(
+                attrs={
+                    "rows": 3,
+                }
+            ),
+            "time_zone": StaticSelect2(),
+        }
+        help_texts = {
+            "name": "Full name of the location",
+            "facility": "Data center provider and facility (e.g. Equinix NY7)",
+            "asn": "BGP autonomous system number",
+            "time_zone": "Local time zone",
+            "description": "Short description (will appear in locations list)",
+            "physical_address": "Physical location of the building (e.g. for GPS)",
+            "shipping_address": "If different from the physical address",
+            "latitude": "Latitude in decimal format (xx.yyyyyy)",
+            "longitude": "Longitude in decimal format (xx.yyyyyy)",
+        }
 
 
 class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
     # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
+    asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
+    time_zone = TimeZoneFormField(
+        choices=add_blank_choice(TimeZoneFormField().choices),
+        required=False,
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         nullable_fields = [
             "parent",
-            "site",
             "tenant",
             "description",
+            "asn",
+            "description",
+            "time_zone",
         ]
 
 
@@ -522,12 +540,6 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         to_field_name="name",
         help_text="Parent location",
     )
-    site = CSVModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent site",
-    )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -538,11 +550,16 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     class Meta:
         model = Location
         fields = Location.csv_headers
+        help_texts = {
+            "time_zone": mark_safe(
+                'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
+            )
+        }
 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
-    field_order = ["q", "location_type", "parent", "subtree", "base_site", "status", "tenant_group", "tenant", "tag"]
+    field_order = ["q", "location_type", "parent", "subtree", "status", "tenant_group", "tenant", "tag"]
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
@@ -550,7 +567,6 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    base_site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     tag = TagFilterField(model)
 
 
@@ -563,15 +579,13 @@ class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
     parent = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
     slug = SlugField()
 
     class Meta:
         model = RackGroup
         fields = (
-            "region",
-            "site",
             "location",
             "parent",
             "name",
@@ -602,38 +616,8 @@ class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         queryset=RackGroup.objects.all(),
         to_field_name="slug",
         required=False,
-        query_params={
-            "region": "$region",
-            "site": "$site",
-        },
+        query_params={"location": "$location"},
     )
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "name",
-            "slug",
-            "color",
-            "description",
-        ]
-
-
-class RackRoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = RackRole
-        fields = RackRole.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 #
@@ -642,21 +626,18 @@ class RackRoleCSVForm(CustomFieldModelCSVForm):
 
 
 class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
-    group = DynamicModelChoiceField(
+    rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
-    role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
         model = Rack
         fields = [
-            "region",
-            "site",
             "location",
-            "group",
+            "rack_group",
             "name",
             "facility_id",
             "tenant_group",
@@ -676,7 +657,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "site": "The site at which the rack exists",
             "location": "The specific location of the rack",
             "name": "Organizational rack name",
             "facility_id": "The unique rack ID assigned by the facility",
@@ -689,19 +669,13 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         }
 
 
-class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
+class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
+    rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
         to_field_name="name",
         help_text="Name of assigned tenant",
-    )
-    role = CSVModelChoiceField(
-        queryset=RackRole.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Name of assigned role",
     )
     type = CSVChoiceField(choices=RackTypeChoices, required=False, help_text="Rack type")
     width = forms.ChoiceField(choices=RackWidthChoices, help_text="Rail-to-rail width (in inches)")
@@ -720,25 +694,25 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
 
         if data:
 
-            # Limit group queryset by assigned site
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
-            self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
+            # Limit rack_group queryset by assigned location
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
+            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
 class RackBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Rack.objects.all(), widget=forms.MultipleHiddenInput)
-    group = DynamicModelChoiceField(
+    rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     asset_tag = forms.CharField(max_length=50, required=False)
     type = forms.ChoiceField(
@@ -766,9 +740,8 @@ class RackBulkEditForm(
         model = Rack
         nullable_fields = [
             "location",
-            "group",
+            "rack_group",
             "tenant",
-            "role",
             "serial",
             "asset_tag",
             "outer_width",
@@ -778,35 +751,33 @@ class RackBulkEditForm(
         ]
 
 
-class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin):
+class RackFilterForm(
+    NautobotFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
     model = Rack
     field_order = [
         "q",
-        "region",
-        "site",
         "location",
-        "group_id",
+        "rack_group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
     type = forms.MultipleChoiceField(choices=RackTypeChoices, required=False, widget=StaticSelect2Multiple())
     width = forms.MultipleChoiceField(choices=RackWidthChoices, required=False, widget=StaticSelect2Multiple())
-    role = DynamicModelMultipleChoiceField(
-        queryset=RackRole.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-    )
     tag = TagFilterField(model)
 
 
@@ -818,9 +789,7 @@ class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
 class RackElevationFilterForm(RackFilterForm):
     field_order = [
         "q",
-        "region",
-        "site",
-        "group_id",
+        "rack_group",
         "id",
         "status",
         "role",
@@ -832,8 +801,8 @@ class RackElevationFilterForm(RackFilterForm):
         label="Rack",
         required=False,
         query_params={
-            "site": "$site",
-            "group_id": "$group_id",
+            "location": "$location",
+            "rack_group": "$rack_group",
         },
     )
 
@@ -844,22 +813,17 @@ class RackElevationFilterForm(RackFilterForm):
 
 
 class RackReservationForm(NautobotModelForm, TenancyForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         query_params={
-            "site_id": "$site",
-            "group_id": "$rack_group",
+            "location": "$location",
+            "rack_group": "$rack_group",
         },
     )
     units = NumericArrayField(
@@ -882,7 +846,7 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
 
 
 class RackReservationCSVForm(CustomFieldModelCSVForm):
-    site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Parent site")
+    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name", help_text="Parent location")
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -904,21 +868,21 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = RackReservation
-        fields = ("site", "rack_group", "rack", "units", "tenant", "description")
+        fields = ("location", "rack_group", "rack", "units", "tenant", "description")
 
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
 
         if data:
 
-            # Limit rack_group queryset by assigned site
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            # Limit rack_group queryset by assigned location
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
-            # Limit rack queryset by assigned site and group
+            # Limit rack queryset by assigned location and group
             params = {
-                f"site__{self.fields['site'].to_field_name}": data.get("site"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"location__{self.fields['location'].to_field_name}": data.get("location"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -941,28 +905,20 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = RackReservation
     field_order = [
         "q",
-        "region",
-        "site",
-        "group_id",
-        "user_id",
+        "rack_group",
+        "user",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
-    group_id = DynamicModelMultipleChoiceField(
-        queryset=RackGroup.objects.select_related("site"),
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    rack_group = DynamicModelMultipleChoiceField(
+        queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
         null_option="None",
     )
-    user_id = DynamicModelMultipleChoiceField(
+    user = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
         label="User",
@@ -1121,7 +1077,7 @@ class ComponentTemplateCreateForm(ComponentForm):
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     description = forms.CharField(required=False)
 
@@ -1273,7 +1229,7 @@ class PowerOutletTemplateForm(NautobotModelForm):
             "name",
             "label",
             "type",
-            "power_port",
+            "power_port_template",
             "feed_leg",
             "description",
         ]
@@ -1285,14 +1241,16 @@ class PowerOutletTemplateForm(NautobotModelForm):
 
         super().__init__(*args, **kwargs)
 
-        # Limit power_port choices to current DeviceType
+        # Limit power_port_template choices to current DeviceType
         if hasattr(self.instance, "device_type"):
-            self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=self.instance.device_type)
+            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(
+                device_type=self.instance.device_type
+            )
 
 
 class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerOutletTypeChoices), required=False)
-    power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
+    power_port_template = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
     feed_leg = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletFeedLegChoices),
         required=False,
@@ -1304,7 +1262,7 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
         "name_pattern",
         "label_pattern",
         "type",
-        "power_port",
+        "power_port_template",
         "feed_leg",
         "description",
     )
@@ -1312,9 +1270,9 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit power_port choices to current DeviceType
+        # Limit power_port_template choices to current DeviceType
         device_type = DeviceType.objects.get(pk=self.initial.get("device_type") or self.data.get("device_type"))
-        self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
+        self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
 
 
 class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
@@ -1331,7 +1289,7 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
-    power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
+    power_port_template = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
     feed_leg = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletFeedLegChoices),
         required=False,
@@ -1340,18 +1298,18 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
     description = forms.CharField(required=False)
 
     class Meta:
-        nullable_fields = ["label", "type", "power_port", "feed_leg", "description"]
+        nullable_fields = ["label", "type", "power_port_template", "feed_leg", "description"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit power_port queryset to PowerPortTemplates which belong to the parent DeviceType
+        # Limit power_port_template queryset to PowerPortTemplates which belong to the parent DeviceType
         if "device_type" in self.initial:
             device_type = DeviceType.objects.filter(pk=self.initial["device_type"]).first()
-            self.fields["power_port"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
+            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
         else:
-            self.fields["power_port"].choices = ()
-            self.fields["power_port"].widget.attrs["disabled"] = True
+            self.fields["power_port_template"].choices = ()
+            self.fields["power_port_template"].widget.attrs["disabled"] = True
 
 
 class InterfaceTemplateForm(NautobotModelForm):
@@ -1408,27 +1366,29 @@ class FrontPortTemplateForm(NautobotModelForm):
             "name",
             "label",
             "type",
-            "rear_port",
+            "rear_port_template",
             "rear_port_position",
             "description",
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
-            "rear_port": StaticSelect2(),
+            "rear_port_template": StaticSelect2(),
         }
 
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
-        # Limit rear_port choices to current DeviceType
+        # Limit rear_port_template choices to current DeviceType
         if hasattr(self.instance, "device_type"):
-            self.fields["rear_port"].queryset = RearPortTemplate.objects.filter(device_type=self.instance.device_type)
+            self.fields["rear_port_template"].queryset = RearPortTemplate.objects.filter(
+                device_type=self.instance.device_type
+            )
 
 
 class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=PortTypeChoices, widget=StaticSelect2())
-    rear_port_set = forms.MultipleChoiceField(
+    rear_port_template_set = forms.MultipleChoiceField(
         choices=[],
         label="Rear ports",
         help_text="Select one rear port assignment for each front port being created.",
@@ -1439,7 +1399,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         "name_pattern",
         "label_pattern",
         "type",
-        "rear_port_set",
+        "rear_port_template_set",
         "description",
     )
 
@@ -1450,34 +1410,34 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
 
         # Determine which rear port positions are occupied. These will be excluded from the list of available mappings.
         occupied_port_positions = [
-            (front_port.rear_port_id, front_port.rear_port_position)
-            for front_port in device_type.frontporttemplates.all()
+            (front_port_template.rear_port_template_id, front_port_template.rear_port_position)
+            for front_port_template in device_type.front_port_templates.all()
         ]
 
         # Populate rear port choices
         choices = []
-        rear_ports = RearPortTemplate.objects.filter(device_type=device_type)
-        for rear_port in rear_ports:
-            for i in range(1, rear_port.positions + 1):
-                if (rear_port.pk, i) not in occupied_port_positions:
+        rear_port_templates = RearPortTemplate.objects.filter(device_type=device_type)
+        for rear_port_template in rear_port_templates:
+            for i in range(1, rear_port_template.positions + 1):
+                if (rear_port_template.pk, i) not in occupied_port_positions:
                     choices.append(
                         (
-                            f"{rear_port.pk}:{i}",
-                            f"{rear_port.name}:{i}",
+                            f"{rear_port_template.pk}:{i}",
+                            f"{rear_port_template.name}:{i}",
                         )
                     )
-        self.fields["rear_port_set"].choices = choices
+        self.fields["rear_port_template_set"].choices = choices
 
     def clean(self):
         super().clean()
 
         # Validate that the number of ports being created equals the number of selected (rear port, position) tuples
         front_port_count = len(self.cleaned_data["name_pattern"])
-        rear_port_count = len(self.cleaned_data["rear_port_set"])
+        rear_port_count = len(self.cleaned_data["rear_port_template_set"])
         if front_port_count != rear_port_count:
             raise forms.ValidationError(
                 {
-                    "rear_port_set": (
+                    "rear_port_template_set": (
                         f"The provided name pattern will create {front_port_count} ports, "
                         f"however {rear_port_count} rear port assignments were selected. These counts must match."
                     )
@@ -1487,10 +1447,10 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
     def get_iterative_data(self, iteration):
 
         # Assign rear port and position from selected set
-        rear_port, position = self.cleaned_data["rear_port_set"][iteration].split(":")
+        rear_port_template, position = self.cleaned_data["rear_port_template_set"][iteration].split(":")
 
         return {
-            "rear_port": rear_port,
+            "rear_port_template": rear_port_template,
             "rear_port_position": int(position),
         }
 
@@ -1660,6 +1620,10 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
 
 
 class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
+    power_port_template = forms.ModelChoiceField(
+        queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False
+    )
+    # Provided for backwards compatibility with netbox/devicetype-library
     power_port = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), to_field_name="name", required=False)
 
     class Meta:
@@ -1669,9 +1633,18 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "label",
             "type",
+            "power_port_template",
             "power_port",
             "feed_leg",
         ]
+
+    def is_valid(self):
+        """
+        Map an input of "power_port" to the model's expected "power_port_template" for devicetype-library compatibility.
+        """
+        if self.data["power_port"] and not self.data["power_port_template"]:
+            self.data["power_port_template"] = self.data["power_port"]
+        return super().is_valid()
 
 
 class InterfaceTemplateImportForm(ComponentTemplateImportForm):
@@ -1690,6 +1663,10 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
 
 class FrontPortTemplateImportForm(ComponentTemplateImportForm):
     type = forms.ChoiceField(choices=PortTypeChoices.CHOICES)
+    rear_port_template = forms.ModelChoiceField(
+        queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False
+    )
+    # Provided for backwards compatibility with netbox/devicetype-library
     rear_port = forms.ModelChoiceField(queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False)
 
     class Meta:
@@ -1698,9 +1675,18 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "name",
             "type",
+            "rear_port_template",
             "rear_port",
             "rear_port_position",
         ]
+
+    def is_valid(self):
+        """
+        Map an input of "rear_port" to the model's expected "rear_port_template" for devicetype-library compatibility.
+        """
+        if self.data["rear_port"] and not self.data["rear_port_template"]:
+            self.data["rear_port_template"] = self.data["rear_port"]
+        return super().is_valid()
 
 
 class RearPortTemplateImportForm(ComponentTemplateImportForm):
@@ -1723,34 +1709,6 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "name",
         ]
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-        ]
-
-
-class DeviceRoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = DeviceRole
-        fields = DeviceRole.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 #
@@ -1799,15 +1757,15 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
         initial_params={"racks": "$rack"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         query_params={
-            "site_id": "$site",
-            "group_id": "$rack_group",
+            "location": "$location",
+            "rack_group": "$rack_group",
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
@@ -1829,13 +1787,12 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
-    device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all())
     platform = DynamicModelChoiceField(
         queryset=Platform.objects.all(),
         required=False,
-        query_params={"manufacturer_id": ["$manufacturer", "null"]},
+        query_params={"manufacturer": ["$manufacturer", "null"]},
     )
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(
@@ -1855,11 +1812,10 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         model = Device
         fields = [
             "name",
-            "device_role",
+            "role",
             "device_type",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "device_redundancy_group",
@@ -1877,13 +1833,13 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "tenant",
             "comments",
             "tags",
-            "local_context_data",
-            "local_context_schema",
+            "local_config_context_data",
+            "local_config_context_schema",
         ]
         help_texts = {
-            "device_role": "The function this device serves",
+            "role": "The function this device serves",
             "serial": "Chassis serial number",
-            "local_context_data": "Local config context data overwrites all source contexts in the final rendered "
+            "local_config_context_data": "Local config context data overwrites all source contexts in the final rendered "
             "config context",
         }
         widgets = {
@@ -1942,11 +1898,10 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 Q(manufacturer__isnull=True) | Q(manufacturer=self.instance.device_type.manufacturer)
             )
 
-            # Disable rack assignment if this is a child device installed in a parent device
             if self.instance.device_type.is_child_device and hasattr(self.instance, "parent_bay"):
-                self.fields["site"].disabled = True
+                self.fields["location"].disabled = True
                 self.fields["rack"].disabled = True
-                self.initial["site"] = self.instance.parent_bay.device.site_id
+                self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
         else:
@@ -1964,11 +1919,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
 
 
 class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    device_role = CSVModelChoiceField(
-        queryset=DeviceRole.objects.all(),
-        to_field_name="name",
-        help_text="Assigned role",
-    )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -2018,7 +1968,7 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
 
 
-class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
+class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm, RoleRequiredRoleModelCSVFormMixin):
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -2042,7 +1992,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
             "name",
-            "device_role",
+            "role",
             "tenant",
             "manufacturer",
             "device_type",
@@ -2050,7 +2000,6 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             "serial",
             "asset_tag",
             "status",
-            "site",
             "location",
             "rack_group",
             "rack",
@@ -2067,18 +2016,18 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
 
         if data:
 
-            # Limit rack_group queryset by assigned site
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            # Limit rack_group queryset by assigned location
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
-            # Limit rack queryset by assigned site and group
+            # Limit rack queryset by assigned location and group
             params = {
-                f"site__{self.fields['site'].to_field_name}": data.get("site"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"location__{self.fields['location'].to_field_name}": data.get("location"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
-            # 2.0 TODO: limit location queryset by assigned site
+            # 2.0 TODO: limit location queryset by assigned location
 
 
 class ChildDeviceCSVForm(BaseDeviceCSVForm):
@@ -2092,7 +2041,7 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
             "name",
-            "device_role",
+            "role",
             "tenant",
             "manufacturer",
             "device_type",
@@ -2123,10 +2072,10 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
         if device_bay:
             self.instance.parent_bay = device_bay
 
-        # Inherit site and rack from parent device
+        # Inherit location and rack from parent device
         parent = self.cleaned_data.get("parent")
         if parent:
-            self.instance.site = parent.site
+            self.instance.location = parent.location
             self.instance.rack = parent.rack
 
 
@@ -2134,6 +2083,7 @@ class DeviceBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
     LocalContextModelBulkEditForm,
 ):
@@ -2142,7 +2092,7 @@ class DeviceBulkEditForm(
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     position = forms.IntegerField(required=False)
@@ -2152,7 +2102,6 @@ class DeviceBulkEditForm(
         widget=StaticSelect2(),
     )
     rack_group = DynamicModelChoiceField(queryset=RackGroup.objects.all(), required=False)
-    device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
@@ -2189,49 +2138,47 @@ class DeviceFilterForm(
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
 ):
     model = Device
     field_order = [
         "q",
-        "region",
-        "site",
         "location",
-        "rack_group_id",
-        "rack_id",
+        "rack_group",
+        "rack",
         "status",
         "role",
         "tenant_group",
         "tenant",
-        "manufacturer_id",
-        "device_type_id",
+        "manufacturer",
+        "device_type",
         "mac_address",
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
-    rack_group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
         query_params={
-            "site": "$site",
-            "group_id": "$rack_group_id",
+            "location": "$location",
+            "rack_group": "$rack_group",
         },
     )
-    role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(),
         to_field_name="slug",
         required=False,
         label="Manufacturer",
     )
-    device_type_id = DynamicModelMultipleChoiceField(
+    device_type = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
         label="Model",
@@ -2261,34 +2208,39 @@ class DeviceFilterForm(
         label="Virtual chassis member",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_ports = forms.NullBooleanField(
+    has_console_ports = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_server_ports = forms.NullBooleanField(
+    has_console_server_ports = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_ports = forms.NullBooleanField(
+    has_power_ports = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_outlets = forms.NullBooleanField(
+    has_power_outlets = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    interfaces = forms.NullBooleanField(
+    has_interfaces = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    pass_through_ports = forms.NullBooleanField(
+    has_front_ports = forms.NullBooleanField(
         required=False,
-        label="Has pass-through ports",
+        label="Has front ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_rear_ports = forms.NullBooleanField(
+        required=False,
+        label="Has rear ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tag = TagFilterField(model)
@@ -2723,7 +2675,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         label="Untagged VLAN",
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -2732,7 +2684,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         label="Tagged VLANs",
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location": "null",
         },
     )
 
@@ -2782,9 +2734,9 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
         self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
-        # Add current site to VLANs query params
-        self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-        self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
+        # Add current location to VLANs query params
+        self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
+        self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
@@ -2945,7 +2897,7 @@ class InterfaceBulkEditForm(
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -2953,7 +2905,7 @@ class InterfaceBulkEditForm(
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location": "null",
         },
     )
 
@@ -2983,27 +2935,27 @@ class InterfaceBulkEditForm(
             self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
-            # Add current site to VLANs query params
-            self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
+            # Add current location to VLANs query params
+            self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
         else:
             # See netbox-community/netbox#4523
             if "pk" in self.initial:
-                site = None
-                interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).select_related("device__site")
+                location = None
+                interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).select_related("device__location")
 
-                # Check interface sites.  First interface should set site, further interfaces will either continue the
-                # loop or reset back to no site and break the loop.
+                # Check interface locations.  First interface should set location, further interfaces will either continue the
+                # loop or reset back to no location and break the loop.
                 for interface in interfaces:
-                    if site is None:
-                        site = interface.device.site
-                    elif interface.device.site is not site:
-                        site = None
+                    if location is None:
+                        location = interface.device.location
+                    elif interface.device.location is not location:
+                        location = None
                         break
 
-                if site is not None:
-                    self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
-                    self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
+                if location is not None:
+                    self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
+                    self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
 
             self.fields["parent_interface"].choices = ()
             self.fields["parent_interface"].widget.attrs["disabled"] = True
@@ -3152,7 +3104,7 @@ class FrontPortCreateForm(ComponentCreateForm):
         # Determine which rear port positions are occupied. These will be excluded from the list of available
         # mappings.
         occupied_port_positions = [
-            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.frontports.all()
+            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.front_ports.all()
         ]
 
         # Populate rear port choices
@@ -3370,7 +3322,7 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
     installed_device = forms.ModelChoiceField(
         queryset=Device.objects.all(),
         label="Child Device",
-        help_text="Child devices must first be created and assigned to the site/rack of the parent device.",
+        help_text="Child devices must first be created and assigned to the location/rack of the parent device.",
         widget=StaticSelect2(),
     )
 
@@ -3379,7 +3331,7 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
         self.fields["installed_device"].queryset = Device.objects.filter(
-            site=device_bay.device.site,
+            location=device_bay.device.location,
             rack=device_bay.device.rack,
             parent_bay__isnull=True,
             device_type__u_height=0,
@@ -3435,7 +3387,7 @@ class DeviceBayCSVForm(CustomFieldModelCSVForm):
 
         if device:
             self.fields["installed_device"].queryset = Device.objects.filter(
-                site=device.site,
+                location=device.location,
                 rack=device.rack,
                 parent_bay__isnull=True,
                 device_type__u_height=0,
@@ -3455,7 +3407,7 @@ class InventoryItemForm(NautobotModelForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
-        query_params={"device_id": "$device"},
+        query_params={"device": "$device"},
     )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
 
@@ -3480,7 +3432,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
-        query_params={"device_id": "$device"},
+        query_params={"device": "$device"},
     )
     part_id = forms.CharField(max_length=50, required=False, label="Part ID")
     serial = forms.CharField(
@@ -3564,35 +3516,32 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     Base form for connecting a Cable to a Device component
     """
 
-    termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
-    termination_b_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        label="Site",
+    termination_b_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        label="Location",
         required=False,
-        query_params={"region_id": "$termination_b_region"},
     )
     termination_b_rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         label="Rack",
         required=False,
         null_option="None",
-        query_params={"site_id": "$termination_b_site"},
+        query_params={"location": "$termination_b_location"},
     )
     termination_b_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         label="Device",
         required=False,
         query_params={
-            "site_id": "$termination_b_site",
-            "rack_id": "$termination_b_rack",
+            "location": "$termination_b_location",
+            "rack": "$termination_b_rack",
         },
     )
 
     class Meta:
         model = Cable
         fields = [
-            "termination_b_region",
-            "termination_b_site",
+            "termination_b_location",
             "termination_b_rack",
             "termination_b_device",
             "termination_b_id",
@@ -3622,7 +3571,7 @@ class ConnectCableToConsolePortForm(ConnectCableToDeviceForm):
         queryset=ConsolePort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3631,7 +3580,7 @@ class ConnectCableToConsoleServerPortForm(ConnectCableToDeviceForm):
         queryset=ConsoleServerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3640,7 +3589,7 @@ class ConnectCableToPowerPortForm(ConnectCableToDeviceForm):
         queryset=PowerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3649,7 +3598,7 @@ class ConnectCableToPowerOutletForm(ConnectCableToDeviceForm):
         queryset=PowerOutlet.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3670,7 +3619,7 @@ class ConnectCableToFrontPortForm(ConnectCableToDeviceForm):
         queryset=FrontPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3679,40 +3628,37 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
         queryset=RearPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
 class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
-    termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
-    termination_b_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        label="Site",
+    termination_b_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        label="Location",
         required=False,
-        query_params={"region_id": "$termination_b_region"},
     )
     termination_b_circuit = DynamicModelChoiceField(
         queryset=Circuit.objects.all(),
         label="Circuit",
         query_params={
-            "provider_id": "$termination_b_provider",
-            "site_id": "$termination_b_site",
+            "provider": "$termination_b_provider",
+            "location": "$termination_b_location",
         },
     )
     termination_b_id = DynamicModelChoiceField(
         queryset=CircuitTermination.objects.all(),
         label="Side",
         disabled_indicator="cable",
-        query_params={"circuit_id": "$termination_b_circuit"},
+        query_params={"circuit": "$termination_b_circuit"},
     )
 
     class Meta:
         model = Cable
         fields = [
             "termination_b_provider",
-            "termination_b_region",
-            "termination_b_site",
+            "termination_b_location",
             "termination_b_circuit",
             "termination_b_id",
             "type",
@@ -3730,33 +3676,31 @@ class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotM
 
 
 class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm):
-    termination_b_region = DynamicModelChoiceField(queryset=Region.objects.all(), label="Region", required=False)
-    termination_b_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        label="Site",
+    termination_b_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        label="Location",
         required=False,
-        query_params={"region_id": "$termination_b_region"},
     )
     termination_b_rackgroup = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         label="Rack Group",
         required=False,
-        query_params={"site_id": "$termination_b_site"},
+        query_params={"location": "$termination_b_location"},
     )
     termination_b_powerpanel = DynamicModelChoiceField(
         queryset=PowerPanel.objects.all(),
         label="Power Panel",
         required=False,
         query_params={
-            "site_id": "$termination_b_site",
-            "rack_group_id": "$termination_b_rackgroup",
+            "location": "$termination_b_location",
+            "rack_group": "$termination_b_rackgroup",
         },
     )
     termination_b_id = DynamicModelChoiceField(
         queryset=PowerFeed.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"power_panel_id": "$termination_b_powerpanel"},
+        query_params={"power_panel": "$termination_b_powerpanel"},
     )
 
     class Meta:
@@ -3941,20 +3885,14 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
 class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
     type = forms.MultipleChoiceField(
         choices=add_blank_choice(CableTypeChoices),
@@ -3962,14 +3900,14 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         widget=StaticSelect2Multiple(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
-            "site": "$site",
+            "location": "$location",
             "tenant": "$tenant",
-            "rack_id": "$rack_id",
+            "rack": "$rack",
         },
     )
     tag = TagFilterField(model)
@@ -3981,50 +3919,32 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
 
 
 class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
-    device_id = DynamicModelMultipleChoiceField(
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
 
 
 class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
-    device_id = DynamicModelMultipleChoiceField(
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
 
 
 class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
-    device_id = DynamicModelMultipleChoiceField(
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
 
 
@@ -4038,24 +3958,19 @@ class DeviceSelectionForm(forms.Form):
 
 
 class VirtualChassisCreateForm(NautobotModelForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
     members = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         query_params={
-            "site_id": "$site",
-            "rack_id": "$rack",
+            "location": "$location",
+            "rack": "$rack",
         },
     )
     initial_position = forms.IntegerField(
@@ -4069,8 +3984,7 @@ class VirtualChassisCreateForm(NautobotModelForm):
         fields = [
             "name",
             "domain",
-            "region",
-            "site",
+            "location",
             "rack",
             "members",
             "initial_position",
@@ -4166,24 +4080,19 @@ class DeviceVCMembershipForm(forms.ModelForm):
 
 
 class VCMemberSelectForm(BootstrapMixin, forms.Form):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         query_params={
-            "site_id": "$site",
-            "rack_id": "$rack",
-            "virtual_chassis_id": "null",
+            "location": "$location",
+            "rack": "$rack",
+            "virtual_chassis": "null",
         },
     )
 
@@ -4218,13 +4127,7 @@ class VirtualChassisCSVForm(CustomFieldModelCSVForm):
 class VirtualChassisFilterForm(NautobotFilterForm):
     model = VirtualChassis
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
         to_field_name="slug",
@@ -4236,7 +4139,7 @@ class VirtualChassisFilterForm(NautobotFilterForm):
         to_field_name="slug",
         required=False,
         null_option="None",
-        query_params={"group": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )
     tag = TagFilterField(model)
 
@@ -4250,14 +4153,12 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
 
     class Meta:
         model = PowerPanel
         fields = [
-            "region",
-            "site",
             "location",
             "rack_group",
             "name",
@@ -4277,8 +4178,8 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
         if data:
 
-            # Limit group queryset by assigned site
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            # Limit rack_group queryset by assigned location
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
@@ -4291,7 +4192,7 @@ class PowerPanelBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
 
     class Meta:
@@ -4302,12 +4203,12 @@ class PowerPanelBulkEditForm(
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
-    rack_group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        label="Rack group (ID)",
+        label="Rack group",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
     tag = TagFilterField(model)
 
@@ -4318,30 +4219,23 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 
 
 class PowerFeedForm(NautobotModelForm):
-    region = DynamicModelChoiceField(
-        queryset=Region.objects.all(),
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
         required=False,
-        initial_params={"sites__powerpanel": "$power_panel"},
+        initial_params={"power_panels": "$power_panel"},
     )
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        initial_params={"powerpanel": "$power_panel"},
-        query_params={"region_id": "$region"},
-    )
-    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"site_id": "$site"})
+    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
     comments = CommentField()
 
     class Meta:
         model = PowerFeed
         fields = [
-            "region",
-            "site",
+            "location",
             "power_panel",
             "rack",
             "name",
@@ -4363,7 +4257,7 @@ class PowerFeedForm(NautobotModelForm):
 
 
 class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name="name", help_text="Assigned site")
+    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name", help_text="Assigned location")
     power_panel = CSVModelChoiceField(
         queryset=PowerPanel.objects.all(),
         to_field_name="name",
@@ -4394,18 +4288,18 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
         if data:
 
-            # Limit power_panel queryset by site
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            # Limit power_panel queryset by location
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["power_panel"].queryset = self.fields["power_panel"].queryset.filter(**params)
 
-            # Limit rack_group queryset by site
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            # Limit rack_group queryset by location
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
-            # Limit rack queryset by site and group
+            # Limit rack queryset by location and group
             params = {
-                f"site__{self.fields['site'].to_field_name}": data.get("site"),
-                f"group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
+                f"location__{self.fields['location'].to_field_name}": data.get("location"),
+                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
@@ -4439,7 +4333,6 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 
     class Meta:
         nullable_fields = [
-            "rackgroup",
             "comments",
         ]
 
@@ -4447,26 +4340,20 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
-    power_panel_id = DynamicModelMultipleChoiceField(
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
         label="Power panel",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$location"},
     )
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),

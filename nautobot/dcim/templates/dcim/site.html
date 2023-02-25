@@ -11,25 +11,20 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        {{ object.status| hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>
                     <td>Region</td>
                     <td>
-                        {% if object.region %}
-                            {% for region in object.region.get_ancestors %}
-                                {{ region|hyperlinked_object }} /
-                            {% endfor %}
-                        {% endif %}
                         {{ object.region|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant and object.tenant.group %}
-                            {{ object.tenant.group|hyperlinked_object }} /
+                        {% if object.tenant and object.tenant.tenant_group %}
+                            {{ object.tenant.tenant_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.tenant|hyperlinked_object }}
                     </td>
@@ -177,7 +172,7 @@
             <table class="table table-hover panel-body">
                 {% for rg in rack_groups %}
                     <tr>
-                        <td style="padding-left: {{ rg.level }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
+                        <td style="padding-left: {{ rg.tree_depth }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                         <td>{{ rg.rack_count }}</td>
                         <td class="text-right noprint">
                             <a href="{% url 'dcim:rack_elevation_list' %}?group_id={{ rg.pk }}" class="btn btn-xs btn-primary" title="View elevations">

@@ -11,9 +11,9 @@ from django.db.models import Q
 from django.utils import timezone
 
 from nautobot.core.models import BaseModel
-from nautobot.utilities.fields import JSONArrayField
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.utils import flatten_dict
+from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.data import flatten_dict
 
 
 __all__ = (
@@ -43,6 +43,7 @@ class User(BaseModel, AbstractUser):
 
     class Meta:
         db_table = "auth_user"
+        ordering = ["username"]
 
     def get_config(self, path, default=None):
         """
@@ -209,6 +210,9 @@ class ObjectPermission(BaseModel):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200, blank=True)
     enabled = models.BooleanField(default=True)
+
+    # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+    # pylint: disable=unsupported-binary-operation
     object_types = models.ManyToManyField(
         to=ContentType,
         limit_choices_to=Q(
@@ -227,6 +231,7 @@ class ObjectPermission(BaseModel):
         ),
         related_name="object_permissions",
     )
+    # pylint: enable=unsupported-binary-operation
     groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
     users = models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name="object_permissions")
     actions = JSONArrayField(

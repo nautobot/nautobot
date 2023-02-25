@@ -2,9 +2,9 @@
 
 from django.apps import apps
 
+from nautobot.core.testing import TestCase
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import TestCase
 
 
 class StatusManagementTestCase(TestCase):
@@ -29,7 +29,7 @@ class StatusManagementTestCase(TestCase):
         status.color = "12ab34"
         status.validated_save()
 
-        status = Status.objects.get(slug="container")
+        status = Status.objects.get(slug="deprecated")
         status.description = "I'm a little teapot"
         status.validated_save()
 

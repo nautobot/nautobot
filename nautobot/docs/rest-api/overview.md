@@ -54,7 +54,7 @@ curl -s http://nautobot/api/ipam/ip-addresses/c557df87-9a63-4555-bfd1-21cea2f6aa
   "description": "Example IP address",
   "tags": [],
   "custom_fields": {},
-  "created": "2020-08-04",
+  "created": "2020-08-04T00:00:00Z",
   "last_updated": "2020-08-04T14:12:39.666885Z"
 }
 ```
@@ -66,7 +66,7 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
 +++ 1.3.0
-    You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=1.3` or `/api/?api_version=1.2`
+    You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=2.0` or `/api/?api_version=2.0`
 
 ## Endpoint Hierarchy
 
@@ -102,8 +102,8 @@ See the [filtering documentation](filtering.md) for more details.
 
 As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
-1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=1.3`
-2. A client may include an `api_version` as a URL query parameter, for example `/api/extras/jobs/?api_version=1.3`
+1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=2.0`
+2. A client may include an `api_version` as a URL query parameter, for example `/api/extras/jobs/?api_version=2.0`
 
 Generally the former approach is recommended when writing automated API integrations, as it can be set as a general request header alongside the [authentication token](authentication.md) and re-used across a series of REST API interactions, while the latter approach may be more convenient when initially exploring the REST API via the interactive documentation as described above.
 
@@ -113,6 +113,8 @@ By default, a REST API request that does not specify an API version number will 
 
 !!! note
     For Nautobot 1.x, the default API behavior is to be compatible with the REST API of Nautobot version 1.2, in other words, for all Nautobot 1.x versions (beginning with Nautobot 1.2.0), `Accept: application/json` is functionally equivalent to `Accept: application/json; version=1.2`.
+
+    For Nautobot 2.x, the default API version is 2.0.
 
 !!! tip
     The default REST API version compatibility may change in a subsequent Nautobot major release, so as a best practice, it is recommended that a REST API client _should always_ request the exact Nautobot REST API version that it is compatible with, rather than relying on the default behavior to remain constant.
@@ -431,6 +433,10 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
         "label": "IPv4"
     },
     "prefix": "192.0.2.0/24",
+    "type": {
+        "value": "container",
+        "label": "Container"
+    },
     "site": {
         "id": "b9edf2ee-cad9-48be-9921-006294bff730",
         "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
@@ -441,8 +447,13 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
     "tenant": null,
     "vlan": null,
     "status": {
-        "value": "container",
-        "label": "Container"
+        "display": "Reserved",
+        "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+        "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+        "name": "Reserved",
+        "slug": "reserved",
+        "created": "2019-12-09T01:02:03.456789Z",
+        "last_updated": "2019-12-09T16:38:50.363404Z"
     },
     "role": {
         "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
@@ -450,11 +461,11 @@ GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
         "name": "Staging",
         "slug": "staging"
     },
-    "is_pool": false,
+    "type": "network",
     "description": "Example prefix",
     "tags": [],
     "custom_fields": {},
-    "created": "2018-12-10",
+    "created": "2018-12-10T00:00:00Z",
     "last_updated": "2019-03-01T20:02:46.173540Z"
 }
 ```
@@ -572,15 +583,20 @@ http://nautobot/api/ipam/prefixes/ \
   "tenant": null,
   "vlan": null,
   "status": {
-    "value": "active",
-    "label": "Active"
+      "display": "Active",
+      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "name": "Active",
+      "slug": "active",
+      "created": "2019-12-09T16:38:50.363404Z",
+      "last_updated": "2019-12-09T16:38:50.363404Z"
   },
   "role": null,
-  "is_pool": false,
+  "type": "network",
   "description": "",
   "tags": [],
   "custom_fields": {},
-  "created": "2020-08-04",
+  "created": "2020-08-04T20:08:39.007125Z",
   "last_updated": "2020-08-04T20:08:39.007125Z"
 }
 ```
@@ -656,15 +672,20 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
   "tenant": null,
   "vlan": null,
   "status": {
-    "value": "reserved",
-    "label": "Reserved"
+      "display": "Reserved",
+      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "name": "Reserved",
+      "slug": "reserved",
+      "created": "2019-12-09T00:00:00Z",
+      "last_updated": "2019-12-09T16:38:50.363404Z"
   },
   "role": null,
-  "is_pool": false,
+  "type": "network",
   "description": "",
   "tags": [],
   "custom_fields": {},
-  "created": "2020-08-04",
+  "created": "2020-08-04T00:00:00Z",
   "last_updated": "2020-08-04T20:14:55.709430Z"
 }
 ```

@@ -9,7 +9,7 @@ from django.test import SimpleTestCase, override_settings
 from packaging import version
 from requests import Response
 
-from nautobot.utilities.tasks import get_releases
+from nautobot.core.tasks import get_releases
 
 
 def successful_github_response(url, *_args, **_kwargs):
@@ -99,6 +99,7 @@ class GetReleasesTestCase(SimpleTestCase):
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
+            timeout=15,
         )
 
         # Check if result is put in cache
@@ -135,6 +136,7 @@ class GetReleasesTestCase(SimpleTestCase):
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
+            timeout=15,
         )
 
         # Check if result is put in cache
@@ -166,6 +168,7 @@ class GetReleasesTestCase(SimpleTestCase):
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
+            timeout=15,
         )
 
         # Check if failure is put in cache

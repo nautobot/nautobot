@@ -1,7 +1,7 @@
 from operator import attrgetter
 
+from nautobot.core.testing import TestCase
 from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.utilities.testing import TestCase
 
 
 class OrderingTestBase(TestCase):

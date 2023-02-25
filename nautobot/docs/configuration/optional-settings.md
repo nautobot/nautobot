@@ -219,24 +219,6 @@ The default celery queue name that will be used by workers if no queue is specif
 
 ---
 
-## CELERY_RESULT_BACKEND
-
-Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`
-
-Default: `'redis://localhost:6379/0'`
-
-Celery result backend used to tell workers where to store task results (tombstones).
-
----
-
-## CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS
-
-Default: `{}`
-
-A dict of additional options passed to the Celery result backend transport. This is only required when [configuring Celery to utilize Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration).
-
----
-
 ## CELERY_TASK_SOFT_TIME_LIMIT
 
 Default: `300` (5 minutes)
@@ -773,7 +755,7 @@ Default:
 ]
 ```
 
-List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
 
 ---
 

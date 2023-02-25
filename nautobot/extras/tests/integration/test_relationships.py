@@ -1,10 +1,10 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device, PowerPanel
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
@@ -33,7 +33,7 @@ class RelationshipsTestCase(SeleniumTestCase):
         """
         device = create_test_device()
         power_panel = PowerPanel.objects.create(
-            site=device.site,
+            location=device.location,
             name="Test Power Panel",
         )
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)

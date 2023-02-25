@@ -18,11 +18,14 @@ def rebuild_paths_circuits(obj):
     """
     termination_type = ContentType.objects.get_for_model(CircuitTermination)
 
+    # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+    # pylint: disable=unsupported-binary-operation
     cable_paths = CablePath.objects.filter(
         Q(path__contains=obj)
         | Q(destination_type=termination_type, destination_id=obj.pk)
         | Q(origin_type=termination_type, origin_id=obj.pk)
     )
+    # pylint: enable=unsupported-binary-operation
 
     with transaction.atomic():
         for cp in cable_paths:
@@ -40,7 +43,7 @@ def update_circuit(instance, raw=False, **kwargs):
     if raw:
         return
     if instance.term_side in CircuitTerminationSideChoices.values():
-        termination_name = f"termination_{instance.term_side.lower()}"
+        termination_name = f"circuit_termination_{instance.term_side.lower()}"
         setattr(instance.circuit, termination_name, instance)
         setattr(instance.circuit, "last_updated", timezone.now())
         instance.circuit.save()

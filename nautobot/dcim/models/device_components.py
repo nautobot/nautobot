@@ -5,8 +5,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
 
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.ordering import naturalize_interface
+from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
@@ -26,19 +31,12 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 
-from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
     RelationshipModel,
     Status,
     StatusModel,
 )
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
     "BaseInterface",
@@ -61,7 +59,7 @@ class ComponentModel(PrimaryModel):
     An abstract model inherited by any model which has a parent Device.
     """
 
-    device = models.ForeignKey(to="dcim.Device", on_delete=models.CASCADE, related_name="%(class)ss")
+    device = ForeignKeyWithAutoRelatedName(to="dcim.Device", on_delete=models.CASCADE)
     name = models.CharField(max_length=64, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
@@ -87,10 +85,6 @@ class ComponentModel(PrimaryModel):
             device = None
 
         return super().to_objectchange(action, related_object=device, **kwargs)
-
-    @property
-    def parent(self):
-        return getattr(self, "device", None)
 
 
 class CableTermination(models.Model):
@@ -138,6 +132,15 @@ class CableTermination(models.Model):
     def get_cable_peer(self):
         return self._cable_peer
 
+    @property
+    def parent(self):
+        """
+        Convenience property - used in template rendering among other cases.
+
+        Could be a Device, a Circuit, a PowerPanel, etc.
+        """
+        raise NotImplementedError("Class didn't implement 'parent' property")
+
 
 class PathEndpoint(models.Model):
     """
@@ -151,7 +154,12 @@ class PathEndpoint(models.Model):
     `connected_endpoint()` is a convenience method for returning the destination of the associated CablePath, if any.
     """
 
-    _path = models.ForeignKey(to="dcim.CablePath", on_delete=models.SET_NULL, null=True, blank=True)
+    _path = ForeignKeyWithAutoRelatedName(
+        to="dcim.CablePath",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         abstract = True
@@ -228,6 +236,10 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
             self.description,
         )
 
+    @property
+    def parent(self):
+        return self.device
+
 
 #
 # Console server ports
@@ -264,6 +276,10 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
             self.type,
             self.description,
         )
+
+    @property
+    def parent(self):
+        return self.device
 
 
 #
@@ -331,6 +347,10 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
             self.allocated_draw,
             self.description,
         )
+
+    @property
+    def parent(self):
+        return self.device
 
     def clean(self):
         super().clean()
@@ -427,7 +447,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name="poweroutlets",
+        related_name="power_outlets",
     )
     # todoindex:
     feed_leg = models.CharField(
@@ -465,6 +485,10 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
             self.description,
         )
 
+    @property
+    def parent(self):
+        return self.device
+
     def clean(self):
         super().clean()
 
@@ -484,7 +508,7 @@ class BaseInterface(RelationshipModel, StatusModel):
     """
 
     enabled = models.BooleanField(default=True)
-    mac_address = MACAddressCharField(null=True, blank=True, verbose_name="MAC Address")
+    mac_address = MACAddressCharField(blank=True, default="", verbose_name="MAC Address")
     mtu = models.PositiveIntegerField(
         blank=True,
         null=True,
@@ -697,28 +721,30 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                 )
 
             # An interface's parent must belong to the same device or virtual chassis
-            if self.parent_interface.parent != self.parent:
-                if getattr(self.parent, "virtual_chassis", None) is None:
+            if self.parent_interface.device != self.device:
+                if getattr(self.device, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
-                            f"({self.parent_interface.parent})."
+                            f"({self.parent_interface.device})."
                         }
                     )
-                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
+                elif self.parent_interface.device.virtual_chassis != self.device.virtual_chassis:
                     raise ValidationError(
                         {
-                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.parent}, which "
-                            f"is not part of virtual chassis {self.parent.virtual_chassis}."
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
+                            f"is not part of virtual chassis {self.device.virtual_chassis}."
                         }
                     )
 
         # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site_id not in [self.parent.site_id, None]:
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
+        # the parent Locations or the child locations of `device.location`?
+        if self.untagged_vlan and self.untagged_vlan.location_id not in [self.device.location_id, None]:
             raise ValidationError(
                 {
                     "untagged_vlan": (
-                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the interface's parent "
+                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same location as the interface's parent "
                         f"device, or it must be global."
                     )
                 }
@@ -732,22 +758,22 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
             # A bridged interface belong to the same device or virtual chassis
-            if self.bridge.parent.id != self.parent.id:
-                if getattr(self.parent, "virtual_chassis", None) is None:
+            if self.bridge.device.id != self.device.id:
+                if getattr(self.device, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "bridge": (
                                 f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                                f"({self.bridge.parent})."
+                                f"({self.bridge.device})."
                             )
                         }
                     )
-                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
+                elif self.bridge.device.virtual_chassis_id != self.device.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "bridge": (
-                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "
-                                f"is not part of virtual chassis {self.parent.virtual_chassis}."
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
+                                f"is not part of virtual chassis {self.device.virtual_chassis}."
                             )
                         }
                     )
@@ -769,7 +795,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         return self.type == InterfaceTypeChoices.TYPE_LAG
 
     @property
-    def count_ipaddresses(self):
+    def ip_address_count(self):
         return self.ip_addresses.count()
 
     @property
@@ -789,7 +815,7 @@ class FrontPort(CableTermination, ComponentModel):
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
-    rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="frontports")
+    rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="front_ports")
     rear_port_position = models.PositiveSmallIntegerField(
         default=1,
         validators=[
@@ -828,6 +854,10 @@ class FrontPort(CableTermination, ComponentModel):
             self.rear_port_position,
             self.description,
         )
+
+    @property
+    def parent(self):
+        return self.device
 
     def clean(self):
         super().clean()
@@ -874,12 +904,12 @@ class RearPort(CableTermination, ComponentModel):
         super().clean()
 
         # Check that positions count is greater than or equal to the number of associated FrontPorts
-        frontport_count = self.frontports.count()
-        if self.positions < frontport_count:
+        front_port_count = self.front_ports.count()
+        if self.positions < front_port_count:
             raise ValidationError(
                 {
                     "positions": f"The number of positions cannot be less than the number of mapped front ports "
-                    f"({frontport_count})"
+                    f"({front_port_count})"
                 }
             )
 
@@ -892,6 +922,10 @@ class RearPort(CableTermination, ComponentModel):
             self.positions,
             self.description,
         )
+
+    @property
+    def parent(self):
+        return self.device
 
 
 #
@@ -952,6 +986,10 @@ class DeviceBay(ComponentModel):
                     }
                 )
 
+    @property
+    def parent(self):
+        return self.device
+
 
 #
 # Inventory items
@@ -966,20 +1004,12 @@ class DeviceBay(ComponentModel):
     "relationships",
     "webhooks",
 )
-class InventoryItem(MPTTModel, ComponentModel):
+class InventoryItem(TreeModel, ComponentModel):
     """
     An InventoryItem represents a serialized piece of hardware within a Device, such as a line card or power supply.
     InventoryItems are used only for inventory purposes.
     """
 
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="child_items",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -1004,8 +1034,6 @@ class InventoryItem(MPTTModel, ComponentModel):
     )
     discovered = models.BooleanField(default=False, help_text="This item was automatically discovered")
 
-    objects = TreeManager()
-
     csv_headers = [
         "device",
         "name",
@@ -1019,7 +1047,7 @@ class InventoryItem(MPTTModel, ComponentModel):
     ]
 
     class Meta:
-        ordering = ("device__id", "parent__id", "_name")
+        ordering = ("_name",)
         unique_together = ("device", "parent", "name")
 
     def get_absolute_url(self):

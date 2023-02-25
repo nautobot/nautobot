@@ -3,10 +3,10 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.dcim.models import PowerPanel, Site
+from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.models import PowerPanel, Location, LocationType
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 class CircuitRelationshipsTestCase(SeleniumTestCase):
@@ -19,12 +19,13 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
-        site_ct = ContentType.objects.get_for_model(Site)
+        location_type = LocationType.objects.get(name="Campus")
+        location_ct = ContentType.objects.get_for_model(Location)
         circuit_termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         provider_ct = ContentType.objects.get_for_model(Provider)
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)
         active_circuit_status = Status.objects.get_for_model(Circuit).get(slug="active")
-        active_site_status = Status.objects.get_for_model(Site).get(slug="active")
+        active_location_status = Status.objects.get_for_model(Location).get(slug="active")
         provider1 = Provider.objects.create(
             name="Test Provider 1",
             slug="test-provider-1",
@@ -40,21 +41,22 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         circuit = Circuit.objects.create(
             provider=provider1,
             cid="1234",
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=active_circuit_status,
         )
-        site = Site.objects.create(
-            name="Test Site",
-            slug="test-site",
-            status=active_site_status,
+        location = Location.objects.create(
+            name="Test Location",
+            slug="test-location",
+            status=active_location_status,
+            location_type=location_type,
         )
         circuit_termination = CircuitTermination.objects.create(
             circuit=circuit,
             term_side="A",
-            site=site,
+            location=location,
         )
         power_panel = PowerPanel.objects.create(
-            site=site,
+            location=location,
             name="Test Power Panel",
         )
         m2m = Relationship.objects.create(
@@ -75,16 +77,16 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination=provider2,
         )
         o2m = Relationship.objects.create(
-            name="Termination 2 Site o2m",
+            name="Termination 2 Location o2m",
             slug="termination-2-provider-o2m",
             source_type=circuit_termination_ct,
-            destination_type=site_ct,
+            destination_type=location_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
         RelationshipAssociation.objects.create(
             relationship=o2m,
             source=circuit_termination,
-            destination=site,
+            destination=location,
         )
         o2o = Relationship.objects.create(
             name="Termination 2 Power Panel o2o",
@@ -135,5 +137,5 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         # Verify custom relationships are visible
         self.assertTrue(self.browser.is_text_present("Power Panel"))
         self.assertTrue(self.browser.is_text_present("2 providers"))
-        self.assertTrue(self.browser.is_text_present("1 site"))
+        self.assertTrue(self.browser.is_text_present("1 location"))
         self.assertTrue(self.browser.is_text_present("1 nonexistentmodel(s)"))
