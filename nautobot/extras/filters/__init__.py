@@ -295,7 +295,7 @@ class ConfigContextFilterSet(BaseFilterSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+        if settings.NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
                 queryset=DynamicGroup.objects.all(),
                 label="Dynamic Groups (slug or ID)",

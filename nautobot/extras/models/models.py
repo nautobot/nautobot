@@ -119,7 +119,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
 
-    # Due to feature flag CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED this field will remain empty unless set to True.
+    # Due to feature flag NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED this field will remain empty unless set to True.
     dynamic_groups = models.ManyToManyField(
         to="extras.DynamicGroup", related_name="+", blank=True, limit_choices_to=limit_dynamic_group_choices
     )

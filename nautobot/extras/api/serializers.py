@@ -355,7 +355,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+        if not settings.NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.fields.pop("dynamic_groups")
 
     class Meta:
