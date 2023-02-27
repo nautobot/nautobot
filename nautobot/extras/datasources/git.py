@@ -538,7 +538,12 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     # Context Metadata `schema` has been updated to `config_context_schema`,
     # but for backwards compatibility `schema` is still supported.
     if "schema" in context_metadata and "config_context_schema" not in context_metadata:
-        logger.warning("`schema` is deprecated in `_metadata`, please use `config_context_schema` instead.")
+        job_result.log(
+            "`schema` is deprecated in `_metadata`, please use `config_context_schema` instead.",
+            level_choice=LogLevelChoices.LOG_WARNING,
+            grouping="config context",
+            logger=logger,
+        )
         context_metadata["config_context_schema"] = context_metadata.pop("schema")
 
     # Translate relationship queries/filters to lists of related objects
