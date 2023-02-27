@@ -59,6 +59,6 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
-        from nautobot.extras.utils import update_registry_with_new_apps
+        from nautobot.extras.utils import populate_model_features_registry
 
-        update_registry_with_new_apps()
+        populate_model_features_registry()

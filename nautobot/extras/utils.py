@@ -208,7 +208,7 @@ def extras_features(*features):
     return wrapper
 
 
-def update_registry_with_new_apps():
+def populate_model_features_registry():
     """
     Updates the registry with new apps.
 
@@ -240,7 +240,7 @@ def update_registry_with_new_apps():
 
     app_models = apps.get_models()
     for lookup_conf in lookup_confs:
-        registry_items = lookup_by_field(
+        registry_items = find_models_with_matching_fields(
             app_models=app_models,
             field_names=lookup_conf["field_names"],
             field_attributes=lookup_conf.get("field_attributes"),
@@ -249,7 +249,7 @@ def update_registry_with_new_apps():
         registry["model_features"][feature_name] = registry_items
 
 
-def lookup_by_field(app_models, field_names, field_attributes=None):
+def find_models_with_matching_fields(app_models, field_names, field_attributes=None):
     """
     Find all models that have fields with the specified names, and return them grouped by app.
 

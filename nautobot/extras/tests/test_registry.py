@@ -5,7 +5,7 @@ from nautobot.extras.models import RelationshipAssociation
 from nautobot.extras.registry import Registry, registry
 from nautobot.extras.secrets import register_secrets_provider
 from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider
-from nautobot.extras.utils import lookup_by_field
+from nautobot.extras.utils import find_models_with_matching_fields
 
 
 class RegistryTest(TestCase):
@@ -56,7 +56,7 @@ class RegistryTest(TestCase):
         """Assert lookup_by_field returns the expected values"""
 
         with self.subTest("Test for model features with field_attributes"):
-            relationships_registry = lookup_by_field(
+            relationships_registry = find_models_with_matching_fields(
                 app_models=apps.get_models(),
                 field_names=["source_for_associations", "destination_for_associations"],
                 field_attributes={"related_model": RelationshipAssociation},
@@ -64,8 +64,7 @@ class RegistryTest(TestCase):
             self.assertEqual(relationships_registry, registry["model_features"]["relationships"])
 
         with self.subTest("Test for model features without field_attributes"):
-            custom_fields_registry = lookup_by_field(
-                app_models=apps.get_models(),
-                field_names=["_custom_field_data"],
+            custom_fields_registry = find_models_with_matching_fields(
+                app_models=apps.get_models(), field_names=["_custom_field_data"]
             )
             self.assertEqual(custom_fields_registry, registry["model_features"]["custom_fields"])
