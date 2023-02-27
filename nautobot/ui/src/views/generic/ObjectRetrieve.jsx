@@ -7,7 +7,6 @@ import useSWR from "swr"
 import create_app_tab from "@components/apps/AppTab"
 import AppComponents from "@components/core/Apps"
 import AppFullWidthComponentsWithProps from "@components/apps/AppFullWidthComponents"
-import { nautobot_url } from "src/index"
 
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
@@ -61,11 +60,11 @@ function RenderRow(props) {
 export default function ObjectRetrieve({ api_url }) {
   const { app_name, model_name, object_id } = useParams()
   if (!!app_name && !!model_name && !!object_id && !api_url) {
-    api_url = `${nautobot_url}/api/${app_name}/${model_name}/${object_id}/`
+    api_url = `/api/${app_name}/${model_name}/${object_id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
   const { data: appHTML } = useSWR(() => api_url ? api_url + "app_full_width_fragment/" : null, fetcherHTML)
-  const ui_url = objectData ? `${nautobot_url}${objectData.formData.web_url}?viewconfig=true` : null
+  const ui_url = objectData ? `${objectData.formData.web_url}?viewconfig=true` : null
   var { data: appConfig } = useSWR(() => ui_url, fetcherTabs)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
