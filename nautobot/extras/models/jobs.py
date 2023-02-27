@@ -69,11 +69,9 @@ JOB_RESULT_METRIC = Histogram(
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "graphql",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class Job(PrimaryModel):
@@ -514,7 +512,6 @@ class JobLogEntry(BaseModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "graphql",
 )

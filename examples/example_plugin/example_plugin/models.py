@@ -5,13 +5,11 @@ from nautobot.apps.models import extras_features, OrganizationalModel
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ExampleModel(OrganizationalModel):
@@ -37,12 +35,10 @@ class ExampleModel(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     # "graphql", Not specified here as we have a custom type for this model, see example_plugin.graphql.types
-    "relationships",
     "webhooks",
 )
 class AnotherExampleModel(OrganizationalModel):

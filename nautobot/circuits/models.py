@@ -23,12 +23,10 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ProviderNetwork(PrimaryModel):
@@ -74,12 +72,10 @@ class ProviderNetwork(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Provider(PrimaryModel):
@@ -177,12 +173,10 @@ class CircuitType(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -274,13 +268,11 @@ class Circuit(PrimaryModel, StatusModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):

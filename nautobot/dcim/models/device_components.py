@@ -200,11 +200,9 @@ class PathEndpoint(models.Model):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
@@ -290,11 +288,9 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class PowerPort(CableTermination, PathEndpoint, ComponentModel):
@@ -563,11 +559,9 @@ class BaseInterface(RelationshipModel, StatusModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -998,11 +992,9 @@ class DeviceBay(ComponentModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class InventoryItem(TreeModel, ComponentModel):

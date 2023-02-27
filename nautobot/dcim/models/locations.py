@@ -15,12 +15,10 @@ from nautobot.extras.utils import extras_features, FeatureQuery
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class LocationType(TreeModel, OrganizationalModel):
@@ -123,12 +121,10 @@ class LocationQuerySet(TreeQuerySet):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )

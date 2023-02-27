@@ -22,11 +22,9 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Region(TreeModel, OrganizationalModel):
@@ -64,12 +62,10 @@ class Region(TreeModel, OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "export_templates",
     "custom_validators",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )

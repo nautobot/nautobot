@@ -21,11 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Secret(PrimaryModel):
@@ -109,11 +107,9 @@ class Secret(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class SecretsGroup(OrganizationalModel):

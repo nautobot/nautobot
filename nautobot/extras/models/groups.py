@@ -27,12 +27,10 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class DynamicGroup(OrganizationalModel):

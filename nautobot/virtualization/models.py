@@ -40,10 +40,8 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ClusterType(OrganizationalModel):
     """
@@ -79,10 +77,8 @@ class ClusterType(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ClusterGroup(OrganizationalModel):
     """
@@ -118,14 +114,12 @@ class ClusterGroup(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class Cluster(PrimaryModel):
@@ -221,13 +215,11 @@ class Cluster(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -392,12 +384,10 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )

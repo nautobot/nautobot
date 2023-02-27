@@ -5,7 +5,6 @@ HTTP_CONTENT_TYPE_JSON = "application/json"
 EXTRAS_FEATURES = [
     "cable_terminations",
     "config_context_owners",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
@@ -14,7 +13,6 @@ EXTRAS_FEATURES = [
     "graphql",
     "job_results",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 ]
