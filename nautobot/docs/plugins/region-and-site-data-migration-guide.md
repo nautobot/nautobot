@@ -1,4 +1,4 @@
-# Region and Site Related Data Model Migration Guide
+# Region and Site Related Data Model Migration Guide For Existing Nautobot Apps
 
 In Nautobot 2.0.0, all the `Region` and `Site` related data models are being migrated to use `Location`. Below is a comprehensive guide for Nautobot App developers to migrate their `Region` and `Site` related data models to `Location`.
 
@@ -35,7 +35,7 @@ class ExampleModel(OrganizationalModel):
 Make the migration file by running `nautobot-server makemigrations [app_name] -n [migration_name]`, for example:
 
 ```shell
-nautobot-server makemigrations example_plugin -n add_location_field_to_example_model
+nautobot-server makemigrations example_app -n add_location_field_to_example_model
 ```
 
 Apply the migration file by running `nautobot-server migrate [app_name]`, for example:
@@ -84,7 +84,11 @@ class Migration(migrations.Migration):
     ]
 ```
 
-Now we can write the function that will perform the data migration. We need to query `ExampleModel` instances that have non-null `site` fields and null `location` fields and point their `location` fields to the new `Location` records that have the same names and other attributes as their respective `Sites`.
+Before we write the function that will perform the data migration, please note that we wrote a helpful migration that added a Foreign Key field `migrated_location` on `Region` and `Site` model. `migrated_location` stores the new location records that have the same names and other attributes as their respective `Sites`. That means all you need to do is query `ExampleModel` instances that have non-null `site` fields and null `location` fields and point the `location` field on your object to the site's `migrated_location` attribute, for example:
+
+```python
+example_model.location = example_model.site.migrated_location.
+```
 
 Below is what the function might look like:
 
@@ -94,16 +98,13 @@ def migrate_example_model_data_to_locations(apps, schema_editor):
     ExampleModel = apps.get("example_app", "examplemodel")
     LocationType = apps.get("dcim", "locationtype")
     Location = apps.get("dcim", "location")
-    # Get "Site" LocationType
-    site_location_type = LocationType.objects.get(name="Site")
 
     # Query ExampleModel instances with non-null site field
     example_models = ExampleModel.objects.filter(site__isnull=False, location__isnull=True).select_related("site", "location")
     for example_model in example_models:
-        site_name = example_model.site.name
         # Point the location field to the corresponding "Site" LocationType Location
         # with the same name.
-        example_model.location = Location.objects.get(location_type=site_location_type, name=site_name)
+        example_model.location = example_model.site.migrated_location
     ExampleModel.objects.bulk_update(example_models, ["location"], 1000)
 ```
 
@@ -136,15 +137,13 @@ def migrate_example_model_data_to_locations(apps, schema_editor):
     # Get "Site" LocationType
     site_location_type = LocationType.objects.get(name="Site")
 
-    if  ExampleModel.objects.exists():
-        # Query ExampleModel instances with non-null site field
-        example_models = ExampleModel.objects.filter(site__isnull=False).select_related("site", "location")
-        for  example_model  in  example_models:
-            site_name = example_model.site.name
-            # Point the location field to the corresponding "Site" LocationType Location
-            # with the same name.
-            example_model.location = Location.objects.get(location_type=site_location_type, name=site_name)
-        ExampleModel.objects.bulk_update(example_models, ["location"], 1000)
+    # Query ExampleModel instances with non-null site field
+    example_models = ExampleModel.objects.filter(site__isnull=False, location__isnull=True).select_related("site", "location")
+    for example_model in example_models:
+        # Point the location field to the corresponding "Site" LocationType Location
+        # with the same name.
+        example_model.location = example_model.site.migrated_location
+    ExampleModel.objects.bulk_update(example_models, ["location"], 1000)
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -164,7 +163,7 @@ class Migration(migrations.Migration):
 
 ## Remove Site/Region Related Fields from Migrated Data Models
 
-After the data migration is successful, we need to remove the `site`/`region` fields from your data model so that Nautobot will be able to remove the `Site` and `Region` models. You can do that by simply removing the `site`/`region` attributes from your model class:
+After the data migration is successful, we need to remove the `site`/`region` fields from your data model so that Nautobot will be able to remove the `Site` and `Region` models. Note that we need to remove those attributes in a separate migration file from the previous since they are two different operations. You can do that by simply removing the `site`/`region` attributes from your model class:
 
 ```python
 # models.py
@@ -209,6 +208,7 @@ class Migration(migrations.Migration):
 ```python
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
+        # TODO we need to change the name after we reorder migration files
         ("dcim", "0034_remove_region_and_site"),
     ]
 ```
@@ -225,6 +225,7 @@ class Migration(migrations.Migration):
     
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
+        # TODO we need to change the name after we reorder migration files
         ("dcim", "0034_remove_region_and_site"),
     ]
     dependencies = [
