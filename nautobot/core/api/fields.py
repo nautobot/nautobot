@@ -110,7 +110,7 @@ class ObjectTypeField(serializers.CharField):
     Represent the ContentType of this serializer's model as "<app_label>.<model>".
     """
 
-    def __init__(self, *args, read_only=True, **kwargs):
+    def __init__(self, *args, read_only=True, **kwargs):  # pylint: disable=useless-parent-delegation
         """Default read_only to True as this should never be a writable field."""
         super().__init__(*args, read_only=read_only, **kwargs)
 

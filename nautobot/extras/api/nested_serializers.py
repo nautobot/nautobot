@@ -2,7 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from nautobot.core.api import ChoiceField, ContentTypeField, WritableNestedSerializer
+from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.extras import choices, models
@@ -239,10 +239,22 @@ class NestedScheduledJobSerializer(WritableNestedSerializer):
         model = models.ScheduledJob
         fields = ["url", "name", "start_time", "interval", "crontab"]
 
+
+class NestedScheduledJobCreationSerializer(BaseModelSerializer):
+    """Unlike WritableNestedSerializer, this allows for creation of a ScheduledJob, not just finding an existing one."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
+    name = serializers.CharField(max_length=255, required=False)
+    start_time = serializers.DateTimeField(format=None, required=False)
+
+    class Meta:
+        model = models.ScheduledJob
+        fields = ["url", "name", "start_time", "interval", "crontab"]
+
     def validate(self, data):
         data = super().validate(data)
 
-        if data["interval"] != choices.JobExecutionType.TYPE_IMMEDIATELY:
+        if data["interval"] in choices.JobExecutionType.SCHEDULE_CHOICES:
             if "name" not in data:
                 raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
 
