@@ -272,7 +272,7 @@ def lookup_by_field(app_models, field_names, field_attributes=None):
                     registry_items.setdefault(app_label, set()).add(model_name)
             except FieldDoesNotExist:
                 pass
-    registry_items = {key: list(value) for key, value in registry_items.items()}
+    registry_items = {key: sorted(value) for key, value in registry_items.items()}
     return registry_items
 
 
