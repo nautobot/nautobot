@@ -70,9 +70,9 @@ The updated JSON data might look like this:
 }
 ```
 
-### Other Data Model Specific ObjectPermission
+### Other Data Model Specific ObjectPermission e.g. Interface
 
-The old `constraints` field for a `Site`/`Region` related data model's (e.g `Interface`) `ObjectPermission` instance might look like this:
+The old `constraints` field for a `Site`/`Region` related data model's (e.g. `Interface`) `ObjectPermission` instance might look like this:
 
 ```json
 {
@@ -127,6 +127,32 @@ The updated JSON data might look like this:
 }
 ```
 
+### Other Data Model Specific ObjectPermission e.g. ObjectChange
+
+The old `constraints` field for a `Site`/`Region` related data model's (e.g. `ObjectChange`) `ObjectPermission` instance might look like this:
+
+```json
+{
+    "changed_object_type": "dcim.site",
+    "changed_object_id": "0ab47314-2944-45f6-b964-9e009fc48ce0",
+    "changed_object_id__in": ["0ab47314-2944-45f6-b964-9e009fc48ce0", "b09545d4-6e2b-471e-8f07-27f25ca308f5"],
+}
+```
+
+To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
+    1. Replace all occurrences of "dcim.site" with "dcim.location" in the **Value** portion (after ":").
+    3. Since we are keeping the uuids of the newly created "Site"/"Region" type locations the same from those of the old `Site`/`Region` instances, we do not need to change the uuid values in "changed_object_id" and "changed_object_id__in" Keys.
+
+The updated JSON data might look like this:
+
+```json
+{
+    "changed_object_type": "dcim.location",
+    "changed_object_id": "0ab47314-2944-45f6-b964-9e009fc48ce0",
+    "changed_object_id__in": ["0ab47314-2944-45f6-b964-9e009fc48ce0", "b09545d4-6e2b-471e-8f07-27f25ca308f5"],
+}
+```
+
 ## Region and Site Related Data Model Migration Guide For Existing Nautobot App installations
 
 In Nautobot 2.0.0, all the `Region` and `Site` related data models are being migrated to use `Location`. Below is a comprehensive guide for Nautobot App developers to migrate their `Region` and `Site` related data models to `Location`.
@@ -165,12 +191,6 @@ Make the migration file by running `nautobot-server makemigrations [app_name] -n
 
 ```shell
 nautobot-server makemigrations example_app -n add_location_field_to_example_model
-```
-
-Apply the migration file by running `nautobot-server migrate [app_name]`, for example:
-
-```shell
-nautobot-server migrate example_app
 ```
 
 ### Create an Empty Migration File and Write the Data Migration
@@ -213,10 +233,10 @@ class Migration(migrations.Migration):
     ]
 ```
 
-Before we write the function that will perform the data migration, please note that we wrote a helpful migration that added a Foreign Key field `migrated_location` on `Region` and `Site` model. `migrated_location` stores the new location records that have the same names and other attributes as their respective `Sites`. That means all you need to do is query `ExampleModel` instances that have non-null `site` fields and null `location` fields and point the `location` field on your object to the site's `migrated_location` attribute, for example:
+Before we write the function that will perform the data migration, please note that Nautobot's `dcim` `0030` migration helpfully added and populated a Foreign Key called `migrated_location` on all `Region` and `Site` records. `migrated_location` stores the new location records that have the same names and other attributes as their respective `Sites`. That means all you need to do is query `ExampleModel` instances that have non-null `site` fields and null `location` fields and point the `location` field on your object to the site's `migrated_location` attribute, for example:
 
 ```python
-example_model.location = example_model.site.migrated_location.
+example_model.location = example_model.site.migrated_location
 ```
 
 Below is what the function might look like:
@@ -229,7 +249,9 @@ def migrate_example_model_data_to_locations(apps, schema_editor):
     Location = apps.get("dcim", "location")
 
     # Query ExampleModel instances with non-null site field
-    example_models = ExampleModel.objects.filter(site__isnull=False, location__isnull=True).select_related("site", "location")
+    example_models = ExampleModel.objects.filter(
+        site__isnull=False, location__isnull=True
+    ).select_related("site", "location")
     for example_model in example_models:
         # Point the location field to the corresponding "Site" LocationType Location
         # with the same name.
@@ -267,7 +289,9 @@ def migrate_example_model_data_to_locations(apps, schema_editor):
     site_location_type = LocationType.objects.get(name="Site")
 
     # Query ExampleModel instances with non-null site field
-    example_models = ExampleModel.objects.filter(site__isnull=False, location__isnull=True).select_related("site", "location")
+    example_models = ExampleModel.objects.filter(
+        site__isnull=False, location__isnull=True
+    ).select_related("site", "location")
     for example_model in example_models:
         # Point the location field to the corresponding "Site" LocationType Location
         # with the same name.
@@ -292,7 +316,7 @@ class Migration(migrations.Migration):
 
 ### Remove Site/Region Related Fields from Migrated Data Models
 
-After the data migration is successful, we need to remove the `site`/`region` fields from your data model so that Nautobot will be able to remove the `Site` and `Region` models. Note that we need to remove those attributes in a separate migration file from the previous since they are two different operations. You can do that by simply removing the `site`/`region` attributes from your model class:
+After the data migration is successful, we need to remove the `site`/`region` fields from your data model so that Nautobot will be able to remove the `Site` and `Region` models. Note that we need to remove those attributes in a separate migration file from the previous one, as it's never a good practice to combine data migrations and schema migrations in the same file. You can do this by simply removing the `site`/`region` attributes from your model class:
 
 ```python
 # models.py
@@ -369,7 +393,10 @@ class Migration(migrations.Migration):
     ]
 ```
 
-Apply the migration file by running `nautobot-server migrate [app_name]`, for example:
+!!!important
+    Before you apply the aforementioned migration files to your app in the following step, please make sure that Nautobot is on version 1.x and not on version 2.0. More importantly, please make sure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied.
+
+Apply the migration files by running `nautobot-server migrate [app_name]`, for example:
 
 ```shell
 nautobot-server migrate example_app
