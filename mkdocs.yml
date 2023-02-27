@@ -186,7 +186,7 @@ nav:
   - App Developer Guide:
       - Developing Apps: "plugins/development.md"
       - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
-      - Migrating from Region and Site to Location from v1.X to v2.0: "plugins/region-and-site-data-migration-guide.md"
+      - Migrating from Region and Site to Location: "plugins/region-and-site-data-migration-guide.md"
       - Code Reference:
           - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
           - nautobot.apps.admin: "code-reference/nautobot/apps/admin.md"
