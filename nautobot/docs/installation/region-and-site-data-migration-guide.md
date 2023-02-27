@@ -1,10 +1,139 @@
-# Region and Site Related Data Model Migration Guide For Existing Nautobot Apps
+# Region and Site to Location Migration Guide
+
+In Nautobot 2.0.0, all the `Region` and `Site` related data models are being migrated to use `Location`. Below is a comprehensive guide for Nautobot users and Nautobot App developers to migrate their `Region` and `Site` related models and apps to `Location`.
+
+## Migrate ObjectPermission instances in Nautobot from Region and Site to Location
+
+Nautobot admins need to migrate `Site` and `Reigon` Related `ObjectPermission` instances to `Location`. The correct way to do it are documented below with practical examples.
+
+### Region Specific ObjectPermission
+
+Add `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present.
+
+Since `Location` has all the filters that `Region` had and they retain the same functionalities. We do not need to modify the `constraints` field of any `Region` specific `ObjectPermission` instances.
+
+### Site Specific ObjectPermission
+
+Add `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present.
+
+The old `constraints` field for `Site` specifc `ObjectPermission` instances might look like this:
+
+```json
+{
+    "name": "AMS01",
+    "name__in": ["AMS01", "ATL01", "EDX01"],
+    "slug": "ams01",
+    "slug__in": ["ams01", "atl01", "edx01"],
+    "id": "9121jfjnjas9fc2-0326-40db-b3a3-3af1231ad",
+    "id__in": ["9121jfjnjas9fc2-0326-40db-b3a3-3afe2207c1ad", "mklmjb79012mkjasd-skmk198721-091231"],
+    "region__name": "United States",
+    "region__name__in": ["United States", "Greece", "England"],
+    "region__slug": "united-states",
+    "region__slug__in": ["united-states", "greece", "england"],
+    "region__id": "9e0e9fc2-0326-40db-b3a3-3afe2207c1ad",
+    "region__id__in": ["9e0e9fc2-0326-40db-b3a3-3afe2207c1ad", "9e0e9fc2-0326-40db-2222-222222222222"],
+    "region__parent__name": "North America",
+    "region__parent__name__in": ["North America", "Europe"],
+    "region__parent__slug": "north-america",
+    "region__parent__slug__in": ["north-america", "europe"],
+    "region__parent__id": "9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad",
+    "region__parent__id__in": ["9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad", "82132yhks-875njjni121-0091213"],
+}
+```
+
+To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
+    1. Replace all occurrences of "region" with "parent" in the **Key** portion (before ":") of the data **not Value** (after ":").
+    2. Since we are keeping the uuids of the newly created "Site"/"Region" type locations the same from those of the old `Site`/`Region` instances, we do not need to change the uuid values in "..__id" and "..__id__in" Keys.
+
+The updated JSON data might look like this:
+
+```json
+{
+    "name": "AMS01",
+    "name__in": ["AMS01", "ATL01", "EDX01"],
+    "slug": "ams01",
+    "slug__in": ["ams01", "atl01", "edx01"],
+    "id": "9121jfjnjas9fc2-0326-40db-b3a3-3af1231ad",
+    "id__in": ["9121jfjnjas9fc2-0326-40db-b3a3-3afe2207c1ad", "mklmjb79012mkjasd-skmk198721-091231"],
+    "parent__name": "United States",
+    "parent__name__in": ["United States", "Greece", "England"],
+    "parent__slug": "united-states",
+    "parent__slug__in": ["united-states", "greece", "england"],
+    "parent__id": "9e0e9fc2-0326-40db-b3a3-3afe2207c1ad",
+    "parent__id__in": ["9e0e9fc2-0326-40db-b3a3-3afe2207c1ad", "9e0e9fc2-0326-40db-2222-222222222222"],
+    "parent__parent__name": "North America",
+    "parent__parent__name__in": ["North America", "Europe"],
+    "parent__parent__slug": "north-america",
+    "parent__parent__slug__in": ["north-america", "europe"],
+    "parent__parent__id": "9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad",
+    "parent__parent__id__in": ["9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad", "82132yhks-875njjni121-0091213"],
+}
+```
+
+### Other Data Model Specific ObjectPermission
+
+The old `constraints` field for a `Site`/`Region` related data model's (e.g `Interface`) `ObjectPermission` instance might look like this:
+
+```json
+{
+    "device__site__name": "AMS01",
+    "device__site__name__in": ["AMS01", "ATL01", "ETX02"],
+    "device__site__slug": "ams01",
+    "device__site__slug__in": ["ams01", "atl01", "etx02"],
+    "device__site__id": "0ab47314-2944-45f6-b964-9e009fc48ce0",
+    "device__site__id__in": ["0ab47314-2944-45f6-b964-9e009fc48ce0", "b09545d4-6e2b-471e-8f07-27f25ca308f5"],
+    "device__site__region__name": "United States",
+    "device__site__region__name__in": ["United States", "United Kingdom", "Greece"],
+    "device__site__region__slug": "united-states",
+    "device__site__region__slug__in": ["united-states", "united-kingdom", "greece"],
+    "device__site__region__id": "0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0",
+    "device__site__region__id__in": ["0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0", "kml21345d4-6e123-471e-8as1231-27f25lmsahca308f5"],
+    "device__site__region__parent__name": "North America",
+    "device__site__region__parent__name__in": ["North America", "Europe", "South America"],
+    "device__site__region__parent__slug": "north-america",
+    "device__site__region__parent__slug__in": ["north-america", "europe", "south-america"],
+    "device__site__region__parent__id": "0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0",
+    "device__site__region__parent__id__in": ["0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0", "qwe0kmjn1lohg-12olm-kmlie-8as1231-km2l1321isdan234f5"],
+}
+```
+
+To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
+    1. Replace all occurrences of "site" with "location" in the **Key** portion (before ":") of the data **not Value** (after ":").
+    2. Replace all occurrences of "region" with "parent" in the **Key** portion (before ":") of the data **not Value** (after ":").
+    3. Since we are keeping the uuids of the newly created "Site"/"Region" type locations the same from those of the old `Site`/`Region` instances, we do not need to change the uuid values in "..__id" and "..__id__in" Keys.
+
+The updated JSON data might look like this:
+
+```json
+{
+    "device__location__name": "AMS01",
+    "device__location__name__in": ["AMS01", "ATL01", "ETX02"],
+    "device__location__slug": "ams01",
+    "device__location__slug__in": ["ams01", "atl01", "etx02"],
+    "device__location__id": "0ab47314-2944-45f6-b964-9e009fc48ce0",
+    "device__location__id__in": ["0ab47314-2944-45f6-b964-9e009fc48ce0", "b09545d4-6e2b-471e-8f07-27f25ca308f5"],
+    "device__location__parent__name": "United States",
+    "device__location__parent__name__in": ["United States", "United Kingdom", "Greece"],
+    "device__location__parent__slug": "united-states",
+    "device__location__parent__slug__in": ["united-states", "united-kingdom", "greece"],
+    "device__location__parent__id": "0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0",
+    "device__location__parent__id__in": ["0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0", "kml21345d4-6e123-471e-8as1231-27f25lmsahca308f5"],
+    "device__location__parent__parent__name": "North America",
+    "device__location__parent__parent__name__in": ["North America", "Europe", "South America"],
+    "device__location__parent__parent__slug": "north-america",
+    "device__location__parent__parent__slug__in": ["north-america", "europe", "south-america"],
+    "device__location__parent__parent__id": "0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0",
+    "device__location__parent__parent__id__in": ["0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0", "qwe0kmjn1lohg-12olm-kmlie-8as1231-km2l1321isdan234f5"],
+}
+```
+
+## Region and Site Related Data Model Migration Guide For Existing Nautobot App installations
 
 In Nautobot 2.0.0, all the `Region` and `Site` related data models are being migrated to use `Location`. Below is a comprehensive guide for Nautobot App developers to migrate their `Region` and `Site` related data models to `Location`.
 
 We will be using `ExampleModel` as a relatively simple and hands-on example throughout this guide to better your understanding of the migration process.
 
-## Add Location Fields to Site and Region Related Data Models
+### Add Location Fields to Site and Region Related Data Models
 
 If the `ExampleModel` currently has a `site` ForeignKey field but it does not have a `location` ForeignKey field, you will need to add the `location` field before any other migrations in this guide.
 
@@ -44,7 +173,7 @@ Apply the migration file by running `nautobot-server migrate [app_name]`, for ex
 nautobot-server migrate example_app
 ```
 
-## Create an Empty Migration File and Write the Data Migration
+### Create an Empty Migration File and Write the Data Migration
 
 After you make sure that all `Site`/`Region` related models have `location` fields on them, it is time to migrate `Site`/`Region` references in your data to `Location`.
 
@@ -161,7 +290,7 @@ class Migration(migrations.Migration):
     ]
 ```
 
-## Remove Site/Region Related Fields from Migrated Data Models
+### Remove Site/Region Related Fields from Migrated Data Models
 
 After the data migration is successful, we need to remove the `site`/`region` fields from your data model so that Nautobot will be able to remove the `Site` and `Region` models. Note that we need to remove those attributes in a separate migration file from the previous since they are two different operations. You can do that by simply removing the `site`/`region` attributes from your model class:
 
@@ -245,3 +374,5 @@ Apply the migration file by running `nautobot-server migrate [app_name]`, for ex
 ```shell
 nautobot-server migrate example_app
 ```
+
+## Region and Site Related Data Model Migration Guide For New Nautobot App installations in an Existing Nautobot 2.0 Environment

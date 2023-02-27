@@ -111,6 +111,7 @@ nav:
           - Upgrading Nautobot: "installation/upgrading.md"
           - Upgrading Nautobot from v1.X to v2.0: "installation/upgrading-from-nautobot-v1.md"
           - Migrating from PostgreSQL to MySQL: "installation/migrating-from-postgresql.md"
+          - Migrating from Region and Site to Location: "installation/region-and-site-data-migration-guide.md"
       - Configuration:
           - Configuring Nautobot: "configuration/index.md"
           - Required Settings: "configuration/required-settings.md"
@@ -186,7 +187,6 @@ nav:
   - App Developer Guide:
       - Developing Apps: "plugins/development.md"
       - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
-      - Migrating from Region and Site to Location: "plugins/region-and-site-data-migration-guide.md"
       - Code Reference:
           - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
           - nautobot.apps.admin: "code-reference/nautobot/apps/admin.md"
