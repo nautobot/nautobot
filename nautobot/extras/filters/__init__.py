@@ -293,7 +293,7 @@ class ConfigContextFilterSet(BaseFilterSet):
 
     # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, *kwargs)
+        super().__init__(*args, **kwargs)
 
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(

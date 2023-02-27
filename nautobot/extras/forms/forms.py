@@ -295,7 +295,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, *kwargs)
+        super().__init__(*args, **kwargs)
 
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
