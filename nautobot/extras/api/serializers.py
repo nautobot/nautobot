@@ -259,7 +259,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         default=None,
     )
     owner = serializers.SerializerMethodField(read_only=True)
-    schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
     locations = SerializedPKRelatedField(
         queryset=Location.objects.all(),
         serializer=NestedLocationSerializer,
@@ -320,7 +320,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "owner",
             "weight",
             "description",
-            "schema",
+            "config_context_schema",
             "is_active",
             "locations",
             "roles",
@@ -446,11 +446,11 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
-    field = NestedCustomFieldSerializer()
+    custom_field = NestedCustomFieldSerializer()
 
     class Meta:
         model = CustomFieldChoice
-        fields = ["url", "field", "value", "weight"]
+        fields = ["url", "custom_field", "value", "weight"]
 
 
 #
@@ -782,7 +782,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
-    schedule = NestedScheduledJobSerializer(read_only=True)
+    scheduled_job = NestedScheduledJobSerializer(read_only=True)
 
     class Meta:
         model = JobResult
@@ -798,7 +798,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
             "data",
             "task_id",
             "task_kwargs",
-            "schedule",
+            "scheduled_job",
         ]
 
 
@@ -918,7 +918,7 @@ class JobHookSerializer(NautobotModelSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
-    schedule = NestedScheduledJobSerializer(required=False)
+    scheduled_job = NestedScheduledJobSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -1198,7 +1198,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
     # a `through` table, that appears very non-trivial to implement. For now we have this as a
     # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
     # api/extras/secrets-group-associations/ REST endpoint as appropriate.
-    secrets = NestedSecretsGroupAssociationSerializer(source="secretsgroupassociation_set", many=True, read_only=True)
+    secrets = NestedSecretsGroupAssociationSerializer(source="secrets_group_associations", many=True, read_only=True)
 
     class Meta:
         model = SecretsGroup
@@ -1215,14 +1215,14 @@ class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
     """Serializer for `SecretsGroupAssociation` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
-    group = NestedSecretsGroupSerializer()
+    secrets_group = NestedSecretsGroupSerializer()
     secret = NestedSecretSerializer()
 
     class Meta:
         model = SecretsGroupAssociation
         fields = [
             "url",
-            "group",
+            "secrets_group",
             "access_type",
             "secret_type",
             "secret",

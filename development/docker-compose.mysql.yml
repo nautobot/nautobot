@@ -18,5 +18,11 @@ services:
       # Unit tests require the createdb permission to clone the database
       - ./mysql-unittests.sql:/docker-entrypoint-initdb.d/mysql-unittests.sql
       - mysqldata_nautobot:/var/lib/mysql
+    healthcheck:
+      test: mysql -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --execute "SHOW DATABASES;"
+      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 50
 volumes:
   mysqldata_nautobot:

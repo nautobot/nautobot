@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.contrib.contenttypes.models import ContentType
 from django.core import exceptions
@@ -133,7 +134,30 @@ class AutoSlugField(_AutoSlugField):
             return ""
 
 
-class ForeignKeyLimitedByContentTypes(models.ForeignKey):
+class ForeignKeyWithAutoRelatedName(models.ForeignKey):
+    """
+    Extend base ForeignKey functionality to create a smarter default `related_name`.
+
+    For example, "ip_addresses" instead of "ipaddress_set", "ipaddresss", or "ipam_ipaddress_related".
+
+    Primarily useful for cases of abstract base classes that define ForeignKeys, such as
+    `nautobot.dcim.models.device_components.ComponentModel`.
+    """
+
+    def __init__(self, *args, related_name=None, **kwargs):
+        super().__init__(*args, related_name=related_name, **kwargs)
+        self._autogenerate_related_name = related_name is None
+
+    def contribute_to_class(self, cls, *args, **kwargs):
+        super().contribute_to_class(cls, *args, **kwargs)
+
+        if self._autogenerate_related_name and not cls._meta.abstract and hasattr(cls._meta, "verbose_name_plural"):
+            # "IP addresses" -> "ip_addresses"
+            related_name = "_".join(re.findall(r"\w+", str(cls._meta.verbose_name_plural))).lower()
+            self.remote_field.related_name = related_name
+
+
+class ForeignKeyLimitedByContentTypes(ForeignKeyWithAutoRelatedName):
     """
     An abstract model field that automatically restricts ForeignKey options based on content_types.
 

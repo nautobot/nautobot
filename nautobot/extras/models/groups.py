@@ -46,6 +46,7 @@ class DynamicGroup(OrganizationalModel):
         on_delete=models.CASCADE,
         verbose_name="Object Type",
         help_text="The type of object for this Dynamic Group.",
+        related_name="dynamic_groups",
     )
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,

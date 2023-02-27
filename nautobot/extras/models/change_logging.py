@@ -77,7 +77,7 @@ class ObjectChange(BaseModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="changes",
+        related_name="object_changes",
         blank=True,
         null=True,
     )

@@ -4,14 +4,6 @@ While there are many different development interfaces in Nautobot that each expo
 
 The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
 
-## Abstract Base Classes
-
-Abstract base classes are classes that do not inherit from a specific class. They are a great way to define an interface with useful abstract methods and attributes while providing great flexibility when it comes to implementations. For an example of abstract base classes, see `PathEndPoint` in `dcim` app.
-
-### Naming convention for related_name
-
-When it comes to writing an abstract base class and naming the reverse relation in a many-to-many or a many-to-one relationship, to ensure data consistency throughout the app, we recommend you to set your `related_name` attribute to **"%(app_label)s_%(class)s_related"** on your model's relationship field (models.ForeignKey, etc).
-
 ## Base Classes
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
@@ -27,7 +19,9 @@ For models that support change-logging, custom fields, and relationships (which 
 | All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
 | API View Sets            | `NautobotModelViewSet`     | `ModelViewSet`             |
 
-## Model Existence in the Database
+## Data Model Best Practices
+
+### Model Existence in the Database
 
 A common Django pattern is to check whether a model instance's primary key (`pk`) field is set as a proxy for whether the instance has been written to the database or whether it exists only in memory.
 Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory _at instance creation time_, not at the time they are written to the database (when the model's `save()` method is called).
@@ -60,11 +54,11 @@ else:
     There is one case where a model instance _will_ have a null primary key, and that is the case where it has been removed from the database and is in the process of being deleted.
     For most purposes, this is not the case you are intending to check!
 
-## Model Validation
+### Model Validation
 
 Django offers several places and mechanism in which to exert data and model validation. All model specific validation should occur within the model's `clean()` method or field specific validators. This ensures the validation logic runs and is consistent through the various Nautobot interfaces (Web UI, REST API, ORM, etc).
 
-### Consuming Model Validation
+#### Consuming Model Validation
 
 Django places specific separation between validation and the saving of an instance and this means it is a common Django pattern to make explicit calls first to a model instance's `clean()`/`full_clean()` methods and then the `save()` method. Calling only the `save()` method **does not** automatically enforce validation and may lead to data integrity issues.
 
@@ -74,7 +68,44 @@ The intended audience for the `validated_save()` convenience method is Job autho
 
 During execution, should model validation fail, `validated_save()` will raise `django.core.exceptions.ValidationError` in the normal Django fashion.
 
-## Slug Field
+### Field Naming in Data Models
+
+Model field names **must** always follow the following conventions:
+
+- Use lowercase letters, numbers, and underscores only
+- Separate words with underscores for readability/clarity
+- For foreign keys and their corresponding reverse-relations, match the `verbose_name` or `verbose_name_plural` of the related model
+
+Instead of:
+
+```python
+Rack.group
+DeviceType.consoleserverporttemplates
+Device.ipaddress_set
+```
+
+Use:
+
+```python
+Rack.rack_group
+DeviceType.console_server_port_templates
+Device.ip_addresses
+```
+
+#### Foreign Key `related_name` for Abstract Model Classes
+
++/- 2.0.0
+
+If an abstract model class defines a foreign key to a concrete model class, Django's default `related_name` functionality doesn't provide great options - the best you could normally do for a `related_name` on a `ForeignKey` from an abstract base class, for example, would be `"%(class)ss"` (potentially resulting in related names like `"devices"` or, less optimally, `"ipaddresss"`) or `"%(app_label)s_%(class)s_related"` (resulting in related names like `"dcim_device_related"` or `"ipam_ipaddress_related"`, which while at least consistent, are rather clunky).
+
+Fortunately, Nautobot provides a `ForeignKeyWithAutoRelatedName` model field class that solves this problem. On any concrete subclass of an abstract base class that uses `ForeignKeyWithAutoRelatedName` instead of `ForeignKey`, the `related_name` will be automatically set based on the concrete subclass's `verbose_name_plural` value (which in many cases Django is clever enough to automatically derive from the class name, but can also be specified directly on your `Meta` class if needed). Thus, if your model's `verbose_name_plural` is "IP addresses", the `related_name` for the `ForeignKeyWithAutoRelatedName` will automatically be `ip_addresses`.
+
+!!! note
+    At this time we _only_ recommend using `ForeignKeyWithAutoRelatedName` for this abstract model case; for foreign keys between concrete models, it's still best to use a regular `ForeignKey` with an explicitly specified `related_name` string.
+
+Nautobot doesn't currently have a similar class provided for `ManyToManyField`; in this case you'll probably be best, for now, to just use `related_name="%(app_label)s_%(class)s_related"` for any abstract base class's ManyToManyField if a reverse relation is desired.
+
+### Slug Field
 
 Moving forward in Nautobot, all models should have a `slug` field. This field can be safely/correctly used in URL patterns, dictionary keys, GraphQL and REST API. Nautobot has provided the `AutoSlugField` to handle automatically populating the `slug` field from another field(s). Generally speaking model slugs should be populated from the `name` field. Below is an example on defining the `slug` field.
 
@@ -175,6 +206,23 @@ Using dotted notation:
 "dcim:device_list"
 ```
 
+## REST API Best Practices
+
+- Generally the field names on a REST API serializer should correspond directly to the field names on the model, subject to the best practices described above.
+- For related count fields, use the related model name suffixed with `_count`.
+
+Instead of:
+
+```python
+Interface.count_ipaddresses
+```
+
+Use:
+
+```python
+Interface.ip_address_count
+```
+
 ## Filtering Models with FilterSets
 
 The following best practices must be considered when establishing new `FilterSet` classes for model classes.
@@ -184,6 +232,7 @@ The following best practices must be considered when establishing new `FilterSet
 - FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
+
 - FilterSets **must** publish all model fields from a model, including related fields.
     - All fields should be provided using `Meta.fields = "__all__"` and this would be preferable for the first and common case as it requires the least maintenance and overhead and asserts parity between the model fields and the filterset filters.
     - In some cases simply excluding certain fields would be the next most preferable e.g. `Meta.exclude = ["unwanted_field", "other_unwanted_field"]`
@@ -201,39 +250,32 @@ class UserFilter(NautobotFilterSet):
 ```
 
 - It is acceptable that default filter mappings **may** need to be overridden with custom filter declarations, but [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#customise-filter-generation-with-filter-overrides) (see below) should be used as a first resort.
+
+### Filter Naming and Definition
+
 - Custom filter definitions **must not** shadow the name of an existing model field if it is also changing the type.
-    - For example `DeviceFilterSet.interfaces` is a `BooleanFilter` that is shadowing the `Device.interfaces` related manager. This introduces problems with automatic introspection of the filterset and this pattern **must** be avoided.
-- For foreign-key related fields, **on existing core models in the v1.3 release train**:
-    - The field **should** be shadowed, replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
-    - A PK-based filter **should** be made available as well, generally with a name suffixed by `_id`. For example:
+    - For example (before Nautobot 2.0.0), `DeviceFilterSet.interfaces` was a `BooleanFilter` that was shadowing the `Device.interfaces` related manager. This caused problems with automatic introspection of the filterset and was fixed in 2.0 by introducing a separate `has_interfaces` filter and changing the `interfaces` filter to show the correct behavior. Shadowing database fields with a filter field of a different type **must** be avoided in all new filters.
+
+- In Nautobot 2.0 and later, for all foreign-key related fields and their corresponding reverse-relations:
+    - If there is no appropriate single field that could be used as a natural key (e.g. a globally-unique `name` or `slug`), then the default filtering behavior for this field (using `django_filters.ModelMultipleChoiceFilter`) can be used for now, until [issue 2875](https://github.com/nautobot/nautobot/issues/2875) is implemented to allow for the use of multiple fields with `NaturalKeyOrPKMultipleChoiceFilter`.
+    - Otherwise, the field **must** be shadowed with a Nautobot `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+        - This provides an advantage over the default `django_filters.ModelMultipleChoiceFilter` which only supports a UUID (`pk`) value as an input.
+    - Fields that use `name` or some other natural key field instead of `slug` can set the `to_field_name` argument on `NaturalKeyOrPKMultipleChoiceFilter` accordingly.
 
 ```python
-    provider = django_filters.ModelMultipleChoiceFilter(
-        field_name="provider__slug",
-        queryset=Provider.objects.all(),
-        to_field_name="slug",
-        label="Provider (slug)",
-    )
-    provider_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Provider.objects.all(),
-        label="Provider (ID)",
-    )
-```
+# Typical usage
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 
-- For foreign-key related fields on **new core models for v1.4 or later:**
-    - The field **must** be shadowed utilizing a hybrid `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
-    - Fields that use `name` instead of `slug` can set the `natural_key` argument on `NaturalKeyOrPKMultipleChoiceFilter`.
-    - In default settings for filtersets, when not using `NaturalKeyOrPKMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyOrPKMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
-    - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. _We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release._
-    - Using the previous field (`provider`) as an example, it would look something like this:
-
-```python
-    from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
         label="Provider (slug or ID)",
     )
-    # optionally use the to_field_name argument to set the field to name instead of slug
+```
+
+```python
+# Optionally, using the to_field_name argument to look up by "name" instead of by "slug"
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
+
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=Provider.objects.all(),
@@ -241,33 +283,43 @@ class UserFilter(NautobotFilterSet):
     )
 ```
 
-### Filter Naming and Definition
-
-- Boolean filters for membership **must** be named with `has_{related_name}` (e.g. `has_interfaces`)
-
-- Boolean filters for identity **must** be named with `is_{name}` (e.g. `is_virtual_chassis`) although this is semantically identical to `has_` filters, there may be occasions where naming the filter `is_` would be more intuitive.
-
-- Filters **must** declare [`field_name`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#field-name) when they have a different name than the underlying model field they are referencing. Where possible the suffix component of the filter name **must** map directly to the underlying field name.
-
-  For example, `DeviceFilterSet.has_console_ports` could be better named, to assert that the filter name following the `has_` prefix is a one-to-one mapping to the underlying model's related field name (`consoleports`) therefore `field_name` must point to the field name as defined on the model:
+- Boolean filters for membership **must** be named with `has_{related_name}` (e.g. `has_interfaces`) and should use the `RelatedMembershipBooleanFilter` filter class.
+    - One exception to this naming convention may be made for Boolean filters for identity, which **may** be named `is_{name}` instead (e.g. `is_virtual_chassis_member` versus `has_virtual_chassis`). Although this is semantically identical to `has_` filters, there may be occasions where naming the filter `is_` would be more intuitive.
 
 ```python
-    has_consoleports = BooleanFilter(field_name="consoleports")
+from nautobot.core.filters import RelatedMembershipBooleanFilter
+
+    has_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        label="Has interfaces",
+    )
+
+    is_virtual_chassis_member = RelatedMembershipBooleanFilter(
+        field_name="virtual_chassis",
+        label="Is a virtual chassis member",
+    )
 ```
 
-- Filters **must** be declared using the appropriate lookup expression (`lookup_expr`) if any other expression than `exact` (the default) is required. For example:
+- Whenever possible otherwise, filter names **must** correspond exactly to the underlying model field they are referencing.
+
+- If there's necessarily a mismatch between the filter name and the model field name (such as in the `has_*` and `is_*` cases described above):
+    1. The suffix component of the filter name **must** correspond exactly to the underlying model field name (for example, for a field of `console_port_templates`, the filter must be `has_console_port_templates`, **not** `has_consoleporttemplates` or `has_console_ports`).
+    2. The filter itself **must** declare [`field_name`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#field-name) to identify unambiguously the underlying model field.
+
+- Filters **must** be declared using the appropriate lookup expression (`lookup_expr`) if any other expression than `exact` (the default) is required.
+
+- Filters **must** be declared using [`exclude=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#exclude) if a queryset `.exclude()` is required to be called vs. queryset `.filter()` which is the default when the filter default `exclude=False` is passed through. If you require `Foo.objects.exclude()`, you must pass `exclude=True` instead of defining a filterset method to explicitly hard-code such a query.
+
+For example, for a boolean filter that checks to see whether the `console_ports` field is null if False and not null if True, you would need to combine all of the above rules, resulting in:
 
 ```python
-   has_consoleports = BooleanFilter(field_name="consoleports", lookup_expr="isnull")
+   has_console_ports = BooleanFilter(field_name="console_ports", lookup_expr="isnull", exclude=True)
 ```
 
-- Filters **must** be declared using [`exclude=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#exclude) if a queryset `.exclude()` is required to be called vs. queryset `.filter()` which is the default when the filter default `exclude=False` is passed through. If you require `Foo.objects.exclude()`, you must pass `exclude=True` instead of defining a filterset method to explicitly hard-code such a query. For example:
+!!! tip
+    For boolean filters on related memberships (`has_*`/`is_*`), you should always use `RelatedMembershipBooleanFilter`, which is a `BooleanFilter` subclass that defaults to the correct `lookup_expr` and `exclude` values for this common case.
 
-```python
-   has_consoleports = BooleanFilter(field_name="consoleports", lookup_expr="isnull", exclude=True)
-```
-
-- Filters **must** be declared using [`distinct=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#distinct) if a queryset `.distinct()`is required to be called on the queryset
+- Filters **must** be declared using [`distinct=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#distinct) if a queryset `.distinct()`is required to be called on the queryset.
 
 - Filters **must not** be set to be required using `required=True`
 

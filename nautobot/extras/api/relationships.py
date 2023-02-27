@@ -320,12 +320,14 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
                 this_side = RelationshipSideChoices.OPPOSITE[other_side]
 
                 if this_side != RelationshipSideChoices.SIDE_PEER:
-                    existing_associations = relationship.associations.filter(**{f"{this_side}_id": instance.pk})
+                    existing_associations = relationship.relationship_associations.filter(
+                        **{f"{this_side}_id": instance.pk}
+                    )
                     existing_objects = [assoc.get_peer(instance) for assoc in existing_associations]
                 else:
-                    existing_associations_1 = relationship.associations.filter(source_id=instance.pk)
+                    existing_associations_1 = relationship.relationship_associations.filter(source_id=instance.pk)
                     existing_objects_1 = [assoc.get_peer(instance) for assoc in existing_associations_1]
-                    existing_associations_2 = relationship.associations.filter(destination_id=instance.pk)
+                    existing_associations_2 = relationship.relationship_associations.filter(destination_id=instance.pk)
                     existing_objects_2 = [assoc.get_peer(instance) for assoc in existing_associations_2]
                     existing_associations = list(existing_associations_1) + list(existing_associations_2)
                     existing_objects = existing_objects_1 + existing_objects_2

@@ -64,7 +64,7 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Enumerate and set the choices (if any)
         for idx, choice in enumerate(choices):
-            self.browser.fill(f"choices-{idx}-value", choice)
+            self.browser.fill(f"custom_field_choices-{idx}-value", choice)
 
         # Do the pre-create stuff
         if callable(call_before_create):
@@ -113,16 +113,16 @@ class CustomFieldTestCase(SeleniumTestCase):
             table = self.browser.find_by_id("custom-field-choices")
 
             # Assert that there are 5 choice rows before
-            self.assertEqual(len(table.find_by_css(".formset_row-choices")), 5)
+            self.assertEqual(len(table.find_by_css(".formset_row-custom_field_choices")), 5)
 
             # And 6 after clicking "Add another..."
             self.browser.find_by_css(".add-row").click()
-            rows = table.find_by_css(".formset_row-choices")
+            rows = table.find_by_css(".formset_row-custom_field_choices")
             self.assertEqual(len(rows), 6)
-            self.browser.fill("choices-5-value", "choice3")
+            self.browser.fill("custom_field_choices-5-value", "choice3")
 
             # Make sure it the new row has default values while we're at it.
-            self.assertEqual(rows.last.find_by_name("choices-5-weight").value, "100")
+            self.assertEqual(rows.last.find_by_name("custom_field_choices-5-weight").value, "100")
 
         self._create_custom_field(
             field_label="Test Select", field_type="select", choices=choices, call_before_create=call_before_create
@@ -145,8 +145,8 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertIn("edit", self.browser.url)
 
         # Null out the first choice, click "Update", expect it to fail.
-        self.browser.fill("choices-0-value", "")
-        self.assertEqual(self.browser.find_by_name("choices-0-value").value, "")
+        self.browser.fill("custom_field_choices-0-value", "")
+        self.assertEqual(self.browser.find_by_name("custom_field_choices-0-value").value, "")
         self.browser.find_by_text("Update").click()
         self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
@@ -155,7 +155,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         #
 
         # Fix it, save it, assert correctness.
-        self.browser.fill("choices-0-value", "new_choice")
+        self.browser.fill("custom_field_choices-0-value", "new_choice")
         self.browser.find_by_text("Update").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
@@ -176,11 +176,11 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Gather the rows, delete the first one, add a new one.
         table = self.browser.find_by_id("custom-field-choices")
         self.browser.find_by_css(".add-row").click()  # Add a new row
-        rows = table.find_by_css(".formset_row-choices")
+        rows = table.find_by_css(".formset_row-custom_field_choices")
         rows.first.find_by_css(".delete-row").click()  # Delete first row
 
         # Fill the new row, save it, assert correctness.
-        self.browser.fill("choices-5-value", "new_choice")  # Fill the last row
+        self.browser.fill("custom_field_choices-5-value", "new_choice")  # Fill the last row
         self.browser.find_by_text("Update").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
@@ -302,7 +302,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         )
         custom_field.save()
         # Add a choice for the custom field selection
-        custom_field_choice = CustomFieldChoice(field=custom_field, value="SelectionChoice")
+        custom_field_choice = CustomFieldChoice(custom_field=custom_field, value="SelectionChoice")
         custom_field_choice.save()
         # Set content type of custom field
         device_content_type = ContentType.objects.get_for_model(Device)

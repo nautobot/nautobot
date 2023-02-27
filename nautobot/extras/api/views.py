@@ -461,9 +461,13 @@ def _run_job(request, job_model, legacy_response=False):
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
     if job_model.has_sensitive_variables:
-        if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+        if (
+            "scheduled_job" in request.data
+            and "interval" in request.data["scheduled_job"]
+            and request.data["scheduled_job"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+        ):
             raise ValidationError(
-                {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
+                {"scheduled_job": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
         if job_model.approval_required:
             raise ValidationError(
@@ -530,7 +534,7 @@ def _run_job(request, job_model, legacy_response=False):
         data = input_serializer.validated_data.get("data", {})
         commit = input_serializer.validated_data.get("commit", None)
         task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
-        schedule_data = input_serializer.validated_data.get("schedule", None)
+        schedule_data = input_serializer.validated_data.get("scheduled_job", None)
 
     if commit is None:
         commit = job_model.commit_default
@@ -608,9 +612,9 @@ def _run_job(request, job_model, legacy_response=False):
         return Response(serializer.data)
     else:
         # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"schedule": None, "job_result": None}
+        data = {"scheduled_job": None, "job_result": None}
         if schedule:
-            data["schedule"] = nested_serializers.NestedScheduledJobSerializer(
+            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
                 schedule, context={"request": request}
             ).data
         if job_result:
@@ -820,7 +824,7 @@ class JobResultViewSet(
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
-        logs = job_result.logs.all()
+        logs = job_result.job_log_entries.all()
         serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 

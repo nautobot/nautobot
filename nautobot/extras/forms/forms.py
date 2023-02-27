@@ -236,7 +236,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "name",
             "weight",
             "description",
-            "schema",
+            "config_context_schema",
             "is_active",
             "locations",
             "roles",
@@ -254,7 +254,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
 
 class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     description = forms.CharField(required=False, max_length=100)
@@ -262,7 +262,7 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
     class Meta:
         nullable_fields = [
             "description",
-            "schema",
+            "config_context_schema",
         ]
 
 
