@@ -486,19 +486,7 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
-    # Job Button
-    path(
-        "job-button/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="jobbutton_changelog",
-        kwargs={"model": JobButton},
-    ),
-    path(
-        "job-button/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="jobbutton_notes",
-        kwargs={"model": JobButton},
-    ),
+    # Job Button Run
     path("job-button/<uuid:pk>/run/", views.JobButtonRunView.as_view(), name="jobbutton_run"),
     # Notes
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
