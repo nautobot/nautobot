@@ -210,7 +210,7 @@ def extras_features(*features):
 
 def populate_model_features_registry():
     """
-    Updates the registry with new apps.
+    Populate the registry model features with new apps.
 
     This function updates the registry model features.
 
