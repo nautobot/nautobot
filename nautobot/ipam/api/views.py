@@ -68,7 +68,7 @@ class RouteTargetViewSet(NautobotModelViewSet):
 
 
 class RIRViewSet(NautobotModelViewSet):
-    queryset = RIR.objects.annotate(related_prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     serializer_class = serializers.RIRSerializer
     filterset_class = filters.RIRFilterSet
 

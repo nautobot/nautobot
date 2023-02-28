@@ -148,7 +148,7 @@ class RouteTargetBulkDeleteView(generic.BulkDeleteView):
 
 
 class RIRListView(generic.ObjectListView):
-    queryset = RIR.objects.annotate(related_prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     filterset = filters.RIRFilterSet
     filterset_form = forms.RIRFilterForm
     table = tables.RIRTable
@@ -160,18 +160,18 @@ class RIRView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Prefixes
-        prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
+        assigned_prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
 
-        prefix_table = tables.PrefixTable(prefixes)
+        assigned_prefix_table = tables.PrefixTable(assigned_prefixes)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(prefix_table)
+        RequestConfig(request, paginate).configure(assigned_prefix_table)
 
         return {
-            "prefix_table": prefix_table,
+            "assigned_prefix_table": assigned_prefix_table,
         }
 
 
@@ -191,7 +191,7 @@ class RIRBulkImportView(generic.BulkImportView):
 
 
 class RIRBulkDeleteView(generic.BulkDeleteView):
-    queryset = RIR.objects.annotate(related_prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     filterset = filters.RIRFilterSet
     table = tables.RIRTable
 
@@ -226,7 +226,9 @@ class PrefixListView(generic.ObjectListView):
         ):
             return cls._queryset
 
-        cls._queryset = Prefix.objects.select_related("location", "vrf__tenant", "tenant", "vlan", "role", "status")
+        cls._queryset = Prefix.objects.select_related(
+            "location", "vrf__tenant", "tenant", "vlan", "rir", "role", "status"
+        )
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
             cls._queryset = cls._queryset.annotate(parents=Count(None)).order_by(
                 F("vrf__name").asc(nulls_first=True),
@@ -243,6 +245,7 @@ class PrefixListView(generic.ObjectListView):
 
 class PrefixView(generic.ObjectView):
     queryset = Prefix.objects.select_related(
+        "rir",
         "role",
         "location",
         "status",

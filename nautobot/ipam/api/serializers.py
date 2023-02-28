@@ -117,7 +117,7 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
 
 class RIRSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
-    related_prefix_count = serializers.IntegerField(read_only=True)
+    assigned_prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RIR
@@ -127,7 +127,7 @@ class RIRSerializer(NautobotModelSerializer):
             "slug",
             "is_private",
             "description",
-            "related_prefix_count",
+            "assigned_prefix_count",
         ]
 
 
