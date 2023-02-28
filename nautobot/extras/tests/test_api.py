@@ -2811,9 +2811,12 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         self.add_permissions("extras.add_relationshipassociation")
 
+        print("====> ", self._get_list_url())
+
         for side, field_error_name, data in associations:
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            print(response.data)
             self.assertEqual(
                 response.data[side],
                 [f"{field_error_name} violates {relationship.name} {side}_filter restriction"],
