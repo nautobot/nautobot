@@ -241,7 +241,12 @@ class NestedScheduledJobSerializer(WritableNestedSerializer):
 
 
 class NestedScheduledJobCreationSerializer(BaseModelSerializer):
-    """Unlike WritableNestedSerializer, this allows for creation of a ScheduledJob, not just finding an existing one."""
+    """
+    Nested serializer specifically for use with `JobInputSerializer.schedule`.
+
+    We don't use `WritableNestedSerializer` here because this is not used to look up
+    an existing `ScheduledJob`, but instead used to specify parameters for creating one.
+    """
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
     name = serializers.CharField(max_length=255, required=False)
