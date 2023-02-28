@@ -1,8 +1,6 @@
-import datetime
 import random
 
 from django.db.models import Count
-from django.utils.formats import localize_input
 from django.test import tag
 
 from nautobot.core.filters import RelatedMembershipBooleanFilter
@@ -44,10 +42,7 @@ class FilterTestCases:
                     break
                 if value[field_name] and value["count"] < qs_count:
                     qs_count -= value["count"]
-                    if isinstance(value[field_name], (datetime.date, datetime.time)):
-                        test_values.append(localize_input(value[field_name]))
-                    else:
-                        test_values.append(str(value[field_name]))
+                    test_values.append(str(value[field_name]))
 
             if len(test_values) < 2:
                 raise ValueError(

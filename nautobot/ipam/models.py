@@ -408,7 +408,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.get_status_display(),
             self.role.name if self.role else None,
             self.rir.name if self.rir else None,
-            self.date_allocated,
+            str(self.date_allocated),
             self.description,
         )
 
