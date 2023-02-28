@@ -1,1 +1,0 @@
-Fixed an issue preventing the inclusion of `netutils` functions in Django templates.
