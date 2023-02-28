@@ -170,7 +170,6 @@ class ConfigContextFilterSetTestCase(TestCase):
     def test_with_dynamic_groups_enabled(self):
         filter_set = ConfigContextFilterSet()
         self.assertIsNotNone(filter_set.filters.get("dynamic_groups", None))
-        
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups_enabled(self):
