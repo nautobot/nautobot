@@ -221,15 +221,15 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
         queryset=DeviceRedundancyGroup.objects.all(), required=False
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+    dynamic_groups = DynamicModelMultipleChoiceField(
+        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+    )
 
     # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if settings.NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
-                queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
-            )
+        if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.fields.pop("dynamic_groups")
 
     data = JSONField(label="")
 
@@ -293,14 +293,15 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
     )
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
+    dynamic_groups = DynamicModelMultipleChoiceField(
+        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if settings.NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
-                queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
-            )
+        if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.fields.pop("dynamic_groups")
 
 
 #
