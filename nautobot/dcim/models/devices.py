@@ -324,7 +324,7 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features("custom_validators", "graphql")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
