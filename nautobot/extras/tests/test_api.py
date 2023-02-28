@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
@@ -23,6 +23,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
+from nautobot.extras.api.serializers import ConfigContextSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
@@ -297,6 +298,18 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Tests that the dynamic_group field is on the ConfigContextSerializer when feature flag is enabled"""
+        serializer = ConfigContextSerializer()
+        self.assertIsNotNone(serializer.fields.get("dynamic_groups", None))
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Tests that the dynamic_group field is on the ConfigContextSerializer when feature flag is enabled"""
+        serializer = ConfigContextSerializer()
+        self.assertIsNone(serializer.fields.get("dynamic_groups", None))
 
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
