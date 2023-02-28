@@ -265,7 +265,7 @@ class RIRTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     is_private = BooleanColumn(verbose_name="Private")
-    prefix_count = LinkedCountColumn(
+    related_prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
         url_params={"rir": "slug"},
         verbose_name="Prefixes",
@@ -279,7 +279,7 @@ class RIRTable(BaseTable):
             "name",
             "slug",
             "is_private",
-            "prefix_count",
+            "related_prefix_count",
             "description",
             "actions",
         )
@@ -287,7 +287,7 @@ class RIRTable(BaseTable):
             "pk",
             "name",
             "is_private",
-            "prefix_count",
+            "related_prefix_count",
             "description",
             "actions",
         )

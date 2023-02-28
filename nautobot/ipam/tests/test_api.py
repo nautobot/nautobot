@@ -77,7 +77,7 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
 
 class RIRTest(APIViewTestCases.APIViewTestCase):
     model = RIR
-    brief_fields = ["display", "id", "name", "prefix_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "related_prefix_count", "slug", "url"]
     create_data = [
         {
             "name": "RIR 4",

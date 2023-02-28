@@ -66,11 +66,11 @@ class NestedRouteTargetSerializer(WritableNestedSerializer):
 
 class NestedRIRSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
-    prefix_count = serializers.IntegerField(read_only=True)
+    related_prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.RIR
-        fields = ["id", "url", "name", "slug", "prefix_count"]
+        fields = ["id", "url", "name", "slug", "related_prefix_count"]
 
 
 #

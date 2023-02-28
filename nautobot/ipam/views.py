@@ -148,7 +148,7 @@ class RouteTargetBulkDeleteView(generic.BulkDeleteView):
 
 
 class RIRListView(generic.ObjectListView):
-    queryset = RIR.objects.annotate(prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.annotate(related_prefix_count=count_related(Prefix, "rir"))
     filterset = filters.RIRFilterSet
     filterset_form = forms.RIRFilterForm
     table = tables.RIRTable
@@ -191,7 +191,7 @@ class RIRBulkImportView(generic.BulkImportView):
 
 
 class RIRBulkDeleteView(generic.BulkDeleteView):
-    queryset = RIR.objects.annotate(prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.annotate(related_prefix_count=count_related(Prefix, "rir"))
     filterset = filters.RIRFilterSet
     table = tables.RIRTable
 
