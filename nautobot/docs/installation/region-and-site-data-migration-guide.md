@@ -4,17 +4,17 @@ In Nautobot 2.0.0, all the `Region` and `Site` related data models are being mig
 
 ## Migrate ObjectPermission instances in Nautobot from Region and Site to Location
 
-Nautobot admins need to migrate `Site` and `Reigon` Related `ObjectPermission` instances to `Location`. The correct way to do it are documented below with practical examples.
+Nautobot admins need to migrate `Site` and `Region` Related `ObjectPermission` instances to `Location`. The correct way to do it are documented below with practical examples.
 
 ### Region Specific ObjectPermission
 
-Add `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present.
+Replace `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present and add `"location_type__name": "Region"` to `constraints` field if the old `ObjectPermission` only allows operations on `Region` instances and not on `Site` instances.
 
-Since `Location` has all the filters that `Region` had and they retain the same functionalities. We do not need to modify the `constraints` field of any `Region` specific `ObjectPermission` instances.
+Since `Location` has all the filters that `Region` had and they retain the same functionalities. We **do not** need to modify the `constraints` field of any `Region` specific `ObjectPermission` instances any further.
 
 ### Site Specific ObjectPermission
 
-Add `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present.
+Replace `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present and add `location_type__name: "Site"` to `constraints` field if the old `ObjectPermission` only allows operations on `Site` instances and not on `Region` instances.
 
 The old `constraints` field for `Site` specifc `ObjectPermission` instances might look like this:
 
@@ -24,49 +24,50 @@ The old `constraints` field for `Site` specifc `ObjectPermission` instances migh
     "name__in": ["AMS01", "ATL01", "EDX01"],
     "slug": "ams01",
     "slug__in": ["ams01", "atl01", "edx01"],
-    "id": "9121jfjnjas9fc2-0326-40db-b3a3-3af1231ad",
-    "id__in": ["9121jfjnjas9fc2-0326-40db-b3a3-3afe2207c1ad", "mklmjb79012mkjasd-skmk198721-091231"],
+    "id": "c12753e5-8f01-49a6-b0cf-bf8b460853a1",
+    "id__in": ["c12753e5-8f01-49a6-b0cf-bf8b460853a1", "455038c3-4045-4b78-85f5-17d9f34cb9e8"],
     "region__name": "United States",
     "region__name__in": ["United States", "Greece", "England"],
     "region__slug": "united-states",
     "region__slug__in": ["united-states", "greece", "england"],
-    "region__id": "9e0e9fc2-0326-40db-b3a3-3afe2207c1ad",
-    "region__id__in": ["9e0e9fc2-0326-40db-b3a3-3afe2207c1ad", "9e0e9fc2-0326-40db-2222-222222222222"],
+    "region__id": "f77f5706-e5b3-49e0-9749-b8f818319c40",
+    "region__id__in": ["f77f5706-e5b3-49e0-9749-b8f818319c40", "7df99dc2-283a-4130-8125-60b9ca293131"],
     "region__parent__name": "North America",
     "region__parent__name__in": ["North America", "Europe"],
     "region__parent__slug": "north-america",
     "region__parent__slug__in": ["north-america", "europe"],
-    "region__parent__id": "9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad",
-    "region__parent__id__in": ["9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad", "82132yhks-875njjni121-0091213"],
+    "region__parent__id": "c1a816df-876f-44d4-8ea0-335898998780",
+    "region__parent__id__in": ["c1a816df-876f-44d4-8ea0-335898998780", "a68b0838-d7fb-416c-b4ba-a3e464e552ba"],
 }
 ```
 
 To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
     1. Replace all occurrences of "region" with "parent" in the **Key** portion (before ":") of the data **not Value** (after ":").
-    2. Since we are keeping the uuids of the newly created "Site"/"Region" type locations the same from those of the old `Site`/`Region` instances, we do not need to change the uuid values in "..__id" and "..__id__in" Keys.
+    2. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in `...__id` and `...__id__in` Keys.
 
 The updated JSON data might look like this:
 
 ```json
 {
+    "location_type__name": "Site",
     "name": "AMS01",
     "name__in": ["AMS01", "ATL01", "EDX01"],
     "slug": "ams01",
     "slug__in": ["ams01", "atl01", "edx01"],
-    "id": "9121jfjnjas9fc2-0326-40db-b3a3-3af1231ad",
-    "id__in": ["9121jfjnjas9fc2-0326-40db-b3a3-3afe2207c1ad", "mklmjb79012mkjasd-skmk198721-091231"],
+    "id": "c12753e5-8f01-49a6-b0cf-bf8b460853a1",
+    "id__in": ["c12753e5-8f01-49a6-b0cf-bf8b460853a1", "455038c3-4045-4b78-85f5-17d9f34cb9e8"],
     "parent__name": "United States",
     "parent__name__in": ["United States", "Greece", "England"],
     "parent__slug": "united-states",
     "parent__slug__in": ["united-states", "greece", "england"],
-    "parent__id": "9e0e9fc2-0326-40db-b3a3-3afe2207c1ad",
-    "parent__id__in": ["9e0e9fc2-0326-40db-b3a3-3afe2207c1ad", "9e0e9fc2-0326-40db-2222-222222222222"],
+    "parent__id":  "f77f5706-e5b3-49e0-9749-b8f818319c40",
+    "parent__id__in": ["f77f5706-e5b3-49e0-9749-b8f818319c40", "7df99dc2-283a-4130-8125-60b9ca293131"],
     "parent__parent__name": "North America",
     "parent__parent__name__in": ["North America", "Europe"],
     "parent__parent__slug": "north-america",
     "parent__parent__slug__in": ["north-america", "europe"],
-    "parent__parent__id": "9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad",
-    "parent__parent__id__in": ["9mkl123094fc2-0326-40db-b3a3-3afe2207c1ad", "82132yhks-875njjni121-0091213"],
+    "parent__parent__id": "c1a816df-876f-44d4-8ea0-335898998780",
+    "parent__parent__id__in": ["c1a816df-876f-44d4-8ea0-335898998780", "a68b0838-d7fb-416c-b4ba-a3e464e552ba"],
 }
 ```
 
@@ -86,21 +87,21 @@ The old `constraints` field for a `Site`/`Region` related data model's (e.g. `In
     "device__site__region__name__in": ["United States", "United Kingdom", "Greece"],
     "device__site__region__slug": "united-states",
     "device__site__region__slug__in": ["united-states", "united-kingdom", "greece"],
-    "device__site__region__id": "0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0",
-    "device__site__region__id__in": ["0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0", "kml21345d4-6e123-471e-8as1231-27f25lmsahca308f5"],
+    "device__site__region__id": "f1a79a3c-d980-40e1-979d-abdb0f83388e",
+    "device__site__region__id__in": ["f1a79a3c-d980-40e1-979d-abdb0f83388e", "6335a61e-503d-463c-99c2-9c87ef8354d9"],
     "device__site__region__parent__name": "North America",
     "device__site__region__parent__name__in": ["North America", "Europe", "South America"],
     "device__site__region__parent__slug": "north-america",
     "device__site__region__parent__slug__in": ["north-america", "europe", "south-america"],
-    "device__site__region__parent__id": "0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0",
-    "device__site__region__parent__id__in": ["0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0", "qwe0kmjn1lohg-12olm-kmlie-8as1231-km2l1321isdan234f5"],
+    "device__site__region__parent__id": "6695809c-b33b-4f12-b0de-a4969000434d",
+    "device__site__region__parent__id__in": ["6695809c-b33b-4f12-b0de-a4969000434d", "e51d07bb-3fcf-4306-9d87-6b1ff6dd6378"],
 }
 ```
 
 To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
     1. Replace all occurrences of "site" with "location" in the **Key** portion (before ":") of the data **not Value** (after ":").
     2. Replace all occurrences of "region" with "parent" in the **Key** portion (before ":") of the data **not Value** (after ":").
-    3. Since we are keeping the uuids of the newly created "Site"/"Region" type locations the same from those of the old `Site`/`Region` instances, we do not need to change the uuid values in "..__id" and "..__id__in" Keys.
+    3. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in `...__id` and `...__id__in` Keys.
 
 The updated JSON data might look like this:
 
@@ -116,40 +117,43 @@ The updated JSON data might look like this:
     "device__location__parent__name__in": ["United States", "United Kingdom", "Greece"],
     "device__location__parent__slug": "united-states",
     "device__location__parent__slug__in": ["united-states", "united-kingdom", "greece"],
-    "device__location__parent__id": "0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0",
-    "device__location__parent__id__in": ["0ab47314-123144-2132f6-b964-9ekmwkq12c48ce0", "kml21345d4-6e123-471e-8as1231-27f25lmsahca308f5"],
+    "device__location__parent__id": "f1a79a3c-d980-40e1-979d-abdb0f83388e",
+    "device__location__parent__id__in": ["f1a79a3c-d980-40e1-979d-abdb0f83388e", "6335a61e-503d-463c-99c2-9c87ef8354d9"],
     "device__location__parent__parent__name": "North America",
     "device__location__parent__parent__name__in": ["North America", "Europe", "South America"],
     "device__location__parent__parent__slug": "north-america",
     "device__location__parent__parent__slug__in": ["north-america", "europe", "south-america"],
-    "device__location__parent__parent__id": "0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0",
-    "device__location__parent__parent__id__in": ["0kmskqjneq14-945840-2132f6-b964-9ekmwkq12c48ce0", "qwe0kmjn1lohg-12olm-kmlie-8as1231-km2l1321isdan234f5"],
+    "device__location__parent__parent__id": "6695809c-b33b-4f12-b0de-a4969000434d",
+    "device__location__parent__parent__id__in": ["6695809c-b33b-4f12-b0de-a4969000434d", "e51d07bb-3fcf-4306-9d87-6b1ff6dd6378"],
 }
 ```
 
-### Other Data Model Specific ObjectPermission e.g. ObjectChange
+### Other Data Model Specific ObjectPermission e.g. ExportTemplate
 
-The old `constraints` field for a `Site`/`Region` related data model's (e.g. `ObjectChange`) `ObjectPermission` instance might look like this:
+The old `constraints` field for a `Site`/`Region` related data model's (e.g. `ExportTemplate`) `ObjectPermission` instance might look like this:
 
 ```json
 {
-    "changed_object_type": "dcim.site",
-    "changed_object_id": "0ab47314-2944-45f6-b964-9e009fc48ce0",
-    "changed_object_id__in": ["0ab47314-2944-45f6-b964-9e009fc48ce0", "b09545d4-6e2b-471e-8f07-27f25ca308f5"],
+    "content_type": "dcim.site",
+    "owner_content_type": "extras.gitrepository",
+    "owner_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
+    "owner_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
 }
 ```
 
 To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
-    1. Replace all occurrences of "dcim.site" with "dcim.location" in the **Value** portion (after ":").
-    3. Since we are keeping the uuids of the newly created "Site"/"Region" type locations the same from those of the old `Site`/`Region` instances, we do not need to change the uuid values in "changed_object_id" and "changed_object_id__in" Keys.
+    1. Replace all occurrences of "dcim.site" and/or "dcim.region" with "dcim.location" in the **Value** portion (after ":") of the `content_type` key.
+    2. Since `owner_content_type` does not contain "dcim.site" and/or "dcim.region", we **do not** need to modify the `owner_content_type` Key and Value.
+    3. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in the `owner_object_id` and `owner_object_id__in` Keys.
 
 The updated JSON data might look like this:
 
 ```json
 {
-    "changed_object_type": "dcim.location",
-    "changed_object_id": "0ab47314-2944-45f6-b964-9e009fc48ce0",
-    "changed_object_id__in": ["0ab47314-2944-45f6-b964-9e009fc48ce0", "b09545d4-6e2b-471e-8f07-27f25ca308f5"],
+    "content_type": "dcim.site",
+    "owner_content_type": "extras.gitrepository",
+    "owner_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
+    "owner_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
 }
 ```
 
