@@ -3,6 +3,8 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.test import override_settings
+from django.test import TestCase
 
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
@@ -161,6 +163,19 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         # fallback_value
         params = {"q": "has errored"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class ConfigContextFilterSetTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        filter_set = ConfigContextFilterSet()
+        self.assertIsNotNone(filter_set.filters.get("dynamic_groups", None))
+        
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        filter_set = ConfigContextFilterSet()
+        self.assertIsNone(filter_set.filters.get("dynamic_groups", None))
 
 
 class ConfigContextTestCase(FilterTestCases.FilterTestCase):
