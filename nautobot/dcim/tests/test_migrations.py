@@ -602,14 +602,17 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
 
             # For each region, a new location of LocationType "Region" is created
             for i in range(10):
-                self.assertEqual(
-                    len(
-                        self.location.objects.filter(
-                            name=f"Test Region {i}", location_type=self.location_type.objects.get(name="Region")
-                        )
-                    ),
-                    1,
+                region_locations = self.location.objects.filter(
+                    name=f"Test Region {i}",
+                    location_type=self.location_type.objects.get(name="Region"),
                 )
+                old_region = self.region.objects.get(name=f"Test Region {i}")
+                self.assertEqual(len(region_locations), 1)
+                # Check if the migrated_location field is correctly populated by the data migration.
+                self.assertEqual(old_region.migrated_location, region_locations[0])
+                # Check if the migrated_location has the same pk as the old region
+                self.assertEqual(old_region.migrated_location.pk, old_region.pk)
+
             # For each site, a new location of LocationType "Site" is created and its parent, if not None, is
             # mapped to a Region LocationType location with the same name as its assigned Region.
             for i in range(10):
@@ -620,6 +623,8 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                 self.assertEqual(len(site_locations), 1)
                 # Check if the migrated_location field is correctly populated by the data migration.
                 self.assertEqual(old_site.migrated_location, site_locations[0])
+                # Check if the migrated_location has the same pk as the old site
+                self.assertEqual(old_site.migrated_location.pk, old_site.pk)
                 if old_site.region:
                     self.assertEqual(site_locations.first().parent.name, old_site.region.name)
 

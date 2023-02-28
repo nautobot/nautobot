@@ -55,6 +55,7 @@ def create_region_location_type_locations(region_class, location_class, region_l
     for region in regions:
         try:
             location_class.objects.create(
+                id=region.id,
                 location_type=region_lt,
                 name=region.name,
                 description=region.description,
@@ -121,6 +122,7 @@ def create_site_location_type_locations(
             )
         location_instances.append(
             location_class(
+                id=site.id,
                 name=site.name,
                 slug=site.slug,
                 location_type=site_lt,
