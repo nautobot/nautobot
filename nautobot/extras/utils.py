@@ -130,6 +130,17 @@ class FeatureQuery:
         """
         Given an extras feature, return a Q object for content type lookup
         """
+
+        # The `populate_model_features_registry` function is called in the `FeatureQuery().get_query` method instead of
+        # `ExtrasConfig.ready` because `FeatureQuery().get_query` is called before `ExtrasConfig.ready`.
+        # This is because `FeatureQuery` is a helper class used in `Forms` and `Serializers` that are called during the
+        # initialization of the application, before `ExtrasConfig.ready` is called.
+        # Calling `populate_model_features_registry` in `ExtrasConfig.ready` would lead to an outdated `model_features`
+        # `registry` record being used by `FeatureQuery`.
+        # As the `populate_model_features_registry` can be resource-intensive. The check the conditional check is used to
+        # avoid calling the function multiple times and optimize the performance of the application.
+        if not registry["model_features"].get("relationships"):
+            populate_model_features_registry()
         query = Q()
         for app_label, models in registry["model_features"][self.feature].items():
             query |= Q(app_label=app_label, model__in=models)
