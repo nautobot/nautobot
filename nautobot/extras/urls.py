@@ -14,7 +14,6 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    JobButton,
     JobHook,
     Note,
     Relationship,
