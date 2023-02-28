@@ -4,12 +4,15 @@ import warnings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.test import override_settings
 from django.test import TestCase
 
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm, SiteForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
+    ConfigContextForm,
+    ConfigContextFilterForm,
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
@@ -1086,3 +1089,27 @@ class JobEditFormTestCase(TestCase):
             error_msg["approval_required"][0]["message"],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class ConfigContextFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups(self):
+        form = ConfigContextForm()
+        self.assertIsNone(form.fields.get("dynamic_groups", None))
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        form = ConfigContextForm()
+        self.assertIsNotNone(form.fields.get("dynamic_groups", None))
+
+
+class ConfigContextFilterFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups(self):
+        filter = ConfigContextFilterForm()
+        self.assertIsNone(filter.fields.get("dynamic_groups", None))
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        filter = ConfigContextFilterForm()
+        self.assertIsNone(filter.fields.get("dynamic_gorups", None))
