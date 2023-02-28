@@ -58,7 +58,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(tenants=obj.tenant) | Q(tenants=None),
             Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
         ]
-        if settings.NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
 
         queryset = (
