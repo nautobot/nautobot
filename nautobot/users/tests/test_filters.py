@@ -36,7 +36,7 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         ["groups_id", "groups__id"],
         ["groups", "groups__name"],
         ["rack_reservations_id", "rack_reservations__id"],
-        ["changes", "changes__id"],
+        ["object_changes", "object_changes__id"],
         ["object_permissions", "object_permissions__id"],
         ["object_permissions", "object_permissions__name"],
     )

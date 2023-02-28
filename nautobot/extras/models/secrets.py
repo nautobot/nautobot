@@ -123,7 +123,7 @@ class SecretsGroup(OrganizationalModel):
     slug = AutoSlugField(populate_from="name", unique=True)
     description = models.CharField(max_length=200, blank=True)
     secrets = models.ManyToManyField(
-        to=Secret, related_name="groups", through="extras.SecretsGroupAssociation", blank=True
+        to=Secret, related_name="secrets_groups", through="extras.SecretsGroupAssociation", blank=True
     )
 
     csv_headers = ["name", "slug", "description"]
@@ -142,7 +142,9 @@ class SecretsGroup(OrganizationalModel):
 
         May raise SecretError and/or Django ObjectDoesNotExist exceptions; it's up to the caller to handle those.
         """
-        secret = self.secrets.through.objects.get(group=self, access_type=access_type, secret_type=secret_type).secret
+        secret = self.secrets.through.objects.get(
+            secrets_group=self, access_type=access_type, secret_type=secret_type
+        ).secret
         return secret.get_value(obj=obj, **kwargs)
 
 
@@ -152,8 +154,8 @@ class SecretsGroup(OrganizationalModel):
 class SecretsGroupAssociation(BaseModel):
     """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
 
-    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
-    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
+    secrets_group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE, related_name="secrets_group_associations")
+    secret = models.ForeignKey(Secret, on_delete=models.CASCADE, related_name="secrets_group_associations")
 
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
@@ -161,9 +163,9 @@ class SecretsGroupAssociation(BaseModel):
     class Meta:
         unique_together = (
             # Don't allow the same access-type/secret-type combination to be used more than once in the same group
-            ("group", "access_type", "secret_type"),
+            ("secrets_group", "access_type", "secret_type"),
         )
-        ordering = ("group", "access_type", "secret_type")
+        ordering = ("secrets_group", "access_type", "secret_type")
 
     def __str__(self):
-        return f"{self.group}: {self.access_type} {self.secret_type}: {self.secret}"
+        return f"{self.secrets_group}: {self.access_type} {self.secret_type}: {self.secret}"
