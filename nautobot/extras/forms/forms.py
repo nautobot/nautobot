@@ -224,7 +224,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
 
     # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, *kwargs)
+        super().__init__(*args, **kwargs)
 
         if settings.NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
