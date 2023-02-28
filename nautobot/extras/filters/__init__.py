@@ -183,7 +183,7 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
     schema = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="schema",
+        field_name="config_context_schema",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug or PK)",
@@ -339,12 +339,7 @@ class CustomFieldFilterSet(BaseFilterSet):
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
-    field_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="field",
-        queryset=CustomField.objects.all(),
-        label="Field (ID) - Deprecated (use field filter)",
-    )
-    field = NaturalKeyOrPKMultipleChoiceFilter(
+    custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
         to_field_name="name",
         label="Field (ID or name)",
@@ -847,13 +842,9 @@ class SecretsGroupFilterSet(
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
 
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Group (ID) - Deprecated (use group filter)",
-    )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SecretsGroup.objects.all(),
-        label="Group (ID or slug)",
+        label="Secrets Group (ID or slug)",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),

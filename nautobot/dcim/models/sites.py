@@ -37,6 +37,13 @@ class Region(TreeModel, OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
+    migrated_location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="regions",
+        blank=True,
+        null=True,
+    )
 
     csv_headers = ["name", "slug", "parent", "description"]
 
@@ -91,6 +98,13 @@ class Site(PrimaryModel, StatusModel):
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="sites",
+        blank=True,
+        null=True,
+    )
+    migrated_location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="sites",
         blank=True,

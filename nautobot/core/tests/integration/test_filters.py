@@ -44,7 +44,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
             custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
 
         for x in ["A", "B", "C"]:
-            CustomFieldChoice.objects.create(field=self.custom_fields[2], value=f"Option {x}")
+            CustomFieldChoice.objects.create(custom_field=self.custom_fields[2], value=f"Option {x}")
 
     def tearDown(self):
         self.logout()

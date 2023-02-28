@@ -71,6 +71,7 @@ class GitRepository(PrimaryModel):
         default=None,
         blank=True,
         null=True,
+        related_name="git_repositories",
     )
 
     # Data content types that this repo is a source of. Valid options are dynamically generated based on

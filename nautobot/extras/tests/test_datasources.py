@@ -132,7 +132,7 @@ class GitTest(TransactionTestCase):
                         "weight": 1500,
                         "description": "NTP servers for Frobozz 1000 devices **only**",
                         "is_active": True,
-                        "schema": "Config Context Schema 1",
+                        "config_context_schema": "Config Context Schema 1",
                         "device_types": [{"slug": self.device_type.slug}],
                     },
                     "ntp-servers": ["172.16.10.22", "172.16.10.33"],
@@ -222,7 +222,7 @@ class GitTest(TransactionTestCase):
             {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
             config_context.data,
         )
-        self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
+        self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.config_context_schema.name)
 
     def assert_implicit_config_context_exists(self, name):
         """Helper function to assert that an 'implicit' ConfigContext exists and is configured appropriately."""
@@ -237,7 +237,7 @@ class GitTest(TransactionTestCase):
         self.assertFalse(config_context.is_active)  # explicit metadata
         self.assertEqual(list(config_context.locations.all()), [self.location])  # implicit from the file path
         self.assertEqual({"domain_name": "example.com"}, config_context.data)
-        self.assertIsNone(config_context.schema)
+        self.assertIsNone(config_context.config_context_schema)
 
     def assert_export_template_html_exist(self, name):
         """Helper function to assert ExportTemplate exists"""
@@ -404,13 +404,13 @@ class GitTest(TransactionTestCase):
                 secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
                 SecretsGroupAssociation.objects.create(
                     secret=username_secret,
-                    group=secrets_group,
+                    secrets_group=secrets_group,
                     access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
                     secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 )
                 SecretsGroupAssociation.objects.create(
                     secret=token_secret,
-                    group=secrets_group,
+                    secrets_group=secrets_group,
                     access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
                     secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
                 )
@@ -665,6 +665,10 @@ class GitTest(TransactionTestCase):
                                     "weight": 1500,
                                     "description": "NTP servers for region NYC",
                                     "is_active": True,
+                                    # Changing this from `config_context_schema` to `schema` to assert that schema can
+                                    # be used inplace of `config_context_schema`.
+                                    # TODO(timizuo): Replace `schema` with `config_context_schema` when `schema`
+                                    #  backwards-compatibility is removed.
                                     "schema": "Config Context Schema 1",
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
@@ -719,7 +723,7 @@ class GitTest(TransactionTestCase):
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
-                self.assertEqual(config_context_schema_record, config_context.schema)
+                self.assertEqual(config_context_schema_record, config_context.config_context_schema)
 
                 config_context_schema = self.config_context_schema
                 config_context_schema_metadata = config_context_schema["_metadata"]
