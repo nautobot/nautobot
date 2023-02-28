@@ -12,7 +12,7 @@ from nautobot.core.api.views import (
     GetFilterSetFieldLookupExpressionChoicesAPIView,
     GetMenu,
     GraphQLDRFAPIView,
-    StatusView,
+    SetCSRFCookie, StatusView,
     NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
 )
@@ -57,6 +57,7 @@ urlpatterns = [
     # TODO: get-menu should be moved under `api/ui/`, not root-level as here. See #3240.
     # Core Apps
     path("get-menu/", GetMenu.as_view(), name="get-menu"),
+    path("get-csrf/", SetCSRFCookie.as_view(), name="get-csrf"),
     # Core
     path("core/", include((core_api_patterns, "core-api"))),
 ]

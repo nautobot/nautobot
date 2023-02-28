@@ -10,6 +10,9 @@ const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => {
   if(res.status !== 200){
     throw new Error(res.json());
   }
+  else if (res.status == 403){
+    throw new Error(res.json());
+  }
   return res.json();
 });
 

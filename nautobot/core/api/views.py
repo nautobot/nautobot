@@ -11,6 +11,8 @@ from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework import fields as drf_fields
 from rest_framework.response import Response
@@ -847,6 +849,18 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         except Exception as e:
             return ExecutionResult(errors=[e], invalid=True)
 
+
+ensure_csrf = method_decorator(ensure_csrf_cookie)
+
+
+class SetCSRFCookie(NautobotAPIVersionMixin, APIView):
+    permission_classes = [AllowAny]
+
+    @ensure_csrf
+    def get(self, request):
+        resp = Response("CSRF Cookie set.")
+        resp.set_cookie("testing", "testing_token", samesite=None)
+        return resp
 
 class GetMenu(NautobotAPIVersionMixin, APIView):
     """API View that returns the registered nav-menu content."""

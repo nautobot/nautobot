@@ -1,21 +1,24 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.models import Group
 from django.db.models import Count
+from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
+from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
-from nautobot.core.api.views import ModelViewSet
+from nautobot.core.api.views import ModelViewSet, NautobotAPIVersionMixin
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
 from . import serializers
+from .serializers import UserLoginSerializer
 
 
 class UsersRootView(APIRootView):
@@ -57,6 +60,10 @@ class GroupViewSet(ModelViewSet):
 # REST API tokens
 #
 
+from django.views.decorators.csrf import csrf_protect, csrf_exempt, ensure_csrf_cookie
+csrf_protect_method = method_decorator(csrf_protect)
+ensure_csrf = method_decorator(ensure_csrf_cookie)
+
 
 class TokenViewSet(ModelViewSet):
     queryset = RestrictedQuerySet(model=Token).select_related("user")
@@ -68,6 +75,15 @@ class TokenViewSet(ModelViewSet):
         """Inherit default authentication_classes and basic authentication."""
         classes = super().authentication_classes
         return classes + [BasicAuthentication]
+
+    @action(methods=["POST"], detail=False, permission_classes=[AllowAny])
+    @ensure_csrf
+    def authenticate(self, request):
+        serializer = UserLoginSerializer(data=request.data, context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        login(request, user=user)
+        return Response(status=200)
 
     def get_queryset(self):
         """
