@@ -1,11 +1,10 @@
-import { Alert, Container } from "react-bootstrap"
+import { Alert, Container } from "@chakra-ui/react"
 import { useLocation } from "react-router-dom"
 
 import Menu from "@components/common/BSNavBar"
 
 
 export default function Layout({ children }) {
-
   let location = useLocation();
   return (
     <>

@@ -1,9 +1,9 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
 import { BrowserRouter } from "react-router-dom"
+import { NautobotUIProvider } from "@nautobot/nautobot-ui"
 
 import "src/styles/globals.css"
-import "bootstrap/dist/css/bootstrap.css"
 
 import Layout from '@components/layouts/BSLayout';
 import reportWebVitals from "src/reportWebVitals"
@@ -28,11 +28,13 @@ const dev = process.env.NODE_ENV !== "production"
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Layout>
-        <NautobotRouter />
-      </Layout>
-    </BrowserRouter>
+    <NautobotUIProvider>
+      <BrowserRouter>
+        <Layout>
+          <NautobotRouter />
+        </Layout>
+      </BrowserRouter>
+    </NautobotUIProvider>
   </React.StrictMode>
 );
 

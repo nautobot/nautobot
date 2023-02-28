@@ -217,12 +217,12 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 
 # Install NodeJS for installing markdownlint-cli
 
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
+RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v19.7.0/node-v19.7.0-linux-x64.tar.xz && \
     mkdir -p /usr/local/lib/nodejs && \
     tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
     rm -rf /tmp/node.tar.xz
 
-ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-x64/bin"
+ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v19.7.0-linux-x64/bin"
 
 FROM dependencies-dev-python as dependencies-dev-platform-arm64
 
@@ -232,12 +232,12 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 
 # Install NodeJS for installing markdownlint-cli
 
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-arm64.tar.xz && \
+RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v19.7.0/node-v19.7.0-linux-arm64.tar.xz && \
     mkdir -p /usr/local/lib/nodejs && \
     tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
     rm -rf /tmp/node.tar.xz
 
-ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-arm64/bin"
+ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v19.7.0-linux-arm64/bin"
 
 ################################ Stage: dependencies-dev (intermediate build target)
 

@@ -6,9 +6,18 @@
 version: "3.4"
 services:
   nautobot:
+    environment:
+      # Forward SSH agent from host into Docker so that we can install nautobot-ui from private GitHub repo
+      # TODO: remove this once the repo is made public
+      SSH_AUTH_SOCK: "/run/host-services/ssh-auth.sock"
     volumes:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
       - ../:/source
+      # Forward SSH agent from host into Docker so that we can install nautobot-ui from private GitHub repo
+      # TODO: remove this once the repo is made public
+      - type: bind
+        source: /run/host-services/ssh-auth.sock
+        target: /run/host-services/ssh-auth.sock
   celery_worker:
     volumes:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
@@ -21,18 +30,29 @@ services:
     volumes:
       - ../:/source
   nodejs:
-    image: node:slim
+    # Changed from node:slim because slim doesn't include git and openssh-client
+    image: node:19
     environment:
       PORT: "3000"
       # DEBUG: "express:*" # nodejs web server debug logging
+      # Forward SSH agent from host into Docker so that we can install nautobot-ui from private GitHub repo
+      # TODO: remove this once the repo is made public
+      SSH_AUTH_SOCK: "/run/host-services/ssh-auth.sock"
     ports:
       - "3000:3000"
     working_dir: /opt/node/nautobot
+    # Note: with Mac Docker Desktop, at least, you may need to comment out user: node (defaulting to user: root)
+    # as the ssh-auth.sock defaults to only writable by root user.
     user: node
     volumes:
       - ../nautobot/ui/:/opt/node/nautobot
       - ../examples/:/opt/examples
       - ../:/source
+      # Forward SSH agent from host into Docker so that we can install nautobot-ui from private GitHub repo
+      # TODO: remove this once the repo is made public
+      - type: bind
+        source: /run/host-services/ssh-auth.sock
+        target: /run/host-services/ssh-auth.sock
     command: >
       bash -c "npm install && npm run start"  # TODO: running npm install every time is slow, can we persist a volume?
     depends_on:
