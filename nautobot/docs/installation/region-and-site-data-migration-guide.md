@@ -41,7 +41,7 @@ The old `constraints` field for `Site` specifc `ObjectPermission` instances migh
 }
 ```
 
-To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
+To modify the data correctly, we need to:
     1. Replace all occurrences of "region" with "parent" in the **Key** portion (before ":") of the data **not Value** (after ":").
     2. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in `...__id` and `...__id__in` Keys.
 
@@ -98,15 +98,17 @@ The old `constraints` field for a `Site`/`Region` related data model's (e.g. `In
 }
 ```
 
-To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
+To modify the data correctly, we need to:
     1. Replace all occurrences of "site" with "location" in the **Key** portion (before ":") of the data **not Value** (after ":").
     2. Replace all occurrences of "region" with "parent" in the **Key** portion (before ":") of the data **not Value** (after ":").
-    3. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in `...__id` and `...__id__in` Keys.
+    3. Add `"device__location__location_type__name": "Site"` if the old `ObjectPermission` only allows operations on `Interfaces` of `Device` instances assigned to `Sites`.
+    4. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in `...__id` and `...__id__in` Keys.
 
 The updated JSON data might look like this:
 
 ```json
 {
+    "device__location__location_type__name": "Site",
     "device__location__name": "AMS01",
     "device__location__name__in": ["AMS01", "ATL01", "ETX02"],
     "device__location__slug": "ams01",
@@ -128,32 +130,29 @@ The updated JSON data might look like this:
 }
 ```
 
-### Other Data Model Specific ObjectPermission e.g. ExportTemplate
+### Other Data Model Specific ObjectPermission e.g. Note
 
-The old `constraints` field for a `Site`/`Region` related data model's (e.g. `ExportTemplate`) `ObjectPermission` instance might look like this:
+The old `constraints` field for a `Site`/`Region` related data model's (e.g. `Note`) `ObjectPermission` instance might look like this:
 
 ```json
 {
-    "content_type": "dcim.site",
-    "owner_content_type": "extras.gitrepository",
-    "owner_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
-    "owner_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
+    "assigned_object_type": "dcim.site",
+    "assigned_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
+    "assigned_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
 }
 ```
 
-To modify the data correctly, we need to replace query filter strings to those of model class `Location`:
-    1. Replace all occurrences of "dcim.site" and/or "dcim.region" with "dcim.location" in the **Value** portion (after ":") of the `content_type` key.
-    2. Since `owner_content_type` does not contain "dcim.site" and/or "dcim.region", we **do not** need to modify the `owner_content_type` Key and Value.
-    3. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in the `owner_object_id` and `owner_object_id__in` Keys.
+To modify the data correctly, we need to:
+    1. Replace all occurrences of "dcim.site" and/or "dcim.region" with "dcim.location" in the **Value** portion (after ":") of the `assigned_object_type` Key.
+    2. Since Nautobot carries over the UUIDs of the old `Site`/`Region` instances when creating the new "Site"/"Region" type `Location` instances, we **do not** need to change the UUID values in the `assigned_object_id` and `assigned_object_id__in` Keys.
 
 The updated JSON data might look like this:
 
 ```json
 {
-    "content_type": "dcim.site",
-    "owner_content_type": "extras.gitrepository",
-    "owner_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
-    "owner_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
+    "assigned_object_type": "dcim.location",
+    "assigned_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
+    "assigned_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
 }
 ```
 
