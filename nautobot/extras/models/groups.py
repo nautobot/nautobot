@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )

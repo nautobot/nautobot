@@ -1000,7 +1000,7 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 
 class JobButtonForm(BootstrapMixin, forms.ModelForm):
     content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("job_buttons").get_query()).order_by("app_label", "model"),
+        queryset=ContentType.objects.all(),
         label="Content Type",
     )
 
@@ -1022,7 +1022,7 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
     model = JobButton
     q = forms.CharField(required=False, label="Search")
     content_type = CSVContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("job_buttons").get_query()).order_by("app_label", "model"),
+        queryset=ContentType.objects.all(),
         required=False,
         label="Content Type",
     )

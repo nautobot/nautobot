@@ -55,7 +55,6 @@ logger = logging.getLogger(__name__)
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -131,7 +130,6 @@ class VRF(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -227,7 +225,6 @@ class RIR(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -436,7 +433,6 @@ class Role(OrganizationalModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "job_buttons",
     "locations",
     "relationships",
     "statuses",
@@ -757,7 +753,6 @@ class Prefix(PrimaryModel, StatusModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "statuses",
     "webhooks",
@@ -1134,7 +1129,6 @@ class VLANGroup(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "locations",
     "relationships",
     "statuses",
@@ -1294,7 +1288,6 @@ class VLAN(PrimaryModel, StatusModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )

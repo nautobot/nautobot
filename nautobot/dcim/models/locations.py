@@ -20,7 +20,6 @@ from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -159,7 +158,6 @@ class LocationQuerySet(TreeQuerySet):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "statuses",
     "webhooks",

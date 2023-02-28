@@ -29,7 +29,6 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -92,7 +91,6 @@ class Region(MPTTModel, OrganizationalModel):
     "custom_links",
     "custom_validators",
     "export_templates",
-    "job_buttons",
     "graphql",
     "relationships",
     "statuses",

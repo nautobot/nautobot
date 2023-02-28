@@ -75,7 +75,6 @@ class TenantGroup(MPTTModel, OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )

@@ -1050,9 +1050,7 @@ class JobLogEntrySerializer(BaseModelSerializer):
 
 class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
-    content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("job_buttons").get_query()).order_by("app_label", "model"),
-    )
+    content_type = ContentTypeField(queryset=ContentType.objects.all())
 
     class Meta:
         model = JobButton

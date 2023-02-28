@@ -830,7 +830,6 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery("job_buttons"),
     )
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(

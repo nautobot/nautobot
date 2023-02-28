@@ -28,7 +28,6 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -80,7 +79,6 @@ class ProviderNetwork(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "webhooks",
 )
@@ -145,7 +143,7 @@ class Provider(PrimaryModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "job_buttons", "relationships")
+@extras_features("custom_fields", "custom_validators", "graphql", "relationships")
 class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
@@ -184,7 +182,6 @@ class CircuitType(OrganizationalModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "relationships",
     "statuses",
     "webhooks",
@@ -282,7 +279,6 @@ class Circuit(PrimaryModel, StatusModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "job_buttons",
     "locations",
     "relationships",
     "webhooks",
