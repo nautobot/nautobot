@@ -165,18 +165,6 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class ConfigContextFilterSetTestCase(TestCase):
-    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
-    def test_with_dynamic_groups_enabled(self):
-        filter_set = ConfigContextFilterSet()
-        self.assertIsNotNone(filter_set.filters.get("dynamic_groups", None))
-
-    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
-    def test_without_dynamic_groups_enabled(self):
-        filter_set = ConfigContextFilterSet()
-        self.assertIsNone(filter_set.filters.get("dynamic_groups", None))
-
-
 class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     queryset = ConfigContext.objects.all()
     filterset = ConfigContextFilterSet
@@ -363,6 +351,18 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Tests that the dynamic_group field is on the ConfigContextFilterSet when feature flag is enabled"""
+        filter_set = ConfigContextFilterSet()
+        self.assertIsNotNone(filter_set.filters.get("dynamic_groups", None))
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Tests that the dynamic_group field is not on the ConfigContextFilterSet when feature flag is disabled"""
+        filter_set = ConfigContextFilterSet()
+        self.assertIsNone(filter_set.filters.get("dynamic_groups", None))
 
 
 class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
