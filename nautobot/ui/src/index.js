@@ -11,7 +11,6 @@ import NautobotRouter from "src/router"
 
 
 const dev = process.env.NODE_ENV !== "production"
-export const nautobot_url = dev ? "http://localhost:8888" : ""
 
 /**
  * Adds capitalize method to string

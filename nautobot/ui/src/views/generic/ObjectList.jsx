@@ -1,7 +1,6 @@
 import { useParams } from "react-router-dom"
 
 import ListViewTemplate from "@views/BSListViewTemplate"
-import { nautobot_url } from "src/index"
 
 
 export default function BSListView({ list_url }) {
@@ -16,7 +15,7 @@ export default function BSListView({ list_url }) {
     return <></>
   }
   if (!list_url) {
-    list_url = `${nautobot_url}/api/${app_name}/${model_name}/`
+    list_url = `/api/${app_name}/${model_name}/`
   }
   console.log(list_url)
   return (
