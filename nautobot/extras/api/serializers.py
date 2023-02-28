@@ -381,6 +381,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "tenant_groups",
             "tenants",
             "tags",
+            "dynamic_groups",
             "data",
         ]
 
