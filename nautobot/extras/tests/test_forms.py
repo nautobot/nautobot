@@ -4,8 +4,7 @@ import warnings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.test import override_settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm, SiteForm
 import nautobot.dcim.models as dcim_models
