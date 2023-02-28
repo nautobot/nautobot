@@ -182,9 +182,9 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 
 #### Aggregate Migrated to Prefix
 
-The `ipam.Aggregate` model has been removed and all existing aggregates will be migrated to `ipam.Prefix` with `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00`. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
+The `ipam.Aggregate` model has been removed and all existing Aggregates will be migrated to `ipam.Prefix` records with their `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00` UTC. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the equivalent fields on the new `Prefix`. ObjectChanges, Tags, Notes, Permissions, Custom Fields, Computed Fields and Relationships will be migrated to relate to the new `Prefix` as well.
 
-If a `Prefix` already exists with the same network and prefix length as a previous `Aggregate`, the `rir` and `date_added` fields will be copied to the existing prefix object. Messages will be output during migration (`nautobot-server migrate` or `nautobot-server post-upgrade`) if the `tenant`, `description` or `type` fields need to be manually migrated.
+If a `Prefix` already exists with the same network and prefix length as a previous `Aggregate`, the `rir` and `date_added` fields will be copied to the `rir` and `date_allocated` fields on the existing Prefix object. Messages will be output during migration (`nautobot-server migrate` or `nautobot-server post_upgrade`) if the `tenant`, `description` or `type` fields need to be manually migrated.
 
 | Aggregate        | Prefix               |
 |------------------|----------------------|
@@ -427,7 +427,7 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 |        | `power_outlets`        | `/dcim/devices/?power_outlets=True`        | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`               |
 |        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                     |
 
-### Removed Redundant Filter Fields
+### Removed Filter Fields
 
 Below is a table documenting [removed redundant filter field changes](../release-notes/version-2.0.md#removed-redundant-filter-fields-2804) in v2.x.
 Unless stated otherwise, all of the `*_id=<uuid>` filters have been replaced by generic filters that support both uuid and slug.
@@ -579,7 +579,9 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 | Site                    | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `tenant_group_id`     |                                                                                               |
-| Tenant                  | `group_id`            |                                                                                               |
+| Tenant                  | `aggregates`          |                                                                                               |
+|                         | `has_aggregates`      |                                                                                               |
+|                         | `group_id`            |                                                                                               |
 | TenantGroup             | `parent_id`           |                                                                                               |
 | VirtualChassis          | `master_id`           |                                                                                               |
 |                         | `region`              |                                                                                               |

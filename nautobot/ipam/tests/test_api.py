@@ -128,16 +128,17 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "prefix": "192.168.4.0/24",
                 "status": cls.status_active.pk,
                 "rir": rir.pk,
+                "type": choices.PrefixTypeChoices.TYPE_POOL,
             },
             {
                 "prefix": "2001:db8:abcd:12::/80",
                 "status": cls.status_active.pk,
                 "rir": rir.pk,
+                "type": choices.PrefixTypeChoices.TYPE_NETWORK,
             },
             {
                 "prefix": "192.168.6.0/24",
                 "status": cls.status_active.pk,
-                "rir": rir.pk,
             },
         ]
         cls.bulk_update_data = {

@@ -7,4 +7,4 @@ Users can create whatever RIRs they like and optionally assign prefixes to an RI
 For example, suppose your organization has been allocated 104.131.0.0/16 by ARIN. It also makes use of RFC 1918 addressing internally. You would first create RIRs named "ARIN" and "RFC 1918," then create a prefix for each of these top-level networks, assigning it to its respective RIR.
 
 +/- 2.0.0
-    The `Aggregate` model and all relationships to `RIR` were migrated to the `Prefix` model.
+    The `Aggregate` model and its relationships to `RIR` were migrated to the `Prefix` model.

@@ -397,6 +397,7 @@ class PrefixFilterForm(
     field_order = [
         "q",
         "within_include",
+        "type",
         "family",
         "mask_length",
         "vrf_id",
@@ -406,6 +407,7 @@ class PrefixFilterForm(
         "role",
         "tenant_group",
         "tenant",
+        "rir",
     ]
     mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
@@ -442,6 +444,7 @@ class PrefixFilterForm(
         choices=PrefixTypeChoices,
         widget=StaticSelect2Multiple(),
     )
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     tag = TagFilterField(model)
 
 
