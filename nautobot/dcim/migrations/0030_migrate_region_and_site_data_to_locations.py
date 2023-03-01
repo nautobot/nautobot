@@ -54,7 +54,7 @@ def create_region_location_type_locations(region_class, location_class, region_l
     )
     for region in regions:
         try:
-            location_class.objects.create(
+            region_loc = location_class.objects.create(
                 id=region.id,
                 location_type=region_lt,
                 name=region.name,
@@ -63,17 +63,12 @@ def create_region_location_type_locations(region_class, location_class, region_l
                 if region.parent
                 else None,
             )
+            region.migrated_location = region_loc
+            region.save()
         except IntegrityError as e:
             logger.error(
                 f"{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
             )
-
-    region_lt_locations = location_class.objects.filter(location_type=region_lt)
-    regions = region_class.objects.all()
-    # Cache the REGION_TO_LOCATION_LOOKUP for later use
-    for region in regions:
-        region.migrated_location = region_lt_locations.get(name=region.name)
-    region_class.objects.bulk_update(regions, ["migrated_location"], 1000)
 
 
 def create_site_location_type_locations(
@@ -161,7 +156,7 @@ def create_site_location_type_locations(
             location_instances = []
 
     # Create the remaining locations
-    if count < 1000:
+    if count > 0:
         # Handle IntegrityError when Region, Site, Location instances with the same slug.
         try:
             location_class.objects.bulk_create(location_instances, batch_size=1000)
@@ -234,28 +229,28 @@ def reassign_model_instances_to_locations(apps, model):
         model_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
 
         # Circuits App
-        cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site")
+        cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site__migrated_location")
         for ct in cts:
             ct.location = ct.site.migrated_location
         CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
 
         # DCIM App
-        devices = Device.objects.filter(location__isnull=True).select_related("site")
+        devices = Device.objects.filter(location__isnull=True).select_related("site__migrated_location")
         for device in devices:
             device.location = device.site.migrated_location
         Device.objects.bulk_update(devices, ["location"], 1000)
 
-        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site")
+        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site__migrated_location")
         for powerpanel in powerpanels:
             powerpanel.location = powerpanel.site.migrated_location
         PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
 
-        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site")
+        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site__migrated_location")
         for rackgroup in rackgroups:
             rackgroup.location = rackgroup.site.migrated_location
         RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
 
-        racks = Rack.objects.filter(location__isnull=True).select_related("site")
+        racks = Rack.objects.filter(location__isnull=True).select_related("site__migrated_location")
         for rack in racks:
             rack.location = rack.site.migrated_location
         Rack.objects.bulk_update(racks, ["location"], 1000)
@@ -269,31 +264,35 @@ def reassign_model_instances_to_locations(apps, model):
         image_attachments = ImageAttachment.objects.filter(content_type=model_ct)
         for ia in image_attachments:
             ia.content_type = location_ct
-            site = model_class.objects.get(id=ia.object_id)
-            ia.object_id = site.migrated_location.id
-        ImageAttachment.objects.bulk_update(image_attachments, ["content_type", "object_id"], 1000)
+        ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
 
         # Below models' site attribute is not required, so we need to check each instance if the site field is not null
         # if so we reassign it to Site Location and if not we leave it alone
 
         # IPAM App
-        prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related(
+            "site__migrated_location"
+        )
         for prefix in prefixes:
             prefix.location = prefix.site.migrated_location
         Prefix.objects.bulk_update(prefixes, ["location"], 1000)
 
-        vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related(
+            "site__migrated_location"
+        )
         for vlangroup in vlangroups:
             vlangroup.location = vlangroup.site.migrated_location
         VLANGroup.objects.bulk_update(vlangroups, ["location"], 1000)
 
-        vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site__migrated_location")
         for vlan in vlans:
             vlan.location = vlan.site.migrated_location
         VLAN.objects.bulk_update(vlans, ["location"], 1000)
 
         # Virtualization App
-        clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related("site")
+        clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related(
+            "site__migrated_location"
+        )
         for cluster in clusters:
             cluster.location = cluster.site.migrated_location
         Cluster.objects.bulk_update(clusters, ["location"], 1000)
@@ -322,14 +321,14 @@ def reassign_model_instances_to_locations(apps, model):
         ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", f"{model}s")
     for cc in ccs:
         if model == "region":
-            model_name_list = list(cc.regions.all().values_list("name", flat=True))
+            model_pk_list = list(cc.regions.all().values_list("pk", flat=True))
         else:
-            model_name_list = list(cc.sites.all().values_list("name", flat=True))
+            model_pk_list = list(cc.sites.all().values_list("pk", flat=True))
 
-        model_locs = list(Location.objects.filter(name__in=model_name_list, location_type=model_lt))
-        if len(model_locs) < len(model_name_list):
+        model_locs = list(Location.objects.filter(pk__in=model_pk_list, location_type=model_lt))
+        if len(model_locs) < len(model_pk_list):
             logger.warning(
-                f'There is a mismatch between the number of {model_lt.name}s ({len(model_name_list)}) and the number of "{model_lt.name}" LocationType locations ({len(model_locs)})'
+                f'There is a mismatch between the number of {model_lt.name}s ({len(model_pk_list)}) and the number of "{model_lt.name}" LocationType locations ({len(model_locs)})'
                 f" found in this ConfigContext {cc.name}"
             )
         cc.locations.add(*model_locs)
@@ -364,23 +363,17 @@ def reassign_model_instances_to_locations(apps, model):
     notes = Note.objects.filter(assigned_object_type=model_ct)
     for note in notes:
         note.assigned_object_type = location_ct
-        old_model = model_class.objects.get(id=note.assigned_object_id)
-        note.assigned_object_id = old_model.migrated_location.id
-    Note.objects.bulk_update(notes, ["assigned_object_type", "assigned_object_id"], 1000)
+    Note.objects.bulk_update(notes, ["assigned_object_type"], 1000)
 
     object_changes_changed = ObjectChange.objects.filter(changed_object_type=model_ct)
     for oc in object_changes_changed:
         oc.changed_object_type = location_ct
-        old_model = model_class.objects.get(id=oc.changed_object_id)
-        oc.changed_object_id = old_model.migrated_location.id
-    ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type", "changed_object_id"], 1000)
+    ObjectChange.objects.bulk_update(object_changes_changed, ["changed_object_type"], 1000)
 
     object_changes_related = ObjectChange.objects.filter(related_object_type=model_ct)
     for oc in object_changes_related:
         oc.related_object_type = location_ct
-        old_model = model_class.objects.get(id=oc.related_object_id)
-        oc.related_object_id = old_model.migrated_location.id
-    ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type", "related_object_id"], 1000)
+    ObjectChange.objects.bulk_update(object_changes_related, ["related_object_type"], 1000)
 
     # make tag manager available in migration
     # https://github.com/jazzband/django-taggit/issues/101
@@ -407,8 +400,6 @@ def reassign_model_instances_to_locations(apps, model):
         src_model = model_class.objects.get(id=relationship_association.source_id)
         src_loc = src_model.migrated_location
         relationship_association.source = src_loc
-        relationship_association.source_id = src_loc.id
-    RelationshipAssociation.objects.bulk_update(src_relationship_associations, ["source_id"], 1000)
     src_relationships = Relationship.objects.filter(source_type=model_ct)
     src_relationships.update(source_type=location_ct)
 
@@ -418,8 +409,6 @@ def reassign_model_instances_to_locations(apps, model):
         dst_model = model_class.objects.get(id=relationship_association.destination_id)
         dst_loc = dst_model.migrated_location
         relationship_association.destination = dst_loc
-        relationship_association.destination_id = dst_loc.pk
-    RelationshipAssociation.objects.bulk_update(dst_relationship_associations, ["destination_id"], 1000)
     dst_relationships = Relationship.objects.filter(destination_type=model_ct)
     dst_relationships.update(destination_type=location_ct)
 
@@ -487,7 +476,6 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("circuits", "0009_circuittermination_location"),
         ("dcim", "0029_add_tree_managers_and_foreign_keys_pre_data_migration"),
