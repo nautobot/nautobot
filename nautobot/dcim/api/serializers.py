@@ -145,7 +145,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable_peer",
+            component_name="cable_termination__cable_peer",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 get_all_concrete_subclasses(CableTermination), prefix="Nested"
@@ -183,7 +183,7 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="connected_endpoint",
+            component_name="path_endpoint__connected_endpoint",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(PathEndpoint), prefix="Nested"),
             allow_null=True,
@@ -1143,8 +1143,7 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerial
 class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
     device = NestedDeviceSerializer()
-    # Provide a default value to satisfy UniqueTogetherValidator
-    parent = serializers.PrimaryKeyRelatedField(queryset=InventoryItem.objects.all(), allow_null=True, default=None)
+    parent = NestedInventoryItemSerializer(required=False, allow_null=True, default=None)
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True, default=None)
 
     class Meta:
@@ -1163,6 +1162,21 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
             "description",
             "tree_depth",
         ]
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (device, parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("device") and data.get("parent") and data.get("name"):
+            validator = UniqueTogetherValidator(
+                queryset=InventoryItem.objects.all(),
+                fields=("device", "parent", "name"),
+            )
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
 
 
 #
@@ -1211,7 +1225,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="termination_a",
+            component_name="cable__termination_a",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 get_all_concrete_subclasses(CableTermination), prefix="Nested"
@@ -1223,7 +1237,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="termination_b",
+            component_name="cable__termination_b",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 get_all_concrete_subclasses(CableTermination), prefix="Nested"
@@ -1277,7 +1291,7 @@ class CablePathSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="origin",
+            component_name="cable_path__origin",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(PathEndpoint), prefix="Nested"),
         )
@@ -1292,7 +1306,7 @@ class CablePathSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="destination",
+            component_name="cable_path__destination",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(PathEndpoint), prefix="Nested"),
             allow_null=True,
@@ -1308,7 +1322,15 @@ class CablePathSerializer(serializers.ModelSerializer):
             return serializer(obj.destination, context=context).data
         return None
 
-    @extend_schema_field(serializers.ListField)
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="cable_path__path",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                get_all_concrete_subclasses(CableTermination), prefix="Nested"
+            ),
+        )
+    )
     def get_path(self, obj):
         ret = []
         for node in obj.get_path():

@@ -118,6 +118,7 @@ class PathEndpointMixin:
 
 
 class PassThroughPortMixin:
+    @extend_schema(filters=False, responses={200: serializers.CablePathSerializer(many=True)})
     @action(detail=True, url_path="paths")
     def paths(self, request, pk):
         """
@@ -214,8 +215,9 @@ class RackViewSet(NautobotModelViewSet):
     filterset_class = filters.RackFilterSet
 
     @extend_schema(
-        responses={200: serializers.RackUnitSerializer(many=True)},
+        filters=False,
         parameters=[serializers.RackElevationDetailFilterSerializer],
+        responses={200: serializers.RackUnitSerializer(many=True)},
     )
     @action(detail=True)
     @xframe_options_sameorigin
@@ -419,6 +421,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         return serializers.DeviceWithConfigContextSerializer
 
     @extend_schema(
+        filters=False,
         parameters=[OpenApiParameter(name="method", location="query", required=True, type=OpenApiTypes.STR)],
         responses={"200": serializers.DeviceNAPALMSerializer},
     )

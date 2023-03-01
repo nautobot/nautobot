@@ -2,9 +2,11 @@ from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
+from nautobot.core.api import ChoiceField, ContentTypeField
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxySerializer, WritableNestedSerializer
+from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.models.utils import get_all_concrete_subclasses
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
@@ -194,7 +196,17 @@ class NestedNoteSerializer(WritableNestedSerializer):
         model = models.Note
         fields = ["assigned_object", "id", "url", "note", "user", "slug"]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="note__assigned_object",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                get_all_concrete_subclasses(models.NotesMixin),
+                prefix="Nested",
+            ),
+            allow_null=True,
+        )
+    )
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None

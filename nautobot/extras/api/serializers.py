@@ -340,7 +340,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="owner",
+            component_name="config_context__owner",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 FeatureQuery("config_context_owners").list_subclasses(), prefix="Nested"
@@ -386,7 +386,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="owner",
+            component_name="config_context_schema__owner",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 FeatureQuery("config_context_owners").list_subclasses(), prefix="Nested"
@@ -574,7 +574,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="owner",
+            component_name="export_template__owner",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 FeatureQuery("export_template_owners").list_subclasses(), prefix="Nested"
@@ -699,7 +699,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="parent",
+            component_name="image_attachment__parent",
             resource_type_field_name="object_type",
             serializers=[
                 NestedDeviceSerializer,
@@ -1039,7 +1039,7 @@ class NoteSerializer(BaseModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="assigned_object",
+            component_name="note__assigned_object",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(NotesMixin), prefix="Nested"),
             allow_null=True,
@@ -1089,7 +1089,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="changed_object",
+            component_name="object_change__changed_object",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 ChangeLoggedModelsQuery().list_subclasses(), prefix="Nested"

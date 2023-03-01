@@ -11,12 +11,13 @@ from nautobot.core.api import (
     SerializedPKRelatedField,
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.models.utils import get_all_concrete_subclasses
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
-    NestedInterfaceSerializer,
     NestedLocationSerializer,
 )
+from nautobot.dcim.models import BaseInterface
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     RoleModelSerializerMixin,
@@ -39,7 +40,6 @@ from nautobot.ipam.models import (
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
-    NestedVMInterfaceSerializer,
 )
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -354,12 +354,9 @@ class IPAddressSerializer(
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="assigned_object",
+            component_name="ip_address__assigned_object",
             resource_type_field_name="object_type",
-            serializers=[
-                NestedInterfaceSerializer,
-                NestedVMInterfaceSerializer,
-            ],
+            serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(BaseInterface), prefix="Nested"),
             allow_null=True,
         )
     )
