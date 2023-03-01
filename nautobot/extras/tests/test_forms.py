@@ -1108,11 +1108,11 @@ class ConfigContextFilterFormTestCase(TestCase):
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups(self):
         """Tests that the dynamic_group field is not on the ConfigContextFilterForm when feature flag is disabled"""
-        filter = ConfigContextFilterForm()
-        self.assertIsNone(filter.fields.get("dynamic_groups", None))
+        context_filter = ConfigContextFilterForm()
+        self.assertIsNone(context_filter.fields.get("dynamic_groups", None))
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
     def test_with_dynamic_groups(self):
         """Tests that the dynamic_group field is on the ConfigContextFilterForm when feature flag is enabled"""
-        filter = ConfigContextFilterForm()
-        self.assertIsNone(filter.fields.get("dynamic_gorups", None))
+        conttext_filter = ConfigContextFilterForm()
+        self.assertIsNone(context_filter.fields.get("dynamic_gorups", None))
