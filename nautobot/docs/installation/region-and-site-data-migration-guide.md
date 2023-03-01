@@ -184,7 +184,12 @@ If the `ExampleModel` currently has a `site` ForeignKey field but it does not ha
 # models.py
 
 class ExampleModel(OrganizationalModel):
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, blank=True, null=True)
+    site = models.ForeignKey(
+        to="dcim.Site",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+    )
     name = models.CharField(max_length=20, help_text="The name of this Example.")
 ...
 ```
@@ -195,8 +200,18 @@ class ExampleModel(OrganizationalModel):
 # models.py
 
 class ExampleModel(OrganizationalModel):
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, blank=True, null=True)
-    location = models.ForeignKey(to="dcim.Location", on_delete=models.PROTECT, blank=True, null=True)
+    site = models.ForeignKey(
+        to="dcim.Site",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+    )
     name = models.CharField(max_length=20, help_text="The name of this Example.")
 ...
 ```
@@ -257,7 +272,8 @@ Below is what the function might look like:
 
 ```python
 def migrate_example_model_data_to_locations(apps, schema_editor):
-    # Always use the provided `apps` to look up models, rather than importing them directly!
+    # Always use the provided `apps` to look up models
+    # rather than importing them directly!
     ExampleModel = apps.get("example_app", "examplemodel")
     LocationType = apps.get("dcim", "locationtype")
     Location = apps.get("dcim", "location")
@@ -315,7 +331,8 @@ def migrate_example_model_data_to_locations(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         # The dcim migration creates the Site Type and Region Type Locations that
-        # your data models are migrating to. It has to be run **before** this migration.
+        # your data models are migrating to.
+        # Therefore, It has to be run **before** this migration.
         ("dcim", "0030_migrate_region_and_site_data_to_locations"),
         ("example_app", "0007_add_location_field_to_example_model"),
     ]
@@ -336,7 +353,12 @@ After the data migration is successful, we need to remove the `site`/`region` fi
 # models.py
 class ExampleModel(OrganizationalModel):
     # note that site field is gone
-    location = models.ForeignKey(to="dcim.Location", on_delete=models.PROTECT, blank=True, null=True)
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+    )
     name = models.CharField(max_length=20, help_text="The name of this Example.")
 ...
 ```
