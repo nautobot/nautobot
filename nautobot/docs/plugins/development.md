@@ -1370,6 +1370,32 @@ except ImportError:
     pass
 ```
 
+## Prometheus Metrics
+
++++ 1.5.?
+
+It is possible for Nautobot apps to provide their own Prometheus metrics. There are two general ways to achieve this:
+
+1. Use the prometheus_client library directly in your app code. Depending on whether that code runs in the web server or the worker context, the metric will show up in the respective `/metrics` endpoint(s).
+2. If the metric cannot be generated alongside existing code, a mechanism similar to that of Jobs in apps can be used. A list called `metrics` residing in a file called `metrics.py` can be provided at the root of the app. Nautobot will automatically read these and expose them via its `/metrics` endpoint. The following code snippet shows an example metric defined this way:
+
+```python
+# metrics.py
+from prometheus_client.metrics_core import GaugeMetricFamily
+
+from nautobot_animal_sounds.models import Animal
+
+
+def metric_animals():
+    gauges = GaugeMetricFamily("nautobot_noisy_animals_count", "Nautobot Example Count Metric", labels=[])
+    screaming_animal_count = Animal.objects.filter(loudness="noisy").count()
+    gauges.add_metric(labels=[], value=screaming_animal_count)
+    yield gauges
+
+
+metrics = [metric_example]
+```
+
 ## Testing Apps
 
 In general apps can be tested like other Django apps. In most cases you'll want to run your automated tests via the `nautobot-server test <app_module>` command or, if using the `coverage` Python library, `coverage run --module nautobot.core.cli test <app_module>`.
