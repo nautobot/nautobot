@@ -191,6 +191,96 @@ def create_site_location_type_locations(
     location_class.objects.bulk_update(top_level_locations, ["parent"], 1000)
     location_type_class.objects.filter(parent__isnull=True).exclude(name=exclude_lt).update(parent=site_lt)
 
+def reassign_site_model_instances_to_locations(apps, site_lt):
+    # Get required models and ContentTypes
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    Location = apps.get_model("dcim", "location")
+    location_ct = ContentType.objects.get_for_model(Location)
+    model_class = apps.get_model("dcim", "site")
+    model_ct = ContentType.objects.get_for_model(model_class)
+    # Site related models
+    CircuitTermination = apps.get_model("circuits", "circuittermination")
+    Device = apps.get_model("dcim", "device")
+    PowerPanel = apps.get_model("dcim", "powerpanel")
+    RackGroup = apps.get_model("dcim", "rackgroup")
+    Rack = apps.get_model("dcim", "rack")
+    CustomLink = apps.get_model("extras", "customlink")
+    ImageAttachment = apps.get_model("extras", "imageattachment")
+    Prefix = apps.get_model("ipam", "prefix")
+    VLANGroup = apps.get_model("ipam", "vlangroup")
+    VLAN = apps.get_model("ipam", "vlan")
+    Cluster = apps.get_model("virtualization", "cluster")
+
+    site_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
+
+    # Circuits App
+    cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site__migrated_location")
+    for ct in cts:
+        ct.location = ct.site.migrated_location
+    CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
+
+    # DCIM App
+    devices = Device.objects.filter(location__isnull=True).select_related("site__migrated_location")
+    for device in devices:
+        device.location = device.site.migrated_location
+    Device.objects.bulk_update(devices, ["location"], 1000)
+
+    powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site__migrated_location")
+    for powerpanel in powerpanels:
+        powerpanel.location = powerpanel.site.migrated_location
+    PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
+
+    rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site__migrated_location")
+    for rackgroup in rackgroups:
+        rackgroup.location = rackgroup.site.migrated_location
+    RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
+
+    racks = Rack.objects.filter(location__isnull=True).select_related("site__migrated_location")
+    for rack in racks:
+        rack.location = rack.site.migrated_location
+    Rack.objects.bulk_update(racks, ["location"], 1000)
+
+    # Extras App
+    custom_links = CustomLink.objects.filter(content_type=model_ct)
+    for cl in custom_links:
+        cl.content_type = location_ct
+    CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
+
+    image_attachments = ImageAttachment.objects.filter(content_type=model_ct)
+    for ia in image_attachments:
+        ia.content_type = location_ct
+    ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
+
+    # Below models' site attribute is not required, so we need to check each instance if the site field is not null
+    # if so we reassign it to Site Location and if not we leave it alone
+
+    # IPAM App
+    prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related(
+        "site__migrated_location"
+    )
+    for prefix in prefixes:
+        prefix.location = prefix.site.migrated_location
+    Prefix.objects.bulk_update(prefixes, ["location"], 1000)
+
+    vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related(
+        "site__migrated_location"
+    )
+    for vlangroup in vlangroups:
+        vlangroup.location = vlangroup.site.migrated_location
+    VLANGroup.objects.bulk_update(vlangroups, ["location"], 1000)
+
+    vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site__migrated_location")
+    for vlan in vlans:
+        vlan.location = vlan.site.migrated_location
+    VLAN.objects.bulk_update(vlans, ["location"], 1000)
+
+    # Virtualization App
+    clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related(
+        "site__migrated_location"
+    )
+    for cluster in clusters:
+        cluster.location = cluster.site.migrated_location
+    Cluster.objects.bulk_update(clusters, ["location"], 1000)
 
 def reassign_model_instances_to_locations(apps, model):
     """
@@ -198,6 +288,10 @@ def reassign_model_instances_to_locations(apps, model):
     Args:
         apps: Installed Apps
         model: could be "region" or "site"
+
+    Note:
+        Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
+        So we do not need to migrate them for Regions
     """
     ContentType = apps.get_model("contenttypes", "ContentType")
     Location = apps.get_model("dcim", "location")
@@ -209,90 +303,7 @@ def reassign_model_instances_to_locations(apps, model):
         model_lt = LocationType.objects.get(name="Region")
     else:
         model_lt = LocationType.objects.get(name="Site")
-
-        # Only Site Related models
-        CircuitTermination = apps.get_model("circuits", "circuittermination")
-        Device = apps.get_model("dcim", "device")
-        PowerPanel = apps.get_model("dcim", "powerpanel")
-        RackGroup = apps.get_model("dcim", "rackgroup")
-        Rack = apps.get_model("dcim", "rack")
-        CustomLink = apps.get_model("extras", "customlink")
-        ImageAttachment = apps.get_model("extras", "imageattachment")
-        Prefix = apps.get_model("ipam", "prefix")
-        VLANGroup = apps.get_model("ipam", "vlangroup")
-        VLAN = apps.get_model("ipam", "vlan")
-        Cluster = apps.get_model("virtualization", "cluster")
-
-        model_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
-
-        # Circuits App
-        cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site__migrated_location")
-        for ct in cts:
-            ct.location = ct.site.migrated_location
-        CircuitTermination.objects.bulk_update(cts, ["location"], 1000)
-
-        # DCIM App
-        devices = Device.objects.filter(location__isnull=True).select_related("site__migrated_location")
-        for device in devices:
-            device.location = device.site.migrated_location
-        Device.objects.bulk_update(devices, ["location"], 1000)
-
-        powerpanels = PowerPanel.objects.filter(location__isnull=True).select_related("site__migrated_location")
-        for powerpanel in powerpanels:
-            powerpanel.location = powerpanel.site.migrated_location
-        PowerPanel.objects.bulk_update(powerpanels, ["location"], 1000)
-
-        rackgroups = RackGroup.objects.filter(location__isnull=True).select_related("site__migrated_location")
-        for rackgroup in rackgroups:
-            rackgroup.location = rackgroup.site.migrated_location
-        RackGroup.objects.bulk_update(rackgroups, ["location"], 1000)
-
-        racks = Rack.objects.filter(location__isnull=True).select_related("site__migrated_location")
-        for rack in racks:
-            rack.location = rack.site.migrated_location
-        Rack.objects.bulk_update(racks, ["location"], 1000)
-
-        # Extras App
-        custom_links = CustomLink.objects.filter(content_type=model_ct)
-        for cf in custom_links:
-            cf.content_type = location_ct
-        CustomLink.objects.bulk_update(custom_links, ["content_type"], 1000)
-
-        image_attachments = ImageAttachment.objects.filter(content_type=model_ct)
-        for ia in image_attachments:
-            ia.content_type = location_ct
-        ImageAttachment.objects.bulk_update(image_attachments, ["content_type"], 1000)
-
-        # Below models' site attribute is not required, so we need to check each instance if the site field is not null
-        # if so we reassign it to Site Location and if not we leave it alone
-
-        # IPAM App
-        prefixes = Prefix.objects.filter(location__isnull=True, site__isnull=False).select_related(
-            "site__migrated_location"
-        )
-        for prefix in prefixes:
-            prefix.location = prefix.site.migrated_location
-        Prefix.objects.bulk_update(prefixes, ["location"], 1000)
-
-        vlangroups = VLANGroup.objects.filter(location__isnull=True, site__isnull=False).select_related(
-            "site__migrated_location"
-        )
-        for vlangroup in vlangroups:
-            vlangroup.location = vlangroup.site.migrated_location
-        VLANGroup.objects.bulk_update(vlangroups, ["location"], 1000)
-
-        vlans = VLAN.objects.filter(location__isnull=True, site__isnull=False).select_related("site__migrated_location")
-        for vlan in vlans:
-            vlan.location = vlan.site.migrated_location
-        VLAN.objects.bulk_update(vlans, ["location"], 1000)
-
-        # Virtualization App
-        clusters = Cluster.objects.filter(location__isnull=True, site__isnull=False).select_related(
-            "site__migrated_location"
-        )
-        for cluster in clusters:
-            cluster.location = cluster.site.migrated_location
-        Cluster.objects.bulk_update(clusters, ["location"], 1000)
+        reassign_site_model_instances_to_locations(apps, model_lt)
 
     # Region and Site Related models
     ComputedField = apps.get_model("extras", "computedfield")
@@ -308,8 +319,8 @@ def reassign_model_instances_to_locations(apps, model):
     WebHook = apps.get_model("extras", "webhook")
 
     computed_fields = ComputedField.objects.filter(content_type=model_ct)
-    for cf in computed_fields:
-        cf.content_type = location_ct
+    for cpf in computed_fields:
+        cpf.content_type = location_ct
     ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
 
     ccs = ConfigContext.objects.filter(**{f"{model}s__isnull": False}).prefetch_related("locations", f"{model}s")
@@ -323,7 +334,7 @@ def reassign_model_instances_to_locations(apps, model):
             )
         cc.locations.add(*model_locs)
 
-    custom_fields = CustomField.objects.filter(content_types__in=[model_ct])
+    custom_fields = CustomField.objects.filter(content_types=model_ct)
     for cf in custom_fields:
         cf.content_types.add(location_ct)
 
@@ -331,8 +342,6 @@ def reassign_model_instances_to_locations(apps, model):
     for model_loc in model_locs:
         model_loc._custom_field_data = model_class.objects.get(migrated_location=model_loc)._custom_field_data
     Location.objects.bulk_update(model_locs, ["_custom_field_data"], 1000)
-
-    # Custom Links and Image Attachements do not have Region ContentType as one of its ContentType options
 
     dynamic_groups = DynamicGroup.objects.all()
     for dg in dynamic_groups:
@@ -345,7 +354,7 @@ def reassign_model_instances_to_locations(apps, model):
         et.content_type = location_ct
     ExportTemplate.objects.bulk_update(export_templates, ["content_type"], 1000)
 
-    job_hooks = JobHook.objects.filter(content_types__in=[model_ct])
+    job_hooks = JobHook.objects.filter(content_types=model_ct)
     for jh in job_hooks:
         jh.content_types.add(location_ct)
 
@@ -383,25 +392,12 @@ def reassign_model_instances_to_locations(apps, model):
             request_id=uuid.uuid4(),
         )
 
-    src_relationship_associations = RelationshipAssociation.objects.filter(relationship__source_type=model_ct)
-    src_relationship_associations.update(source_type=location_ct)
-    for relationship_association in src_relationship_associations:
-        src_model = model_class.objects.get(id=relationship_association.source_id)
-        src_loc = src_model.migrated_location
-        relationship_association.source = src_loc
-    src_relationships = Relationship.objects.filter(source_type=model_ct)
-    src_relationships.update(source_type=location_ct)
+    RelationshipAssociation.objects.filter(relationship__source_type=model_ct).update(source_type=location_ct)
+    Relationship.objects.filter(source_type=model_ct).update(source_type=location_ct)
+    RelationshipAssociation.objects.filter(relationship__destination_type=model_ct).update(destination_type=location_ct)
+    Relationship.objects.filter(destination_type=model_ct).update(destination_type=location_ct)
 
-    dst_relationship_associations = RelationshipAssociation.objects.filter(relationship__destination_type=model_ct)
-    dst_relationship_associations.update(destination_type=location_ct)
-    for relationship_association in dst_relationship_associations:
-        dst_model = model_class.objects.get(id=relationship_association.destination_id)
-        dst_loc = dst_model.migrated_location
-        relationship_association.destination = dst_loc
-    dst_relationships = Relationship.objects.filter(destination_type=model_ct)
-    dst_relationships.update(destination_type=location_ct)
-
-    web_hooks = WebHook.objects.filter(content_types__in=[model_ct])
+    web_hooks = WebHook.objects.filter(content_types=model_ct)
     for wh in web_hooks:
         wh.content_types.add(location_ct)
 
@@ -435,7 +431,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
             "exclude_lt": "Site",
         }
         if Region.objects.exists():
-            site_lt.parent = LocationType.objects.get(name="Region")
+            site_lt.parent = region_lt
             site_lt.save()
             if Site.objects.filter(region__isnull=True).exists():
                 Location.objects.create(
