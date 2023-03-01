@@ -1203,8 +1203,6 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         if side.lower() not in ["a", "b"]:
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
-        if termination is None:
-            return None
         serializer = get_serializer_for_model(termination, prefix="Nested")
         context = {"request": self.context["request"]}
         data = serializer(termination, context=context).data
@@ -1218,7 +1216,6 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
             serializers=lambda: get_serializers_for_models(
                 get_all_concrete_subclasses(CableTermination), prefix="Nested"
             ),
-            allow_null=True,
         )
     )
     def get_termination_a(self, obj):
@@ -1231,7 +1228,6 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
             serializers=lambda: get_serializers_for_models(
                 get_all_concrete_subclasses(CableTermination), prefix="Nested"
             ),
-            allow_null=True,
         )
     )
     def get_termination_b(self, obj):
