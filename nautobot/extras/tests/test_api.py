@@ -301,13 +301,13 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
     def test_with_dynamic_groups_enabled(self):
-        """Tests that the dynamic_group field is on the ConfigContextSerializer when feature flag is enabled"""
+        """Asserts that `ConfigContextSerializer.dynamic_group` is present when feature flag is enabled."""
         serializer = ConfigContextSerializer()
         self.assertIsNotNone(serializer.fields.get("dynamic_groups", None))
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups_enabled(self):
-        """Tests that the dynamic_group field is on the ConfigContextSerializer when feature flag is enabled"""
+        """Asserts that `ConfigContextSerializer.dynamic_group` is NOT present the when feature flag is disabled."""
         serializer = ConfigContextSerializer()
         self.assertIsNone(serializer.fields.get("dynamic_groups", None))
 
