@@ -16,8 +16,8 @@ Sometimes it is desirable to associate additional data with a group of devices o
 +++ 1.5.0
     * Device redundancy group
 
-+++ 1.5.10
-    * Dynamic group
++++ 1.5.12
+    * Dynamic group - Need to set `settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED` to `True`. [See notes here](https://docs.nautobot.com/projects/core/en/stable/configuration/optional-settings/#config_context_dynamic_groups_enabled)
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 
