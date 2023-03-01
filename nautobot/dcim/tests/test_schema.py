@@ -1,4 +1,4 @@
-from nautobot.core.models.utils import get_all_concrete_subclasses
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.testing.schema import OpenAPISchemaTestCases
 from nautobot.dcim.models import CableTermination, PathEndpoint
 
@@ -26,12 +26,10 @@ class DCIMOpenAPISchemaTestCase(OpenAPISchemaTestCases.BaseSchemaTestCase):
         # but we do want to assert that they're the correct set of models
         self.assertEqual(
             set(cable_peer_schema["discriminator"]["mapping"].keys()),
-            set(
-                [
-                    f"{model._meta.app_label}.{model._meta.model_name}"
-                    for model in get_all_concrete_subclasses(CableTermination)
-                ]
-            ),
+            {
+                f"{model._meta.app_label}.{model._meta.model_name}"
+                for model in get_all_concrete_models(CableTermination)
+            },
         )
 
     def test_path_endpoint__connected_endpoint_schema(self):
@@ -54,12 +52,7 @@ class DCIMOpenAPISchemaTestCase(OpenAPISchemaTestCases.BaseSchemaTestCase):
         # but we do want to assert that they're the correct set of models
         self.assertEqual(
             set(connected_endpoint_schema["discriminator"]["mapping"].keys()),
-            set(
-                [
-                    f"{model._meta.app_label}.{model._meta.model_name}"
-                    for model in get_all_concrete_subclasses(PathEndpoint)
-                ]
-            ),
+            {f"{model._meta.app_label}.{model._meta.model_name}" for model in get_all_concrete_models(PathEndpoint)},
         )
 
     def test_cable__terminations_schema(self):
@@ -80,12 +73,10 @@ class DCIMOpenAPISchemaTestCase(OpenAPISchemaTestCases.BaseSchemaTestCase):
         # but we do want to assert that they're the correct set of models
         self.assertEqual(
             set(termination_a_schema["discriminator"]["mapping"].keys()),
-            set(
-                [
-                    f"{model._meta.app_label}.{model._meta.model_name}"
-                    for model in get_all_concrete_subclasses(CableTermination)
-                ]
-            ),
+            {
+                f"{model._meta.app_label}.{model._meta.model_name}"
+                for model in get_all_concrete_models(CableTermination)
+            },
         )
 
         # Schema for `termination_b` should be the same as `termination_a`.

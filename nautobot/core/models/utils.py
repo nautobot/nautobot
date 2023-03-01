@@ -1,6 +1,7 @@
 from itertools import count, groupby
 import json
 
+from django.apps import apps
 from django.core.serializers import serialize
 from django.utils.tree import Node
 from taggit.managers import _TaggableManager
@@ -16,12 +17,12 @@ def array_to_string(array):
     return ", ".join("-".join(map(str, (g[0], g[-1])[: len(g)])) for g in group)
 
 
-def get_all_concrete_subclasses(base_class):
-    """Yield all non-abstract subclasses of the given base_class, recursively."""
-    for subclass in base_class.__subclasses__():
-        yield from get_all_concrete_subclasses(subclass)
-        if not subclass._meta.abstract:
-            yield subclass
+def get_all_concrete_models(base_class):
+    """Yield all non-abstract models that inherit from the given base_class."""
+    for appconfig in apps.get_app_configs():
+        for model in appconfig.get_models():
+            if issubclass(model, base_class) and not model._meta.abstract:
+                yield model
 
 
 def is_taggable(obj):

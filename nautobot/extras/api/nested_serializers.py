@@ -6,7 +6,7 @@ from nautobot.core.api import ChoiceField, ContentTypeField
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxySerializer, WritableNestedSerializer
 from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
-from nautobot.core.models.utils import get_all_concrete_subclasses
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 
@@ -201,7 +201,7 @@ class NestedNoteSerializer(WritableNestedSerializer):
             component_name="note__assigned_object",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
-                get_all_concrete_subclasses(models.NotesMixin),
+                get_all_concrete_models(models.NotesMixin),
                 prefix="Nested",
             ),
             allow_null=True,

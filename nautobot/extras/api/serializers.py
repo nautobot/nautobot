@@ -17,7 +17,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxySerializer
 from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
-from nautobot.core.models.utils import get_all_concrete_subclasses
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
@@ -1041,7 +1041,7 @@ class NoteSerializer(BaseModelSerializer):
         PolymorphicProxySerializer(
             component_name="note__assigned_object",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(NotesMixin), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(NotesMixin), prefix="Nested"),
             allow_null=True,
         )
     )

@@ -12,7 +12,7 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
-from nautobot.core.models.utils import get_all_concrete_subclasses
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
@@ -356,7 +356,7 @@ class IPAddressSerializer(
         PolymorphicProxySerializer(
             component_name="ip_address__assigned_object",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_subclasses(BaseInterface), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(BaseInterface), prefix="Nested"),
             allow_null=True,
         )
     )
