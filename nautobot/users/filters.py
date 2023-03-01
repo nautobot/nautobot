@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.utilities.filters import BaseFilterSet, NaturalKeyOrPKMultipleChoiceFilter, SearchFilter
 
 from nautobot.utilities.filters import (BaseFilterSet,
                                         SearchFilter,
@@ -40,8 +41,9 @@ class UserFilterSet(BaseFilterSet):
     group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group",
+        label="Group (ID)",
     )
+    # TODO(timizuo): Migrate ModelMultipleChoiceFilter to NaturalKeyOrPKMultipleChoiceFilter: As of now NaturalKeyOrPKMultipleChoiceFilter isn't correctly handling integer id field
     group = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
@@ -114,19 +116,20 @@ class ObjectPermissionFilterSet(BaseFilterSet):
     user_id = django_filters.ModelMultipleChoiceFilter(
         field_name="users",
         queryset=get_user_model().objects.all(),
-        label="User",
+        label="User (ID) - Deprecated (use user filter)",
     )
-    user = django_filters.ModelMultipleChoiceFilter(
-        field_name="users__username",
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="users",
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User (name)",
+        label="User (ID or username)",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
-        label="Group",
+        label="Group (ID)",
     )
+    # TODO(timizuo): Migrate ModelMultipleChoiceFilter to NaturalKeyOrPKMultipleChoiceFilter
     group = django_filters.ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),

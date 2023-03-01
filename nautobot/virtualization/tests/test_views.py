@@ -292,6 +292,9 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3"),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE"),
         )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = interfaces[:3]
+        cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN1", site=site),
@@ -338,6 +341,18 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
+        }
+
+        cls.bulk_add_data = {
+            "virtual_machine": virtualmachines[1].pk,
+            "name_pattern": "Interface [4-6]",
+            "enabled": True,
+            "status": status_active.pk,
+            "mtu": 1500,
+            "description": "New Description",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "custom_field_1": "Custom field data",
+            "tags": [],
         }
 
         cls.csv_data = (

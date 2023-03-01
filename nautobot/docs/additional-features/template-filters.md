@@ -7,17 +7,20 @@ Nautobot uses 2 template engines internally, Django Template and Jinja2. Django 
 !!! note
     Jinja2 and Django Template are very similar, the main difference between them is the syntax of the template. Historically, Django Template has been the go-to solution to generate webpage in Django and Jinja2 is the industry standard outside of Django.
 
-Both Django Template and Jinja2 can be extended with a library of functions, called `filters`, that apply formatting or transformations to a provided input. Nautobot provides many built-in `filters`, including network specific `filters` from the [netutils library](https://netutils.readthedocs.io/en/latest/index.html).
+Both Django Template and Jinja2 can be extended with a library of functions, called `filters`, that apply formatting or transformations to a provided input. Nautobot provides many built-in `filters`, including network specific `filters` from the [netutils library](https://netutils.readthedocs.io/en/latest/).
 
 ## Netutils Filters
 
 +++ 1.2.0
 
-[Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks.
+[Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks. Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/) to see the list of available functions.
 
-Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/netutils/index.html) to see the list of available functions.
+These functions are available automatically in Jinja2 rendered by Nautobot. For example you could define a [computed field](../models/extras/computedfield.md) on Circuit objects, using the Netutils `bits_to_name` function, to display the "Commit Rate" as a human-readable value by using the template code `{{ (obj.commit_rate * 1000) | bits_to_name }}`. (This particular example is contrived, as the Nautobot UI already humanizes the raw `commit_rate` value for display, but it demonstrates the kinds of things that these filters can be used for.)
 
-All functions in Netutils are available in Nautobot in both Jinja2 filters and Django Template.
+In general the syntax for using a netutils filter in a Jinja2 template is something like `{{ arg1 | function_name }}` for functions that take a single argument, and `{{ arg1 | function_name(arg_name2=arg2, arg_name3=arg3) }}` for functions that take multiple arguments.
+
++++ 1.5.11
+    Netutils functions are also available in Django templates after using the `{% load netutils %}` directive in a template. The syntax to use these functions is then generally `{% function_name arg_name1=arg1 arg_name2=arg2 %}`.
 
 ## Nautobot Built-In Filters
 

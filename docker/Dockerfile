@@ -137,7 +137,7 @@ RUN apt-get update && \
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
 RUN --mount=type=cache,target="/root/.cache/pip" \
     curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
-    python /tmp/install-poetry.py --version 1.2.0 && \
+    python /tmp/install-poetry.py --version 1.3.1 && \
     rm -f /tmp/install-poetry.py
 
 # Add poetry install location to the $PATH

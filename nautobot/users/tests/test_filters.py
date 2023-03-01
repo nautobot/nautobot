@@ -358,11 +358,17 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_group(self):
-        groups = Group.objects.all()[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [groups[0].name, groups[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        groups = list(Group.objects.all()[:2])
+        filter_params = [
+            {"group_id": [groups[0].pk, groups[1].pk]},
+            {"group": [groups[0].name, groups[1].name]},
+        ]
+
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs.order_by("id"),
+                self.queryset.filter(groups__in=groups).order_by("id"),
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -456,18 +462,20 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_group(self):
-        groups = Group.objects.filter(name__in=["Group 1", "Group 2"])
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [groups[0].name, groups[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        groups = list(Group.objects.filter(name__in=["Group 1", "Group 2"])[:2])
+        filter_params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].name, groups[1].name]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(groups__in=groups).distinct()
+            )
 
     def test_user(self):
-        users = User.objects.filter(username__in=["User1", "User2"])
-        params = {"user_id": [users[0].pk, users[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"user": [users[0].username, users[1].username]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        users = list(User.objects.filter(username__in=["User1", "User2"])[:2])
+        filter_params = [{"user_id": [users[0].pk, users[1].pk]}, {"user": [users[0].pk, users[1].username]}]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(users__in=users)
+            )
 
     def test_object_types(self):
         object_types = ContentType.objects.filter(model__in=["site", "rack"])

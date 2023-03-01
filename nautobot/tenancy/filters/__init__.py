@@ -7,6 +7,7 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
@@ -25,13 +26,11 @@ __all__ = (
 class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     parent_id = django_filters.ModelMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        label="Tenant group (ID)",
+        label="Tenant group (ID) - Deprecated (use parent filter)",
     )
-    parent = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent__slug",
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
-        label="Tenant group group (slug)",
+        label="Tenant group group (ID or slug)",
     )
 
     class Meta:

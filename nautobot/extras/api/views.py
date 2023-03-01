@@ -175,8 +175,6 @@ class ConfigContextQuerySetMixin:
 
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
-    # v2 TODO(jathan): Replace prefetch_related with select_related (except the
-    # plural ones are b2 m2m)
     queryset = ConfigContext.objects.prefetch_related(
         "regions",
         "sites",
@@ -329,8 +327,7 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = DynamicGroup.objects.prefetch_related("content_type")
+    queryset = DynamicGroup.objects.select_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
@@ -355,8 +352,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
+    queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
 
@@ -889,8 +885,7 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = JobLogEntry.objects.prefetch_related("job_result")
+    queryset = JobLogEntry.objects.select_related("job_result")
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
 
@@ -908,8 +903,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.select_related("job_model", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -931,8 +925,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = ScheduledJob.objects.prefetch_related("user")
+    queryset = ScheduledJob.objects.select_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
@@ -1071,8 +1064,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 class NoteViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Note.objects.prefetch_related("user")
+    queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
 
@@ -1092,8 +1084,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
 
     metadata_class = ContentTypeMetadata
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = ObjectChange.objects.prefetch_related("user")
+    queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
 

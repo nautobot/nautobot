@@ -12,17 +12,18 @@ import django_filters
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
 from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
-from django.utils.tree import Node
-
 from django.template import engines
+from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
+from django.utils.tree import Node
 from django_filters import (
     BooleanFilter,
     DateFilter,
@@ -105,7 +106,15 @@ def get_route_for_model(model, action, api=False):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    # The `contenttypes` and `auth` app doesn't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in our `extras` and Group model in `users` app.
+    if model is ContentType:
+        app_label = "extras"
+    elif model is Group:
+        app_label = "users"
+    else:
+        app_label = model._meta.app_label
+    prefix = f"{app_label}{suffix}:{model._meta.model_name}"
     sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
@@ -475,24 +484,64 @@ class NautobotFakeRequest:
     def __init__(self, _dict):
         self.__dict__ = _dict
 
+    def _get_user(self):
+        """Lazy lookup function for self.user."""
+        if not self._cached_user:
+            User = get_user_model()
+            self._cached_user = User.objects.get(pk=self._user_pk)
+        return self._cached_user
+
+    def _init_user(self):
+        """Set up self.user as a lazy attribute, similar to a real Django Request object."""
+        self._cached_user = None
+        self.user = SimpleLazyObject(self._get_user)
+
     def nautobot_serialize(self):
         """
-        Serialize a json representation that is safe to pass to celery
+        Serialize a JSON representation that is safe to pass to Celery.
+
+        This function is called from nautobot.core.celery.NautobotKombuJSONEncoder.
         """
         data = copy.deepcopy(self.__dict__)
-        data["user"] = data["user"].pk
+        # We don't want to try to pickle/unpickle or serialize/deserialize the actual User object,
+        # but make sure we do store its PK so that we can look it up on-demand after being deserialized.
+        user = data.pop("user")
+        data.pop("_cached_user", None)
+        if "_user_pk" not in data:
+            data["_user_pk"] = user.pk
         return data
 
     @classmethod
     def nautobot_deserialize(cls, data):
         """
-        Deserialize a json representation that is safe to pass to celery and return an actual instance
-        """
-        User = get_user_model()
+        Deserialize a JSON representation that is safe to pass to Celery and return a NautobotFakeRequest instance.
 
+        This function is registered for usage by Celery in nautobot/core/celery/__init__.py
+        """
         obj = cls(data)
-        obj.user = User.objects.get(pk=obj.user)
+        obj._init_user()
         return obj
+
+    def __getstate__(self):
+        """
+        Implement `pickle` serialization API.
+
+        It turns out that Celery uses pickle internally in apply_async()/send_job() even if we have configured Celery
+        to use JSON for all I/O (and we do, see settings.py), so we need to support pickle and JSON both.
+        """
+        return self.nautobot_serialize()
+
+    def __setstate__(self, state):
+        """
+        Implement `pickle` deserialization API.
+
+        It turns out that Celery uses pickle internally in apply_async()/send_job() even if we have configured Celery
+        to use JSON for all I/O (and we do, see settings.py), so we need to support pickle and JSON both.
+        """
+        # Generic __setstate__ behavior
+        self.__dict__.update(state)
+        # Set up lazy `self.user` attribute based on `state["_user_pk"]`
+        self._init_user()
 
 
 def copy_safe_request(request):
@@ -805,7 +854,7 @@ def get_filterset_parameter_form_field(model, parameter):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
     from nautobot.extras.models import Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
     from nautobot.utilities.forms import (
@@ -818,13 +867,18 @@ def get_filterset_parameter_form_field(model, parameter):
         TimePicker,
         MultipleContentTypeField,
     )
+    from nautobot.utilities.forms.widgets import (
+        MultiValueCharInput,
+    )
 
     filterset_class = get_filterset_for_model(model)
     field = get_filterset_field(filterset_class, parameter)
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
-    if isinstance(field, NumberFilter):
+    if isinstance(field, CustomFieldFilterMixin):
+        form_field = field.custom_field.to_form_field()
+    elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, filters.ModelMultipleChoiceFilter):
         related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
@@ -867,6 +921,8 @@ def get_filterset_parameter_form_field(model, parameter):
         form_field.widget = DatePicker()
     elif isinstance(field, TimeFilter):
         form_field.widget = TimePicker()
+    elif isinstance(field, django_filters.UUIDFilter):
+        form_field.widget = MultiValueCharInput()
 
     form_field.required = False
     form_field.initial = None

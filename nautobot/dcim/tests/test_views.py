@@ -1,4 +1,5 @@
 from decimal import Decimal
+import unittest
 
 import pytz
 import yaml
@@ -1693,9 +1694,14 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
-        ConsolePort.objects.create(device=device, name="Console Port 1")
-        ConsolePort.objects.create(device=device, name="Console Port 2")
-        ConsolePort.objects.create(device=device, name="Console Port 3")
+        console_ports = (
+            ConsolePort.objects.create(device=device, name="Console Port 1"),
+            ConsolePort.objects.create(device=device, name="Console Port 2"),
+            ConsolePort.objects.create(device=device, name="Console Port 3"),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = console_ports
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -1735,9 +1741,15 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
-        ConsoleServerPort.objects.create(device=device, name="Console Server Port 1")
-        ConsoleServerPort.objects.create(device=device, name="Console Server Port 2")
-        ConsoleServerPort.objects.create(device=device, name="Console Server Port 3")
+        console_server_ports = (
+            ConsoleServerPort.objects.create(device=device, name="Console Server Port 1"),
+            ConsoleServerPort.objects.create(device=device, name="Console Server Port 2"),
+            ConsoleServerPort.objects.create(device=device, name="Console Server Port 3"),
+        )
+
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = console_server_ports
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -1775,9 +1787,14 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
-        PowerPort.objects.create(device=device, name="Power Port 1")
-        PowerPort.objects.create(device=device, name="Power Port 2")
-        PowerPort.objects.create(device=device, name="Power Port 3")
+        power_ports = (
+            PowerPort.objects.create(device=device, name="Power Port 1"),
+            PowerPort.objects.create(device=device, name="Power Port 2"),
+            PowerPort.objects.create(device=device, name="Power Port 3"),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = power_ports
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -1826,9 +1843,14 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             PowerPort.objects.create(device=device, name="Power Port 2"),
         )
 
-        PowerOutlet.objects.create(device=device, name="Power Outlet 1", power_port=powerports[0])
-        PowerOutlet.objects.create(device=device, name="Power Outlet 2", power_port=powerports[0])
-        PowerOutlet.objects.create(device=device, name="Power Outlet 3", power_port=powerports[0])
+        poweroutlets = (
+            PowerOutlet.objects.create(device=device, name="Power Outlet 1", power_port=powerports[0]),
+            PowerOutlet.objects.create(device=device, name="Power Outlet 2", power_port=powerports[0]),
+            PowerOutlet.objects.create(device=device, name="Power Outlet 3", power_port=powerports[0]),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = poweroutlets
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -1845,6 +1867,15 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Power Outlet [4-6]",
             "type": PowerOutletTypeChoices.TYPE_IEC_C13,
             "power_port": powerports[1].pk,
+            "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
+            "description": "A power outlet",
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
+        }
+
+        cls.bulk_add_data = {
+            "device": device.pk,
+            "name_pattern": "Power Outlet [4-6]",
+            "type": PowerOutletTypeChoices.TYPE_IEC_C13,
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
             "description": "A power outlet",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
@@ -1882,6 +1913,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             Interface.objects.create(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG),
             Interface.objects.create(device=device, name="BRIDGE", type=InterfaceTypeChoices.TYPE_BRIDGE),
         )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = interfaces
+        cls.selected_objects_parent_name = device.name
 
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN1", site=device.site),
@@ -1910,6 +1944,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.bulk_create_data = {
             "device": device.pk,
             "name_pattern": "Interface [4-6]",
+            "label_pattern": "Interface Number [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
             "bridge": interfaces[4].pk,
@@ -1917,12 +1952,26 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
             "mgmt_only": True,
-            "description": "A front port",
+            "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+        }
+
+        cls.bulk_add_data = {
+            "device": device.pk,
+            "name_pattern": "Interface [4-6]",
+            "label_pattern": "Interface Number [4-6]",
+            "status": status_active.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "enabled": True,
+            "mtu": 1500,
+            "mgmt_only": False,
+            "description": "An Interface",
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tags": [],
         }
 
         cls.bulk_edit_data = {
@@ -1953,6 +2002,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         device = create_test_device("Device 1")
+        cls.device = device
 
         rearports = (
             RearPort.objects.create(device=device, name="Rear Port 1"),
@@ -1963,9 +2013,14 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             RearPort.objects.create(device=device, name="Rear Port 6"),
         )
 
-        FrontPort.objects.create(device=device, name="Front Port 1", rear_port=rearports[0])
-        FrontPort.objects.create(device=device, name="Front Port 2", rear_port=rearports[1])
-        FrontPort.objects.create(device=device, name="Front Port 3", rear_port=rearports[2])
+        frontports = (
+            FrontPort.objects.create(device=device, name="Front Port 1", rear_port=rearports[0]),
+            FrontPort.objects.create(device=device, name="Front Port 2", rear_port=rearports[1]),
+            FrontPort.objects.create(device=device, name="Front Port 3", rear_port=rearports[2]),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = frontports
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -1998,6 +2053,10 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "Device 1,Front Port 6,8p8c,Rear Port 6,1",
         )
 
+    @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
+    def test_bulk_add_component(self):
+        pass
+
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
@@ -2006,9 +2065,14 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
-        RearPort.objects.create(device=device, name="Rear Port 1")
-        RearPort.objects.create(device=device, name="Rear Port 2")
-        RearPort.objects.create(device=device, name="Rear Port 3")
+        rearports = (
+            RearPort.objects.create(device=device, name="Rear Port 1"),
+            RearPort.objects.create(device=device, name="Rear Port 2"),
+            RearPort.objects.create(device=device, name="Rear Port 3"),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = rearports
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -2051,9 +2115,14 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         # Update the DeviceType subdevice role to allow adding DeviceBays
         DeviceType.objects.update(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
 
-        DeviceBay.objects.create(device=device, name="Device Bay 1")
-        DeviceBay.objects.create(device=device, name="Device Bay 2")
-        DeviceBay.objects.create(device=device, name="Device Bay 3")
+        devicebays = (
+            DeviceBay.objects.create(device=device, name="Device Bay 1"),
+            DeviceBay.objects.create(device=device, name="Device Bay 2"),
+            DeviceBay.objects.create(device=device, name="Device Bay 3"),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = devicebays
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,
@@ -2089,9 +2158,14 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
         device = create_test_device("Device 1")
         manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
 
-        InventoryItem.objects.create(device=device, name="Inventory Item 1")
-        InventoryItem.objects.create(device=device, name="Inventory Item 2")
-        InventoryItem.objects.create(device=device, name="Inventory Item 3")
+        inventory_items = (
+            InventoryItem.objects.create(device=device, name="Inventory Item 1"),
+            InventoryItem.objects.create(device=device, name="Inventory Item 2"),
+            InventoryItem.objects.create(device=device, name="Inventory Item 3"),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = inventory_items
+        cls.selected_objects_parent_name = device.name
 
         cls.form_data = {
             "device": device.pk,

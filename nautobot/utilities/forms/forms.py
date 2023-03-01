@@ -329,7 +329,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             for name, field in self.filterset_filters.items()
             if "__" not in name and name != "q"
         )
-        return sorted(filterset_without_lookup)
+        return sorted(filterset_without_lookup, key=lambda x: x[1])
 
 
 def dynamic_formset_factory(filterset_class, data=None, **kwargs):

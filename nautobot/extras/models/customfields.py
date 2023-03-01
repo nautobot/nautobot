@@ -382,6 +382,20 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
     objects = CustomFieldManager()
 
+    clone_fields = [
+        "content_types",
+        "grouping",
+        "type",
+        "description",
+        "required",
+        "filter_logic",
+        "default",
+        "weight",
+        "validation_minimum",
+        "validation_maximum",
+        "validation_regex",
+    ]
+
     class Meta:
         ordering = ["weight", "name"]
 

@@ -148,6 +148,156 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.11 (2023-02-18)
+
+### Added
+
+- [#3168](https://github.com/nautobot/nautobot/issues/3168) - Add device name to bulk interface rename header.
+- [#3184](https://github.com/nautobot/nautobot/issues/3184) - Added Git 2.0+ as a mandatory dependency in the installation instructions.
+- [#3255](https://github.com/nautobot/nautobot/issues/3255) - Added `--cache-test-fixtures` command line argument to Nautobot unit and integration tests.
+
+### Changed
+
+- [#3134](https://github.com/nautobot/nautobot/issues/3134) - Migrate ModelMultipleChoiceFilters to NaturalKeyOrPKMultipleChoiceFilter.
+- [#3224](https://github.com/nautobot/nautobot/issues/3224) - Updates to our deprecation policy: Prior-major REST API versions will be dropped upon next-major release.
+- [#3264](https://github.com/nautobot/nautobot/issues/3264) - Changed `DynamicGroup.objects.get_for_object()` to be a little more efficient.
+- [#3311](https://github.com/nautobot/nautobot/issues/3311) - Add Links to Branch Names to README.md.
+- [#3314](https://github.com/nautobot/nautobot/issues/3314) - Updated developer documentation for user and prototype branching conventions.
+- [#3314](https://github.com/nautobot/nautobot/issues/3314) - Updated pre-commit hook to validate user namespace prefix on branch name.
+
+### Dependencies
+
+- [#3251](https://github.com/nautobot/nautobot/issues/3251) - Updated `oauthlib` to 3.2.2.
+- [#3258](https://github.com/nautobot/nautobot/issues/3258) - Updated `cryptography` to 39.0.1.
+- [#3320](https://github.com/nautobot/nautobot/issues/3320) - Updated `django` to 3.2.18.
+- [#3333](https://github.com/nautobot/nautobot/issues/3333) - Updated `netutils` constraint from ~1.4.0 to ^1.4.0 to permit semver upgrades.
+
+### Fixed
+
+- [#2580](https://github.com/nautobot/nautobot/issues/2580) - Fixed fragile generic view test.
+- [#3187](https://github.com/nautobot/nautobot/issues/3187) - Fixed `DynamicModelChoiceField`s having a generic default label when one is provided.
+- [#3274](https://github.com/nautobot/nautobot/issues/3274) - Fixed ObjectListViewMixin's filtering when exporting objects in NautobotUIViewSet.
+- [#3277](https://github.com/nautobot/nautobot/issues/3277) - Fixed incorrect test data in `nautobot.extras.tests.test_api.NoteTest`.
+- [#3278](https://github.com/nautobot/nautobot/issues/3278) - Fixed docker development environment error when the Nautobot container tries to start before the database is ready.
+- [#3290](https://github.com/nautobot/nautobot/issues/3290) - Fixed an issue preventing the inclusion of `netutils` functions in Django templates.
+- [#3308](https://github.com/nautobot/nautobot/issues/3308) - Fixed incorrect documentation for object permissions.
+- [#3327](https://github.com/nautobot/nautobot/issues/3327) - Fixed Azure AD tenant configuration documentation.
+- [#3332](https://github.com/nautobot/nautobot/issues/3332) - Fixed missing imports in Secrets Providers plugin development documentation.
+- [#3335](https://github.com/nautobot/nautobot/issues/3335) - Fixed inability to change filtering on custom field (selection) once filter is configured.
+
+### Security
+
+- [#3251](https://github.com/nautobot/nautobot/issues/3251) - Updated `oauthlib` to 3.2.2 due to CVE-2022-36087. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3258](https://github.com/nautobot/nautobot/issues/3258) - Updated `cryptography` to 39.0.1 due to CVE-2023-0286, CVE-2023-23931. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3320](https://github.com/nautobot/nautobot/issues/3320) - Updated `django` to 3.2.18 due to CVE-2023-24580.
+
+## v1.5.10 (2023-02-06)
+
+### Added
+
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added `CELERY_WORKER_PROMETHEUS_PORTS` configuration setting
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added prometheus HTTP server listening on the worker to expose worker metrics
+- [#3013](https://github.com/nautobot/nautobot/issues/3013) - Added `nautobot_job_duration_seconds` counter metric that reports on job execution
+
+### Changed
+
+- [#3177](https://github.com/nautobot/nautobot/issues/3177) - Updated VLANFactory to generate longer and more "realistic" VLAN names.
+- [#3198](https://github.com/nautobot/nautobot/issues/3198) - Added dependencies towncrier section, removed extra newline.
+
+### Dependencies
+
+- [#3227](https://github.com/nautobot/nautobot/issues/3227) - Updated `django` to 3.2.17.
+
+### Fixed
+
+- [#3126](https://github.com/nautobot/nautobot/issues/3126) - Fixed interface not raising exception when adding a VLAN from a different site in tagged_vlans.
+- [#3153](https://github.com/nautobot/nautobot/issues/3153) - Made integration test `CableConnectFormTestCase.test_js_functionality` more resilient and less prone to erroneous failures.
+- [#3177](https://github.com/nautobot/nautobot/issues/3177) - Fixed a spurious failure in BulkEditObjectsViewTestCase.test_bulk_edit_objects_with_constrained_permission.
+- [#3200](https://github.com/nautobot/nautobot/issues/3200) - Added `dependencies` to the list of valid change fragment types in the documentation.
+
+### Security
+
+- [#3227](https://github.com/nautobot/nautobot/issues/3227) - Updated `django` to 3.2.17 due to CVE-2023-23969.
+
+## v1.5.9 (2023-01-26)
+
+### Changed
+
+- [#3117](https://github.com/nautobot/nautobot/issues/3117) - Update Renovate config to batch lockfile updates to next.
+- [#3144](https://github.com/nautobot/nautobot/issues/3144) - Updated `netutils` to `~1.4.0`
+- [#3171](https://github.com/nautobot/nautobot/issues/3171) - Increased maximum VLAN name length from 64 characters to 255 characters.
+
+### Fixed
+
+- [#3114](https://github.com/nautobot/nautobot/issues/3114) - Fixed Navbar scroll through top-level menu in low resolution desktop screens.
+- [#3155](https://github.com/nautobot/nautobot/issues/3155) - Aligned buttons on device component create page.
+- [#3169](https://github.com/nautobot/nautobot/issues/3169) - Fixed data mismatch in `ScheduledJob` causing celery workers to fail when running scheduled jobs created in versions prior to `v1.5.8`. ⚠ **NOTE**: If your celery workers are failing on startup after upgrading to `v1.5.8`, you may need to purge the celery queue with `nautobot-server celery purge` or `nautobot-server celery purge -Q <queues>` to purge custom queues.
+
+## v1.5.8 (2023-01-23)
+
+### Added
+
+- [#3103](https://github.com/nautobot/nautobot/issues/3103) - Added Redis troubleshooting section to installation docs.
+
+### Changed
+
+- [#3072](https://github.com/nautobot/nautobot/issues/3072) - In Nautobot's unit tests, all HTTP requests are now sent with SERVER_NAME set to `nautobot.example.com` instead of `testserver` (Django's default) and the test configuration for Nautobot itself sets `ALLOWED_HOSTS` to expect `nautobot.example.com`. This is intended to protect against issues such as #3065.
+- [#3077](https://github.com/nautobot/nautobot/issues/3077) - Updated Nautobot release checklist to reflect current branching and pull request process.
+- [#3112](https://github.com/nautobot/nautobot/issues/3112) - Converted eligible `prefetch_related()` to `select_related()` queries. Users should note a performance gain from this change, but note that cacheops is no longer recommended in v1.5 and this change will likely result in invalid data responses if cacheops remains enabled in your environment. Cacheops will be removed entirely in a future release.
+- [#3121](https://github.com/nautobot/nautobot/issues/3121) - Updated Config Contexts documentation to denote support for associating by Device Redundancy Group membership.
+
+### Fixed
+
+- [#2244](https://github.com/nautobot/nautobot/issues/2244) - Fixed an unnecessary and sometimes problematic database access from the Celery worker before it forks off to execute an individual job.
+- [#3097](https://github.com/nautobot/nautobot/issues/3097) - Fixed scrolling past select dropdown in modals.
+- [#3104](https://github.com/nautobot/nautobot/issues/3104) - Fixed bug preventing filters from being removed from list views.
+
+### Security
+
+- [#3055](https://github.com/nautobot/nautobot/issues/3055) - Updated `setuptools` to `65.5.1` to address `CVE-2022-40897`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3082](https://github.com/nautobot/nautobot/issues/3082) - Updated `gitpython` to `~3.1.30` to address `CVE-2022-24439`.
+- [#3119](https://github.com/nautobot/nautobot/issues/3119) - Updated `future` to `0.18.3` due to `CVE-2022-40899`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+## v1.5.7 (2023-01-04)
+
+### Fixed
+
+- [#3065](https://github.com/nautobot/nautobot/issues/3065) - Rolled back the changes made in 1.5.6 by #3016 to fix a breaking issue with `ALLOWED_HOSTS` and change-logging.
+
+### Security
+
+- [#3074](https://github.com/nautobot/nautobot/issues/3074) - Sandboxed rendering of Jinja2 templates is now enforced by default in keeping with [Jinja2 best practices](https://jinja.palletsprojects.com/en/3.0.x/sandbox/#sandbox). To enable template sandboxing in a Nautobot instance without needing to upgrade, add the following value to your `nautobot_config.py` and restart your Nautobot services: `TEMPLATES[1]["OPTIONS"]["environment"] = "jinja2.sandbox.SandboxedEnvironment"`
+
+## v1.5.6 (2022-12-23)
+
+### Added
+
+- [#1768](https://github.com/nautobot/nautobot/issues/1768) - Added the display of half-depth rack items from the rear face.
+- [#2481](https://github.com/nautobot/nautobot/issues/2481) - Added `clone_fields` definition to Custom Field class.
+- [#2511](https://github.com/nautobot/nautobot/issues/2511) - Added mouseover help text for cable connect buttons on DeviceConsolePortTable, DeviceConsoleServerPortTable, DevicePowerPortTable, DeviceInterfaceTable, DeviceFrontPortTable, DeviceRearPortTable.
+- [#2951](https://github.com/nautobot/nautobot/issues/2951) - Added change logging when relationships are changed.
+- [#2966](https://github.com/nautobot/nautobot/issues/2966) - Added device name to rack elevation with images.
+- [#3014](https://github.com/nautobot/nautobot/issues/3014) - Added support for Git repositories to provide config contexts filtered by Location.
+- [#3025](https://github.com/nautobot/nautobot/issues/3025) - Added plugin banner test back to ListObjectsViewTestCase and ensured `example_plugin` installation before running it.
+
+### Changed
+
+- [#2589](https://github.com/nautobot/nautobot/issues/2589) - Updated all screenshots on the README.md to gifs.
+- [#2970](https://github.com/nautobot/nautobot/issues/2970) - Updated `certifi` to `2022.12.7` for `CVE-2022-23491`. This is a nested dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#2994](https://github.com/nautobot/nautobot/issues/2994) - Updated `mkdocs-material` to `8.5.11`.
+- [#2995](https://github.com/nautobot/nautobot/issues/2995) - Updated `Poetry` lockfile to use new v2 version format (requiring `Poetry>=1.3`).
+- [#2995](https://github.com/nautobot/nautobot/issues/2995) - Updated included `poetry` version in `nautobot-dev` container to `1.3.1`.
+
+### Fixed
+
+- [#2898](https://github.com/nautobot/nautobot/issues/2898) - Disabled sorting on Computed Field column.
+- [#2967](https://github.com/nautobot/nautobot/issues/2967) - Fixed inverted device images in dark mode.
+- [#2989](https://github.com/nautobot/nautobot/issues/2989) - Fixed legacy filters displaying UUIDs instead of user-friendly display names.
+- [#2999](https://github.com/nautobot/nautobot/issues/2999) - Fixed several missing fields in the UI when bulk-adding components to a list of devices.
+- [#3018](https://github.com/nautobot/nautobot/issues/3018) - Fixed rendering of Select2 widgets in modal dialogs.
+- [#3028](https://github.com/nautobot/nautobot/issues/3028) - Fixed filter fields on advanced filter form not being alpha-sorted.
+- [#3036](https://github.com/nautobot/nautobot/issues/3036) - Fixed MultiValueUUIDFilter's value input field in ObjectListView Advanced FilterSet Form.
+
 ## v1.5.5 (2022-12-12)
 
 ### Changed

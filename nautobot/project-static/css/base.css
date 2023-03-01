@@ -81,7 +81,7 @@ footer p {
 @media (max-width: 1179px) {
     #navbar {
         max-height: calc(80vh - 50px);
-        overflow-y: auto;
+        overflow-y: auto !important;
     }
     .navbar-header {
         float: none;
@@ -107,6 +107,16 @@ footer p {
     .navbar-nav {
         float: none !important;
         margin-top: 7.5px;
+    }
+    .navbar-nav .open .dropdown-menu {
+        position: static;
+        float: none;
+        width: auto;
+        margin-top: 0;
+        background-color: transparent;
+        border: 0;
+        -webkit-box-shadow: none;
+        box-shadow: none;
     }
     .navbar-nav > li {
         float: none;
@@ -647,4 +657,10 @@ td span.hover_copy:hover .hover_copy_button {
 }
 .theme-table .active-theme {
     border: 5px solid #FF0000;
+}
+
+/* Fixes select dropdowns in modals and improves modal UX by making the modal body scrollable (instead of the whole page) */
+.modal-body {
+    max-height: calc(100vh - 212px);
+    overflow-y: scroll;
 }
