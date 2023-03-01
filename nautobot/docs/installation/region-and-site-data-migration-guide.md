@@ -283,8 +283,8 @@ def migrate_example_model_data_to_locations(apps, schema_editor):
         site__isnull=False, location__isnull=True
     ).select_related("site", "location")
     for example_model in example_models:
-        # Point the location field to the corresponding "Site" LocationType Location
-        # with the same name.
+        # Point the location field to the corresponding
+        # "Site" LocationType Location stored in migrate_location
         example_model.location = example_model.site.migrated_location
     ExampleModel.objects.bulk_update(example_models, ["location"], 1000)
 ```
