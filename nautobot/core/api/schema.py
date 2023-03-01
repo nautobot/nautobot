@@ -271,15 +271,6 @@ class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExte
 
     target_class = "nautobot.core.api.serializers.PolymorphicProxySerializer"
 
-    def map_serializer(self, auto_schema, direction):
-        """
-        Extend the base map_serializer() method to correctly represent "allow_null=True" in the OpenAPI schema.
-        """
-        result = super().map_serializer(auto_schema, direction)
-        if self.target.allow_null:
-            result["nullable"] = True
-        return result
-
 
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):
     """

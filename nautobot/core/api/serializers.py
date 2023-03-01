@@ -288,8 +288,7 @@ class PolymorphicProxySerializer(_PolymorphicProxySerializer):
 
     1. You can pass a callable (such as a lambda function) as the `serializers` argument, allowing for deferred
        loading/initialization of the serializer list.
-    2. Supports `allow_null` as an init parameter, similar to real serializers. This works in combination with
-       nautobot.core.api.schema.NautobotPolymorphicProxySerializerExtension to render nullable fields in the schema.
+    2. Supports `allow_null` as an init parameter, similar to real serializers.
     """
 
     @property
