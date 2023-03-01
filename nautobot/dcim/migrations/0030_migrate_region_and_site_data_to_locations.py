@@ -37,16 +37,17 @@ def add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
         tag.content_types.add(location_ct)
 
 
-def create_region_location_type_locations(region_class, location_class, region_lt):
+def create_region_location_type_locations(apps, region_lt):
     """
     Create location objects for each region instance in the region_class model.
 
     Args:
-        region_class: The model class for legacy regions
-        location_class: The model class for locations
+        apps: Installed apps
         region_lt: The newly created region location type
     """
     # Breadth First Query to create parents on the top levels first and children second.
+    region_class = apps.get_model("dcim", "region")
+    location_class = apps.get_model("dcim", "location")
     regions = (
         region_class.objects.with_tree_fields()
         .extra(order_by=["__tree.tree_depth", "__tree.tree_ordering"])
@@ -59,9 +60,7 @@ def create_region_location_type_locations(region_class, location_class, region_l
                 location_type=region_lt,
                 name=region.name,
                 description=region.description,
-                parent=location_class.objects.get(name=region.parent.name, location_type=region_lt)
-                if region.parent
-                else None,
+                parent=location_class.objects.get(id=region.parent_id) if region.parent else None,
             )
             region.migrated_location = region_loc
             region.save()
@@ -72,10 +71,7 @@ def create_region_location_type_locations(region_class, location_class, region_l
 
 
 def create_site_location_type_locations(
-    site_class,
-    location_type_class,
-    location_class,
-    tagged_item_class,
+    apps,
     location_ct,
     site_ct,
     site_lt,
@@ -86,10 +82,7 @@ def create_site_location_type_locations(
     Create location objects for each site instance in the site_class model.
 
     Args:
-        site_class: The model class for Legacy sites
-        location_type_class: The model class for location types
-        location_class: The model class for locations
-        tagged_item_class: The model class for tagged items
+        apps: Installed apps
         location_ct: Location ContentType
         site_ct: Site ContentType
         site_lt: The newly created site location type
@@ -105,6 +98,10 @@ def create_site_location_type_locations(
     """
     count = 0
     location_instances = []
+    site_class = apps.get_model("dcim", "site")
+    location_class = apps.get_model("dcim", "location")
+    location_type_class = apps.get_model("dcim", "locationtype")
+    tagged_item_class = apps.get_model("extras", "TaggedItem")
 
     # Django Documentation on .iterator():
     # "For a QuerySet which returns a large number of objects that you only need to access once
@@ -315,16 +312,9 @@ def reassign_model_instances_to_locations(apps, model):
         cf.content_type = location_ct
     ComputedField.objects.bulk_update(computed_fields, ["content_type"], 1000)
 
-    if model == "region":
-        ccs = ConfigContext.objects.filter(regions__isnull=False).prefetch_related("locations", f"{model}s")
-    else:
-        ccs = ConfigContext.objects.filter(sites__isnull=False).prefetch_related("locations", f"{model}s")
+    ccs = ConfigContext.objects.filter(**{f"{model}s__isnull": False}).prefetch_related("locations", f"{model}s")
     for cc in ccs:
-        if model == "region":
-            model_pk_list = list(cc.regions.all().values_list("pk", flat=True))
-        else:
-            model_pk_list = list(cc.sites.all().values_list("pk", flat=True))
-
+        model_pk_list = list(getattr(cc, f"{model}s").all().values_list("pk", flat=True))
         model_locs = list(Location.objects.filter(pk__in=model_pk_list, location_type=model_lt))
         if len(model_locs) < len(model_pk_list):
             logger.warning(
@@ -332,7 +322,6 @@ def reassign_model_instances_to_locations(apps, model):
                 f" found in this ConfigContext {cc.name}"
             )
         cc.locations.add(*model_locs)
-        cc.save()
 
     custom_fields = CustomField.objects.filter(content_types__in=[model_ct])
     for cf in custom_fields:
@@ -426,18 +415,28 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
     LocationType = apps.get_model("dcim", "locationtype")
     Location = apps.get_model("dcim", "location")
     ContentType = apps.get_model("contenttypes", "ContentType")
-    TaggedItem = apps.get_model("extras", "TaggedItem")
     site_ct = ContentType.objects.get_for_model(Site)
     location_ct = ContentType.objects.get_for_model(Location)
 
     # Region instances exist
     if Region.objects.exists():
         region_lt = LocationType.objects.create(name="Region", nestable=True)
-        create_region_location_type_locations(region_class=Region, location_class=Location, region_lt=region_lt)
+        create_region_location_type_locations(apps, region_lt=region_lt)
         reassign_model_instances_to_locations(apps, "region")
 
-        if Site.objects.exists():  # Both Site and Region instances exist
-            site_lt = LocationType.objects.create(name="Site", parent=LocationType.objects.get(name="Region"))
+    if Site.objects.exists():
+        site_lt = LocationType.objects.create(name="Site")
+        add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
+        create_site_locations_signature = {
+            "apps": apps,
+            "location_ct": location_ct,
+            "site_ct": site_ct,
+            "site_lt": site_lt,
+            "exclude_lt": "Site",
+        }
+        if Region.objects.exists():
+            site_lt.parent = LocationType.objects.get(name="Region")
+            site_lt.save()
             if Site.objects.filter(region__isnull=True).exists():
                 Location.objects.create(
                     location_type=region_lt,
@@ -445,33 +444,9 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
                     description="Parent Location of Region LocationType for all sites that "
                     "did not have a region attribute set before the migration",
                 )
-            add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
-            create_site_location_type_locations(
-                site_class=Site,
-                location_type_class=LocationType,
-                location_class=Location,
-                tagged_item_class=TaggedItem,
-                location_ct=location_ct,
-                site_ct=site_ct,
-                site_lt=site_lt,
-                exclude_lt="Region",
-                region_lt=region_lt,
-            )
-            reassign_model_instances_to_locations(apps, "site")
-
-    elif Site.objects.exists():  # Only Site instances exist, we make Site the top level LocationType
-        site_lt = LocationType.objects.create(name="Site")
-        add_location_contenttype_to_site_status_and_tags(apps, site_ct, location_ct)
-        create_site_location_type_locations(
-            site_class=Site,
-            location_type_class=LocationType,
-            location_class=Location,
-            tagged_item_class=TaggedItem,
-            location_ct=location_ct,
-            site_ct=site_ct,
-            site_lt=site_lt,
-            exclude_lt="Site",
-        )
+            create_site_locations_signature["exclude_lt"] = "Region"
+            create_site_locations_signature["region_lt"] = region_lt
+        create_site_location_type_locations(**create_site_locations_signature)
         reassign_model_instances_to_locations(apps, "site")
 
 
