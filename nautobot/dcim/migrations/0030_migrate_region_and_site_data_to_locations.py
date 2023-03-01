@@ -191,6 +191,7 @@ def create_site_location_type_locations(
     location_class.objects.bulk_update(top_level_locations, ["parent"], 1000)
     location_type_class.objects.filter(parent__isnull=True).exclude(name=exclude_lt).update(parent=site_lt)
 
+
 def reassign_site_model_instances_to_locations(apps, site_lt):
     # Get required models and ContentTypes
     ContentType = apps.get_model("contenttypes", "ContentType")
@@ -281,6 +282,7 @@ def reassign_site_model_instances_to_locations(apps, site_lt):
     for cluster in clusters:
         cluster.location = cluster.site.migrated_location
     Cluster.objects.bulk_update(clusters, ["location"], 1000)
+
 
 def reassign_model_instances_to_locations(apps, model):
     """
