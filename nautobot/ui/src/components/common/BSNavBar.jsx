@@ -8,7 +8,7 @@ import useSWR from "swr"
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
-  const { data, error } = useSWR("/api/get-menu/", fetcher)
+  const { data, error } = useSWR("/api/ui/get-menu/", fetcher)
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
 

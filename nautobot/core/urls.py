@@ -29,6 +29,7 @@ urlpatterns = [
     path("virtualization/", include("nautobot.virtualization.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
+    path("api/ui/", include("nautobot.core.api.ui.urls")),
     # GraphQL
     path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
     # Serving static media in Django
