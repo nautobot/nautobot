@@ -3,8 +3,15 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.filters import BaseFilterSet, SearchFilter
 
+from nautobot.utilities.filters import (BaseFilterSet,
+                                        SearchFilter,
+                                        RelatedMembershipBooleanFilter,
+                                        NaturalKeyOrPKMultipleChoiceFilter)
+from nautobot.dcim.models import (
+    RackReservation,
+    RackRole,
+)
 __all__ = (
     "GroupFilterSet",
     "ObjectPermissionFilterSet",
@@ -27,6 +34,7 @@ class UserFilterSet(BaseFilterSet):
             "first_name": "icontains",
             "last_name": "icontains",
             "email": "icontains",
+            # "social_auth":"icontains",
         },
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
@@ -40,6 +48,33 @@ class UserFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Group (name)",
     )
+    has_changes = RelatedMembershipBooleanFilter(
+        field_name="changes",
+        label="Has changes",
+    )
+    rack_reservations = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="rackreservation_set",
+        to_field_name="rack_reservations",
+        queryset=RackReservation.objects.all(),
+        label="Rack Reservations",
+    )
+    has_rack_reservations = RelatedMembershipBooleanFilter(
+        field_name = "has_rack_reservations",
+        label = "Has Rack Reservations"
+    )
+    has_social_auth = RelatedMembershipBooleanFilter(
+        field_name="social_auth",
+        label="Has social auth",
+    )
+    has_tokens = RelatedMembershipBooleanFilter(
+        field_name="tokens",
+        label="Has token",
+    )
+    has_object_permissions = RelatedMembershipBooleanFilter(
+        field_name="object_permissions",
+        label="Has Object Permissions",
+    )
+
 
     class Meta:
         model = get_user_model()
@@ -51,6 +86,19 @@ class UserFilterSet(BaseFilterSet):
             "email",
             "is_staff",
             "is_active",
+            "config_data",
+            "changes",
+            "has_changes",
+            # "logentry_set",
+            # "has_logentry_set",
+            "object_permissions",
+            "has_object_permissions",
+            # "rackreservation_set",
+            # "has_rack_reservations",
+            "social_auth",
+            "has_social_auth",
+            "tokens",
+            "has_tokens"
         ]
 
 

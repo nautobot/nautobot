@@ -31,7 +31,7 @@ __all__ = (
 
 class User(BaseModel, AbstractUser):
     """
-    Nautobot implements its own User model to suport several specific use cases.
+    Nautobot implements its own User model to support several specific use cases.
 
     This model also implements the user configuration (preferences) data store functionality.
     """

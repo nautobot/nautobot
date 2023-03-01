@@ -5,6 +5,9 @@ from django.test import tag
 from nautobot.utilities.testing.views import TestCase
 
 from nautobot.tenancy.models import Tenant, TenantGroup
+from django.db.models.fields.reverse_related import ForeignObjectRel
+from django.db.models.fields.related import ForeignKey
+from tomlkit.exceptions import NonExistentKey
 
 
 @tag("unit")
@@ -52,7 +55,7 @@ class FilterTestCases:
     class FilterTestCase(BaseFilterTestCase):
         """Add common tests for all FilterSets."""
 
-        queryset = None
+        queryset = NonExistentKey
         filterset = None
 
         def test_id(self):
@@ -66,6 +69,41 @@ class FilterTestCases:
             """Verify that the filterset reports as invalid when initialized with an unsupported filter parameter."""
             params = {"ice_cream_flavor": ["chocolate"]}
             self.assertFalse(self.filterset(params, self.queryset).is_valid())
+
+            def field_mismatch(self, field):
+                field_type = type(field).__name__
+                if field_type in ["OneToOneRel", "ForeignKey", "OneToOneField"] and field.name.endswith("s"):
+                    return " -- possible mismatch in field name. OneToOneRel should be singular, not plural"
+                if "ManyTo" in field_type and not field.name.endswith("s"):
+                    return f" -- possible mismatch in field name. {field_type} should be plural, not singular"
+                return ""
+
+            def field_details(self, field):
+                details = type(field).__name__
+                if isinstance(field, (ForeignObjectRel, ForeignKey)):
+                    details += f"({field.related_model._meta.label})"
+                return details
+
+            def test_missing_filters(self):
+                reverse_fields = list(self.filterset._meta.model._meta.fields_map.values())
+                forward_fields = list(self.filterset._meta.model._meta.fields)
+                fs_name = self.filterset.__module__ + "." + self.filterset.__qualname__
+                for field in set(reverse_fields + forward_fields):
+                    with self.subTest(field=field):
+                        field_type = self.field_details(field)
+                        if field.name.startswith("_") or field.name.endswith("+"):
+                            continue
+                        self.assertTrue(
+                            field.name in self.filterset.get_filters(),
+                            msg=f"{field.name}({field_type}) not in {fs_name} {self.field_mismatch(field)}",
+                        )
+                    with self.subTest(field=field):
+                        field_type = self.field_details(field)
+                        if field_type.startswith("ManyTo"):
+                            self.assertTrue(
+                                f"has_{field.name}" in self.filterset.get_filters(),
+                                msg=f"has_{field.name}({field_type}) not in {fs_name} {self.field_mismatch(field)}",
+                            )
 
     class NameSlugFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name and by slug."""
