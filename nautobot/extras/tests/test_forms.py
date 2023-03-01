@@ -1093,13 +1093,13 @@ class JobEditFormTestCase(TestCase):
 class ConfigContextFormTestCase(TestCase):
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups(self):
-        """Tests that the dynamic_group field is not on the ConfigContextForm when feature flag is disabled"""
+        """Asserts that `ConfigContextForm.dynamic_group` is NOT present when feature flag is disabled."""
         form = ConfigContextForm()
         self.assertIsNone(form.fields.get("dynamic_groups", None))
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
     def test_with_dynamic_groups(self):
-        """Tests that the dynamic_group field is on the ConfigContextForm when feature flag is enabled"""
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
         form = ConfigContextForm()
         self.assertIsNotNone(form.fields.get("dynamic_groups", None))
 
@@ -1107,12 +1107,12 @@ class ConfigContextFormTestCase(TestCase):
 class ConfigContextFilterFormTestCase(TestCase):
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups(self):
-        """Tests that the dynamic_group field is not on the ConfigContextFilterForm when feature flag is disabled"""
+        """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
         context_filter_form = ConfigContextFilterForm()
         self.assertIsNone(context_filter_form.fields.get("dynamic_groups", None))
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
     def test_with_dynamic_groups(self):
-        """Tests that the dynamic_group field is on the ConfigContextFilterForm when feature flag is enabled"""
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
         context_filter_form = ConfigContextFilterForm()
         self.assertIsNone(context_filter_form.fields.get("dynamic_groups", None))
