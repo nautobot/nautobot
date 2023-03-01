@@ -16,7 +16,7 @@ Since `Location` has all the filters that `Region` had and they retain the same 
 
 Replace `Location` ContentType to `object_types` field of the `ObjectPermission` if it is not already present and add `location_type__name: "Site"` to `constraints` field if the old `ObjectPermission` only allows operations on `Site` instances and not on `Region` instances.
 
-The old `constraints` field for `Site` specifc `ObjectPermission` instances might look like this:
+The old `constraints` field for a `Site` specific `ObjectPermission` instance might look like this:
 
 ```json
 {
@@ -37,7 +37,7 @@ The old `constraints` field for `Site` specifc `ObjectPermission` instances migh
     "region__parent__slug": "north-america",
     "region__parent__slug__in": ["north-america", "europe"],
     "region__parent__id": "c1a816df-876f-44d4-8ea0-335898998780",
-    "region__parent__id__in": ["c1a816df-876f-44d4-8ea0-335898998780", "a68b0838-d7fb-416c-b4ba-a3e464e552ba"],
+    "region__parent__id__in": ["c1a816df-876f-44d4-8ea0-335898998780", "a68b0838-d7fb-416c-b4ba-a3e464e552ba"]
 }
 ```
 
@@ -67,7 +67,7 @@ The updated JSON data might look like this:
     "parent__parent__slug": "north-america",
     "parent__parent__slug__in": ["north-america", "europe"],
     "parent__parent__id": "c1a816df-876f-44d4-8ea0-335898998780",
-    "parent__parent__id__in": ["c1a816df-876f-44d4-8ea0-335898998780", "a68b0838-d7fb-416c-b4ba-a3e464e552ba"],
+    "parent__parent__id__in": ["c1a816df-876f-44d4-8ea0-335898998780", "a68b0838-d7fb-416c-b4ba-a3e464e552ba"]
 }
 ```
 
@@ -94,7 +94,7 @@ The old `constraints` field for a `Site`/`Region` related data model's (e.g. `In
     "device__site__region__parent__slug": "north-america",
     "device__site__region__parent__slug__in": ["north-america", "europe", "south-america"],
     "device__site__region__parent__id": "6695809c-b33b-4f12-b0de-a4969000434d",
-    "device__site__region__parent__id__in": ["6695809c-b33b-4f12-b0de-a4969000434d", "e51d07bb-3fcf-4306-9d87-6b1ff6dd6378"],
+    "device__site__region__parent__id__in": ["6695809c-b33b-4f12-b0de-a4969000434d", "e51d07bb-3fcf-4306-9d87-6b1ff6dd6378"]
 }
 ```
 
@@ -126,7 +126,7 @@ The updated JSON data might look like this:
     "device__location__parent__parent__slug": "north-america",
     "device__location__parent__parent__slug__in": ["north-america", "europe", "south-america"],
     "device__location__parent__parent__id": "6695809c-b33b-4f12-b0de-a4969000434d",
-    "device__location__parent__parent__id__in": ["6695809c-b33b-4f12-b0de-a4969000434d", "e51d07bb-3fcf-4306-9d87-6b1ff6dd6378"],
+    "device__location__parent__parent__id__in": ["6695809c-b33b-4f12-b0de-a4969000434d", "e51d07bb-3fcf-4306-9d87-6b1ff6dd6378"]
 }
 ```
 
@@ -138,7 +138,7 @@ The old `constraints` field for a `Site`/`Region` related data model's (e.g. `No
 {
     "assigned_object_type": "dcim.site",
     "assigned_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
-    "assigned_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
+    "assigned_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"]
 }
 ```
 
@@ -152,7 +152,7 @@ The updated JSON data might look like this:
 {
     "assigned_object_type": "dcim.location",
     "assigned_object_id": "932d94ee-5571-40a0-903f-4274fcfbed32",
-    "assigned_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"],
+    "assigned_object_id__in": ["932d94ee-5571-40a0-903f-4274fcfbed32", "e383db9a-dd55-464d-9e56-2f18bc03b32c"]
 }
 ```
 
@@ -161,6 +161,17 @@ The updated JSON data might look like this:
 In Nautobot 2.0.0, all the `Region` and `Site` related data models are being migrated to use `Location`. Below is a comprehensive guide for Nautobot App developers to migrate their `Region` and `Site` related data models to `Location`.
 
 We will be using `ExampleModel` as a relatively simple and hands-on example throughout this guide to better your understanding of the migration process.
+
+!!!important  
+    Before you follow the guide, please make sure that these operations are completed:  
+        1. Make sure your working Nautobot is on Version 1.5.x with baseline migrations all run.  
+        2. Stop Nautobot Server.  
+        3. Update installed version of Nautobot to 2.0.0.  
+        4. Run `nautobot-server migrate dcim 0030_migrate_region_and_site_data_to_locations`. (This step will ensure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied.)  
+    After you complete those operations, follow the guide below for each of your installed apps to:  
+        1. Make all necessary migration files for each app.  
+        2. Run `nautobot-server migrate [app_name]` to apply those migration files to each app.  
+        3. Finally, Start Nautobot Server after **all** the migration files are applied and **all** your affected apps are updated.  
 
 ### Add Location Fields to Site and Region Related Data Models
 
@@ -236,7 +247,7 @@ class Migration(migrations.Migration):
     ]
 ```
 
-Before we write the function that will perform the data migration, please note that Nautobot's `dcim` `0030` migration helpfully added and populated a Foreign Key called `migrated_location` on all `Region` and `Site` records. `migrated_location` stores the new location records that have the same names and other attributes as their respective `Sites`. That means all you need to do is query `ExampleModel` instances that have non-null `site` fields and null `location` fields and point the `location` field on your object to the site's `migrated_location` attribute, for example:
+Before we write the function that will perform the data migration, please note that Nautobot's `dcim` `0029` migration helpfully added and populated a Foreign Key called `migrated_location` on all `Region` and `Site` records. `migrated_location` stores the new location records that have the same names and other attributes as their respective `Sites`. That means all you need to do is query `ExampleModel` instances that have non-null `site` fields and null `location` fields and point the `location` field on your object to the site's `migrated_location` attribute, for example:
 
 ```python
 example_model.location = example_model.site.migrated_location
@@ -364,7 +375,7 @@ class Migration(migrations.Migration):
 ```python
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
-        # TODO we need to change the name after we reorder migration files
+        # TODO we need to change the name when PR #3313 is merged and migrations files are reordered.
         ("dcim", "0034_remove_region_and_site"),
     ]
 ```
@@ -381,7 +392,7 @@ class Migration(migrations.Migration):
     
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
-        # TODO we need to change the name after we reorder migration files
+        # TODO we need to change the name when PR #3313 is merged and migrations files are reordered.
         ("dcim", "0034_remove_region_and_site"),
     ]
     dependencies = [
@@ -395,9 +406,6 @@ class Migration(migrations.Migration):
         ),
     ]
 ```
-
-!!!important
-    Before you apply the aforementioned migration files to your app in the following step, please make sure that Nautobot is on version 1.x and not on version 2.0. More importantly, please make sure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied.
 
 Apply the migration files by running `nautobot-server migrate [app_name]`, for example:
 
