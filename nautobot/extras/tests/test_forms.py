@@ -1115,4 +1115,4 @@ class ConfigContextFilterFormTestCase(TestCase):
     def test_with_dynamic_groups(self):
         """Tests that the dynamic_group field is on the ConfigContextFilterForm when feature flag is enabled"""
         context_filter_form = ConfigContextFilterForm()
-        self.assertIsNone(context_filter_form.fields.get("dynamic_gorups", None))
+        self.assertIsNone(context_filter_form.fields.get("dynamic_groups", None))
