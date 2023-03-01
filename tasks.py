@@ -164,7 +164,7 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, **kwargs):
+def run_command(context, command, service="nautobot", **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
@@ -175,10 +175,10 @@ def run_command(context, command, **kwargs):
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
-        if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
+        if service in results.stdout:
+            compose_command = f"exec {service} {command}"
         else:
-            compose_command = f"run --entrypoint '{command}' nautobot"
+            compose_command = f"run --entrypoint '{command}' {service}"
 
         docker_compose(context, compose_command, pty=True)
 
@@ -433,15 +433,10 @@ def nbshell(context):
 @task(help={"service": "Name of the service to shell into"})
 def cli(context, service="nautobot"):
     """Launch a bash shell inside the running Nautobot (or other) Docker container."""
-    docker_compose_status = "ps --services --filter status=running"
-    results = docker_compose(context, docker_compose_status, hide="out")
-    if service in results.stdout:
-        compose_command = f"exec {service} bash"
-    else:
-        compose_command = f"run --entrypoint 'bash' {service}"
+    context.nautobot.local = False
+    command = "bash"
 
-    docker_compose(context, compose_command, pty=True)
-
+    run_command(context, command, service=service, pty=True)
 
 
 @task(
