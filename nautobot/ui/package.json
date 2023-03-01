@@ -4,7 +4,7 @@
   "private": true,
   "proxy": "http://nautobot:8080",
   "dependencies": {
-    "@chakra-ui/react": "^2.4.2",
+    "@chakra-ui/react": "^2.5.1",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
     "@fortawesome/fontawesome-svg-core": "^6.2.1",
@@ -40,7 +40,6 @@
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "gen:theme-typings": "chakra-cli tokens node_modules/@nautobot/nautobot-ui",
-    "postinstall": "npm run gen:theme-typings",
     "test": "react-app-rewired test",
     "eject": "react-app-rewired eject"
   },
@@ -63,7 +62,6 @@
     ]
   },
   "devDependencies": {
-    "@chakra-ui/cli": "^2.3.0",
-    "@popperjs/core": "^2.11.6"
+    "@chakra-ui/cli": "^2.3.0"
   }
 }
