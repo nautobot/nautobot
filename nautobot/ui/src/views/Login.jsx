@@ -1,11 +1,8 @@
 import { Button, Card, Col, Form, Row } from "react-bootstrap"
-import Cookies from "js-cookie"
-import { useEffect } from "react"
 import axios from "axios"
 
 
 export default function Login() {
-  const csrf_token = Cookies.get("csrftoken")
   const handleSubmit = (e) => {
     e.preventDefault();
     axios.post(
@@ -13,6 +10,8 @@ export default function Login() {
         username: e.target.username.value,
         password: e.target.password.value,
       })
+      .then(res => localStorage.setItem("nautobot-user", e.target.username.value))
+      .catch(err => alert(err.detail))
   }
   return (
     <Row style={{ marginTop: "150px" }}>
@@ -21,7 +20,6 @@ export default function Login() {
           <Card>
             <Card.Header>Log In</Card.Header>
             <Card.Body>
-              <Form.Control type="hidden" name="csrfmiddlewaretoken" value={csrf_token} />
               <Form.Group controlId="id_username">
                 <Form.Label>Username</Form.Label>
                 <Form.Control type="text" name="username" autoCapitalize="none" autoFocus autoComplete="username" maxLength={150} required />
