@@ -441,10 +441,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
     class Meta:
         ordering = ["name"]
-        index_together = [
-            ("source_type", "source_hidden"),
-            ("destination_type", "destination_hidden"),
-        ]
 
     def __str__(self):
         return self.name.replace("_", " ")
