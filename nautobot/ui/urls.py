@@ -2,15 +2,14 @@ from django.conf.urls import include
 from django.urls import path
 
 from nautobot.core.api.views import (
+    GetMenu,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
-    GetMenu,
 )
 
+from nautobot.extras.plugins.urls import plugin_api_patterns
 
-# TODO: these should be moved under `api/ui/` for consistency. See #3240.
 core_api_patterns = [
-    # Lookup Expr
     path(
         "filterset-fields/lookup-choices/",
         GetFilterSetFieldLookupExpressionChoicesAPIView.as_view(),
@@ -22,9 +21,8 @@ core_api_patterns = [
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
 ]
-
-urlpatterns = [
-    path("get-menu/", GetMenu.as_view(), name="get-menu"),
-    # Core
+ui_api_patterns = [
+    # Lookup Expr
     path("core/", include((core_api_patterns, "core-api"))),
+    path("get-menu/", GetMenu.as_view(), name="get-menu"),
 ]

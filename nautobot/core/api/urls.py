@@ -14,7 +14,7 @@ from nautobot.core.api.views import (
     NautobotSpectacularRedocView,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
-
+from nautobot.ui.urls import ui_api_patterns
 
 urlpatterns = [
     # Base views
@@ -36,4 +36,6 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
+    # UI
+    path("ui/", include((ui_api_patterns, "ui-api"))),
 ]
