@@ -192,7 +192,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
         # migrate custom fields on this aggregate to the new prefix
         mismatches.update(_migrate_aggregate_custom_fields_to_prefix(instance))
 
-        # migrate all relationships related to this aggregate to the new prefix
+        # migrate all relationship associations related to this aggregate to the new prefix
         _migrate_aggregate_relationships_to_prefix(apps, instance, aggregate_ct, prefix_ct)
 
         # make tag manager available in migration for nautobot.core.models.utils.serialize_object
@@ -231,5 +231,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(migrate_aggregate_to_prefix),
+        migrations.RunPython(
+            code=migrate_aggregate_to_prefix,
+            reverse_code=migrations.operations.special.RunPython.noop,
+        ),
     ]

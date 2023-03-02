@@ -2,9 +2,9 @@ import itertools
 
 import factory as factoryboy
 
-from nautobot.core import testing
 from nautobot.core import constants
 from nautobot.core import factory
+from nautobot.core import testing
 
 
 class FactoryTestCase(testing.TestCase):
