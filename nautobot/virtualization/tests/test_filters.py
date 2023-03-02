@@ -711,7 +711,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
 
     def test_mode(self):
-        params = {"mode": InterfaceModeChoices.MODE_ACCESS}
+        params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(mode=InterfaceModeChoices.MODE_ACCESS),
