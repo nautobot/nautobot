@@ -8,9 +8,6 @@ from drf_spectacular.views import (
 
 from nautobot.core.api.views import (
     APIRootView,
-    GetFilterSetFieldDOMElementAPIView,
-    GetFilterSetFieldLookupExpressionChoicesAPIView,
-    GetMenu,
     GraphQLDRFAPIView,
     StatusView,
     NautobotSpectacularSwaggerView,
