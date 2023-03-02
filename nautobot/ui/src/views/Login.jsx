@@ -10,7 +10,10 @@ export default function Login() {
         username: e.target.username.value,
         password: e.target.password.value,
       })
-      .then(res => localStorage.setItem("nautobot-user", e.target.username.value))
+      .then(() => {
+        localStorage.setItem("nautobot-user", e.target.username.value)
+        window.location.replace("/")
+      })
       .catch(err => alert(err.detail))
   }
   return (
