@@ -18,11 +18,13 @@ def array_to_string(array):
 
 
 def get_all_concrete_models(base_class):
-    """Yield all non-abstract models that inherit from the given base_class."""
+    """Get a list of all non-abstract models that inherit from the given base_class."""
+    models = []
     for appconfig in apps.get_app_configs():
         for model in appconfig.get_models():
             if issubclass(model, base_class) and not model._meta.abstract:
-                yield model
+                models.append(model)
+    return sorted(models, key=lambda model: (model._meta.app_label, model._meta.model_name))
 
 
 def is_taggable(obj):

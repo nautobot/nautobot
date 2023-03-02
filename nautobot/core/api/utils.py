@@ -125,12 +125,14 @@ def get_serializers_for_models(models, prefix=""):
 
     Used primarily in OpenAPI schema generation.
     """
+    serializers = []
     for model in models:
         try:
-            yield get_serializer_for_model(model, prefix=prefix)
+            serializers.append(get_serializer_for_model(model, prefix=prefix))
         except exceptions.SerializerNotFound as exc:
             logger.error("%s", exc)
             continue
+    return serializers
 
 
 def is_api_request(request):
