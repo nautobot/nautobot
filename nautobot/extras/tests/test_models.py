@@ -10,6 +10,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
+from django.test import override_settings
+
 
 from nautobot.dcim.models import (
     Device,
@@ -356,6 +358,37 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_dynamic_group_assignment_uniqueness(self):
+        """
+        Assert that a Device in a given Dynamic Group with a Config Context associated to it
+        does not have a Config Context applied that is associated to another Dynamic Group that
+        the device is not a member of.
+        """
+
+        device2 = Device.objects.create(
+            name="Device 2",
+            site=self.site,
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            device_role=self.devicerole,
+            device_type=self.devicetype,
+        )
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic context 1", weight=100, data={"dynamic_group": "dynamic context 1"}
+        )
+        dynamic_group_context_2 = ConfigContext.objects.create(
+            name="dynamic context 2", weight=100, data={"dynamic_group": "dynamic context 2"}
+        )
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        dynamic_group_context_2.dynamic_groups.add(self.dynamic_group_2)
+
+        self.assertIn("dynamic context 1", self.device.get_config_context().values())
+        self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
+        self.assertIn("dynamic context 2", device2.get_config_context().values())
+        self.assertNotIn("dynamic context 1", device2.get_config_context().values())
 
 
 class ConfigContextSchemaTestCase(TestCase):
