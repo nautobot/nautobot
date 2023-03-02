@@ -1,3 +1,5 @@
+# UI-related API endpoints
+
 from django.conf.urls import include
 from django.urls import path
 
@@ -7,7 +9,6 @@ from nautobot.core.api.views import (
     GetFilterSetFieldLookupExpressionChoicesAPIView,
 )
 
-from nautobot.extras.plugins.urls import plugin_api_patterns
 
 core_api_patterns = [
     path(
