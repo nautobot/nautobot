@@ -225,9 +225,9 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
 
         for rel in relationships.iterator():
-            if rel.source_type == self.obj_type:
+            if rel.source_type == self.obj_type and not rel.source_hidden:
                 self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
-            if rel.destination_type == self.obj_type:
+            if rel.destination_type == self.obj_type and not rel.destination_hidden:
                 self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
