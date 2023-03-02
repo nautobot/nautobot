@@ -355,13 +355,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     def test_with_dynamic_groups_enabled(self):
         """Asserts that `ConfigContextFilterSet.dynamic_group` is present when feature flag is enabled."""
         filter_set = ConfigContextFilterSet()
-        self.assertIsNotNone(filter_set.filters.get("dynamic_groups", None))
+        self.assertIn("dynamic_groups", filter_set.filters)
+
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups_enabled(self):
         """Tests that `ConfigContextFilterSet.dynamic_group` is NOT present when feature flag is disabled."""
         filter_set = ConfigContextFilterSet()
-        self.assertIsNone(filter_set.filters.get("dynamic_groups", None))
+        self.assertNotIn("dynamic_groups", filter_set.filters)
 
 
 class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):

@@ -1091,28 +1091,28 @@ class JobEditFormTestCase(TestCase):
 
 
 class ConfigContextFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
+        form = ConfigContextForm()
+        self.assertIn("dynamic_groups", form.fields)
+
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups(self):
         """Asserts that `ConfigContextForm.dynamic_group` is NOT present when feature flag is disabled."""
         form = ConfigContextForm()
-        self.assertIsNone(form.fields.get("dynamic_groups", None))
-
-    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
-    def test_with_dynamic_groups(self):
-        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
-        form = ConfigContextForm()
-        self.assertIsNotNone(form.fields.get("dynamic_groups", None))
+        self.assertNotIn("dynamic_groups", form.fields)
 
 
 class ConfigContextFilterFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
+        context_filter_form = ConfigContextFilterForm()
+        self.assertIn("dynamic_groups", context_filter_form.fields)
+
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
     def test_without_dynamic_groups(self):
         """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
         context_filter_form = ConfigContextFilterForm()
-        self.assertIsNone(context_filter_form.fields.get("dynamic_groups", None))
-
-    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
-    def test_with_dynamic_groups(self):
-        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
-        context_filter_form = ConfigContextFilterForm()
-        self.assertIsNotNone(context_filter_form.fields.get("dynamic_groups", None))
+        self.assertNotIn("dynamic_groups", context_filter_form.fields)
