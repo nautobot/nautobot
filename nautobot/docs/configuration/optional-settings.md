@@ -288,6 +288,7 @@ The number of days to retain logged changes (object creations, updates, and dele
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
+
 ## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED
 
 Default: `False`
@@ -298,7 +299,6 @@ If `True`, it will be possible to apply Config Context objects to devices and vm
 
 !!! warning
     With a large number of dynamic groups this could invoke a performance pentalty when processing Config Contexts.
-
 
 ---
 
