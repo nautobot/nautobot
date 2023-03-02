@@ -298,7 +298,7 @@ Environment Variable: `NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED`
 If `True`, it will be possible to apply Config Context objects to Devices and Virtual Machines via Dynamic Group membership. When set to `False` this behavior will not be available.
 
 !!! warning
-    With a large number of dynamic groups this could invoke a performance pentalty when processing Config Contexts.
+    With a large number of dynamic groups, enabling this could invoke a performance penalty when processing Config Contexts.
 
 ---
 
