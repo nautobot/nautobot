@@ -7,12 +7,7 @@ import useSWR from "swr"
 import axios from "axios";
 
 
-const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => {
-  if(res.status !== 200){
-    throw new Error(res.json());
-  }
-  return res.json();
-});
+const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
   const { data, error } = useSWR("/api/get-menu/", fetcher)
