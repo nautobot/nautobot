@@ -1,18 +1,16 @@
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.db.models import Count
-from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
-from nautobot.core.api.views import ModelViewSet, NautobotAPIVersionMixin
+from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
