@@ -441,10 +441,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
     class Meta:
         ordering = ["name"]
-        index_together = [
-            ("source_type", "source_hidden"),
-            ("destination_type", "destination_hidden"),
-        ]
 
     def __str__(self):
         return self.name.replace("_", " ")
@@ -713,10 +709,6 @@ class RelationshipAssociation(BaseModel):
             "destination_type",
             "destination_id",
         )
-        index_together = [
-            ("destination_id", "source_type", "relationship"),
-            ("source_id", "destination_type", "relationship"),
-        ]
 
     def __str__(self):
         arrow = "<->" if self.relationship.symmetric else "->"
