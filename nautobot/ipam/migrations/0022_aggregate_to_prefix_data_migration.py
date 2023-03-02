@@ -164,6 +164,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
 
         else:
             prefix = Prefix.objects.create(
+                id=instance.id,
                 broadcast=instance.broadcast,
                 date_allocated=_convert_date_to_datetime(instance.date_added),
                 description=instance.description,
