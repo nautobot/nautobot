@@ -850,18 +850,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return ExecutionResult(errors=[e], invalid=True)
 
 
-ensure_csrf = method_decorator(ensure_csrf_cookie)
-
-
-class SetCSRFCookie(NautobotAPIVersionMixin, APIView):
-    permission_classes = [AllowAny]
-
-    @ensure_csrf
-    def get(self, request):
-        resp = Response("CSRF Cookie set.")
-        resp.set_cookie("testing", "testing_token", samesite=None)
-        return resp
-
 class GetMenu(NautobotAPIVersionMixin, APIView):
     """API View that returns the registered nav-menu content."""
 

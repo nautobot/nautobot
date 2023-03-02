@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.db.models import Count
 from django.utils.decorators import method_decorator
@@ -60,10 +60,6 @@ class GroupViewSet(ModelViewSet):
 # REST API tokens
 #
 
-from django.views.decorators.csrf import csrf_protect, csrf_exempt, ensure_csrf_cookie
-csrf_protect_method = method_decorator(csrf_protect)
-ensure_csrf = method_decorator(ensure_csrf_cookie)
-
 
 class TokenViewSet(ModelViewSet):
     queryset = RestrictedQuerySet(model=Token).select_related("user")
@@ -77,12 +73,16 @@ class TokenViewSet(ModelViewSet):
         return classes + [BasicAuthentication]
 
     @action(methods=["POST"], detail=False, permission_classes=[AllowAny])
-    @ensure_csrf
     def authenticate(self, request):
         serializer = UserLoginSerializer(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         login(request, user=user)
+        return Response(status=200)
+
+    @action(methods=["GET"], detail=False, permission_classes=[AllowAny])
+    def logout(self, request):
+        logout(request)
         return Response(status=200)
 
     def get_queryset(self):

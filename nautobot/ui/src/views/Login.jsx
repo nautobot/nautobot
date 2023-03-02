@@ -1,28 +1,19 @@
 import { Button, Card, Col, Form, Row } from "react-bootstrap"
 import Cookies from "js-cookie"
 import { useEffect } from "react"
+import axios from "axios"
 
 
 export default function Login() {
   const csrf_token = Cookies.get("csrftoken")
   const handleSubmit = (e) => {
     e.preventDefault();
-    // fetch('http://localhost:8080/api/get-csrf/')
-    fetch('http://localhost:8080/api/users/tokens/authenticate/', {
-      method: 'POST',
-      body: JSON.stringify({
+    axios.post(
+      '/api/users/tokens/authenticate/', {
         username: e.target.username.value,
         password: e.target.password.value,
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      },
-    })
+      })
   }
-
-  useEffect(() => {
-
-  })
   return (
     <Row style={{ marginTop: "150px" }}>
       <Col sm={{ span: 4, offset: 4 }}>
