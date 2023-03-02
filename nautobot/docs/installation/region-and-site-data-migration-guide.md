@@ -162,16 +162,20 @@ In Nautobot 2.0.0, all the `Region` and `Site` related data models are being mig
 
 We will be using `ExampleModel` as a relatively simple and hands-on example throughout this guide to better your understanding of the migration process.
 
-!!!important  
-    Before you follow the guide, please make sure that these operations are completed:  
-        1. Make sure your working Nautobot is on Version 1.5.x with baseline migrations all run.  
-        2. Stop Nautobot Server.  
-        3. Update installed version of Nautobot to 2.0.0.  
-        4. Run `nautobot-server migrate dcim 0030_migrate_region_and_site_data_to_locations`. (This step will ensure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied.)  
-    After you complete those operations, follow the guide below for each of your installed apps to:  
-        1. Make all necessary migration files for each app.  
-        2. Run `nautobot-server migrate [app_name]` to apply those migration files to each app.  
-        3. Finally, Start Nautobot Server after **all** the migration files are applied and **all** your affected apps are updated.  
+### Before you Begin 
+!!! warning
+    You **must** perform these steps before proceeding. Failing to follow them properly could result in data loss. **Always** backup your database before performing any migration steps.
+    
+Before you follow the guide, please make sure that these operations are completed:  
+1. Make sure your working Nautobot is on Version 1.5.x with baseline migrations all run.  
+2. Stop Nautobot Server.  
+3. Create a backup of your Nautobot database. (Check out the [Export Data Guide](../installation/migrating-from-postgresql.md#export-data-from-postgresql) for this operation)
+4. Update installed version of Nautobot to 2.0.0.  
+5. Run `nautobot-server migrate dcim 0030_migrate_region_and_site_data_to_locations`. (This operation will ensure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is the latest migration applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied. **Failure to complete this step will result in data loss**)  
+After you complete those operations, follow the guide below for each of your installed apps to:  
+1. Make all necessary migration files for each app.  
+2. Run `nautobot-server migrate [app_name]` to apply those migration files to each app.  
+3. Finally, Start Nautobot Server after **all** the migration files are applied and **all** your affected apps are updated.  
 
 ### Add Location Fields to Site and Region Related Data Models
 
