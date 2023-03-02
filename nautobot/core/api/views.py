@@ -203,7 +203,6 @@ class ModelViewSetMixin:
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
-
         # If a list of objects has been provided, initialize the serializer with many=True
         if isinstance(kwargs.get("data", {}), list):
             kwargs["many"] = True
@@ -496,7 +495,6 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-
         return Response(
             OrderedDict(
                 (
@@ -868,7 +866,8 @@ class GetMenu(NautobotAPIVersionMixin, APIView):
                     "celery-workers-running": {"type": "integer"},
                 },
             }
-        }
+        },
+        exclude=True,
     )
     def get(self, request):
         # TODO: do we need this local import or can it be moved globally?
