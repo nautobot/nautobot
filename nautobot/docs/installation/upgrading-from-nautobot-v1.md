@@ -182,7 +182,7 @@ The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim
 
 #### Aggregate Migrated to Prefix
 
-The `ipam.Aggregate` model has been removed and all existing Aggregates will be migrated to `ipam.Prefix` records with their `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00` UTC. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the equivalent fields on the new `Prefix`. ObjectChanges, Tags, Notes, Permissions, Custom Fields, Computed Fields and Relationships will be migrated to relate to the new `Prefix` as well.
+The `ipam.Aggregate` model has been removed and all existing Aggregates will be migrated to `ipam.Prefix` records with their `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00` UTC. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the equivalent fields on the new `Prefix`. ObjectChanges, Tags, Notes, Permissions, Custom Fields, Custom Links, Computed Fields and Relationships will be migrated to relate to the new `Prefix` as well.
 
 If a `Prefix` already exists with the same network and prefix length as a previous `Aggregate`, the `rir` and `date_added` fields will be copied to the `rir` and `date_allocated` fields on the existing Prefix object. Messages will be output during migration (`nautobot-server migrate` or `nautobot-server post_upgrade`) if the `tenant`, `description` or `type` fields need to be manually migrated.
 

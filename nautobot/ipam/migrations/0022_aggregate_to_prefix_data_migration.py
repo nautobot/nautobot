@@ -108,6 +108,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
     ContentType = apps.get_model("contenttypes", "ContentType")
     ComputedField = apps.get_model("extras", "ComputedField")
     CustomField = apps.get_model("extras", "CustomField")
+    CustomLink = apps.get_model("extras", "CustomLink")
     Prefix = apps.get_model("ipam", "Prefix")
     ObjectChange = apps.get_model("extras", "ObjectChange")
     ObjectPermission = apps.get_model("users", "ObjectPermission")
@@ -140,6 +141,9 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
     # migrate Aggregate CustomFields to Prefix
     for custom_field in CustomField.objects.filter(content_types=aggregate_ct):
         custom_field.content_types.add(prefix_ct)
+
+    # migrate Aggregate CustomLinks to Prefix
+    CustomLink.objects.filter(content_type=aggregate_ct).update(content_type=prefix_ct)
 
     # migrate Aggregate ComputedFields to Prefix
     ComputedField.objects.filter(content_type=aggregate_ct).update(content_type=prefix_ct)
