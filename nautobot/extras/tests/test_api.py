@@ -312,7 +312,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertNotIn("dynamic_groups", serializer.fields)
 
 
-
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContextSchema
     brief_fields = ["display", "id", "name", "slug", "url"]
