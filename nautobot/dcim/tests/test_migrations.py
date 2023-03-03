@@ -2,7 +2,7 @@ from unittest import skipIf
 
 from django.db import connection
 
-from nautobot.core.tests.test_migration import NautobotDataMigrationTest
+from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 
