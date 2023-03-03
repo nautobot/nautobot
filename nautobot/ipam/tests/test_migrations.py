@@ -1,17 +1,34 @@
+import uuid
+
 from unittest import skipIf
 
 from django.db import connection
 from taggit.managers import TaggableManager
 
+from nautobot.core.models.utils import serialize_object
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.extras.management import populate_status_choices
 from nautobot.core.models.generics import _NautobotTaggableManager
+from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 
 
 class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
     migrate_from = [("ipam", "0021_prefix_add_rir_and_date_allocated")]
     migrate_to = [("ipam", "0022_aggregate_to_prefix_data_migration")]
+
+    def _create_objectchange(self, instance, change_context_detail):
+        instance.refresh_from_db()
+        return self.object_change.objects.create(
+            action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE,
+            change_context=extras_choices.ObjectChangeEventContextChoices.CONTEXT_ORM,
+            change_context_detail=change_context_detail,
+            changed_object_id=instance.pk,
+            changed_object_type=self.content_type.objects.get_for_model(instance.__class__),
+            object_data=serialize_object(instance),
+            object_repr="",
+            request_id=uuid.uuid4(),
+        )
 
     def populateDataBeforeMigration(self, apps):
         """Populate Aggregate data before migrating to Prefixes"""
@@ -142,6 +159,12 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         )
         object_permission1.object_types.add(self.aggregate_ct)
         object_permission2.object_types.add(self.aggregate_ct)
+
+        # object changes
+        self._create_objectchange(self.prefix1, "Pre-migration object change for prefix1")
+        self._create_objectchange(self.prefix4, "Pre-migration object change for prefix4")
+        self._create_objectchange(self.prefix5, "Pre-migration object change for prefix5")
+        self._create_objectchange(self.aggregate5, "Pre-migration object change for aggregate5")
 
     @skipIf(
         connection.vendor != "postgresql",
@@ -292,3 +315,33 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         )
         self.assertTrue(object_permission2.exists())
         self.assertTrue(object_permission2.first().object_types.filter(id=self.prefix_ct.id).exists())
+
+    def test_aggregate_to_prefix_migration_object_changes(self):
+        self.assertEqual(self.object_change.objects.filter(changed_object_type=self.prefix_ct).count(), 24)
+        self.assertEqual(self.object_change.objects.filter(changed_object_type=self.aggregate_ct).count(), 0)
+
+        for prefix in (self.prefix1, self.prefix4, self.prefix.objects.get(network="8.5.0.0")):
+            self.assertEqual(
+                self.object_change.objects.filter(changed_object_id=prefix.id).count(),
+                2,
+            )
+
+        for prefix in (self.prefix2, self.prefix3, self.prefix5):
+            self.assertEqual(
+                self.object_change.objects.filter(changed_object_id=prefix.id).count(),
+                1,
+            )
+
+        for i in range(6, 13):
+            prefix = self.prefix.objects.get(network=f"10.{i}.0.0")
+            self.assertEqual(
+                self.object_change.objects.filter(changed_object_id=prefix.id).count(),
+                0,
+            )
+
+        for i in range(6, 21):
+            prefix = self.prefix.objects.get(network=f"8.{i}.0.0")
+            self.assertEqual(
+                self.object_change.objects.filter(changed_object_id=prefix.id).count(),
+                1,
+            )
