@@ -2,9 +2,12 @@ import uuid
 from unittest import skipIf
 
 from django.db import connection
+from taggit.managers import TaggableManager
 
+from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
+from nautobot.extras import models as extras_models
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 
 
@@ -15,12 +18,17 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
     def populateDataBeforeMigration(self, installed_apps):
         """Populate Site/Site-related and Region/Region-related Data before migrating them to Locations"""
         # Needed models
+        taggable_manager = TaggableManager(
+            through=extras_models.TaggedItem, manager=_NautobotTaggableManager, ordering=["name"]
+        )
         apps = installed_apps
         self.content_type = apps.get_model("contenttypes", "ContentType")
         self.region = apps.get_model("dcim", "region")
         self.site = apps.get_model("dcim", "site")
+        self.site.tags = taggable_manager
         self.location_type = apps.get_model("dcim", "locationtype")
         self.location = apps.get_model("dcim", "location")
+        self.location.tags = taggable_manager
         self.provider = apps.get_model("circuits", "provider")
         self.circuit_type = apps.get_model("circuits", "circuittype")
         self.circuit = apps.get_model("circuits", "circuit")
@@ -100,12 +108,19 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         site_2 = self.site.objects.get(name="Test Site 2")
         site_2.region = self.region.objects.get(name="Test Region 1")
         site_2.save()
+        site_2.tags.add("Tag 1")
+        site_2.tags.add("Tag 2")
+        site_2.tags.add("Tag 3")
         site_4 = self.site.objects.get(name="Test Site 4")
         site_4.region = self.region.objects.get(name="Test Region 2")
         site_4.save()
+        site_4.tags.add("Tag 2")
+        site_4.tags.add("Tag 3")
         site_6 = self.site.objects.get(name="Test Site 6")
         site_6.region = self.region.objects.get(name="Test Region 3")
         site_6.save()
+        site_6.tags.add("Tag 1")
+        site_6.tags.add("Tag 3")
 
         location_types = []
         for i in range(5):
@@ -888,7 +903,25 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
                 sorted(list(tag_3.content_types.values_list("model", flat=True))),
             )
-
+            # Check if the tags from Sites are properly transferred to Locations
+            self.assertCountEqual(
+                self.location.objects.get(name="Test Site 2").tags.values_list("id", flat=True),
+                self.tag.objects.filter(name__in=["Tag 1", "Tag 2", "Tag 3"]).values_list(
+                    "id", flat=True
+                ),
+            )
+            self.assertCountEqual(
+                self.location.objects.get(name="Test Site 4").tags.values_list("id", flat=True),
+                self.tag.objects.filter(name__in=["Tag 2", "Tag 3"]).values_list(
+                    "id", flat=True
+                ),
+            )
+            self.assertCountEqual(
+                self.location.objects.get(name="Test Site 6").tags.values_list("id", flat=True),
+                self.tag.objects.filter(name__in=["Tag 1", "Tag 3"]).values_list(
+                    "id", flat=True
+                ),
+            )
             wb_1 = self.web_hook.objects.get(name="test-1")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
