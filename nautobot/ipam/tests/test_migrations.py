@@ -3,7 +3,7 @@ from unittest import skipIf
 from django.db import connection
 from taggit.managers import TaggableManager
 
-from nautobot.core.tests.test_migration import NautobotDataMigrationTest
+from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.extras.management import populate_status_choices
 from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.extras import models as extras_models
