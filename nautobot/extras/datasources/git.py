@@ -32,6 +32,7 @@ from nautobot.extras.models import (
     JobLogEntry,
     JobResult,
     Tag,
+    DynamicGroup,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
@@ -408,6 +409,7 @@ def update_git_config_contexts(repository_record, job_result):
         "tenant_groups",
         "tenants",
         "tags",
+        "dynamic_groups",
     ):
         if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
             job_result.log(
@@ -544,6 +546,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         ("tenant_groups", TenantGroup),
         ("tenants", Tenant),
         ("tags", Tag),
+        ("dynamic_groups", DynamicGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):

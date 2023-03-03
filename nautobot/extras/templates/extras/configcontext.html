@@ -215,6 +215,22 @@
                             {% endif %}
                         </td>
                     </tr>
+                    {% if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED %}
+                    <tr>
+                        <td>Dynamic Groups</td>
+                        <td>
+                            {% if object.dynamic_groups.all %}
+                                <ul>
+                                    {% for dynamic_group in object.dynamic_groups.all %}
+                                        <li>{{ dynamic_group|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
                 </table>
             </div>
 {% endblock content_right_page %}
