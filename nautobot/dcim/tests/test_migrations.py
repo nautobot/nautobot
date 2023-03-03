@@ -1,10 +1,11 @@
+import uuid
 from unittest import skipIf
 
 from django.db import connection
 
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 
 
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
@@ -40,9 +41,10 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         self.job = apps.get_model("extras", "job")
         self.job_hook = apps.get_model("extras", "jobhook")
         self.note = apps.get_model("extras", "note")
-        self.web_hook = apps.get_model("extras", "webhook")
+        self.object_change = apps.get_model("extras", "objectchange")
         self.relationship = apps.get_model("extras", "relationship")
         self.relationship_association = apps.get_model("extras", "relationshipassociation")
+        self.web_hook = apps.get_model("extras", "webhook")
         self.prefix = apps.get_model("ipam", "prefix")
         self.vlan_group = apps.get_model("ipam", "vlangroup")
         self.vlan = apps.get_model("ipam", "vlan")
@@ -50,11 +52,30 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         self.cluster = apps.get_model("virtualization", "cluster")
         self.status = apps.get_model("extras", "status")
         self.tag = apps.get_model("extras", "tag")
+        self.user = apps.get_model("users", "user")
 
         self.region_ct = self.content_type.objects.get_for_model(self.region)
         self.site_ct = self.content_type.objects.get_for_model(self.site)
         self.location_ct = self.content_type.objects.get_for_model(self.location)
         self.device_ct = self.content_type.objects.get_for_model(self.device)
+
+        self.statuses = (
+            self.status.objects.create(name="Active", slug="active"),
+            self.status.objects.create(name="Planned", slug="planned"),
+            self.status.objects.create(name="Failed", slug="failed"),
+        )
+        for status in self.statuses:
+            status.content_types.add(self.site_ct)
+            status.content_types.add(self.region_ct)
+
+        self.tags = (
+            self.tag.objects.create(name="Tag 1", slug="tag-1"),
+            self.tag.objects.create(name="Tag 2", slug="tag-2"),
+            self.tag.objects.create(name="Tag 3", slug="tag-3"),
+        )
+        for tag in self.tags:
+            tag.content_types.add(self.site_ct)
+            tag.content_types.add(self.region_ct)
 
         regions = []
         for i in range(10):
@@ -112,6 +133,25 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                 location = self.location.objects.get(name=f"Test Location {i}")
                 location.parent = self.location.objects.get(name=f"Test Location {i - 1}")
                 location.save()
+        # sites, regions, and locations for assignment purposes
+        sites = [
+            self.site.objects.get(name="Test Site 0"),
+            self.site.objects.get(name="Test Site 1"),
+            self.site.objects.get(name="Test Site 2"),
+            self.site.objects.get(name="Test Site 3"),
+        ]
+        regions = [
+            self.region.objects.get(name="Test Region 0"),
+            self.region.objects.get(name="Test Region 1"),
+            self.region.objects.get(name="Test Region 2"),
+            self.region.objects.get(name="Test Region 3"),
+        ]
+        locations = [
+            self.location.objects.get(name="Test Location 0"),
+            self.location.objects.get(name="Test Location 1"),
+            self.location.objects.get(name="Test Location 2"),
+            self.location.objects.get(name="Test Location 3"),
+        ]
 
         provider = self.provider.objects.create(name="Provider 1", slug="provider-1")
         circuit_type = self.circuit_type.objects.create(name="Circuit Type 1", slug="circuit-type-1")
@@ -124,18 +164,10 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         SIDE_A = CircuitTerminationSideChoices.SIDE_A
         SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
         self.cts = (
-            self.circuit_termination.objects.create(
-                circuit=self.circuits[0], site=self.site.objects.get(name="Test Site 0"), term_side=SIDE_A
-            ),
-            self.circuit_termination.objects.create(
-                circuit=self.circuits[0], site=self.site.objects.get(name="Test Site 1"), term_side=SIDE_Z
-            ),
-            self.circuit_termination.objects.create(
-                circuit=self.circuits[1], site=self.site.objects.get(name="Test Site 0"), term_side=SIDE_A
-            ),
-            self.circuit_termination.objects.create(
-                circuit=self.circuits[1], site=self.site.objects.get(name="Test Site 1"), term_side=SIDE_Z
-            ),
+            self.circuit_termination.objects.create(circuit=self.circuits[0], site=sites[0], term_side=SIDE_A),
+            self.circuit_termination.objects.create(circuit=self.circuits[0], site=sites[1], term_side=SIDE_Z),
+            self.circuit_termination.objects.create(circuit=self.circuits[1], site=sites[0], term_side=SIDE_A),
+            self.circuit_termination.objects.create(circuit=self.circuits[1], site=sites[1], term_side=SIDE_Z),
         )
 
         manufacturer = self.manufacturer.objects.create(name="Manufacturer 1")
@@ -148,79 +180,71 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             is_full_depth=True,
             manufacturer=manufacturer,
         )
-        site_0 = self.site.objects.get(name="Test Site 0")
-        site_1 = self.site.objects.get(name="Test Site 1")
-        site_2 = self.site.objects.get(name="Test Site 2")
-        site_3 = self.site.objects.get(name="Test Site 3")
-        site_4 = self.site.objects.get(name="Test Site 4")
-        site_5 = self.site.objects.get(name="Test Site 5")
-        location_0 = self.location.objects.get(name="Test Location 0")
-        location_1 = self.location.objects.get(name="Test Location 1")
-        location_2 = self.location.objects.get(name="Test Location 2")
-        location_3 = self.location.objects.get(name="Test Location 3")
 
         self.device.objects.create(
             device_type=device_type,
             name="Device 1",
-            site=site_0,
-            location=location_0,
+            site=sites[0],
+            location=locations[0],
         )
         self.device.objects.create(
             device_type=device_type,
             name="Device 2",
-            site=site_1,
-            location=location_1,
+            site=sites[1],
+            location=locations[1],
         )
         self.device.objects.create(
             device_type=device_type,
             name="Device 3",
-            site=site_5,
+            site=sites[3],
         )
         self.power_panels = [
-            self.power_panel.objects.create(name="site1-powerpanel1", site=site_1),
-            self.power_panel.objects.create(name="site1-powerpanel2", site=site_1),
-            self.power_panel.objects.create(name="site1-powerpanel3", site=site_1, location=location_2),
+            self.power_panel.objects.create(name="site1-powerpanel1", site=sites[1]),
+            self.power_panel.objects.create(name="site1-powerpanel2", site=sites[1]),
+            self.power_panel.objects.create(name="site1-powerpanel3", site=sites[1], location=locations[2]),
         ]
         self.rack_groups = [
-            self.rack_group.objects.create(site=site_1, name="Rack Group 1", slug="rack-group-1"),
-            self.rack_group.objects.create(site=site_2, name="Rack Group 2", slug="rack-group-2"),
-            self.rack_group.objects.create(site=site_3, name="Rack Group 3", slug="rack-group-3", location=location_3),
+            self.rack_group.objects.create(site=sites[1], name="Rack Group 1", slug="rack-group-1"),
+            self.rack_group.objects.create(site=sites[2], name="Rack Group 2", slug="rack-group-2"),
+            self.rack_group.objects.create(
+                site=sites[3], name="Rack Group 3", slug="rack-group-3", location=locations[3]
+            ),
         ]
         self.racks = [
-            self.rack.objects.create(site=site_1, name="Rack 1"),
-            self.rack.objects.create(site=site_2, name="Rack 2"),
-            self.rack.objects.create(site=site_3, name="Rack 3", location=location_3),
+            self.rack.objects.create(site=sites[1], name="Rack 1"),
+            self.rack.objects.create(site=sites[2], name="Rack 2"),
+            self.rack.objects.create(site=sites[3], name="Rack 3", location=locations[3]),
         ]
 
         self.prefixes = [
             self.prefix.objects.create(
-                network="1.1.1.0", broadcast="172.31.255.255", prefix_length=25, site=site_1, type="container"
+                network="1.1.1.0", broadcast="172.31.255.255", prefix_length=25, site=sites[1], type="container"
             ),
             self.prefix.objects.create(
-                network="1.1.1.1", broadcast="172.31.255.255", prefix_length=25, site=site_2, type="container"
+                network="1.1.1.1", broadcast="172.31.255.255", prefix_length=25, site=sites[2], type="container"
             ),
             self.prefix.objects.create(
                 network="1.1.1.2",
                 broadcast="172.31.255.255",
                 prefix_length=25,
-                site=site_3,
-                location=location_2,
+                site=sites[3],
+                location=locations[2],
                 type="container",
             ),
         ]
 
         self.vlan_groups = [
-            self.vlan_group.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1, description="A"),
-            self.vlan_group.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=site_2, description="B"),
+            self.vlan_group.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[1], description="A"),
+            self.vlan_group.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[2], description="B"),
             self.vlan_group.objects.create(
-                name="VLAN Group 3", slug="vlan-group-3", site=site_3, location=location_2, description="C"
+                name="VLAN Group 3", slug="vlan-group-3", site=sites[3], location=locations[2], description="C"
             ),
         ]
 
         self.vlans = [
-            self.vlan.objects.create(name="VLAN 1", vid=1, site=site_1),
-            self.vlan.objects.create(name="VLAN 2", vid=2, site=site_2),
-            self.vlan.objects.create(name="VLAN 3", vid=3, site=site_3, location=location_2),
+            self.vlan.objects.create(name="VLAN 1", vid=1, site=sites[1]),
+            self.vlan.objects.create(name="VLAN 2", vid=2, site=sites[2]),
+            self.vlan.objects.create(name="VLAN 3", vid=3, site=sites[3], location=locations[2]),
         ]
 
         self.computed_field.objects.create(
@@ -396,6 +420,39 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             assigned_object_type=self.location_ct,
             assigned_object_id=locations[1].pk,
         )
+        user = self.user.objects.create(username="user1")
+        self.object_change.objects.create(
+            user=user,
+            user_name=user.username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            changed_object_type=self.site_ct,
+            changed_object_id=sites[0].id,
+            object_repr=str(sites[0]),
+            object_data={"name": sites[0].name, "slug": sites[0].slug},
+        )
+        self.object_change.objects.create(
+            user=user,
+            user_name=user.username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object_type=self.region_ct,
+            changed_object_id=regions[0].id,
+            object_repr=str(regions[0]),
+            object_data={"name": regions[0].name, "slug": regions[0].slug},
+        )
+        self.object_change.objects.create(
+            user=user,
+            user_name=user.username,
+            request_id=uuid.uuid4(),
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object_type=self.site_ct,
+            changed_object_id=sites[0].id,
+            object_repr=str(sites[0]),
+            object_data={"name": sites[0].name, "slug": sites[0].slug},
+            related_object_type=self.region_ct,
+            related_object_id=regions[0].id,
+        )
         o2m = self.relationship.objects.create(
             name="Site to Location o2m",
             slug="site-to-location-o2m",
@@ -405,14 +462,14 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         )
         self.relationship_association.objects.create(
             relationship=o2m,
-            source_id=self.site.objects.get(name="Test Site 0").id,
+            source_id=sites[0].id,
             source_type_id=self.site_ct.id,
             destination_id=self.location.objects.get(name="Test Location 0").id,
             destination_type_id=self.location_ct.id,
         )
         self.relationship_association.objects.create(
             relationship=o2m,
-            source_id=self.site.objects.get(name="Test Site 0").id,
+            source_id=sites[0].id,
             source_type_id=self.site_ct.id,
             destination_id=self.location.objects.get(name="Test Location 1").id,
             destination_type_id=self.location_ct.id,
@@ -426,9 +483,9 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         )
         self.relationship_association.objects.create(
             relationship=m2m,
-            source_id=self.region.objects.get(name="Test Region 0").id,
+            source_id=regions[0].id,
             source_type_id=self.region_ct.id,
-            destination_id=self.site.objects.get(name="Test Site 0").id,
+            destination_id=sites[0].id,
             destination_type_id=self.site_ct.id,
         )
         self.relationship_association.objects.create(
@@ -493,22 +550,20 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         cluster_type = self.cluster_type.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         self.clusters = (
-            self.cluster.objects.create(
-                name="Cluster 1", cluster_type=cluster_type, site=self.site.objects.get(name="Test Site 0")
-            ),
+            self.cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, site=sites[0]),
             self.cluster.objects.create(
                 name="Cluster 2", cluster_type=cluster_type, site=self.site.objects.get(name="Test Site 1")
             ),
             self.cluster.objects.create(
                 name="Cluster 3",
                 cluster_type=cluster_type,
-                site=self.site.objects.get(name="Test Site 0"),
+                site=sites[0],
                 location=self.location.objects.get(name="Test Location 0"),
             ),
             self.cluster.objects.create(
                 name="Cluster 4",
                 cluster_type=cluster_type,
-                site=self.site.objects.get(name="Test Site 0"),
+                site=sites[0],
                 location=self.location.objects.get(name="Test Location 0"),
             ),
         )
@@ -547,14 +602,17 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
 
             # For each region, a new location of LocationType "Region" is created
             for i in range(10):
-                self.assertEqual(
-                    len(
-                        self.location.objects.filter(
-                            name=f"Test Region {i}", location_type=self.location_type.objects.get(name="Region")
-                        )
-                    ),
-                    1,
+                region_locations = self.location.objects.filter(
+                    name=f"Test Region {i}",
+                    location_type=self.location_type.objects.get(name="Region"),
                 )
+                old_region = self.region.objects.get(name=f"Test Region {i}")
+                self.assertEqual(len(region_locations), 1)
+                # Check if the migrated_location field is correctly populated by the data migration.
+                self.assertEqual(old_region.migrated_location, region_locations[0])
+                # Check if the migrated_location has the same pk as the old region
+                self.assertEqual(old_region.migrated_location.pk, old_region.pk)
+
             # For each site, a new location of LocationType "Site" is created and its parent, if not None, is
             # mapped to a Region LocationType location with the same name as its assigned Region.
             for i in range(10):
@@ -563,6 +621,10 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                 )
                 old_site = self.site.objects.get(name=f"Test Site {i}")
                 self.assertEqual(len(site_locations), 1)
+                # Check if the migrated_location field is correctly populated by the data migration.
+                self.assertEqual(old_site.migrated_location, site_locations[0])
+                # Check if the migrated_location has the same pk as the old site
+                self.assertEqual(old_site.migrated_location.pk, old_site.pk)
                 if old_site.region:
                     self.assertEqual(site_locations.first().parent.name, old_site.region.name)
 
@@ -574,6 +636,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         with self.subTest("Testing Circuits app model migration"):
             cts = self.circuit_termination.objects.all().select_related("site", "location")
             for ct in cts:
+                self.assertEqual(ct.site.migrated_location, ct.location)
                 self.assertEqual(ct.site.name, ct.location.name)
 
         with self.subTest("Testing DCIM app model migration"):
@@ -582,7 +645,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             device_2 = self.device.objects.get(name="Device 2")
             self.assertEqual(device_2.location.name, "Test Location 1")
             device_3 = self.device.objects.get(name="Device 3")
-            self.assertEqual(device_3.location.name, "Test Site 5")
+            self.assertEqual(device_3.location.name, "Test Site 3")
             self.assertEqual(device_3.location.location_type.name, "Site")
             powerpanel_1 = self.power_panel.objects.get(name="site1-powerpanel1")
             self.assertEqual(powerpanel_1.location.name, "Test Site 1")
@@ -677,14 +740,16 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(image_location_3.name, "Test Location 0")
             jh_1 = self.job_hook.objects.get(name="JobHook1")
             self.assertEqual(
-                [self.location_ct.model, self.region_ct.model], list(jh_1.content_types.values_list("model", flat=True))
+                [self.location_ct.model, self.region_ct.model],
+                sorted(list(jh_1.content_types.values_list("model", flat=True))),
             )
             jh_2 = self.job_hook.objects.get(name="JobHook2")
             self.assertEqual(
-                [self.location_ct.model, self.site_ct.model], list(jh_2.content_types.values_list("model", flat=True))
+                [self.location_ct.model, self.site_ct.model],
+                sorted(list(jh_2.content_types.values_list("model", flat=True))),
             )
             jh_3 = self.job_hook.objects.get(name="JobHook3")
-            self.assertEqual([self.location_ct.model], list(jh_3.content_types.values_list("model", flat=True)))
+            self.assertEqual([self.location_ct.model], sorted(list(jh_3.content_types.values_list("model", flat=True))))
             nt_1 = self.note.objects.get(note="Location has been placed on maintenance.")
             note_location_1 = self.location.objects.get(id=nt_1.assigned_object_id)
             self.assertEqual(nt_1.assigned_object_type.model, self.location_ct.model)
@@ -700,6 +765,57 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(nt_3.assigned_object_type.model, self.location_ct.model)
             self.assertEqual(note_location_3.location_type.name, "Test Location Type 1")
             self.assertEqual(note_location_3.name, "Test Location 1")
+
+            oc_1 = self.object_change.objects.get(action=ObjectChangeActionChoices.ACTION_CREATE, user__isnull=False)
+            self.assertEqual(oc_1.changed_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_1.changed_object_id, self.location.objects.get(name="Test Site 0").id)
+            oc_2 = self.object_change.objects.get(action=ObjectChangeActionChoices.ACTION_UPDATE, user__isnull=False)
+            self.assertEqual(oc_2.changed_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_2.changed_object_id, self.location.objects.get(name="Test Region 0").id)
+            oc_3 = self.object_change.objects.get(action=ObjectChangeActionChoices.ACTION_DELETE, user__isnull=False)
+            self.assertEqual(oc_3.changed_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_3.changed_object_id, self.location.objects.get(name="Test Site 0").id)
+            self.assertEqual(oc_3.related_object_type.model, self.location_ct.model)
+            self.assertEqual(oc_3.related_object_id, self.location.objects.get(name="Test Region 0").id)
+
+            # Assert that the new ObjectChange instances also exist and has the right data
+            region_object_changes = self.object_change.objects.filter(change_context_detail="Migrated from Region")
+            # Assert that for every new Region LocationType location created, there is a new object change documenting the migration
+            self.assertEqual(
+                len(region_object_changes),
+                len(
+                    self.location.objects.filter(location_type=self.location_type.objects.get(name="Region")).exclude(
+                        name="Global Region"
+                    )
+                ),
+            )
+            for object_change in region_object_changes:
+                self.assertEqual(object_change.changed_object_type.model, self.location_ct.model)
+                self.assertEqual(
+                    object_change.object_data["name"],
+                    self.location.objects.get(id=object_change.changed_object_id).name,
+                )
+                self.assertEqual(
+                    object_change.object_data["location_type"],
+                    str(self.location.objects.get(id=object_change.changed_object_id).location_type.id),
+                )
+
+            site_object_changes = self.object_change.objects.filter(change_context_detail="Migrated from Site")
+            # Assert that for every new Site LocationType location created, there is a new object change documenting the migration
+            self.assertEqual(
+                len(site_object_changes),
+                len(self.location.objects.filter(location_type=self.location_type.objects.get(name="Site"))),
+            )
+            for object_change in site_object_changes:
+                self.assertEqual(object_change.changed_object_type.model, self.location_ct.model)
+                self.assertEqual(
+                    object_change.object_data["name"],
+                    self.location.objects.get(id=object_change.changed_object_id).name,
+                )
+                self.assertEqual(
+                    object_change.object_data["location_type"],
+                    str(self.location.objects.get(id=object_change.changed_object_id).location_type.id),
+                )
 
             o2m = self.relationship.objects.get(name="Site to Location o2m")
             self.assertEqual(o2m.source_type.model, self.location_ct.model)
@@ -741,20 +857,52 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(o2o_rs_2.source_id, self.location.objects.get(name="Test Region 3").id)
             self.assertEqual(o2o_rs_2.destination_id, self.location.objects.get(name="Test Location 3").id)
 
+            status_1 = self.status.objects.get(name="Active")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(status_1.content_types.values_list("model", flat=True))),
+            )
+            status_2 = self.status.objects.get(name="Planned")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(status_2.content_types.values_list("model", flat=True))),
+            )
+            status_3 = self.status.objects.get(name="Failed")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(status_3.content_types.values_list("model", flat=True))),
+            )
+
+            tag_1 = self.tag.objects.get(name="Tag 1")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(tag_1.content_types.values_list("model", flat=True))),
+            )
+            tag_2 = self.tag.objects.get(name="Tag 2")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(tag_2.content_types.values_list("model", flat=True))),
+            )
+            tag_3 = self.tag.objects.get(name="Tag 3")
+            self.assertEqual(
+                [self.location_ct.model, self.region_ct.model, self.site_ct.model],
+                sorted(list(tag_3.content_types.values_list("model", flat=True))),
+            )
+
             wb_1 = self.web_hook.objects.get(name="test-1")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
-                list(wb_1.content_types.values_list("model", flat=True)),
+                sorted(list(wb_1.content_types.values_list("model", flat=True))),
             )
             wb_2 = self.web_hook.objects.get(name="test-2")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
-                list(wb_2.content_types.values_list("model", flat=True)),
+                sorted(list(wb_2.content_types.values_list("model", flat=True))),
             )
             wb_3 = self.web_hook.objects.get(name="test-3")
             self.assertEqual(
                 [self.location_ct.model, self.region_ct.model, self.site_ct.model],
-                list(wb_3.content_types.values_list("model", flat=True)),
+                sorted(list(wb_3.content_types.values_list("model", flat=True))),
             )
 
         with self.subTest("Testing IPAM app model migration"):
