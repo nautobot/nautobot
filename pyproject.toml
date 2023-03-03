@@ -92,7 +92,7 @@ drf-spectacular = {version = "~0.24.2", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
-GitPython = "~3.1.30"
+GitPython = "~3.1.31"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -120,7 +120,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.4.0"
+netutils = "^1.4.1"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter
