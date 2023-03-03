@@ -588,9 +588,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         "mysql does not support rollbacks",
     )
     def test_region_and_site_data_migration(self):
-
         with self.subTest("Testing Region and Site correctly migrate to Locations"):
-
             # Test Location Types are created and the hierarchy is correct
             self.assertEqual(len(self.location_type.objects.filter(name="Region")), 1)
             self.assertEqual(len(self.location_type.objects.filter(name="Site")), 1)
@@ -906,21 +904,15 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             # Check if the tags from Sites are properly transferred to Locations
             self.assertCountEqual(
                 self.location.objects.get(name="Test Site 2").tags.values_list("id", flat=True),
-                self.tag.objects.filter(name__in=["Tag 1", "Tag 2", "Tag 3"]).values_list(
-                    "id", flat=True
-                ),
+                self.tag.objects.filter(name__in=["Tag 1", "Tag 2", "Tag 3"]).values_list("id", flat=True),
             )
             self.assertCountEqual(
                 self.location.objects.get(name="Test Site 4").tags.values_list("id", flat=True),
-                self.tag.objects.filter(name__in=["Tag 2", "Tag 3"]).values_list(
-                    "id", flat=True
-                ),
+                self.tag.objects.filter(name__in=["Tag 2", "Tag 3"]).values_list("id", flat=True),
             )
             self.assertCountEqual(
                 self.location.objects.get(name="Test Site 6").tags.values_list("id", flat=True),
-                self.tag.objects.filter(name__in=["Tag 1", "Tag 3"]).values_list(
-                    "id", flat=True
-                ),
+                self.tag.objects.filter(name__in=["Tag 1", "Tag 3"]).values_list("id", flat=True),
             )
             wb_1 = self.web_hook.objects.get(name="test-1")
             self.assertEqual(
