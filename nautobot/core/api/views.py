@@ -846,7 +846,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return ExecutionResult(errors=[e], invalid=True)
 
 
-class GetMenu(NautobotAPIVersionMixin, APIView):
+class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
     """API View that returns the registered nav-menu content."""
 
     permission_classes = [AllowAny]
