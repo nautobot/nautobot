@@ -198,7 +198,7 @@ class NestedNoteSerializer(WritableNestedSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="note__assigned_object",
+            component_name="NoteAssignedObject",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(
                 get_all_concrete_models(models.NotesMixin),

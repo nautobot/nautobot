@@ -145,7 +145,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable_termination__cable_peer",
+            component_name="CableTermination",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
             allow_null=True,
@@ -181,7 +181,7 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="path_endpoint__connected_endpoint",
+            component_name="PathEndpoint",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
             allow_null=True,
@@ -1223,7 +1223,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable__termination_a",
+            component_name="CableTermination",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
         )
@@ -1233,7 +1233,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable__termination_b",
+            component_name="CableTermination",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
         )
@@ -1285,7 +1285,7 @@ class CablePathSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable_path__origin",
+            component_name="PathEndpoint",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
         )
@@ -1300,7 +1300,7 @@ class CablePathSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable_path__destination",
+            component_name="PathEndpoint",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
             allow_null=True,
@@ -1318,9 +1318,10 @@ class CablePathSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(
         PolymorphicProxySerializer(
-            component_name="cable_path__path",
+            component_name="CableTermination",
             resource_type_field_name="object_type",
             serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            many=True,
         )
     )
     def get_path(self, obj):
