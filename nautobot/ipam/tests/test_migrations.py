@@ -105,6 +105,33 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.aggregate5.tags.add("AggregateTagB")
         self.aggregate6.tags.add("AggregateTagB")
 
+        # notes
+        self.note.objects.create(
+            note="Prefix1 test note",
+            assigned_object_type=self.prefix_ct,
+            assigned_object_id=self.prefix1.id,
+        )
+        self.note.objects.create(
+            note="Prefix2 test note",
+            assigned_object_type=self.prefix_ct,
+            assigned_object_id=self.prefix2.id,
+        )
+        self.note.objects.create(
+            note="Aggregate1 test note",
+            assigned_object_type=self.aggregate_ct,
+            assigned_object_id=self.aggregate1.id,
+        )
+        self.note.objects.create(
+            note="Aggregate3 test note",
+            assigned_object_type=self.aggregate_ct,
+            assigned_object_id=self.aggregate3.id,
+        )
+        self.note.objects.create(
+            note="Aggregate5 test note",
+            assigned_object_type=self.aggregate_ct,
+            assigned_object_id=self.aggregate5.id,
+        )
+
     @skipIf(
         connection.vendor != "postgresql",
         "mysql does not support rollbacks",
@@ -181,3 +208,59 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         for i in range(7, 21):
             prefix = self.prefix.objects.get(network=f"8.{i}.0.0")
             self.assertCountEqual(prefix.tags.values_list("id", flat=True), [])
+
+    def test_aggregate_to_prefix_migration_notes(self):
+        # no notes are assigned to aggregates
+        self.assertQuerysetEqual(
+            self.note.objects.filter(assigned_object_type=self.aggregate_ct), self.note.objects.none()
+        )
+        # no extra notes were created
+        self.assertEqual(self.note.objects.count(), 5)
+
+        # aggregate1 note added on top of existing note on prefix1
+        self.assertQuerysetEqual(
+            self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=self.prefix1.id),
+            self.note.objects.filter(note__in=["Prefix1 test note", "Aggregate1 test note"]),
+        )
+
+        # prefix2 note was unchanged
+        self.assertQuerysetEqual(
+            self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=self.prefix2.id),
+            self.note.objects.filter(note="Prefix2 test note"),
+        )
+
+        # aggregate3 note was migrated to prefix3
+        self.assertQuerysetEqual(
+            self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=self.prefix3.id),
+            self.note.objects.filter(note="Aggregate3 test note"),
+        )
+
+        # no notes for prefix4
+        self.assertQuerysetEqual(
+            self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=self.prefix4.id),
+            self.note.objects.none(),
+        )
+
+        # aggregate5 note was migrated to new prefix object
+        aggregate5_migrated_prefix = self.prefix.objects.get(network="8.5.0.0")
+        self.assertQuerysetEqual(
+            self.note.objects.filter(
+                assigned_object_type=self.prefix_ct,
+                assigned_object_id=aggregate5_migrated_prefix.id,
+            ),
+            self.note.objects.filter(note="Aggregate5 test note"),
+        )
+
+        # no other notes are related to remaining prefixes
+        for i in range(5, 13):
+            prefix = self.prefix.objects.get(network=f"10.{i}.0.0")
+            self.assertQuerysetEqual(
+                self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=prefix.id),
+                self.note.objects.none(),
+            )
+        for i in range(6, 21):
+            prefix = self.prefix.objects.get(network=f"8.{i}.0.0")
+            self.assertQuerysetEqual(
+                self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=prefix.id),
+                self.note.objects.none(),
+            )
