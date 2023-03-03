@@ -31,6 +31,7 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.dynamic_group = apps.get_model("extras", "DynamicGroup")
         self.note = apps.get_model("extras", "note")
         self.object_change = apps.get_model("extras", "objectchange")
+        self.object_permission = apps.get_model("users", "objectpermission")
         self.prefix = apps.get_model("ipam", "prefix")
         self.prefix.tags = taggable_manager
         self.relationship = apps.get_model("extras", "relationship")
@@ -131,6 +132,16 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
             assigned_object_type=self.aggregate_ct,
             assigned_object_id=self.aggregate5.id,
         )
+
+        # object permissions
+        object_permission1 = self.object_permission.objects.create(
+            name="Aggregate permission 1", actions=["view", "add", "change", "delete"]
+        )
+        object_permission2 = self.object_permission.objects.create(
+            name="Aggregate permission 2", actions=["add", "delete"], enabled=False
+        )
+        object_permission1.object_types.add(self.aggregate_ct)
+        object_permission2.object_types.add(self.aggregate_ct)
 
     @skipIf(
         connection.vendor != "postgresql",
@@ -264,3 +275,20 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
                 self.note.objects.filter(assigned_object_type=self.prefix_ct, assigned_object_id=prefix.id),
                 self.note.objects.none(),
             )
+
+    def test_aggregate_to_prefix_migration_permissions(self):
+        self.assertEqual(self.object_permission.objects.count(), 2)
+
+        # assert prefix content type was added to object permission 1
+        object_permission1 = self.object_permission.objects.filter(
+            name="Aggregate permission 1", actions=["view", "add", "change", "delete"]
+        )
+        self.assertTrue(object_permission1.exists())
+        self.assertTrue(object_permission1.first().object_types.filter(id=self.prefix_ct.id).exists())
+
+        # assert prefix content type was added to object permission 2
+        object_permission2 = self.object_permission.objects.filter(
+            name="Aggregate permission 2", actions=["add", "delete"], enabled=False
+        )
+        self.assertTrue(object_permission2.exists())
+        self.assertTrue(object_permission2.first().object_types.filter(id=self.prefix_ct.id).exists())
