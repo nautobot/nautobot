@@ -230,7 +230,11 @@ def populate_model_features_registry():
         - 'feature_name': The name of the feature to be updated in the registry.
         - 'field_names': A list of names of fields that must be present in order for the model to be considered
                         a valid model_feature.
-        - 'field_attributes': Optional dictionary of attributes to filter the fields by.
+        - 'field_attributes': Optional dictionary of attributes to filter the fields by. Only model which fields match
+                            all the attributes specified in the dictionary will be considered. This parameter can be
+                            useful to narrow down the search for fields that match certain criteria. For example, if
+                            `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
+                            a related model of RelationshipAssociation will be considered.
     - Looks up all the models in the installed apps.
     - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
