@@ -811,7 +811,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         with self.subTest():
             self.assertEqual(Rack.objects.exclude(outer_unit="").count(), 3)
         with self.subTest():
-            params = {"outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER}
+            params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
@@ -932,13 +932,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
-            params = {"subdevice_role": SubdeviceRoleChoices.ROLE_PARENT}
+            params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_PARENT]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
             )
         with self.subTest():
-            params = {"subdevice_role": SubdeviceRoleChoices.ROLE_CHILD}
+            params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_CHILD]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD),
@@ -1129,11 +1129,10 @@ class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_feed_leg(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A),
         )
 
 
@@ -1143,11 +1142,10 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
+        params = {"type": [InterfaceTypeChoices.TYPE_1GE_FIXED]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=InterfaceTypeChoices.TYPE_1GE_FIXED),
         )
 
     def test_mgmt_only(self):
@@ -1176,11 +1174,10 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
 
 
@@ -1207,11 +1204,10 @@ class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
 
     def test_positions(self):
@@ -1370,8 +1366,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_face(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"face": DeviceFaceChoices.FACE_FRONT}
+        params = {"face": [DeviceFaceChoices.FACE_FRONT]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             Device.objects.filter(face=DeviceFaceChoices.FACE_FRONT),
@@ -1699,7 +1694,7 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
     def test_feed_leg(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_connected(self):
@@ -1982,8 +1977,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_mode(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"mode": InterfaceModeChoices.MODE_ACCESS}
+        params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_device_with_common_vc(self):
@@ -2153,8 +2147,7 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
@@ -2219,8 +2212,7 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -2645,8 +2637,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_length_unit(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"length_unit": CableLengthUnitChoices.UNIT_FOOT}
+        params = {"length_unit": [CableLengthUnitChoices.UNIT_FOOT]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_device(self):
@@ -2820,20 +2811,17 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PowerFeedTypeChoices.TYPE_PRIMARY}
+        params = {"type": [PowerFeedTypeChoices.TYPE_PRIMARY]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_supply(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"supply": PowerFeedSupplyChoices.SUPPLY_AC}
+        params = {"supply": [PowerFeedSupplyChoices.SUPPLY_AC]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_phase(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"phase": PowerFeedPhaseChoices.PHASE_3PHASE}
+        params = {"phase": [PowerFeedPhaseChoices.PHASE_3PHASE]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_connected(self):
@@ -2874,13 +2862,13 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
-            params = {"failover_strategy": "active-active"}
+            params = {"failover_strategy": ["active-active"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-active"),
             )
         with self.subTest():
-            params = {"failover_strategy": "active-passive"}
+            params = {"failover_strategy": ["active-passive"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive"),

@@ -979,7 +979,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_protocol(self):
-        params = {"protocol": ServiceProtocolChoices.PROTOCOL_TCP}
+        params = {"protocol": [ServiceProtocolChoices.PROTOCOL_TCP]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_port(self):

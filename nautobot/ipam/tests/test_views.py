@@ -299,7 +299,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             location=location_1,
             role=roles[0],
             status=status_active,
-            _custom_field_data={"field": "Value"},
+            _custom_field_data={"custom_field": "Value"},
         )
         VLAN.objects.create(
             vlan_group=vlangroups[0],
@@ -308,7 +308,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             location=location_1,
             role=roles[0],
             status=status_active,
-            _custom_field_data={"field": "Value"},
+            _custom_field_data={"custom_field": "Value"},
         )
         VLAN.objects.create(
             vlan_group=vlangroups[0],
@@ -317,10 +317,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             location=location_1,
             role=roles[0],
             status=status_active,
-            _custom_field_data={"field": "Value"},
+            _custom_field_data={"custom_field": "Value"},
         )
 
-        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field", default="")
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, name="custom_field", default=""
+        )
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {

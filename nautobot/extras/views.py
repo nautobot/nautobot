@@ -257,7 +257,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Config context table
         config_context_table = tables.ConfigContextTable(
-            data=instance.configcontext_set.all(),
+            data=instance.config_contexts.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -1086,7 +1086,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         if "kwargs_from_job_result" in initial:
             job_result_pk = initial.pop("kwargs_from_job_result")
             try:
-                job_result = job_model.results.get(pk=job_result_pk)
+                job_result = job_model.job_results.get(pk=job_result_pk)
                 # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
                 # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                 explicit_initial = initial
@@ -1520,7 +1520,7 @@ class JobResultView(generic.ObjectView):
         headers = JobLogEntry.csv_headers.copy()
         csv_data.append(",".join(headers))
 
-        for log_entry in instance.logs.all():
+        for log_entry in instance.job_log_entries.all():
             data = log_entry.to_csv()
             csv_data.append(csv_format(data))
 
@@ -1571,7 +1571,7 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
+        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 
@@ -1915,7 +1915,7 @@ class SecretView(generic.ObjectView):
 
         provider = registry["secrets_providers"].get(instance.provider)
 
-        groups = instance.groups.distinct()
+        groups = instance.secrets_groups.distinct()
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {
@@ -1975,7 +1975,7 @@ class SecretsGroupView(generic.ObjectView):
     queryset = SecretsGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(group=instance)}
+        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(secrets_group=instance)}
 
 
 class SecretsGroupEditView(generic.ObjectEditView):

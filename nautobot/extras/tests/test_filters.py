@@ -346,6 +346,30 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
 
 
+class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = CustomFieldChoice.objects.all()
+    filterset = CustomFieldChoiceFilterSet
+
+    generic_filter_tests = (
+        ["value"],
+        ["custom_field", "custom_field__name"],
+        ["weight"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        obj_type = ContentType.objects.get_for_model(Device)
+        cfs = [
+            CustomField.objects.create(name=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
+            for num in range(3)
+        ]
+        for cf in cfs:
+            cf.content_types.set([obj_type])
+
+        for i, val in enumerate(["Value 1", "Value 2", "Value 3"]):
+            CustomFieldChoice.objects.create(custom_field=cfs[i], value=val, weight=100 * i)
+
+
 class CustomLinkTestCase(FilterTestCases.FilterTestCase):
     queryset = CustomLink.objects.all()
     filterset = CustomLinkFilterSet
@@ -415,17 +439,16 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
             field.content_types.set([content_type])
 
         for num in range(3):
-            CustomFieldChoice.objects.create(field=fields[num], value=f"Custom Field Choice {num}")
+            CustomFieldChoice.objects.create(custom_field=fields[num], value=f"Custom Field Choice {num}")
 
     def test_field(self):
         fields = list(self.fields[:2])
         filter_params = [
-            {"field_id": [fields[0].pk, fields[1].pk]},
-            {"field": [fields[0].name, fields[1].pk]},
+            {"custom_field": [fields[0].name, fields[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(field__in=fields).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(custom_field__in=fields).distinct()
             )
 
 
@@ -905,7 +928,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_log_level(self):
-        params = {"log_level": "success"}
+        params = {"log_level": ["success"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_grouping(self):
@@ -1057,7 +1080,7 @@ class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
         ).validated_save()
 
     def test_type(self):
-        params = {"type": "one-to-many"}
+        params = {"type": ["one-to-many"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_source_type(self):
@@ -1452,6 +1475,11 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = SecretsGroupAssociation.objects.all()
     filterset = SecretsGroupAssociationFilterSet
 
+    generic_filter_tests = (
+        ["secrets_group", "secrets_group__id"],
+        ["secrets_group", "secrets_group__slug"],
+    )
+
     @classmethod
     def setUpTestData(cls):
         cls.secrets = (
@@ -1482,33 +1510,23 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         )
 
         SecretsGroupAssociation.objects.create(
-            group=cls.groups[0],
+            secrets_group=cls.groups[0],
             secret=cls.secrets[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
         )
         SecretsGroupAssociation.objects.create(
-            group=cls.groups[1],
+            secrets_group=cls.groups[1],
             secret=cls.secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
         SecretsGroupAssociation.objects.create(
-            group=cls.groups[2],
+            secrets_group=cls.groups[2],
             secret=cls.secrets[2],
             access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
-
-    def test_group(self):
-        filter_params = [
-            {"group_id": [self.groups[0].pk, self.groups[1].pk]},
-            {"group": [self.groups[0].pk, self.groups[1].slug]},
-        ]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=self.groups[:2]).distinct()
-            )
 
     def test_secret(self):
         filter_params = [

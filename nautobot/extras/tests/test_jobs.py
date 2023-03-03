@@ -379,7 +379,7 @@ class JobTest(TransactionTestCase):
         job_result_2 = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_SUCCESS)
         _job_class, job_model = get_job_class_and_model(module, name)
-        self.assertGreaterEqual(job_model.results.count(), 2)
+        self.assertGreaterEqual(job_model.job_results.count(), 2)
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
