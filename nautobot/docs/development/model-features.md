@@ -8,11 +8,11 @@ The `populate_model_features_registry()` function updates the registry model fea
 
 - `feature_name`: The name of the feature to be updated in the registry.
 - `field_names`: A list of names of fields that must be present in order for the model to be considered a valid `model_feature`.
-- `field_attributes`: An optional dictionary of attributes to filter the fields by. Only model which fields match all the attributes specified in the dictionary will be considered. This parameter can be useful to narrow down the search for fields that match certain criteria. For example, if `field_attributes` is set to `{"related_model": RelationshipAssociation}`, only fields attr with `related_model` of `RelationshipAssociation` will be considered.
+- `field_attributes`: An optional dictionary of attributes used to filter the fields. Only models with fields matching all the attributes specified in the dictionary will be considered. This parameter can be useful to narrow down the search for fields that match certain criteria. For example, if `field_attributes` is set to `{"related_model": RelationshipAssociation}`, only fields with a `related_model` of `RelationshipAssociation` will be considered.
 
 To add a new feature to the `lookup_confs` list, follow these steps:
 
-1. Determine the name of the feature to be added.
+1. Determine the name of the feature to be added, This name should be in `snake_case` as per convention
 2. Determine the names of the fields that must be present in order for the model to be considered a valid `model_feature`.
 3. (Optional) Determine any field attributes that can be used to filter the fields if `field_names` would not be enough. 
 4. Add a new dictionary with the following keys to `lookup_confs` which is in  `nautobot.extras.utils.populate_model_features_registry()`:
@@ -34,7 +34,7 @@ def populate_model_features_registry():
        ...
     ]
 ```
-With this only Models which has a field name of `bar` and its field `bar` has the attribute choices=FooBarChoices would be a valid model for the feature `"foo"`
+With this only Models which have a field name of `bar`, which in turn has the attribute `choices=FooBarChoices`, would be a valid model for the feature `"foo"`
 
 !!! note
-   Only add a feature to lookup_confs if it does not require the use of `@extras_features`.
+   Only add a feature to `lookup_confs` if it does not require the use of `@extras_features`.
