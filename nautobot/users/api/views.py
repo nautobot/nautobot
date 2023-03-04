@@ -16,7 +16,6 @@ from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
 from . import serializers
-from .serializers import UserLoginSerializer
 
 
 class UsersRootView(APIRootView):
@@ -72,7 +71,7 @@ class TokenViewSet(ModelViewSet):
 
     @action(methods=["POST"], detail=False, permission_classes=[AllowAny])
     def authenticate(self, request):
-        serializer = UserLoginSerializer(data=request.data, context=self.get_serializer_context())
+        serializer = serializers.UserLoginSerializer(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         login(request, user=user)

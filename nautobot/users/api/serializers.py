@@ -117,8 +117,8 @@ class ObjectPermissionSerializer(ValidatedModelSerializer):
 
 
 class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=250)
-    password = serializers.CharField(max_length=250)
+    username = serializers.CharField()
+    password = serializers.CharField()
 
     def validate(self, attrs):
         user = authenticate(
