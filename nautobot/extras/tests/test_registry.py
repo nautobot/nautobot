@@ -1,11 +1,11 @@
 from django.apps import apps
 from django.test import TestCase
 
+from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.extras.registry import Registry, registry
 from nautobot.extras.secrets import register_secrets_provider
 from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider
-from nautobot.extras.utils import find_models_with_matching_fields
 
 
 class RegistryTest(TestCase):

@@ -104,6 +104,7 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
     ...
 }
 ```
+For more information visit [model-features](model-features.md).
 
 ### `nav_menu`
 

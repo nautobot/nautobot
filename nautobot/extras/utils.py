@@ -9,7 +9,6 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
@@ -18,7 +17,7 @@ from taggit.managers import _TaggableManager
 from nautobot.core.models.fields import slugify_dots_to_dashes
 
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.core.models.utils import is_taggable  # noqa: F401
+from nautobot.core.models.utils import find_models_with_matching_fields, is_taggable  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -262,33 +261,6 @@ def populate_model_features_registry():
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
-
-
-def find_models_with_matching_fields(app_models, field_names, field_attributes=None):
-    """
-    Find all models that have fields with the specified names, and return them grouped by app.
-
-    Args:
-        app_models: A list of model classes to search through.
-        field_names: A list of names of fields that must be present in order for the model to be considered
-        field_attributes: Optional dictionary of attributes to filter the fields by.
-
-    Return:
-        A dictionary where the keys are app labels and the values are sets of model names.
-    """
-    registry_items = {}
-    field_attributes = field_attributes or {}
-    for model_class in app_models:
-        app_label, model_name = model_class._meta.label_lower.split(".")
-        for field_name in field_names:
-            try:
-                field = model_class._meta.get_field(field_name)
-                if all((getattr(field, item, None) == value for item, value in field_attributes.items())):
-                    registry_items.setdefault(app_label, set()).add(model_name)
-            except FieldDoesNotExist:
-                pass
-    registry_items = {key: sorted(value) for key, value in registry_items.items()}
-    return registry_items
 
 
 def generate_signature(request_body, secret):
