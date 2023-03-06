@@ -12,6 +12,7 @@ import django_filters
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
@@ -105,7 +106,15 @@ def get_route_for_model(model, action, api=False):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    # The `contenttypes` and `auth` app doesn't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in our `extras` and Group model in `users` app.
+    if model is ContentType:
+        app_label = "extras"
+    elif model is Group:
+        app_label = "users"
+    else:
+        app_label = model._meta.app_label
+    prefix = f"{app_label}{suffix}:{model._meta.model_name}"
     sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
@@ -496,12 +505,10 @@ class NautobotFakeRequest:
         data = copy.deepcopy(self.__dict__)
         # We don't want to try to pickle/unpickle or serialize/deserialize the actual User object,
         # but make sure we do store its PK so that we can look it up on-demand after being deserialized.
+        user = data.pop("user")
+        data.pop("_cached_user", None)
         if "_user_pk" not in data:
-            # We have a user but haven't stored its PK yet, so look it up and store it
-            data["_user_pk"] = data.pop("user").pk
-        else:
-            # We already have stored the PK, and we need to AVOID actually resolving the lazy user reference.
-            data.pop("user")
+            data["_user_pk"] = user.pk
         return data
 
     @classmethod

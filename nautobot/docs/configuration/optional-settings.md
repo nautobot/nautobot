@@ -289,6 +289,19 @@ The number of days to retain logged changes (object creations, updates, and dele
 
 ---
 
+## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED`
+
+If `True`, it will be possible to apply Config Context objects to Devices and Virtual Machines via Dynamic Group membership. When set to `False` this behavior will not be available.
+
+!!! warning
+    With a large number of dynamic groups, enabling this could invoke a performance penalty when processing Config Contexts.
+
+---
+
 ## CORS_ALLOW_ALL_ORIGINS
 
 Default: `False`
