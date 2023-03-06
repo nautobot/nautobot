@@ -284,24 +284,10 @@ class PolymorphicProxySerializer(_PolymorphicProxySerializer):
         def get_some_field(self, obj):
             ...
 
-    This has two key enhancements compared to the base class:
+    This enhances the base class with:
 
-    1. You can pass a callable (such as a lambda function) as the `serializers` argument, allowing for deferred
-       loading/initialization of the serializer list.
-    2. Supports `allow_null` as an init parameter, similar to real serializers.
+    1. Supports `allow_null` as an init parameter, similar to real serializers.
     """
-
-    @property
-    def serializers(self):
-        """Return the serializers provided for this instance, evaluating them first if needed."""
-        if callable(self._serializers):
-            self._serializers = self._serializers()
-        return self._serializers
-
-    @serializers.setter
-    def serializers(self, value):
-        """Set the serializers for this instance."""
-        self._serializers = value
 
     def __init__(self, *args, allow_null=False, **kwargs):
         """Intercept the `allow_null` parameter that's not understood by the base class."""
