@@ -588,6 +588,7 @@ class IPAddressEditView(generic.ObjectEditView):
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
 
+        # TODO: update to work with interface M2M
         if "interface" in request.GET:
             try:
                 obj.assigned_object = Interface.objects.get(pk=request.GET["interface"])

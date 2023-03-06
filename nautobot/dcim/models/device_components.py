@@ -610,11 +610,12 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="interface",
+        through="ipam.IPAddressToInterface",
+        related_name="interfaces",
+        blank=True,
+        verbose_name="IP Addresses",
     )
 
     csv_headers = [

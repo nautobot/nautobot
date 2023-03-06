@@ -436,13 +436,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
-    assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Interface")
-    assigned_object_parent = tables.Column(
-        accessor="assigned_object__parent",
-        linkify=True,
-        orderable=False,
-        verbose_name="Interface Parent",
-    )
+    # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -453,8 +447,6 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "assigned_object",
-            "assigned_object_parent",
             "dns_name",
             "description",
         )
@@ -466,8 +458,8 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
 class IPAddressDetailTable(IPAddressTable):
     nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
-    assigned = BooleanColumn(accessor="assigned_object_id", verbose_name="Assigned")
     tags = TagColumn(url_name="ipam:ipaddress_list")
+    # TODO: add interface M2M
 
     class Meta(IPAddressTable.Meta):
         fields = (
@@ -498,7 +490,7 @@ class IPAddressDetailTable(IPAddressTable):
 
 class IPAddressAssignTable(StatusTableMixin, BaseTable):
     address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
-    assigned_object = tables.Column(orderable=False)
+    # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -509,7 +501,6 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "assigned_object",
             "description",
         )
         orderable = False

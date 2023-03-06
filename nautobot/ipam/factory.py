@@ -530,11 +530,11 @@ class PrefixFactory(PrimaryModelFactory):
 class IPAddressFactory(PrimaryModelFactory):
     """Create random IPAddress objects with randomized data.
 
-    The fields `assigned_object`, `description`, `dns_name`, `nat_inside`, `role`, `tenant`, and `vrf`
-    have a 50% chance to be populated with randomized data, otherwise they are null or blank depending
-    on the field. The address has a 50% chance to be ipv4 or ipv6. Uses a self-referential SubFactory
-    to create random IPAddress objects to use for the `nat_inside` reference. This can be disabled by
-    passing `has_nat_inside=False` to the create/build methods.
+    The fields `description`, `dns_name`, `nat_inside`, `role`, `tenant`, and `vrf` have a 50% chance
+    to be populated with randomized data, otherwise they are null or blank depending on the field.
+    The address has a 50% chance to be ipv4 or ipv6. Uses a self-referential SubFactory to create
+    random IPAddress objects to use for the `nat_inside` reference. This can be disabled by passing
+    `has_nat_inside=False` to the create/build methods.
 
     Examples:
         Create 20 IP addresses with 50% chance to generate IP addresses for `nat_inside`:
@@ -550,7 +550,6 @@ class IPAddressFactory(PrimaryModelFactory):
         model = IPAddress
 
     class Params:
-        has_assigned_object = NautobotBoolIterator()
         has_description = NautobotBoolIterator()
         has_dns_name = NautobotBoolIterator()
         has_nat_inside = NautobotBoolIterator()
@@ -564,8 +563,6 @@ class IPAddressFactory(PrimaryModelFactory):
         UniqueFaker("ipv6"),
         UniqueFaker("ipv4_private"),
     )
-    # TODO: add objects for assigned_object when factories for dcim.interface and virtualization.vminterface are ready
-    assigned_object = factory.Maybe("has_assigned_object", None, None)
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     dns_name = factory.Maybe("has_dns_name", factory.Faker("hostname"), "")
     nat_inside = factory.SubFactory(

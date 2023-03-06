@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -426,11 +425,12 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="vminterface",
+        through="ipam.IPAddressToInterface",
+        related_name="vm_interfaces",
+        blank=True,
+        verbose_name="IP Addresses",
     )
     tags = TaggableManager(through=TaggedItem, related_name="vminterface")
 

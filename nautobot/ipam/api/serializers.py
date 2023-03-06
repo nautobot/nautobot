@@ -1,16 +1,12 @@
 from collections import OrderedDict
 
-from django.contrib.contenttypes.models import ContentType
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     ChoiceField,
-    ContentTypeField,
     SerializedPKRelatedField,
 )
-from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
@@ -320,12 +316,6 @@ class IPAddressSerializer(
     address = IPFieldSerializer()
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    assigned_object_type = ContentTypeField(
-        queryset=ContentType.objects.filter(constants.IPADDRESS_ASSIGNMENT_MODELS),
-        required=False,
-        allow_null=True,
-    )
-    assigned_object = serializers.SerializerMethodField(read_only=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
     nat_outside = NestedIPAddressSerializer(read_only=True, many=True, source="nat_outside_list")
 
@@ -339,23 +329,12 @@ class IPAddressSerializer(
             "tenant",
             "status",
             "role",
-            "assigned_object_type",
-            "assigned_object_id",
-            "assigned_object",
             "nat_inside",
             "nat_outside",
             "dns_name",
             "description",
         ]
         read_only_fields = ["family"]
-
-    @extend_schema_field(serializers.DictField(allow_null=True))
-    def get_assigned_object(self, obj):
-        if obj.assigned_object is None:
-            return None
-        serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
-        context = {"request": self.context["request"]}
-        return serializer(obj.assigned_object, context=context).data
 
 
 class AvailableIPSerializer(serializers.Serializer):
