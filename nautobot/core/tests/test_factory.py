@@ -17,6 +17,7 @@ class FactoryTestCase(testing.TestCase):
         attribute2 = factory.NautobotBoolIterator()
 
     def test_nautobot_bool_iterator(self):
+        """Test nautobot.core.factory.NautobotBoolIterator `cycle`, `chance_of_getting_true` and `length` arguments"""
         probability = constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY
         length = constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_LENGTH
         batch = FactoryTestCase.TestDictFactory.build_batch(10)
