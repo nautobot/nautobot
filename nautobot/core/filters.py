@@ -585,10 +585,6 @@ class BaseFilterSet(django_filters.FilterSet):
         ):
             lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
-        # These filter types support only negation
-        elif existing_filter.extra.get("choices"):
-            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
-
         elif isinstance(
             existing_filter,
             (
@@ -707,6 +703,16 @@ class BaseFilterSet(django_filters.FilterSet):
 
         filters.update(new_filters)
         return filters
+
+    @classmethod
+    def filter_for_lookup(cls, field, lookup_type):
+        """Override filter_for_lookup method to set ChoiceField Filter to MultipleChoiceFilter.
+
+        Note: Any CharField or IntegerField with choices set is a ChoiceField.
+        """
+        if lookup_type == "exact" and getattr(field, "choices", None):
+            return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+        return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)

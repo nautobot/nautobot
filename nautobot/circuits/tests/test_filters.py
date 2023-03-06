@@ -173,7 +173,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     def test_term_side(self):
         for choice in CircuitTerminationSideChoices.values():
             with self.subTest(f"term_side: {choice}"):
-                params = {"term_side": choice}
+                params = {"term_side": [choice]}
                 filterset_result = self.filterset(params, self.queryset).qs
                 qs_result = self.queryset.filter(term_side=choice)
                 self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)

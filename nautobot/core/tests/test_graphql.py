@@ -1309,8 +1309,8 @@ query {
             f'location: ["{self.location1.slug}", "{self.location2.slug}"]': _count(
                 {"location": [self.location1.slug, self.location2.slug]}
             ),
-            'face: "front"': _count({"face": "front"}),
-            'face: "rear"': _count({"face": "rear"}),
+            'face: "front"': _count({"face": ["front"]}),
+            'face: "rear"': _count({"face": ["rear"]}),
             f'status: "{self.device_statuses[0].slug}"': _count({"status": [self.device_statuses[0].slug]}),
             f'status: ["{self.device_statuses[1].slug}"]': _count({"status": [self.device_statuses[1].slug]}),
             f'status: ["{self.device_statuses[0].slug}", "{self.device_statuses[1].slug}"]': _count(
