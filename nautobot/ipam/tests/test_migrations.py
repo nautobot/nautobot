@@ -166,6 +166,44 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self._create_objectchange(self.prefix5, "Pre-migration object change for prefix5")
         self._create_objectchange(self.aggregate5, "Pre-migration object change for aggregate5")
 
+        # custom fields
+        prefix_cf1 = self.custom_field.objects.create(name="prefixcf1")
+        prefix_cf1.content_types.add(self.prefix_ct)
+        aggregate_cf1 = self.custom_field.objects.create(name="aggregatecf1")
+        aggregate_cf1.content_types.add(self.aggregate_ct)
+        prefixaggregate_cf1 = self.custom_field.objects.create(name="prefixaggregatecf1")
+        prefixaggregate_cf1.content_types.add(self.aggregate_ct, self.prefix_ct)
+
+        self.prefix1._custom_field_data["prefixcf1"] = "testdata prefixcf1 prefix1"
+        self.prefix1._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 prefix1"
+        self.aggregate1._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate1"
+
+        self.prefix2._custom_field_data["prefixcf1"] = "testdata prefixcf1 prefix2"
+        self.prefix2._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 prefix2"
+        self.aggregate2._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate2"
+        self.aggregate2._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate2"
+
+        self.aggregate3._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate3"
+
+        self.prefix5._custom_field_data["prefixcf1"] = "testdata prefixcf1 prefix5"
+        self.prefix5._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 prefix5"
+
+        self.aggregate5._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate5"
+        self.aggregate5._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate5"
+
+        self.aggregate6._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate6"
+
+        self.prefix1.save()
+        self.prefix2.save()
+        self.prefix3.save()
+        self.prefix4.save()
+        self.prefix5.save()
+        self.aggregate1.save()
+        self.aggregate2.save()
+        self.aggregate3.save()
+        self.aggregate5.save()
+        self.aggregate6.save()
+
     @skipIf(
         connection.vendor != "postgresql",
         "mysql does not support rollbacks",
@@ -345,3 +383,49 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
                 self.object_change.objects.filter(changed_object_id=prefix.id).count(),
                 1,
             )
+
+    def test_aggregate_to_prefix_migration_custom_fields(self):
+        self.assertEqual(self.custom_field.objects.exclude(name="example_plugin_auto_custom_field").count(), 3)
+        self.assertEqual(self.custom_field.objects.filter(content_types=self.prefix_ct).count(), 3)
+        self.assertEqual(self.custom_field.objects.filter(content_types=self.aggregate_ct).count(), 2)
+
+        expected = {
+            "prefix1": {
+                "prefixcf1": "testdata prefixcf1 prefix1",
+                "prefixaggregatecf1": "testdata prefixaggregatecf1 prefix1",
+                "aggregatecf1": "testdata aggregatecf1 aggregate1",
+            },
+            "prefix2": {
+                "prefixcf1": "testdata prefixcf1 prefix2",
+                "prefixaggregatecf1": "testdata prefixaggregatecf1 prefix2",
+                "aggregatecf1": "testdata aggregatecf1 aggregate2",
+            },
+            "prefix3": {
+                "aggregatecf1": "testdata aggregatecf1 aggregate3",
+            },
+            "prefix4": {},
+            "prefix5": {
+                "prefixcf1": "testdata prefixcf1 prefix5",
+                "prefixaggregatecf1": "testdata prefixaggregatecf1 prefix5",
+            },
+        }
+
+        for i in range(1, 6):
+            with self.subTest(f"Custom fields for prefix{i}"):
+                prefix = self.prefix.objects.get(network=f"10.{i}.0.0")
+                self.assertDictEqual(prefix._custom_field_data, expected[f"prefix{i}"])
+
+        with self.subTest("Custom fields for prefix 8.5.0.0"):
+            expected = {
+                "prefixaggregatecf1": "testdata prefixaggregatecf1 aggregate5",
+                "aggregatecf1": "testdata aggregatecf1 aggregate5",
+            }
+            prefix = self.prefix.objects.get(network="8.5.0.0")
+            self.assertDictEqual(prefix._custom_field_data, expected)
+
+        with self.subTest("Custom fields for prefix 8.6.0.0"):
+            expected = {
+                "prefixaggregatecf1": "testdata prefixaggregatecf1 aggregate6",
+            }
+            prefix = self.prefix.objects.get(network="8.6.0.0")
+            self.assertDictEqual(prefix._custom_field_data, expected)
