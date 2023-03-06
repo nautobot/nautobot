@@ -214,12 +214,20 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         with self.subTest("Test Aggregate count"):
             self.assertEqual(self.aggregate.objects.count(), 20)
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_network(self):
         for i in range(16):
             self.assertTrue(
                 self.prefix.objects.filter(network=f"8.{i+5}.0.0", prefix_length=29, rir=self.rir2).exists()
             )
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_rir(self):
         with self.subTest(f"prefix.rir = {self.rir1.name}"):
             self.assertEqual(self.prefix.objects.get(network="10.1.0.0").rir, self.rir1)
@@ -235,14 +243,26 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
                 prefix = self.prefix.objects.get(network=f"10.{i+5}.0.0")
                 self.assertIsNone(prefix.rir)
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_description(self):
         self.assertEqual(self.prefix.objects.filter(description="PrefixDesc").count(), 2)
         self.assertEqual(self.prefix.objects.filter(description="").count(), 10)
         self.assertEqual(self.prefix.objects.filter(description="AggregateDesc").count(), 16)
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_status(self):
         self.assertEqual(self.prefix.objects.filter(status=self.prefix_status).count(), self.prefix.objects.count())
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_tags(self):
         with self.subTest("Prefix content type was added to Aggregate Tags"):
             prefix_tags = self.tag.objects.filter(content_types=self.prefix_ct)
@@ -281,6 +301,10 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
             prefix = self.prefix.objects.get(network=f"8.{i}.0.0")
             self.assertCountEqual(prefix.tags.values_list("id", flat=True), [])
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_notes(self):
         # no notes are assigned to aggregates
         self.assertQuerysetEqual(
@@ -337,6 +361,10 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
                 self.note.objects.none(),
             )
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_permissions(self):
         self.assertEqual(self.object_permission.objects.count(), 2)
 
@@ -354,6 +382,10 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.assertTrue(object_permission2.exists())
         self.assertTrue(object_permission2.first().object_types.filter(id=self.prefix_ct.id).exists())
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_object_changes(self):
         self.assertEqual(self.object_change.objects.filter(changed_object_type=self.prefix_ct).count(), 24)
         self.assertEqual(self.object_change.objects.filter(changed_object_type=self.aggregate_ct).count(), 0)
@@ -384,6 +416,10 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
                 1,
             )
 
+    @skipIf(
+        connection.vendor != "postgresql",
+        "mysql does not support rollbacks",
+    )
     def test_aggregate_to_prefix_migration_custom_fields(self):
         self.assertEqual(self.custom_field.objects.exclude(name="example_plugin_auto_custom_field").count(), 3)
         self.assertEqual(self.custom_field.objects.filter(content_types=self.prefix_ct).count(), 3)
