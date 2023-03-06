@@ -14,6 +14,8 @@ from nautobot.extras import models as extras_models
 
 
 class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
+    """Test data migrations removing the Aggregate model and replacing with Prefix in v2.0"""
+
     migrate_from = [("ipam", "0021_prefix_add_rir_and_date_allocated")]
     migrate_to = [("ipam", "0022_aggregate_to_prefix_data_migration")]
 
@@ -115,12 +117,10 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.prefix2.tags.add("PrefixTagA")
         self.prefix3.tags.add("PrefixTagA")
         self.prefix4.tags.add("PrefixTagA")
-        self.aggregate1.tags.add("AggregateTagA")
-        self.aggregate1.tags.add("AggregateTagB")
+        self.aggregate1.tags.add("AggregateTagA", "AggregateTagB")
         self.aggregate2.tags.add("AggregateTagA")
         self.aggregate3.tags.add("AggregateTagB")
-        self.aggregate5.tags.add("AggregateTagA")
-        self.aggregate5.tags.add("AggregateTagB")
+        self.aggregate5.tags.add("AggregateTagA", "AggregateTagB")
         self.aggregate6.tags.add("AggregateTagB")
 
         # notes
