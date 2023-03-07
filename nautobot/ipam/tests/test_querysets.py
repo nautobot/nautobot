@@ -4,74 +4,7 @@ import netaddr
 from django.db import connection
 
 from nautobot.core.testing import TestCase
-from nautobot.ipam.models import Prefix, Aggregate, IPAddress
-
-
-class AggregateQuerysetTestCase(TestCase):
-    queryset = Aggregate.objects.all()
-
-    # Note: unlike Prefixes, Aggregates should never overlap; this is checked in Aggregate.clean().
-    # A previous implementation of this test disregarded this restriction in order to test the Aggregate queryset
-    # features more extensively, but this is shared logic between AggregateQueryset and PrefixQueryset and is
-    # covered thoroughly by the PrefixQuerysetTestCase later in this file, so we can get adequate test coverage for
-    # Aggregate querysets without violating the model's base assumptions.
-
-    @classmethod
-    def setUpTestData(cls):
-        agg = cls.queryset.first()
-        cls.exact_network = agg.prefix
-        cls.parent_network = cls.exact_network.supernet()[-1]
-        # Depending on random generation, parent_network *might* cover a second aggregate
-        cls.parent_covers_second_aggregate = (
-            cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[0]).exists()
-            and cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]).exists()
-        )
-        cls.child_network = list(cls.exact_network.subnet(cls.exact_network.prefixlen + 3))[0]
-
-    def test_net_equals(self):
-        self.assertEqual(self.queryset.net_equals(self.exact_network).count(), 1)
-        self.assertEqual(self.queryset.net_equals(self.parent_network).count(), 0)
-        self.assertEqual(self.queryset.net_equals(self.child_network).count(), 0)
-
-    def test_net_contained(self):
-        self.assertEqual(
-            self.queryset.net_contained(self.parent_network).count(),
-            1 if not self.parent_covers_second_aggregate else 2,
-        )
-        self.assertEqual(self.queryset.net_contained(self.exact_network).count(), 0)
-        self.assertEqual(self.queryset.net_contained(self.child_network).count(), 0)
-
-    def test_net_contained_or_equal(self):
-        self.assertEqual(
-            self.queryset.net_contained_or_equal(self.parent_network).count(),
-            1 if not self.parent_covers_second_aggregate else 2,
-        )
-        self.assertEqual(self.queryset.net_contained_or_equal(self.exact_network).count(), 1)
-        self.assertEqual(self.queryset.net_contained_or_equal(self.child_network).count(), 0)
-
-    def test_net_contains(self):
-        self.assertEqual(self.queryset.net_contains(self.parent_network).count(), 0)
-        self.assertEqual(self.queryset.net_contains(self.exact_network).count(), 0)
-        self.assertEqual(self.queryset.net_contains(self.child_network).count(), 1)
-
-    def test_net_contains_or_equals(self):
-        self.assertEqual(self.queryset.net_contains_or_equals(self.parent_network).count(), 0)
-        self.assertEqual(self.queryset.net_contains_or_equals(self.exact_network).count(), 1)
-        self.assertEqual(self.queryset.net_contains_or_equals(self.child_network).count(), 1)
-
-    def test_get_by_prefix(self):
-        prefix = self.queryset.net_equals(self.exact_network)[0]
-        self.assertEqual(self.queryset.get(prefix=str(self.exact_network)), prefix)
-
-    def test_get_by_prefix_fails(self):
-        with self.assertRaises(Aggregate.DoesNotExist):
-            self.queryset.get(prefix=self.parent_network)
-        with self.assertRaises(Aggregate.DoesNotExist):
-            self.queryset.get(prefix=self.child_network)
-
-    def test_filter_by_prefix(self):
-        prefix = self.queryset.net_equals(self.exact_network)[0]
-        self.assertEqual(self.queryset.filter(prefix=self.exact_network)[0], prefix)
+from nautobot.ipam.models import Prefix, IPAddress
 
 
 class IPAddressQuerySet(TestCase):
@@ -385,7 +318,6 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
 
     def test_string_search(self):
-        # This test case also applies to Aggregate objects.
         search_terms = {
             "192": 7,
             "192.": 7,

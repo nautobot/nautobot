@@ -81,16 +81,6 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Aggregate</td>
-                        <td>
-                            {% if aggregate %}
-                                {{ aggregate|hyperlinked_object }} ({{ aggregate.rir }})
-                            {% else %}
-                                <span class="text-warning">None</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
                         <td>Location</td>
                         <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
@@ -112,6 +102,14 @@
                     <tr>
                         <td>Role</td>
                         <td>{{ object.role | hyperlinked_object_with_color }}</td>
+                    </tr>
+                    <tr>
+                        <td>RIR</td>
+                        <td>{{ object.rir|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>Date Allocated</td>
+                        <td>{{ object.date_allocated|placeholder }}</td>
                     </tr>
                     <tr>
                         <td>Description</td>
