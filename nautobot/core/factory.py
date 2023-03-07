@@ -1,4 +1,4 @@
-from ipaddress import IPV6LENGTH, IPv6Address, IPv6Network
+from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
 
 from django.db.models import Model
 import factory

@@ -1,3 +1,0 @@
-Updated `GitPython` to 3.1.31.
-Updated `drf-yasg` to 1.21.5. Note: this is automatic for the Nautobot-provided containers, but because our dependency on it goes away in 2.0, it's an optional update for other installations.
-Updated `netutils` to 1.4.1.
