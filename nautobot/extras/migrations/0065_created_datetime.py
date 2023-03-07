@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0063_jobresult__add_celery_fields"),
+        ("extras", "0064_jobresult__add_celery_fields"),
     ]
 
     operations = [

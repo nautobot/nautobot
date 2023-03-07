@@ -8,7 +8,7 @@ import nautobot.extras.models.roles
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0058_collect_roles_from_related_apps_roles"),
+        ("extras", "0059_collect_roles_from_related_apps_roles"),
         ("ipam", "0009_alter_vlan_name"),
     ]
 
