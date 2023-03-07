@@ -47,8 +47,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
@@ -135,162 +133,6 @@ class Mixins:
         """Mixin class for all `FooPortTemplate` tests."""
 
         brief_fields = ["display", "id", "name", "url"]
-
-
-class RegionTest(APIViewTestCases.APIViewTestCase):
-    model = Region
-    brief_fields = ["display", "id", "name", "site_count", "slug", "tree_depth", "url"]
-    create_data = [
-        {
-            "name": "Region 4",
-            "slug": "region-4",
-        },
-        {
-            "name": "Region 5",
-            "slug": "region-5",
-        },
-        {
-            "name": "Region 6",
-            "slug": "region-6",
-        },
-        {"name": "Region 7"},
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        Region.objects.create(name="Region 1", slug="region-1")
-        Region.objects.create(name="Region 2", slug="region-2")
-        Region.objects.create(name="Region 3", slug="region-3")
-
-
-class SiteTest(APIViewTestCases.APIViewTestCase):
-    model = Site
-    brief_fields = ["display", "id", "name", "slug", "url"]
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        regions = Region.objects.all()[:2]
-        cls.statuses = Status.objects.get_for_model(Site)
-
-        cls.create_data = [
-            {
-                "name": "Site 4",
-                "slug": "site-4",
-                "region": regions[1].pk,
-                "status": cls.statuses[0].pk,
-            },
-            {
-                "name": "Site 5",
-                "slug": "site-5",
-                "region": regions[1].pk,
-                "status": cls.statuses[0].pk,
-            },
-            {
-                "name": "Site 6",
-                "slug": "site-6",
-                "region": regions[1].pk,
-                "status": cls.statuses[0].pk,
-            },
-            {"name": "Site 7", "region": regions[1].pk, "status": cls.statuses[0].pk},
-        ]
-
-        cls.bulk_update_data = {
-            "status": cls.statuses[1].pk,
-        }
-
-    def get_deletable_object_pks(self):
-        Sites = [
-            Site.objects.create(name="Deletable Site 1"),
-            Site.objects.create(name="Deletable Site 2"),
-            Site.objects.create(name="Deletable Site 3"),
-        ]
-        return [site.pk for site in Sites]
-
-    def test_time_zone_field_post_null(self):
-        """
-        Test allow_null to time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": None}
-
-        # Attempt to create new site with null time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["time_zone"], None)
-
-    def test_time_zone_field_post_blank(self):
-        """
-        Test disallowed blank time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": ""}
-
-        # Attempt to create new site with blank time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
-
-    def test_time_zone_field_post_valid(self):
-        """
-        Test valid time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        time_zone = "UTC"
-        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": time_zone}
-
-        # Attempt to create new site with valid time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["time_zone"], time_zone)
-
-    def test_time_zone_field_post_invalid(self):
-        """
-        Test invalid time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        time_zone = "IDONOTEXIST"
-        site = {"name": "foo", "slug": "foo", "status": self.statuses[0].pk, "time_zone": time_zone}
-
-        # Attempt to create new site with invalid time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json()["time_zone"],
-            ["A valid timezone is required."],
-        )
-
-    def test_time_zone_field_get_blank(self):
-        """
-        Test that a site's time_zone field defaults to null.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-
-        self.add_permissions("dcim.view_site")
-        site = Site.objects.filter(time_zone="").first()
-        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
-        response = self.client.get(url, **self.header)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["time_zone"], None)
 
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase):
@@ -638,21 +480,21 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
         Rack.objects.create(
             location=locations[0],
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 1",
             status=statuses[0],
         )
         Rack.objects.create(
             location=locations[0],
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 2",
             status=statuses[0],
         )
         Rack.objects.create(
             location=locations[0],
-            group=rack_groups[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 3",
             status=statuses[0],
@@ -662,21 +504,21 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Test Rack 4",
                 "location": locations[1].pk,
-                "group": rack_groups[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 5",
                 "location": locations[1].pk,
-                "group": rack_groups[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 6",
                 "location": locations[1].pk,
-                "group": rack_groups[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
@@ -813,7 +655,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["devicetype_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["device_type_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
@@ -1073,19 +915,19 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
             device_type=cls.device_type,
             name="Front Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[0],
+            rear_port_template=rear_port_templates[0],
         )
         FrontPortTemplate.objects.create(
             device_type=cls.device_type,
             name="Front Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[1],
+            rear_port_template=rear_port_templates[1],
         )
         FrontPortTemplate.objects.create(
             device_type=cls.device_type,
             name="Front Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[2],
+            rear_port_template=rear_port_templates[2],
         )
 
         cls.create_data = [
@@ -1093,21 +935,21 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[3].pk,
+                "rear_port_template": rear_port_templates[3].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[4].pk,
+                "rear_port_template": rear_port_templates[4].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[5].pk,
+                "rear_port_template": rear_port_templates[5].pk,
                 "rear_port_position": 1,
             },
         ]
@@ -1186,7 +1028,7 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtual_machine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
@@ -2329,7 +2171,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["display", "id", "name", "powerfeed_count", "url"]
+    brief_fields = ["display", "id", "name", "power_feed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2378,10 +2220,10 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         rackrole = Role.objects.get_for_model(Rack).first()
 
         racks = (
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 1"),
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 2"),
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 3"),
-            Rack.objects.create(location=location, group=rackgroup, role=rackrole, name="Rack 4"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 1"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 2"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 3"),
+            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 4"),
         )
 
         power_panels = (

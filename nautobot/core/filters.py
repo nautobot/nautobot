@@ -5,7 +5,6 @@ import uuid
 
 from django import forms as django_forms
 from django.conf import settings
-from django.core.validators import MaxValueValidator
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
 import django_filters
@@ -28,25 +27,39 @@ def multivalue_field_factory(field_class):
     filter values while maintaining the field's built-in validation. Example: GET /api/dcim/devices/?name=foo&name=bar
     """
 
-    class NewField(field_class):
-        widget = django_forms.SelectMultiple
+    def to_python(self, value):
+        if not value:
+            return []
 
-        def to_python(self, value):
-            if not value:
-                return []
+        # Make it a list if it's a string.
+        if isinstance(value, str):
+            value = [value]
 
-            # Make it a list if it's a string.
-            if isinstance(value, str):
-                value = [value]
+        return [
+            # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+            field_class.to_python(self, v)
+            for v in value
+            if v
+        ]
 
-            return [
-                # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v)  # pylint: disable=bad-super-call
-                for v in value
-                if v
-            ]
+    def validate(self, value):
+        for v in value:
+            field_class.validate(self, v)
 
-    return type(f"MultiValue{field_class.__name__}", (NewField,), {})
+    def run_validators(self, value):
+        for v in value:
+            field_class.run_validators(self, v)
+
+    return type(
+        f"MultiValue{field_class.__name__}",
+        (field_class,),
+        {
+            "run_validators": run_validators,
+            "to_python": to_python,
+            "validate": validate,
+            "widget": django_forms.SelectMultiple,
+        },
+    )
 
 
 #
@@ -74,19 +87,17 @@ class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.Mul
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.IntegerField)
 
-    class MultiValueMaxValueValidator(MaxValueValidator):
-        """As django.core.validators.MaxValueValidator, but apply to a list of values rather than a single value."""
-
-        def compare(self, values, limit_value):
-            return any(int(value) > limit_value for value in values)
-
-    def get_max_validator(self):
-        """Like django_filters.NumberFilter, limit the maximum value for any single entry as an anti-DoS measure."""
-        return self.MultiValueMaxValueValidator(1e50)
-
 
 class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
+
+
+class MultiValueFloatFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+    field_class = multivalue_field_factory(django_forms.FloatField)
+
+
+class MultiValueDecimalFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+    field_class = multivalue_field_factory(django_forms.DecimalField)
 
 
 class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
@@ -98,7 +109,9 @@ class MACAddressFilter(django_filters.CharFilter):
 
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.MACAddressField)
+    # Don't use multivalue_field_factory(forms.MACAddressField) because that will reject partial substrings like
+    # "aa:" or ":01:02", which would prevent us from using filters like `mac_address__isw` to their potential.
+    field_class = forms.MultiValueCharField
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
@@ -170,7 +183,7 @@ class NumericArrayFilter(django_filters.NumberFilter):
 
 class ContentTypeFilterMixin:
     """
-    Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
+    Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.location").
     """
 
     def filter(self, qs, value):
@@ -192,7 +205,7 @@ class ContentTypeFilterMixin:
 
 class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
     """
-    Allows character-based ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+    Allows character-based ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
 
     Does not support limiting of choices. Can be used without arguments on a `FilterSet`:
 
@@ -203,7 +216,7 @@ class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
 class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilter):
     """
     Allows character-based ContentType filtering by <app_label>.<model> (e.g.
-    "dcim.site") but an explicit set of choices must be provided.
+    "dcim.location") but an explicit set of choices must be provided.
 
     Example use on a `FilterSet`:
 
@@ -215,7 +228,7 @@ class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilte
 
 class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
-    Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+    Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
 
     Defaults to joining multiple options with "AND". Pass `conjoined=False` to
     override this behavior to join with "OR" instead.
@@ -525,9 +538,9 @@ class BaseFilterSet(django_filters.FilterSet):
             models.CharField: {"filter_class": MultiValueCharFilter},
             models.DateField: {"filter_class": MultiValueDateFilter},
             models.DateTimeField: {"filter_class": MultiValueDateTimeFilter},
-            models.DecimalField: {"filter_class": MultiValueNumberFilter},
+            models.DecimalField: {"filter_class": MultiValueDecimalFilter},
             models.EmailField: {"filter_class": MultiValueCharFilter},
-            models.FloatField: {"filter_class": MultiValueNumberFilter},
+            models.FloatField: {"filter_class": MultiValueFloatFilter},
             models.IntegerField: {"filter_class": MultiValueNumberFilter},
             # Ref: https://github.com/carltongibson/django-filter/issues/1107
             models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": "icontains"}},
@@ -552,6 +565,8 @@ class BaseFilterSet(django_filters.FilterSet):
             (
                 MultiValueDateFilter,
                 MultiValueDateTimeFilter,
+                MultiValueDecimalFilter,
+                MultiValueFloatFilter,
                 MultiValueNumberFilter,
                 MultiValueTimeFilter,
             ),
@@ -568,10 +583,6 @@ class BaseFilterSet(django_filters.FilterSet):
                 TreeNodeMultipleChoiceFilter,
             ),
         ):
-            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
-
-        # These filter types support only negation
-        elif existing_filter.extra.get("choices"):
             lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
         elif isinstance(
@@ -692,6 +703,16 @@ class BaseFilterSet(django_filters.FilterSet):
 
         filters.update(new_filters)
         return filters
+
+    @classmethod
+    def filter_for_lookup(cls, field, lookup_type):
+        """Override filter_for_lookup method to set ChoiceField Filter to MultipleChoiceFilter.
+
+        Note: Any CharField or IntegerField with choices set is a ChoiceField.
+        """
+        if lookup_type == "exact" and getattr(field, "choices", None):
+            return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+        return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)

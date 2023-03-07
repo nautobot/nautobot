@@ -202,7 +202,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -211,7 +211,9 @@ class ConfigContextTestCase(
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Config Context with schema").schema.pk, schema.pk)
+        self.assertEqual(
+            self._get_queryset().get(name="Config Context with schema").config_context_schema.pk, schema.pk
+        )
 
     def test_schema_validation_fails(self):
         """
@@ -239,7 +241,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -414,10 +416,10 @@ class CustomFieldTestCase(
             "filter_logic": "loose",
             "weight": 100,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
-            "choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
-            "choices-INITIAL_FORMS": "1",
-            "choices-MIN_NUM_FORMS": "0",
-            "choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
         }
 
     def test_create_object_without_permission(self):
@@ -743,19 +745,19 @@ class SecretsGroupTestCase(
         )
 
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
@@ -766,10 +768,10 @@ class SecretsGroupTestCase(
             "slug": "group-4",
             "description": "Some description",
             # Management form fields required for the dynamic Secret formset
-            "secretsgroupassociation_set-TOTAL_FORMS": "0",
-            "secretsgroupassociation_set-INITIAL_FORMS": "1",
-            "secretsgroupassociation_set-MIN_NUM_FORMS": "0",
-            "secretsgroupassociation_set-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-TOTAL_FORMS": "0",
+            "secrets_group_associations-INITIAL_FORMS": "1",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
 
         cls.slug_source = "name"
@@ -2309,7 +2311,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,weight,color,content_types",
-            "test_role1,test-role1,1000,ffffff,dcim.device",
+            'test_role1,test-role1,1000,ffffff,"dcim.device"',
             'test_role2,test-role2,200,ffffff,"dcim.device,dcim.rack"',
             'test_role3,test-role3,100,ffffff,"dcim.device,ipam.prefix"',
             'test_role4,test-role4,50,ffffff,"ipam.ipaddress,ipam.vlan"',

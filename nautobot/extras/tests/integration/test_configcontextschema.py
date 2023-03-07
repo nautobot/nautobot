@@ -102,7 +102,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # ConfigContext
-        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
+        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, config_context_schema=schema)
 
         # Device
         device_ct = ContentType.objects.get_for_model(Device)

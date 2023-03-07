@@ -2,7 +2,7 @@ import factory
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation, Site
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
@@ -315,7 +315,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"rack_reservations": [rack_reservations[0].pk, rack_reservations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservations__in=rack_reservations).distinct(),
+            self.queryset.filter(rack_reservations__in=rack_reservations).distinct(),
         )
 
     def test_has_rack_reservations(self):
@@ -323,12 +323,12 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_rack_reservations": True}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservations__isnull=False).distinct(),
+            self.queryset.filter(rack_reservations__isnull=False).distinct(),
         )
         params = {"has_rack_reservations": False}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservations__isnull=True).distinct(),
+            self.queryset.filter(rack_reservations__isnull=True).distinct(),
         )
 
     def test_racks(self):
@@ -373,28 +373,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(route_targets__isnull=True).distinct(),
-        )
-
-    def test_sites(self):
-        """Test the `sites` filter."""
-        sites = list(Site.objects.filter(tenant__isnull=False))[:2]
-        params = {"sites": [sites[0].pk, sites[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__in=sites).distinct(),
-        )
-
-    def test_has_sites(self):
-        """Test the `has_sites` filter."""
-        params = {"has_sites": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__isnull=False).distinct(),
-        )
-        params = {"has_sites": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__isnull=True).distinct(),
         )
 
     def test_virtual_machines(self):

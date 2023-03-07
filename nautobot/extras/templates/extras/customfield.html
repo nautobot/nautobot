@@ -64,7 +64,7 @@
                     </tr>
                 </table>
             </div>
-            {% if object.choices.exists %}
+            {% if object.custom_field_choices.exists %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Custom Field Choices</strong>
@@ -77,7 +77,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for choice in object.choices.all %}
+                    {% for choice in object.custom_field_choices.all %}
                         <tr>
                             <td>{{ choice.value }}</td>
                             <td>{{ choice.weight }}</td>

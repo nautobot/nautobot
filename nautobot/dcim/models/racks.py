@@ -135,7 +135,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         on_delete=models.PROTECT,
         related_name="racks",
     )
-    group = models.ForeignKey(
+    rack_group = models.ForeignKey(
         to="dcim.RackGroup",
         on_delete=models.SET_NULL,
         related_name="racks",
@@ -189,7 +189,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
 
     csv_headers = [
         "location",
-        "group",
+        "rack_group",
         "name",
         "facility_id",
         "tenant",
@@ -208,7 +208,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     ]
     clone_fields = [
         "location",
-        "group",
+        "rack_group",
         "tenant",
         "status",
         "role",
@@ -224,11 +224,11 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:
-        ordering = ("location", "group", "_name")  # (location, group, name) may be non-unique
+        ordering = ("location", "rack_group", "_name")  # (location, rack_group, name) may be non-unique
         unique_together = (
             # Name and facility_id must be unique *only* within a RackGroup
-            ("group", "name"),
-            ("group", "facility_id"),
+            ("rack_group", "name"),
+            ("rack_group", "facility_id"),
         )
 
     def __str__(self):
@@ -241,16 +241,16 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         # Validate location
-        # Validate group/location assignment
+        # Validate rack_group/location assignment
         if (
-            self.group is not None
-            and self.group.location is not None
-            and self.group.location not in self.location.ancestors(include_self=True)
+            self.rack_group is not None
+            and self.rack_group.location is not None
+            and self.rack_group.location not in self.location.ancestors(include_self=True)
         ):
             raise ValidationError(
                 {
-                    "group": f'The assigned rack group "{self.group}" belongs to a location '
-                    f'("{self.group.location}") that does not include location "{self.location}".'
+                    "rack_group": f'The assigned rack group "{self.rack_group}" belongs to a location '
+                    f'("{self.rack_group.location}") that does not include location "{self.location}".'
                 }
             )
 
@@ -278,7 +278,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     def to_csv(self):
         return (
             self.location.name,
-            self.group.name if self.group else None,
+            self.rack_group.name if self.rack_group else None,
             self.name,
             self.facility_id,
             self.tenant.name if self.tenant else None,
@@ -289,7 +289,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
             self.asset_tag,
             self.width,
             self.u_height,
-            self.desc_units,
+            str(self.desc_units),
             self.outer_width,
             self.outer_depth,
             self.outer_unit,
@@ -345,7 +345,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
             # Retrieve all devices installed within the rack
             queryset = (
                 Device.objects.select_related("device_type", "device_type__manufacturer", "role")
-                .annotate(devicebay_count=Count("devicebays"))
+                .annotate(device_bay_count=Count("device_bays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
                 .filter(Q(face=face) | Q(device_type__is_full_depth=True))
@@ -416,7 +416,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
         Return a dictionary mapping all reserved units within the rack to their reservation.
         """
         reserved_units = {}
-        for r in self.reservations.all():
+        for r in self.rack_reservations.all():
             for u in r.units:
                 reserved_units[u] = r
         return reserved_units
@@ -519,16 +519,16 @@ class RackReservation(PrimaryModel):
     One or more reserved units within a Rack.
     """
 
-    rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="reservations")
+    rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="rack_reservations")
     units = JSONArrayField(base_field=models.PositiveSmallIntegerField())
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="rackreservations",
+        related_name="rack_reservations",
         blank=True,
         null=True,
     )
-    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
     description = models.CharField(max_length=200)
 
     csv_headers = [
@@ -567,7 +567,7 @@ class RackReservation(PrimaryModel):
 
             # Check that none of the units has already been reserved for this Rack.
             reserved_units = []
-            for resv in self.rack.reservations.exclude(pk=self.pk):
+            for resv in self.rack.rack_reservations.exclude(pk=self.pk):
                 reserved_units += resv.units
             conflicting_units = [u for u in self.units if u in reserved_units]
             if conflicting_units:
@@ -577,7 +577,7 @@ class RackReservation(PrimaryModel):
     def to_csv(self):
         return (
             self.rack.location.name,
-            self.rack.group if self.rack.group else None,
+            self.rack.rack_group if self.rack.rack_group else None,
             self.rack.name,
             ",".join([str(u) for u in self.units]),
             self.tenant.name if self.tenant else None,

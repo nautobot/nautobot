@@ -392,7 +392,7 @@ class ConfigContextSchemaTestCase(TestCase):
         And the config context context data is valid for the schema
         Assert calling clean on the config context object DOES NOT raise a ValidationError
         """
-        self.config_context.schema = self.schema_validation_pass
+        self.config_context.config_context_schema = self.schema_validation_pass
 
         try:
             self.config_context.full_clean()
@@ -407,7 +407,7 @@ class ConfigContextSchemaTestCase(TestCase):
         Assert calling clean on the config context object DOES raise a ValidationError
         """
         for schema in self.schemas_validation_fail:
-            self.config_context.schema = schema
+            self.config_context.config_context_schema = schema
 
             with self.assertRaises(ValidationError):
                 self.config_context.full_clean()
@@ -1226,7 +1226,7 @@ class SecretsGroupTest(TestCase):
         )
 
         SecretsGroupAssociation.objects.create(
-            group=self.secrets_group,
+            secrets_group=self.secrets_group,
             secret=self.environment_secret,
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,

@@ -479,5 +479,5 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         return self.virtual_machine
 
     @property
-    def count_ipaddresses(self):
+    def ip_address_count(self):
         return self.ip_addresses.count()

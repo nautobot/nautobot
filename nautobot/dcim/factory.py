@@ -31,12 +31,10 @@ from nautobot.dcim.models import (
     Platform,
     Location,
     LocationType,
-    Region,
     Rack,
     RackGroup,
     RackReservation,
     PowerPanel,
-    Site,
 )
 from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
@@ -175,81 +173,6 @@ class PlatformFactory(OrganizationalModelFactory):
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-
-
-class RegionFactory(OrganizationalModelFactory):
-    class Meta:
-        model = Region
-        exclude = (
-            "has_parent",
-            "has_description",
-        )
-
-    has_parent = NautobotBoolIterator()
-    parent = factory.Maybe("has_parent", random_instance(Region), None)
-    name = factory.Maybe("has_parent", UniqueFaker("city"), UniqueFaker("country"))
-
-    has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
-
-
-class SiteFactory(PrimaryModelFactory):
-    class Meta:
-        model = Site
-        exclude = (
-            "has_asn",
-            "has_region",
-            "has_tenant",
-            "has_time_zone",
-            "has_physical_address",
-            "has_shipping_address",
-            "has_latitude",
-            "has_longitude",
-            "has_contact_name",
-            "has_contact_phone",
-            "has_contact_email",
-        )
-
-    name = UniqueFaker("street_address")
-    status = random_instance(lambda: Status.objects.get_for_model(Site), allow_null=False)
-
-    has_asn = NautobotBoolIterator()
-    asn = factory.Maybe("has_asn", factory.Sequence(lambda n: 65000 + n), None)
-
-    has_region = NautobotBoolIterator()
-    region = factory.Maybe("has_region", random_instance(Region), None)
-
-    has_tenant = NautobotBoolIterator()
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
-
-    has_time_zone = NautobotBoolIterator()
-    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=pytz.common_timezones))
-
-    has_physical_address = NautobotBoolIterator()
-    physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
-
-    has_shipping_address = NautobotBoolIterator()
-    shipping_address = factory.Maybe("has_shipping_address", factory.Faker("address"))
-
-    # Faker().latitude()/longitude() sometimes will generate a decimal number with more than 8 digits.
-    # Which will make validations for those fields fail.
-    # This is a way to formulate the number to make sure it generates no more than 5 digits.
-    has_latitude = NautobotBoolIterator()
-    latitude = factory.Maybe("has_latitude", factory.LazyFunction(lambda: f"{Faker().latitude():.2f}"), None)
-
-    has_longitude = NautobotBoolIterator()
-    longitude = factory.Maybe("has_longitude", factory.LazyFunction(lambda: f"{Faker().longitude():.2f}"), None)
-
-    has_contact_name = NautobotBoolIterator()
-    contact_name = factory.Maybe("has_contact_name", factory.Faker("name"))
-
-    has_contact_phone = NautobotBoolIterator()
-    # Opt not to use factory.Faker("phone_number") because contact_phone has a 20 char limit
-    # whereas factory.Faker("phone_number") generates more than 20 chars
-    contact_phone = factory.Maybe("has_contact_phone", factory.Sequence(lambda n: f"1091-65912-{n:04d}"))
-
-    has_contact_email = NautobotBoolIterator()
-    contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
 
 class LocationTypeFactory(OrganizationalModelFactory):
@@ -427,7 +350,7 @@ class RackFactory(PrimaryModelFactory):
             "has_asset_tag",
             "has_comments",
             "has_facility_id",
-            "has_group",
+            "has_rack_group",
             "has_outer_depth",
             "has_outer_width",
             "has_role",
@@ -444,8 +367,8 @@ class RackFactory(PrimaryModelFactory):
 
     location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
 
-    has_group = NautobotBoolIterator()
-    group = factory.Maybe("has_group", random_instance(RackGroup), None)  # TODO there's no RackGroupFactory yet...
+    has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
+    rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
 
     has_tenant = factory.Faker("boolean")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)

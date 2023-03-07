@@ -41,8 +41,10 @@ class PowerPanel(PrimaryModel):
     A distribution point for electrical power; e.g. a data center RPP.
     """
 
-    location = models.ForeignKey(to="dcim.Location", on_delete=models.PROTECT, related_name="powerpanels")
-    rack_group = models.ForeignKey(to="RackGroup", on_delete=models.PROTECT, blank=True, null=True)
+    location = models.ForeignKey(to="dcim.Location", on_delete=models.PROTECT, related_name="power_panels")
+    rack_group = models.ForeignKey(
+        to="RackGroup", on_delete=models.PROTECT, blank=True, null=True, related_name="power_panels"
+    )
     name = models.CharField(max_length=100, db_index=True)
 
     csv_headers = ["location", "rack_group", "name"]
@@ -106,8 +108,8 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     An electrical circuit delivered from a PowerPanel.
     """
 
-    power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="powerfeeds")
-    rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True)
+    power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="power_feeds")
+    rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
     name = models.CharField(max_length=100)
     type = models.CharField(
         max_length=50,
@@ -176,7 +178,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         return (
             self.power_panel.location.name,
             self.power_panel.name,
-            self.rack.group.name if self.rack and self.rack.group else None,
+            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
             self.rack.name if self.rack else None,
             self.name,
             self.get_status_display(),
