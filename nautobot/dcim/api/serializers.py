@@ -68,8 +68,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.api.serializers import (
@@ -123,8 +121,6 @@ from .nested_serializers import (  # noqa: F401
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
-    NestedRegionSerializer,
-    NestedSiteSerializer,
     NestedVirtualChassisSerializer,
 )
 
@@ -190,59 +186,6 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 @class_deprecated_in_favor_of(PathEndpointModelSerializerMixin)
 class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
     pass
-
-
-#
-# Regions/sites
-#
-
-
-class RegionSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
-    parent = NestedRegionSerializer(required=False, allow_null=True)
-    site_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Region
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "parent",
-            "description",
-            "site_count",
-            "tree_depth",
-        ]
-
-
-class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
-    region = NestedRegionSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    time_zone = TimeZoneSerializerField(required=False, allow_null=True)
-
-    class Meta:
-        model = Site
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "status",
-            "region",
-            "tenant",
-            "facility",
-            "asn",
-            "time_zone",
-            "description",
-            "physical_address",
-            "shipping_address",
-            "latitude",
-            "longitude",
-            "contact_name",
-            "contact_phone",
-            "contact_email",
-            "comments",
-        ]
 
 
 #

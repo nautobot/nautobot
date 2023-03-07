@@ -49,7 +49,6 @@ from .racks import (
     RackGroupTable,
     RackReservationTable,
 )
-from .sites import RegionTable, SiteTable
 
 __all__ = (
     "CableTable",
@@ -96,8 +95,6 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
-    "RegionTable",
-    "SiteTable",
     "VirtualChassisTable",
 )
 
