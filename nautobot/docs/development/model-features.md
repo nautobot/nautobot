@@ -14,27 +14,30 @@ To add a new feature to the `lookup_confs` list, follow these steps:
 
 1. Determine the name of the feature to be added, This name should be in `snake_case` as per convention
 2. Determine the names of the fields that must be present in order for the model to be considered a valid `model_feature`.
-3. (Optional) Determine any field attributes that can be used to filter the fields if `field_names` would not be enough. 
+3. (Optional) Determine any field attributes that can be used to filter the fields if `field_names` would not be enough.
 4. Add a new dictionary with the following keys to `lookup_confs` which is in  `nautobot.extras.utils.populate_model_features_registry()`:
     - `feature_name`: The name of the feature.
     - `field_names`: The list of names of fields.
     - `field_attributes`: (Optional) The dictionary of attributes to filter the fields.
 
 ```python
+from nautobot.extras.models.relationships import RelationshipAssociation
+
+
 def populate_model_features_registry():
     """..."""
 
     lookup_confs = [
         ...,
         {
-            "feature_name": "foo",
-            "field_names": ["bar"],
-            "field_attributes": {"choices": FooBarChoices}
+            "feature_name": "relationships",
+            "field_names": ["source_for_associations", "destination_for_associations"],
+            "field_attributes": {"related_model": RelationshipAssociation},
         },
        ...
     ]
 ```
-With this only Models which have a field name of `bar`, which in turn has the attribute `choices=FooBarChoices`, would be a valid model for the feature `"foo"`
+With this only Models which have fields names of `source_for_associations` and `destination_for_associations`, which in turn has the attribute `related_model=RelationshipAssociation`, would be a valid model for the feature `relationships`.
 
 !!! note
    Only add a feature to `lookup_confs` if it does not require the use of `@extras_features`.
