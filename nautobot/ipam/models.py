@@ -967,6 +967,12 @@ class IPAddressToInterface(BaseModel):
 
         # TODO: if primary_for_device=True, set primary_for_device=False for all other assocations on this device in the same address family
 
+    def __str__(self):
+        if self.interface:
+            return f"{self.ip_address!s} {self.interface.device.name} {self.interface.name}"
+        else:
+            return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
+
 
 @extras_features(
     "custom_fields",

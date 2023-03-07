@@ -8,20 +8,12 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("dcim", "0035_related_name_changes"),
+        ("dcim", "0036_remove_region_and_site"),
         ("virtualization", "0018_related_name_changes"),
         ("ipam", "0020_related_name_changes"),
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="ipaddress",
-            name="assigned_object_id",
-        ),
-        migrations.RemoveField(
-            model_name="ipaddress",
-            name="assigned_object_type",
-        ),
         migrations.CreateModel(
             name="IPAddressToInterface",
             fields=[
