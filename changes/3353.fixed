@@ -1,2 +1,0 @@
-Fixed a bug in `nautobot.extras.forms.mixins.CustomFieldModelFilterFormMixin` where the list of custom field names were not being stored on `self.custom_fields`.
-Fixed a bug in `nautobot.utilities.filters.MappedPredicatesFilterMixin` (from which `SearchFilter` inherits) that was preventing `q` fields from being used in Dynamic Group filters.
