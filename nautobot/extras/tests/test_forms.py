@@ -4,12 +4,14 @@ import warnings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm, SiteForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
+    ConfigContextForm,
+    ConfigContextFilterForm,
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
@@ -1086,3 +1088,31 @@ class JobEditFormTestCase(TestCase):
             error_msg["approval_required"][0]["message"],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class ConfigContextFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
+        form = ConfigContextForm()
+        self.assertIn("dynamic_groups", form.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is NOT present when feature flag is disabled."""
+        form = ConfigContextForm()
+        self.assertNotIn("dynamic_groups", form.fields)
+
+
+class ConfigContextFilterFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
+        context_filter_form = ConfigContextFilterForm()
+        self.assertIn("dynamic_groups", context_filter_form.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups(self):
+        """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
+        context_filter_form = ConfigContextFilterForm()
+        self.assertNotIn("dynamic_groups", context_filter_form.fields)

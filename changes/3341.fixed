@@ -1,1 +1,0 @@
-Fix the issue with the ContentType reverse return, i.e get_route_for_model(ContentType, api=True...).

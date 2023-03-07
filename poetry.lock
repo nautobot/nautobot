@@ -1234,14 +1234,14 @@ Django = ">=2.2"
 
 [[package]]
 name = "drf-yasg"
-version = "1.21.4"
+version = "1.21.5"
 description = "Automated generation of real Swagger/OpenAPI 2.0 schemas from Django Rest Framework code."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "drf-yasg-1.21.4.tar.gz", hash = "sha256:887c9f79e64f46aa48974234e61029b1bea6b12ea628a8fc8a3697589add1d3e"},
-    {file = "drf_yasg-1.21.4-py3-none-any.whl", hash = "sha256:4a156d195fdccc51b40a227955588d982ca43c2e327927c7713bf967f5589913"},
+    {file = "drf-yasg-1.21.5.tar.gz", hash = "sha256:ceef0c3b5dc4389781afd786e6dc3697af2a2fe0d8724ee1f637c23d75bbc5b2"},
+    {file = "drf_yasg-1.21.5-py3-none-any.whl", hash = "sha256:ba9cf4bf79f259290daee9b400fa4fcdb0e78d2f043fa5e9f6589c939fd06d05"},
 ]
 
 [package.dependencies]
@@ -1420,14 +1420,14 @@ smmap = ">=3.0.1,<6"
 
 [[package]]
 name = "gitpython"
-version = "3.1.30"
-description = "GitPython is a python library used to interact with Git repositories"
+version = "3.1.31"
+description = "GitPython is a Python library used to interact with Git repositories"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "GitPython-3.1.30-py3-none-any.whl", hash = "sha256:cd455b0000615c60e286208ba540271af9fe531fa6a87cc590a7298785ab2882"},
-    {file = "GitPython-3.1.30.tar.gz", hash = "sha256:769c2d83e13f5d938b7688479da374c4e3d49f71549aaf462b646db9602ea6f8"},
+    {file = "GitPython-3.1.31-py3-none-any.whl", hash = "sha256:f04893614f6aa713a60cbbe1e6a97403ef633103cdd0ef5eb6efe0deb98dbe8d"},
+    {file = "GitPython-3.1.31.tar.gz", hash = "sha256:8ce3bcf69adfdf7c7d503e78fd3b1c492af782d58893b650adb2ac8912ddd573"},
 ]
 
 [package.dependencies]
@@ -2312,14 +2312,14 @@ test = ["pytest (>=5.1.2)", "pyyaml (>=5.1.2)"]
 
 [[package]]
 name = "netutils"
-version = "1.4.0"
+version = "1.4.1"
 description = "Common helper functions useful in network automation."
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "netutils-1.4.0-py3-none-any.whl", hash = "sha256:feab18de83c8544e681c1c25c3d944f81f9ebdae22cca357bd883839b6288cec"},
-    {file = "netutils-1.4.0.tar.gz", hash = "sha256:2f86b7d6361f6ef097eaa9945f2847accb56476f807cd7572f61c6f2ac098af1"},
+    {file = "netutils-1.4.1-py3-none-any.whl", hash = "sha256:41002e42b205149fbe6739b7fdbc778ed843e87fabba9691d3d06a35f7876fd4"},
+    {file = "netutils-1.4.1.tar.gz", hash = "sha256:4f7501478d810bcd3c64edfe064fa8962a1572636f4fceee2538fc9d3616fbe2"},
 ]
 
 [package.extras]
@@ -4150,4 +4150,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "ba52ace6f960eb88efed06c459020950a31ed3bf21dc73bdec715937fffd52aa"
+content-hash = "56f77ef0abccb7312233b423b9c80ac7c9966f878f9a35bb47af9ce79d5205bd"

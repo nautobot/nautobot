@@ -160,6 +160,7 @@ class ConfigContextTable(BaseTable):
             "clusters",
             "tenant_groups",
             "tenants",
+            "dynamic_groups",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 

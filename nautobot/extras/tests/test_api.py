@@ -23,6 +23,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
+from nautobot.extras.api.serializers import ConfigContextSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
@@ -297,6 +298,18 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextSerializer.dynamic_group` is present when feature flag is enabled."""
+        serializer = ConfigContextSerializer()
+        self.assertIn("dynamic_groups", serializer.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextSerializer.dynamic_group` is NOT present the when feature flag is disabled."""
+        serializer = ConfigContextSerializer()
+        self.assertNotIn("dynamic_groups", serializer.fields)
 
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
