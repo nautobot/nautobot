@@ -353,11 +353,10 @@ class ConfigContextTest(TestCase):
 
         device2 = Device.objects.create(
             name="Device 2",
-            site=self.site,
             location=self.location,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         dynamic_group_context = ConfigContext.objects.create(
