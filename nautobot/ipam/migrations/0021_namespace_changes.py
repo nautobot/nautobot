@@ -10,76 +10,129 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0067_rename_model_fields'),
-        ('dcim', '0036_namespace_changes'),
-        ('ipam', '0020_related_name_changes'),
+        ("extras", "0067_rename_model_fields"),
+        ("dcim", "0036_namespace_changes"),
+        ("ipam", "0020_related_name_changes"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Namespace',
+            name="Namespace",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.AddField(
-            model_name='ipaddress',
-            name='parent',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ip_addresses', to='ipam.prefix'),
+            model_name="ipaddress",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="ip_addresses",
+                to="ipam.prefix",
+            ),
         ),
         migrations.AddField(
-            model_name='vrf',
-            name='device',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='vrfs', to='dcim.device'),
+            model_name="vrf",
+            name="device",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="vrfs",
+                to="dcim.device",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='ipaddress',
-            unique_together={('parent', 'host', 'prefix_length')},
+            name="ipaddress",
+            unique_together={("parent", "host", "prefix_length")},
         ),
         migrations.CreateModel(
-            name='RouteDistinguisher',
+            name="RouteDistinguisher",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('rd', models.CharField(max_length=21, unique=True)),
-                ('name', models.CharField(max_length=255)),
-                ('namespace', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='route_distinguishers', to='ipam.namespace')),
-                ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("rd", models.CharField(max_length=21, unique=True)),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "namespace",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="route_distinguishers",
+                        to="ipam.namespace",
+                    ),
+                ),
+                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'unique_together': {('namespace', 'rd')},
+                "unique_together": {("namespace", "rd")},
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.AddField(
-            model_name='prefix',
-            name='namespace',
-            field=models.ForeignKey(default=nautobot.ipam.models.get_default_namespace, on_delete=django.db.models.deletion.PROTECT, related_name='prefixes', to='ipam.namespace'),
+            model_name="prefix",
+            name="namespace",
+            field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="prefixes",
+                to="ipam.namespace",
+            ),
         ),
         migrations.AddField(
-            model_name='vrf',
-            name='route_distinguisher',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='vrfs', to='ipam.routedistinguisher'),
+            model_name="vrf",
+            name="route_distinguisher",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="vrfs",
+                to="ipam.routedistinguisher",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='prefix',
-            unique_together={('namespace', 'network', 'prefix_length')},
+            name="prefix",
+            unique_together={("namespace", "network", "prefix_length")},
         ),
         migrations.AlterUniqueTogether(
-            name='vrf',
-            unique_together={('name', 'device', 'route_distinguisher')},
+            name="vrf",
+            unique_together={("name", "device", "route_distinguisher")},
         ),
     ]

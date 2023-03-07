@@ -544,7 +544,6 @@ class BaseInterface(RelationshipModel, StatusModel):
             raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
 
     def save(self, *args, **kwargs):
-
         if not self.status:
             query = Status.objects.get_for_model(self)
             try:
@@ -559,14 +558,21 @@ class BaseInterface(RelationshipModel, StatusModel):
 
         return super().save(*args, **kwargs)
 
+
 class InterfaceAssignment(BaseModel):
-    vminterface = models.ForeignKey(to="virtualization.VMInterface", on_delete=models.CASCADE, related_name="ip_assignments", null=True)
-    interface = models.ForeignKey(to="dcim.Interface", on_delete=models.CASCADE, related_name="ip_assignments", null=True)
+    vminterface = models.ForeignKey(
+        to="virtualization.VMInterface", on_delete=models.CASCADE, related_name="ip_assignments", null=True
+    )
+    interface = models.ForeignKey(
+        to="dcim.Interface", on_delete=models.CASCADE, related_name="ip_assignments", null=True
+    )
     ip_address = models.ForeignKey(to="ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
 
     class Meta:
-        unique_together=(("interface", "ip_address"), ("vminterface", "ip_address"),)
-    
+        unique_together = (
+            ("interface", "ip_address"),
+            ("vminterface", "ip_address"),
+        )
 
 
 @extras_features(
@@ -583,7 +589,13 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
     A network interface within a Device. A physical Interface can connect to exactly one other Interface.
     """
-    ip_addresses = models.ManyToManyField(to="ipam.IPAddress", related_name="+", through="dcim.InterfaceAssignment", through_fields=("interface", "ip_address"))
+
+    ip_addresses = models.ManyToManyField(
+        to="ipam.IPAddress",
+        related_name="+",
+        through="dcim.InterfaceAssignment",
+        through_fields=("interface", "ip_address"),
+    )
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
         target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
@@ -673,7 +685,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # LAG validation
         if self.lag is not None:
-
             # A LAG interface cannot be its own parent
             if self.lag_id == self.pk:
                 raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
@@ -713,7 +724,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # Parent validation
         if self.parent_interface is not None:
-
             # An interface cannot be its own parent
             if self.parent_interface_id == self.pk:
                 raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
@@ -761,7 +771,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # Bridge validation
         if self.bridge is not None:
-
             # An interface cannot be bridged to itself
             if self.bridge_id == self.pk:
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})

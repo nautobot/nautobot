@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -180,7 +179,6 @@ class Cluster(PrimaryModel):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
@@ -322,7 +320,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
         return reverse("virtualization:virtualmachine", args=[self.pk])
 
     def validate_unique(self, exclude=None):
-
         # Check for a duplicate name on a VM assigned to the same Cluster and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
@@ -402,7 +399,12 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
     "webhooks",
 )
 class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
-    ip_addresses = models.ManyToManyField(to="ipam.IPAddress", related_name="+", through="dcim.InterfaceAssignment", through_fields=("vminterface", "ip_address"))
+    ip_addresses = models.ManyToManyField(
+        to="ipam.IPAddress",
+        related_name="+",
+        through="dcim.InterfaceAssignment",
+        through_fields=("vminterface", "ip_address"),
+    )
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,
@@ -474,7 +476,6 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         )
 
     def to_objectchange(self, action):
-
         # Annotate the parent VirtualMachine
         return ObjectChange(
             changed_object=self,

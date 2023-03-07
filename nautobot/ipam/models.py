@@ -49,13 +49,14 @@ logger = logging.getLogger(__name__)
 
 
 class Namespace(PrimaryModel):
-    """
-    """
+    """ """
+
     name = models.CharField(max_length=255, unique=True)
 
+
 class RouteDistinguisher(PrimaryModel):
-    """
-    """
+    """ """
+
     namespace = models.ForeignKey(to="ipam.Namespace", on_delete=models.PROTECT, related_name="route_distinguishers")
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
@@ -69,6 +70,7 @@ class RouteDistinguisher(PrimaryModel):
 
     class Meta:
         unique_together = ("namespace", "rd")
+
 
 @extras_features(
     "custom_fields",
@@ -155,16 +157,29 @@ class VRF(PrimaryModel):
             str(self.enforce_unique),
             self.description,
         )
+
     def validate_unique(self, exclude=None):
         message = f"VRF object with name {self.name}, device {self.device} and route_distinguisher {self.route_distinguisher} already exists"
         if self.device is None and self.route_distinguisher is None:
-            if VRF.objects.exclude(pk=self.pk).filter(name=self.name, device__isnull=True, route_distinguisher__isnull=True).exists():
+            if (
+                VRF.objects.exclude(pk=self.pk)
+                .filter(name=self.name, device__isnull=True, route_distinguisher__isnull=True)
+                .exists()
+            ):
                 raise ValidationError(message)
         elif self.device is None:
-            if VRF.objects.exclude(pk=self.pk).filter(name=self.name, device__isnull=True, route_distinguisher=self.route_distinguisher).exists():
+            if (
+                VRF.objects.exclude(pk=self.pk)
+                .filter(name=self.name, device__isnull=True, route_distinguisher=self.route_distinguisher)
+                .exists()
+            ):
                 raise ValidationError(message)
         elif self.route_distinguisher is None:
-            if VRF.objects.exclude(pk=self.pk).filter(name=self.name, device=self.device, route_distinguisher__isnull=True).exists():
+            if (
+                VRF.objects.exclude(pk=self.pk)
+                .filter(name=self.name, device=self.device, route_distinguisher__isnull=True)
+                .exists()
+            ):
                 raise ValidationError(message)
 
         return super().validate_unique(exclude)
@@ -354,7 +369,6 @@ class Aggregate(PrimaryModel):
         super().clean()
 
         if self.prefix:
-
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
@@ -437,8 +451,10 @@ class Aggregate(PrimaryModel):
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
         return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
+
 def get_default_namespace():
     return Namespace.objects.get_or_create(name="Global")[0].pk
+
 
 @extras_features(
     "custom_fields",
@@ -459,7 +475,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
     """
-    namespace = models.ForeignKey(to="ipam.Namespace", on_delete=models.PROTECT, related_name="prefixes", default=get_default_namespace)
+
+    namespace = models.ForeignKey(
+        to="ipam.Namespace", on_delete=models.PROTECT, related_name="prefixes", default=get_default_namespace
+    )
     network = VarbinaryIPField(
         null=False,
         db_index=True,
@@ -573,7 +592,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         if self.prefix:
-
             # /0 masks are not acceptable
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
@@ -587,16 +605,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
                 )
 
     def save(self, *args, **kwargs):
-
         if isinstance(self.prefix, netaddr.IPNetwork):
-
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
@@ -766,6 +781,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     for example, when mapping public addresses to private addresses. When an Interface has been assigned an IPAddress
     which has a NAT outside IP, that Interface's Device can use either the inside or outside IP as its primary IP.
     """
+
     parent = models.ForeignKey(
         to="ipam.Prefix",
         on_delete=models.PROTECT,
@@ -906,7 +922,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             )
 
         if self.address:
-
             # /0 masks are not acceptable
             if self.address.prefixlen == 0:
                 raise ValidationError({"address": "Cannot create IP address with /0 mask."})
@@ -952,7 +967,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
 
     def to_csv(self):
-
         # Determine if this IP is primary for a Device
         is_primary = False
         if self.address.version == 4 and getattr(self, "primary_ip4_for", False):
@@ -1075,7 +1089,6 @@ class VLANGroup(OrganizationalModel):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
@@ -1199,7 +1212,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}

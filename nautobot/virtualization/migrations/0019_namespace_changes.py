@@ -4,17 +4,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0036_namespace_changes'),
-        ('ipam', '0021_namespace_changes'),
-        ('virtualization', '0018_related_name_changes'),
+        ("dcim", "0036_namespace_changes"),
+        ("ipam", "0021_namespace_changes"),
+        ("virtualization", "0018_related_name_changes"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='vminterface',
-            name='ip_addresses',
-            field=models.ManyToManyField(related_name='_virtualization_vminterface_ip_addresses_+', through='dcim.InterfaceAssignment', to='ipam.IPAddress'),
+            model_name="vminterface",
+            name="ip_addresses",
+            field=models.ManyToManyField(
+                related_name="_virtualization_vminterface_ip_addresses_+",
+                through="dcim.InterfaceAssignment",
+                to="ipam.IPAddress",
+            ),
         ),
     ]

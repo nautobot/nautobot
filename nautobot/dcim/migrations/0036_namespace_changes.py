@@ -6,29 +6,56 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('virtualization', '0018_related_name_changes'),
-        ('ipam', '0020_related_name_changes'),
-        ('dcim', '0035_related_name_changes'),
+        ("virtualization", "0018_related_name_changes"),
+        ("ipam", "0020_related_name_changes"),
+        ("dcim", "0035_related_name_changes"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='InterfaceAssignment',
+            name="InterfaceAssignment",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('interface', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='ip_assignments', to='dcim.interface')),
-                ('ip_address', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='ipam.ipaddress')),
-                ('vminterface', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='ip_assignments', to='virtualization.vminterface')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                (
+                    "interface",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ip_assignments",
+                        to="dcim.interface",
+                    ),
+                ),
+                (
+                    "ip_address",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="+", to="ipam.ipaddress"
+                    ),
+                ),
+                (
+                    "vminterface",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ip_assignments",
+                        to="virtualization.vminterface",
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('vminterface', 'ip_address'), ('interface', 'ip_address')},
+                "unique_together": {("vminterface", "ip_address"), ("interface", "ip_address")},
             },
         ),
         migrations.AddField(
-            model_name='interface',
-            name='ip_addresses',
-            field=models.ManyToManyField(related_name='_dcim_interface_ip_addresses_+', through='dcim.InterfaceAssignment', to='ipam.IPAddress'),
+            model_name="interface",
+            name="ip_addresses",
+            field=models.ManyToManyField(
+                related_name="_dcim_interface_ip_addresses_+", through="dcim.InterfaceAssignment", to="ipam.IPAddress"
+            ),
         ),
     ]
