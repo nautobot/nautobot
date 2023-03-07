@@ -1,4 +1,4 @@
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.jobs import Job
 
 
@@ -16,7 +16,7 @@ class TestReadOnlyPass(Job):
         """
         Job function.
         """
+        location_type = LocationType.objects.create(name="Job Root Type")
+        location = Location.objects.create(name="New Location", location_type=location_type)
 
-        site = Site.objects.create(name="Site", slug="site")
-
-        self.log_success(obj=site)
+        self.log_success(obj=location)

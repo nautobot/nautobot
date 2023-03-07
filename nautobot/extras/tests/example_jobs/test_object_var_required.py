@@ -1,14 +1,14 @@
 from nautobot.extras.jobs import Job, ObjectVar
-from nautobot.dcim.models import Region
+from nautobot.dcim.models import Location
 
 
 class TestRequiredObjectVar(Job):
-    region = ObjectVar(
-        description="Region (required)",
-        model=Region,
+    location = ObjectVar(
+        description="Location (required)",
+        model=Location,
         required=True,
     )
 
     def run(self, data, commit):
-        self.log_info(obj=data["region"], message="The Region that the user provided.")
-        return "Nice Region!"
+        self.log_info(obj=data["location"], message="The Location that the user provided.")
+        return "Nice Location!"

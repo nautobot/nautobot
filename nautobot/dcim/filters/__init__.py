@@ -65,8 +65,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.filters import (
@@ -121,87 +119,8 @@ __all__ = (
     "RackReservationFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
-    "RegionFilterSet",
-    "SiteFilterSet",
     "VirtualChassisFilterSet",
 )
-
-
-class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    parent = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        label="Parent region (slug or ID)",
-    )
-    children = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        label="Children (slug or ID)",
-    )
-    has_children = RelatedMembershipBooleanFilter(
-        field_name="children",
-        label="Has children",
-    )
-    sites = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Sites (slug or ID)",
-    )
-    has_sites = RelatedMembershipBooleanFilter(
-        field_name="sites",
-        label="Has sites",
-    )
-
-    class Meta:
-        model = Region
-        fields = ["id", "name", "slug", "description"]
-
-
-class SiteFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "facility": "icontains",
-            "description": "icontains",
-            "physical_address": "icontains",
-            "shipping_address": "icontains",
-            "contact_name": "icontains",
-            "contact_phone": "icontains",
-            "contact_email": "icontains",
-            "comments": "icontains",
-            "asn": {
-                "lookup_expr": "exact",
-                "preprocessor": int,  # asn expects an int
-            },
-        },
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="region",
-        label="Region (slug or ID)",
-    )
-    time_zone = django_filters.MultipleChoiceFilter(
-        choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
-        label="Time zone",
-        null_value="",
-    )
-
-    class Meta:
-        model = Site
-        fields = [
-            "asn",
-            "comments",
-            "contact_email",
-            "contact_name",
-            "contact_phone",
-            "description",
-            "facility",
-            "id",
-            "latitude",
-            "longitude",
-            "name",
-            "physical_address",
-            "shipping_address",
-            "slug",
-            "tags",
-        ]
 
 
 class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):

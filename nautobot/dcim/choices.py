@@ -2,28 +2,6 @@ from nautobot.core.choices import ChoiceSet
 
 
 #
-# Sites
-#
-
-
-class SiteStatusChoices(ChoiceSet):
-
-    STATUS_PLANNED = "planned"
-    STATUS_STAGING = "staging"
-    STATUS_ACTIVE = "active"
-    STATUS_DECOMMISSIONING = "decommissioning"
-    STATUS_RETIRED = "retired"
-
-    CHOICES = (
-        (STATUS_PLANNED, "Planned"),
-        (STATUS_STAGING, "Staging"),
-        (STATUS_ACTIVE, "Active"),
-        (STATUS_DECOMMISSIONING, "Decommissioning"),
-        (STATUS_RETIRED, "Retired"),
-    )
-
-
-#
 # Locations
 #
 
