@@ -1,16 +1,33 @@
-import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap"
-import { faRightToBracket } from "@fortawesome/free-solid-svg-icons";
+import { Button, Container, Nav, Navbar, NavDropdown } from "react-bootstrap"
+import { faSignIn, faSignOut } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Link, NavLink } from "react-router-dom"
+import { Link, NavLink, redirect, useNavigate } from "react-router-dom"
+import {useState, useEffect} from "react"
 import useSWR from "swr"
+import axios from "axios";
 
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
+  const navigate = useNavigate();
+
   const { data, error } = useSWR("/api/ui/get-menu/", fetcher)
+  const [ isLoggedIn, setIsLoggedIn] = useState(false)
+  useEffect(() => {
+    // Check if `nautobot-user` exist in localStorage; if found set setIsLoggedIn to true else false
+    setIsLoggedIn(localStorage.getItem("nautobot-user") != null)
+  }, [])
+
+  const logout = () => {
+    axios.get("/api/users/tokens/logout/")
+    setIsLoggedIn(false)
+    localStorage.removeItem("nautobot-user")
+    navigate("/login")
+  }
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
+
 
   return (
     <Navbar bg="light" expand="lg" fixed="top">
@@ -48,10 +65,18 @@ export default function BSNavBar() {
         </Navbar.Collapse>
         <Navbar.Collapse className="justify-content-end">
           <Navbar.Text>
-            <Link to="/login/">
-              <FontAwesomeIcon icon={faRightToBracket} />
-              {" Login"}
-            </Link>
+            {
+                isLoggedIn ?
+                    <span role="button" className="border-0 btn-success cusor-pointer" onClick={() => logout()}>
+                      <FontAwesomeIcon icon={faSignOut} />
+                      {" Logout"}
+                    </span>
+                :
+                    <Link to="/login/">
+                      <FontAwesomeIcon icon={faSignIn} />
+                      {" Login"}
+                    </Link>
+            }
           </Navbar.Text>
         </Navbar.Collapse>
       </Container>
