@@ -14,7 +14,6 @@ def populate_status_choices(apps, schema_editor):
             "circuits.Circuit",
             "dcim.Cable",
             "dcim.Device",
-            "dcim.Site",
             "dcim.PowerFeed",
             "dcim.Rack",
             "ipam.IPAddress",

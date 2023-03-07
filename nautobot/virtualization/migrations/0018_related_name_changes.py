@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0065_created_datetime"),
+        ("extras", "0064_created_datetime"),
         ("virtualization", "0017_created_datetime"),
     ]
 

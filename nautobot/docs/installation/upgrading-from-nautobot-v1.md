@@ -432,7 +432,7 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 
 ### Removed Filter Fields
 
-Below is a table documenting [removed redundant filter field changes](../release-notes/version-2.0.md#removed-redundant-filter-fields-2804) in v2.x.
+Below is a table documenting [removed filter field changes](../release-notes/version-2.0.md#removed-filter-fields-2804) in v2.x.
 Unless stated otherwise, all of the `*_id=<uuid>` filters have been replaced by generic filters that support both uuid and slug.
 For example `/circuits/circuits/?provider_id=<uuid>` has been replaced by `/circuits/circuits/?provider=<uuid>`.
 
@@ -583,8 +583,10 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `region_id`           |                                                                                               |
 |                         | `tenant_group_id`     |                                                                                               |
 | Tenant                  | `aggregates`          |                                                                                               |
-|                         | `has_aggregates`      |                                                                                               |
 |                         | `group_id`            |                                                                                               |
+|                         | `has_aggregates`      |                                                                                               |
+|                         | `has_sites`           |                                                                                               |
+|                         | `sites`               |                                                                                               |
 | TenantGroup             | `parent_id`           |                                                                                               |
 | VirtualChassis          | `master_id`           |                                                                                               |
 |                         | `region`              |                                                                                               |

@@ -33,33 +33,8 @@ __all__ = [
     "NestedRackSerializer",
     "NestedRearPortSerializer",
     "NestedRearPortTemplateSerializer",
-    "NestedRegionSerializer",
-    "NestedSiteSerializer",
     "NestedVirtualChassisSerializer",
 ]
-
-
-#
-# Regions/sites
-#
-
-
-class NestedRegionSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
-    site_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.Region
-        fields = ["id", "url", "name", "slug", "site_count", "tree_depth"]
-
-
-class NestedSiteSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
-
-    class Meta:
-        model = models.Site
-        fields = ["id", "url", "name", "slug"]
-
 
 #
 # Locations

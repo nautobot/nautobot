@@ -9,7 +9,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.circuits.models import Circuit
-from nautobot.dcim.models import Device, Location, Rack, RackReservation, Site
+from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
@@ -141,11 +141,6 @@ class TenantFilterSet(NautobotFilterSet):
     has_route_targets = RelatedMembershipBooleanFilter(
         field_name="route_targets",
         label="Has route targets",
-    )
-    sites = NaturalKeyOrPKMultipleChoiceFilter(queryset=Site.objects.all(), label="Sites (slug or ID)")
-    has_sites = RelatedMembershipBooleanFilter(
-        field_name="sites",
-        label="Has sites",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),

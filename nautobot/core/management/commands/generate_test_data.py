@@ -57,8 +57,6 @@ class Command(BaseCommand):
             from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.dcim.factory import (
-                RegionFactory,
-                SiteFactory,
                 LocationTypeFactory,
                 LocationFactory,
             )
@@ -96,11 +94,6 @@ class Command(BaseCommand):
         self.stdout.write("Creating Tenants...")
         TenantFactory.create_batch(10, has_tenant_group=False)
         TenantFactory.create_batch(10, has_tenant_group=True)
-        self.stdout.write("Creating Regions...")
-        RegionFactory.create_batch(15, has_parent=False)
-        RegionFactory.create_batch(5, has_parent=True)
-        self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(25)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
