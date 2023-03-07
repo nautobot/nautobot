@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.urls import reverse
 
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
@@ -559,6 +559,15 @@ class BaseInterface(RelationshipModel, StatusModel):
 
         return super().save(*args, **kwargs)
 
+class InterfaceAssignment(BaseModel):
+    vminterface = models.ForeignKey(to="virtualization.VMInterface", on_delete=models.CASCADE, related_name="ip_assignments", null=True)
+    interface = models.ForeignKey(to="dcim.Interface", on_delete=models.CASCADE, related_name="ip_assignments", null=True)
+    ip_address = models.ForeignKey(to="ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        unique_together=(("interface", "ip_address"), ("vminterface", "ip_address"),)
+    
+
 
 @extras_features(
     "cable_terminations",
@@ -574,7 +583,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
     A network interface within a Device. A physical Interface can connect to exactly one other Interface.
     """
-
+    ip_addresses = models.ManyToManyField(to="ipam.IPAddress", related_name="+", through="dcim.InterfaceAssignment", through_fields=("interface", "ip_address"))
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
         target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
@@ -610,12 +619,12 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
-        to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="interface",
-    )
+    # ip_addresses = GenericRelation(
+    #     to="ipam.IPAddress",
+    #     content_type_field="assigned_object_type",
+    #     object_id_field="assigned_object_id",
+    #     related_query_name="interface",
+    # )
 
     csv_headers = [
         "device",

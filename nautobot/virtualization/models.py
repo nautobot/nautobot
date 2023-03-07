@@ -402,6 +402,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
     "webhooks",
 )
 class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
+    ip_addresses = models.ManyToManyField(to="ipam.IPAddress", related_name="+", through="dcim.InterfaceAssignment", through_fields=("vminterface", "ip_address"))
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,
@@ -426,12 +427,12 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
-        to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="vminterface",
-    )
+    # ip_addresses = GenericRelation(
+    #     to="ipam.IPAddress",
+    #     content_type_field="assigned_object_type",
+    #     object_id_field="assigned_object_id",
+    #     related_query_name="vminterface",
+    # )
     tags = TaggableManager(through=TaggedItem, related_name="vminterface")
 
     csv_headers = [

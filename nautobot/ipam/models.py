@@ -48,6 +48,28 @@ __all__ = (
 logger = logging.getLogger(__name__)
 
 
+class Namespace(PrimaryModel):
+    """
+    """
+    name = models.CharField(max_length=255, unique=True)
+
+class RouteDistinguisher(PrimaryModel):
+    """
+    """
+    namespace = models.ForeignKey(to="ipam.Namespace", on_delete=models.PROTECT, related_name="route_distinguishers")
+    rd = models.CharField(
+        max_length=VRF_RD_MAX_LENGTH,
+        unique=True,
+        verbose_name="Route distinguisher",
+        help_text="Unique route distinguisher (as defined in RFC 4364)",
+    )
+    name = models.CharField(
+        max_length=255,
+    )
+
+    class Meta:
+        unique_together = ("namespace", "rd")
+
 @extras_features(
     "custom_fields",
     "custom_links",
@@ -73,6 +95,23 @@ class VRF(PrimaryModel):
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    route_distinguisher = models.ForeignKey(
+        to="ipam.RouteDistinguisher",
+        on_delete=models.PROTECT,
+        related_name="vrfs",
+        verbose_name="Route distinguisher",
+        help_text="Unique route distinguisher (as defined in RFC 4364)",
+        null=True,
+        blank=True,
+    )
+    device = models.ForeignKey(
+        to="dcim.Device",
+        on_delete=models.PROTECT,
+        related_name="vrfs",
+        verbose_name="Device",
+        null=True,
+        blank=True,
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -97,6 +136,7 @@ class VRF(PrimaryModel):
     ]
 
     class Meta:
+        unique_together = ("name", "device", "route_distinguisher")
         ordering = ("name", "rd")  # (name, rd) may be non-unique
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
@@ -115,6 +155,19 @@ class VRF(PrimaryModel):
             str(self.enforce_unique),
             self.description,
         )
+    def validate_unique(self, exclude=None):
+        message = f"VRF object with name {self.name}, device {self.device} and route_distinguisher {self.route_distinguisher} already exists"
+        if self.device is None and self.route_distinguisher is None:
+            if VRF.objects.exclude(pk=self.pk).filter(name=self.name, device__isnull=True, route_distinguisher__isnull=True).exists():
+                raise ValidationError(message)
+        elif self.device is None:
+            if VRF.objects.exclude(pk=self.pk).filter(name=self.name, device__isnull=True, route_distinguisher=self.route_distinguisher).exists():
+                raise ValidationError(message)
+        elif self.route_distinguisher is None:
+            if VRF.objects.exclude(pk=self.pk).filter(name=self.name, device=self.device, route_distinguisher__isnull=True).exists():
+                raise ValidationError(message)
+
+        return super().validate_unique(exclude)
 
     @property
     def display(self):
@@ -384,6 +437,8 @@ class Aggregate(PrimaryModel):
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
         return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
+def get_default_namespace():
+    return Namespace.objects.get_or_create(name="Global")[0].pk
 
 @extras_features(
     "custom_fields",
@@ -404,7 +459,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
     """
-
+    namespace = models.ForeignKey(to="ipam.Namespace", on_delete=models.PROTECT, related_name="prefixes", default=get_default_namespace)
     network = VarbinaryIPField(
         null=False,
         db_index=True,
@@ -478,6 +533,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     }
 
     class Meta:
+        unique_together = ("namespace", "network", "prefix_length")
         ordering = (
             F("vrf__name").asc(nulls_first=True),
             "network",
@@ -710,7 +766,13 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     for example, when mapping public addresses to private addresses. When an Interface has been assigned an IPAddress
     which has a NAT outside IP, that Interface's Device can use either the inside or outside IP as its primary IP.
     """
-
+    parent = models.ForeignKey(
+        to="ipam.Prefix",
+        on_delete=models.PROTECT,
+        related_name="ip_addresses",
+        null=True,
+        blank=True,
+    )
     host = VarbinaryIPField(
         null=False,
         db_index=True,
@@ -786,6 +848,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     objects = IPAddressQuerySet.as_manager()
 
     class Meta:
+        unique_together = ("parent", "host", "prefix_length")
         ordering = ("host", "prefix_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
