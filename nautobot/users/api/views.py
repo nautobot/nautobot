@@ -69,6 +69,8 @@ class TokenViewSet(ModelViewSet):
         classes = super().authentication_classes
         return classes + [BasicAuthentication]
 
+    # TODO(timizuo): Move authenticate and logout to its own view;
+    #  as it is not proper to be on this.
     @action(methods=["POST"], detail=False, permission_classes=[AllowAny])
     def authenticate(self, request):
         serializer = serializers.UserLoginSerializer(data=request.data, context=self.get_serializer_context())
@@ -77,7 +79,7 @@ class TokenViewSet(ModelViewSet):
         login(request, user=user)
         return Response(status=200)
 
-    @action(methods=["GET"], detail=False, permission_classes=[AllowAny])
+    @action(methods=["GET"], detail=False)
     def logout(self, request):
         logout(request)
         return Response(status=200)
