@@ -832,6 +832,11 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    is_job_button_receiver = forms.NullBooleanField(
+        initial=False,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tag = TagFilterField(model)
 
 
@@ -999,15 +1004,18 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 
 
 class JobButtonForm(BootstrapMixin, forms.ModelForm):
-    content_type = forms.ModelChoiceField(
+    content_types = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
-        label="Content Type",
+        label="Object Types",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
     )
 
     class Meta:
         model = JobButton
         fields = (
-            "content_type",
+            "content_types",
             "name",
             "text",
             "job",
@@ -1021,10 +1029,10 @@ class JobButtonForm(BootstrapMixin, forms.ModelForm):
 class JobButtonFilterForm(BootstrapMixin, forms.Form):
     model = JobButton
     q = forms.CharField(required=False, label="Search")
-    content_type = CSVContentTypeField(
+    content_types = CSVContentTypeField(
         queryset=ContentType.objects.all(),
         required=False,
-        label="Content Type",
+        label="Object Types",
     )
 
 

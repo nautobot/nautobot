@@ -48,7 +48,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.utilities.utils import copy_safe_request
+from nautobot.utilities.utils import copy_safe_request, get_model_from_name
 
 
 User = get_user_model()
@@ -880,6 +880,34 @@ class JobHookReceiver(Job):
         raise NotImplementedError
 
 
+class JobButtonReceiver(Job):
+    """
+    Base class for job button receivers. Job button receivers are jobs that are initiated
+    from UI buttons and are not intended to be run from the job form UI or API like standard jobs.
+    """
+
+    object_pk = StringVar()
+    object_model_name = StringVar()
+
+    def run(self, data, commit):
+        """JobButtonReceiver subclasses generally shouldn't need to override this method."""
+        object_pk = data["object_pk"]
+        object_model_name = data["object_model_name"]
+
+        model = get_model_from_name(object_model_name)
+        obj = model.objects.get(pk=object_pk)
+
+        self.receive_job_button(obj=obj)
+
+    def receive_job_button(self, obj):
+        """
+        Method to be implemented by concrete JobButtonReceiver subclasses.
+
+        :param obj: an instance of the object
+        """
+        raise NotImplementedError
+
+
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
@@ -888,7 +916,7 @@ def is_job(obj):
     from .reports import Report
 
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]
+        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver, JobButtonReceiver]
     except TypeError:
         return False
 

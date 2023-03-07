@@ -768,6 +768,7 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "installed",
             "enabled",
             "is_job_hook_receiver",
+            "is_job_button_receiver",
             "has_sensitive_variables",
             "has_sensitive_variables_override",
             "approval_required",
@@ -1050,7 +1051,7 @@ class JobLogEntrySerializer(BaseModelSerializer):
 
 class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
-    content_type = ContentTypeField(queryset=ContentType.objects.all())
+    content_types = ContentTypeField(queryset=ContentType.objects.all(), many=True)
 
     class Meta:
         model = JobButton
@@ -1058,7 +1059,7 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "url",
             "job",
             "name",
-            "content_type",
+            "content_types",
             "text",
             "weight",
             "group_name",

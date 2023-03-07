@@ -23,7 +23,8 @@ GROUP_DROPDOWN = """
 
 HIDDEN_INPUTS = """
 <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">
-<input type="hidden" name="obj" value="{object_pk}">
+<input type="hidden" name="object_pk" value="{object_pk}">
+<input type="hidden" name="object_model_name" value="{object_model_name}">
 <input type="hidden" name="redirect_path" value="{redirect_path}">
 """
 
@@ -73,7 +74,7 @@ def job_buttons(context, obj):
     Render all applicable job buttons for the given object.
     """
     content_type = ContentType.objects.get_for_model(obj)
-    buttons = JobButton.objects.filter(content_type=content_type)
+    buttons = JobButton.objects.filter(content_types=content_type)
     if not buttons:
         return ""
 
@@ -91,6 +92,7 @@ def job_buttons(context, obj):
     hidden_inputs = HIDDEN_INPUTS.format(
         csrf_token=context["csrf_token"],
         object_pk=obj.pk,
+        object_model_name=f"{content_type.app_label}.{content_type.model}",
         redirect_path=context["request"].path,
     )
 

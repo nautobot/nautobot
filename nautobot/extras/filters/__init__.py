@@ -593,6 +593,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "hidden",
             "read_only",
             "is_job_hook_receiver",
+            "is_job_button_receiver",
             "soft_time_limit",
             "time_limit",
             "grouping_override",
@@ -707,18 +708,16 @@ class JobButtonFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "job": "icontains",
+            "job__name": "icontains",
             "text": "icontains",
-            "content_type__app_label": "icontains",
-            "content_type__model": "icontains",
         },
     )
-    content_type = ContentTypeFilter()
+    content_types = ContentTypeFilter()
 
     class Meta:
         model = JobButton
         fields = (
-            "content_type",
+            "content_types",
             "name",
             "text",
             "job",

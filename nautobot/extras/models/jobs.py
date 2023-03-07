@@ -155,6 +155,10 @@ class Job(PrimaryModel):
         default=False, editable=False, help_text="Whether this job is a job hook receiver"
     )
 
+    is_job_button_receiver = models.BooleanField(
+        default=False, editable=False, help_text="Whether this job is a job button receiver"
+    )
+
     has_sensitive_variables = models.BooleanField(
         default=True, help_text="Whether this job contains sensitive variables"
     )
@@ -827,9 +831,11 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     The button text field accepts Jinja2 template code to be rendered with an object as context.
     """
 
-    content_type = models.ForeignKey(
+    content_types = models.ManyToManyField(
         to=ContentType,
-        on_delete=models.CASCADE,
+        related_name="job_buttons",
+        verbose_name="Object types",
+        help_text="The object type(s) to which this job button applies.",
     )
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
@@ -840,6 +846,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         to="extras.Job",
         on_delete=models.CASCADE,
         help_text="Job this button will run",
+        limit_choices_to={"is_job_button_receiver": True},
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(

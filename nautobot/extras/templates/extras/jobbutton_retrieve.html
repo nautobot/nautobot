@@ -9,8 +9,14 @@
 
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    <td>Object Type</td>
-                    <td><span>{{ object.content_type }}</span></td>
+                    <td>Object Types</td>
+                    <td>
+                        <ul>
+                            {% for ct in object.content_types.all %}
+                                <li>{{ ct }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
                 </tr>
                 <tr>
                     <td>Name</td>

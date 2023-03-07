@@ -1041,6 +1041,8 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         if "is_job_hook_receiver" not in request.GET:
             queryset = queryset.filter(is_job_hook_receiver=False)
+        if "is_job_button_receiver" not in request.GET:
+            queryset = queryset.filter(is_job_button_receiver=False)
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1605,7 +1607,8 @@ class JobButtonRunView(ObjectPermissionRequiredMixin, View):
             obj_type=get_job_content_type(),
             user=request.user,
             data={
-                "obj": post_data["obj"],
+                "object_pk": post_data["object_pk"],
+                "object_model_name": post_data["object_model_name"],
             },
             request=copy_safe_request(request),
             commit=True,
