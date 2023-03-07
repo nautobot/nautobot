@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("ipam", "0021_interface_to_ipaddress_m2m"),
-        ("dcim", "0035_related_name_changes"),
+        ("dcim", "0036_remove_region_and_site"),
     ]
 
     operations = [
