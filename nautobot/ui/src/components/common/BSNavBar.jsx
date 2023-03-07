@@ -12,13 +12,13 @@ const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => re
 export default function BSNavBar() {
   const navigate = useNavigate();
 
-  const { data, error } = useSWR("/api/get-menu/", fetcher)
+  const { data, error } = useSWR("/api/ui/get-menu/", fetcher)
   const [ isLoggedIn, setIsLoggedIn] = useState(false)
   useEffect(() => {
     // Check if `nautobot-user` exist in localStorage; if found set setIsLoggedIn to true else false
     setIsLoggedIn(localStorage.getItem("nautobot-user") != null)
   }, [])
-  
+
   const logout = () => {
     axios.get("/api/users/tokens/logout/")
     setIsLoggedIn(false)
