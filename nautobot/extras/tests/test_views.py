@@ -518,7 +518,7 @@ class DynamicGroupTestCase(
 
         # Now update it.
         instance = self._get_queryset().get(name=data["name"])
-        data["filter-serial"] = "abc123"
+        data["filter-serial"] = ["abc123"]
         request = {
             "path": self._get_url("edit", instance),
             "data": post_data(data),
