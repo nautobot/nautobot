@@ -137,5 +137,6 @@ class Command(BaseCommand):
         if options["npm_build"]:
             args = f"run build {loglevel}"
             self.run_command(f"npm {args}", ">>> Compiling Nautobot UI packages...")
+            self.run_command(f"cp {Path(settings.NAUTOBOT_UI_DIR, 'build' ,'asset-manifest.json')} {Path(settings.NAUTOBOT_UI_DIR, 'build' , 'static', 'asset-manifest.json')}", ">>> Copying built manifest...")
 
         self.stdout.write(self.style.SUCCESS(">>> Nautobot UI build complete! 🎉"))

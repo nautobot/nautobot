@@ -1,4 +1,5 @@
-import { Flex, Box, Spacer, Image, Link, Menu, MenuButton, MenuDivider, MenuList, MenuGroup, MenuItem } from "@chakra-ui/react"
+import { Flex, Box, Link } from "@nautobot/nautobot-ui"
+import { Spacer, Image, Menu, MenuButton, MenuDivider, MenuList, MenuGroup, MenuItem } from "@chakra-ui/react"
 import { faRightToBracket } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Fragment } from "react"

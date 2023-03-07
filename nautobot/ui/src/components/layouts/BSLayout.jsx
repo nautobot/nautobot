@@ -10,7 +10,7 @@ export default function Layout({ children }) {
     <>
       <Menu />
       <Container fluid="sm" className='page-container'>
-        <Alert>
+        <Alert status='info'>
           Current route is {location.pathname}
         </Alert>
         {children}

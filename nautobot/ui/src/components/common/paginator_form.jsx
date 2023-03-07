@@ -1,6 +1,5 @@
 import React, { useState } from "react"
-import { Text } from "@nautobot/nautobot-ui"
-import { Box, Select } from "@chakra-ui/react"
+import { Box, Text, Select } from "@nautobot/nautobot-ui"
 import { useSearchParams } from "react-router-dom"
 
 

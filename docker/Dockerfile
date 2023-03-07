@@ -215,36 +215,18 @@ FROM dependencies-dev-python as dependencies-dev-platform-amd64
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
-# Install NodeJS for installing markdownlint-cli
-
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v19.7.0/node-v19.7.0-linux-x64.tar.xz && \
-    mkdir -p /usr/local/lib/nodejs && \
-    tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
-    rm -rf /tmp/node.tar.xz
-
-ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v19.7.0-linux-x64/bin"
-
 FROM dependencies-dev-python as dependencies-dev-platform-arm64
 
 # Install hadolint for linting Dockerfiles
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
     chmod +x /usr/bin/hadolint
 
-# Install NodeJS for installing markdownlint-cli
-
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v19.7.0/node-v19.7.0-linux-arm64.tar.xz && \
-    mkdir -p /usr/local/lib/nodejs && \
-    tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
-    rm -rf /tmp/node.tar.xz
-
-ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v19.7.0-linux-arm64/bin"
-
 ################################ Stage: dependencies-dev (intermediate build target)
 
 # hadolint ignore=DL3006
 FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
-RUN npm install --global markdownlint-cli@0.31.1
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt install -y nodejs && npm install --global markdownlint-cli@0.31.1
 
 # Nautobot wheel build is no longer a direct previous layer
 # /source from build-nautobot will include docs from build-docs as well

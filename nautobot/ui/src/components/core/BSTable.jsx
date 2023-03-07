@@ -1,4 +1,4 @@
-import { Checkbox, Table, Thead, Tr, Th, Tbody, Td } from "@chakra-ui/react"
+import { Checkbox, Table, Thead, Tr, Th, Tbody, Td } from "@nautobot/nautobot-ui"
 
 import BSTableItem from "@components/core/BSTableItem"
 

@@ -1,5 +1,5 @@
-import { Button } from "@nautobot/nautobot-ui"
-import { Card, CardHeader, CardBody, CardFooter, FormControl, FormLabel, Input } from "@chakra-ui/react"
+import { Button, FormControl, FormLabel, Input } from "@nautobot/nautobot-ui"
+import { Card, CardHeader, CardBody, CardFooter } from "@chakra-ui/react"
 import Cookies from "js-cookie"
 
 
