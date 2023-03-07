@@ -1,5 +1,5 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 
 
 layout = (
@@ -14,14 +14,6 @@ layout = (
                 description="Virtual routing and forwarding tables",
                 permissions=["ipam.view_vrf"],
                 weight=100,
-            ),
-            HomePageItem(
-                name="Aggregates",
-                link="ipam:aggregate_list",
-                model=Aggregate,
-                description="Top-level IP allocations",
-                permissions=["ipam.view_aggregate"],
-                weight=200,
             ),
             HomePageItem(
                 name="Prefixes",

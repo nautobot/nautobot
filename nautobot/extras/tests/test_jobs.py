@@ -320,7 +320,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_object_var_optional"
         name = "TestOptionalObjectVar"
-        data = {"region": None}
+        data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, data=data, commit=True, request=self.request)
 
         info_log = JobLogEntry.objects.filter(
@@ -330,8 +330,8 @@ class JobTest(TransactionTestCase):
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(info_log.log_object, "")
-        self.assertEqual(info_log.message, "The Region if any that the user provided.")
-        self.assertEqual(job_result.data["output"], "\nNice Region (or not)!")
+        self.assertEqual(info_log.message, "The Location if any that the user provided.")
+        self.assertEqual(job_result.data["output"], "\nNice Location (or not)!")
 
     def test_required_object_var(self):
         """
@@ -339,7 +339,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
-        data = {"region": None}
+        data = {"location": None}
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
         logging.disable(logging.NOTSET)
@@ -349,7 +349,7 @@ class JobTest(TransactionTestCase):
         log_failure = JobLogEntry.objects.filter(
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
-        self.assertIn("region is a required field", log_failure.message)
+        self.assertIn("location is a required field", log_failure.message)
 
     def test_job_data_as_string(self):
         """

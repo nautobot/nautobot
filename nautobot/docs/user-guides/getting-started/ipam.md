@@ -3,7 +3,7 @@
 This next section will demonstrate how to:
 
 * Create a Regional Internet Registry
-* Create an Aggregate
+* Create a Prefix
 * Create assignable IP addresses
 * Assign an IP address to an Interface on a Device
 
@@ -28,29 +28,10 @@ To create a RIR:
 
 ![Add RIR](../images/getting-started-nautobot-ui/27-add-rir.png)
 
-## Creating an Aggregate
-
-An aggregate is a consolidated allocation of IP address space, whether it is public or private. An aggregate must map back to a RIR that has allocated the space.
-
-To create an Aggregate:
-
-1. Click on **IPAM** in the top-level navigation menu
-2. Find **Aggregates** and click on the **+**; this takes you to the `Add a new aggregate` form
-3. Specify the `Prefix` in a `prefix/mask` format
-4. Select a `RIR` from the drop-down selector
-5. Click the `Create` button
-
-![Add aggregate](../images/getting-started-nautobot-ui/28-add-aggregate.png)
-
-You will then be taken to the `Aggregates` main page, where you will see the Aggregate you just created.
-
-![View aggregates](../images/getting-started-nautobot-ui/29-view-aggregates.png)
-
 ## Creating a Prefix
 
 A Prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24).
-Prefixes are automatically organized by their parent Aggregates.
-Additionally, each Prefix can be assigned to a particular Site and virtual routing and forwarding (VRF) instance.
+Each Prefix can be assigned to a particular Location, an RIR and virtual routing and forwarding (VRF) instance.
 
 To create a prefix:
 
@@ -58,25 +39,12 @@ To create a prefix:
 2. Look for **Prefixes** and click on the **+**
     * This will take you to the `Add a new prefix` form
 3. Populate the `Prefix` in CIDR notation
-4. Select a `Status` from the drop-down selector
-5. If all addresses in the Prefix are usable, change the type to "Pool"
-6. Click on the `Create` button (not shown)
+4. If all addresses in the Prefix are usable, change the type to "Pool"
+5. Select a `Status` from the drop-down selector
+6. Optionally select a `RIR` from the drop-down selector
+7. Click on the `Create` button (not shown)
 
 ![Add prefix](../images/getting-started-nautobot-ui/30-add-prefix.png)
-
-## Verifying a Prefix in an Aggregate
-
-To view the Prefixes in an Aggregate:
-
-1. Click on **IPAM** in the top-level navigation menu
-2. Click on **Aggregates** to go to the Aggregates main page
-3. Find the Aggregate you are interested in and click on it
-4. On the main page for the specific Aggregate, look for a specific Prefix (`10.10.10.0/24` in this example)
-
-!!! note
-    Nautobot will break an Aggregate into the highest-level child Prefixes to carve out user-defined Prefixes
-
-![View aggregates](../images/getting-started-nautobot-ui/31-view-aggregates-again.png)
 
 ## Creating IP Addresses
 

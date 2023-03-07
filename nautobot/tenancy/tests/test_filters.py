@@ -2,9 +2,9 @@ import factory
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation, Site
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -142,28 +142,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_comments(self):
         params = {"comments": Tenant.objects.exclude(comments__exact="").values_list("comments", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_aggregates(self):
-        """Test the `aggregates` filter."""
-        aggregates = list(Aggregate.objects.filter(tenant__isnull=False))[:2]
-        params = {"aggregates": [aggregates[0].pk, aggregates[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__in=aggregates).distinct(),
-        )
-
-    def test_has_aggregates(self):
-        """Test the `has_aggregates` filter."""
-        params = {"has_aggregates": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__isnull=False).distinct(),
-        )
-        params = {"has_aggregates": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__isnull=True).distinct(),
-        )
 
     def test_circuits(self):
         """Test the `circuits` filter."""
@@ -373,28 +351,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(route_targets__isnull=True).distinct(),
-        )
-
-    def test_sites(self):
-        """Test the `sites` filter."""
-        sites = list(Site.objects.filter(tenant__isnull=False))[:2]
-        params = {"sites": [sites[0].pk, sites[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__in=sites).distinct(),
-        )
-
-    def test_has_sites(self):
-        """Test the `has_sites` filter."""
-        params = {"has_sites": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__isnull=False).distinct(),
-        )
-        params = {"has_sites": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__isnull=True).distinct(),
         )
 
     def test_virtual_machines(self):

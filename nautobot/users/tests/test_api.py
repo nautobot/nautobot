@@ -312,7 +312,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Permission 4",
-                "object_types": ["dcim.site"],
+                "object_types": ["dcim.location"],
                 "groups": [groups[0].pk],
                 "users": [users[0].pk],
                 "actions": ["view", "add", "change", "delete"],
@@ -320,7 +320,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Permission 5",
-                "object_types": ["dcim.site"],
+                "object_types": ["dcim.location"],
                 "groups": [groups[1].pk],
                 "users": [users[1].pk],
                 "actions": ["view", "add", "change", "delete"],
@@ -328,7 +328,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Permission 6",
-                "object_types": ["dcim.site"],
+                "object_types": ["dcim.location"],
                 "groups": [groups[2].pk],
                 "users": [users[2].pk],
                 "actions": ["view", "add", "change", "delete"],

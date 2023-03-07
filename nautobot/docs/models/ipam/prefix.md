@@ -2,7 +2,7 @@
 
 A prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24). A prefix entails only the "network portion" of an IP address: All bits in the address not covered by the mask must be zero. (In other words, a prefix cannot be a specific IP address.)
 
-Prefixes are automatically organized by their parent aggregates. Additionally, each prefix can be assigned to a particular site (optionally also to a location within the site) and a virtual routing and forwarding instance (VRF). Each VRF represents a separate IP space or routing table. All prefixes not assigned to a VRF are considered to be in the "global" table.
+Each prefix can be assigned to a particular site (optionally also to a location within the site) and a virtual routing and forwarding instance (VRF). Each VRF represents a separate IP space or routing table. All prefixes not assigned to a VRF are considered to be in the "global" table.
 
 Each prefix must be assigned a [`status`](../../models/extras/status.md) and can optionally be assigned a role. These terms are often used interchangeably so it's important to recognize the difference between them. The **status** defines a prefix's operational state. The following statuses are provided by default:
 
@@ -27,3 +27,10 @@ If a prefix's type is set to "Pool", Nautobot will treat this prefix as a range 
 
 +/- 2.0.0
     The `is_pool` field was removed and its functionality was replaced by the `Prefix.type` field.
+
+A prefix can be assigned to an [RIR](rir.md) to track which RIR has granted your organization permission to use the specified IP space on the public Internet.
+
+The `date_allocated` field can be used to track any date and time you would like to define as the "allocated date" for a prefix. This could be the date an RIR assigned a prefix to your organization or the date a prefix was assigned to a specific internal team.
+
++++ 2.0.0
+    The `date_allocated` and `rir` fields were added, migrating data from the removed `Aggregate` model.

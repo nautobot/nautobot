@@ -249,11 +249,11 @@ class IsTaggableTest(TestCase):
             tags = "Nope!"
 
         # Classes
-        self.assertFalse(models_utils.is_taggable(dcim_models.Region))
+        self.assertFalse(models_utils.is_taggable(dcim_models.Manufacturer))
         self.assertFalse(models_utils.is_taggable(FakeOut))
 
         # Instances
-        self.assertFalse(models_utils.is_taggable(dcim_models.Region(name="Test Region")))
+        self.assertFalse(models_utils.is_taggable(dcim_models.Manufacturer(name="Test Manufacturer")))
         self.assertFalse(models_utils.is_taggable(FakeOut()))
 
         self.assertFalse(models_utils.is_taggable(None))
