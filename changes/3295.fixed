@@ -1,0 +1,1 @@
+Fixed kombu serialization error on `User` object that arose when `CELERY_RESULT_EXTENDED == True` or when `enqueue_job` was called from within an existing `Job`.

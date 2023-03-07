@@ -503,6 +503,31 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_saved_filter(self):
+        """Test that editing a filter works using the edit view."""
+        self.add_permissions("extras.add_dynamicgroup", "extras.change_dynamicgroup")
+
+        # Create the object first.
+        data = self.form_data.copy()
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        # Now update it.
+        instance = self._get_queryset().get(name=data["name"])
+        data["filter-serial"] = "abc123"
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter, {"serial": data["filter-serial"]})
+
 
 class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,

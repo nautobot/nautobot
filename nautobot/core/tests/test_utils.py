@@ -1,6 +1,8 @@
 import pickle
 
 from django import forms as django_forms
+from django.contrib.auth.models import Group
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import RequestFactory, TestCase
@@ -200,6 +202,10 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Device, "list", api=True), "dcim-api:device-list")
         self.assertEqual(lookup.get_route_for_model("dcim.location", "detail", api=True), "dcim-api:location-detail")
+        self.assertEqual(lookup.get_route_for_model(ContentType, "list", api=True), "extras-api:contenttype-list")
+        self.assertEqual(lookup.get_route_for_model(ContentType, "detail", api=True), "extras-api:contenttype-detail")
+        self.assertEqual(lookup.get_route_for_model(Group, "list", api=True), "users-api:group-list")
+        self.assertEqual(lookup.get_route_for_model(Group, "detail", api=True), "users-api:group-detail")
         self.assertEqual(
             lookup.get_route_for_model(dcim_models.Location, "detail", api=True), "dcim-api:location-detail"
         )

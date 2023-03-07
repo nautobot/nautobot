@@ -66,17 +66,18 @@ class DynamicGroup(OrganizationalModel):
 
     clone_fields = ["content_type", "filter"]
 
-    # This is used as a `startswith` check on field names, so these can be
-    # explicit fields or just substrings.
+    # This is used as a `startswith` check on field names, so these can be explicit fields or just
+    # substrings.
     #
-    # Currently this means skipping "search", custom fields, and custom relationships.
+    # Currently this means skipping "computed fields" and "comments".
     #
-    # FIXME(jathan): As one example, `DeviceFilterSet.q` filter searches in `comments`. The issue
-    # really being that this field renders as a textarea and it's not cute in the UI. Might be able
-    # to dynamically change the widget if we decide we do want to support this field.
+    # - Computed fields are skipped because they are generated at call time and
+    #   therefore cannot be queried
+    # - Comments are skipped because they are TextFields that require an exact
+    #   match and are better covered by the search (`q`) field.
     #
     # Type: tuple
-    exclude_filter_fields = ("q", "cf_", "cr_", "cpf_", "comments")  # Must be a tuple
+    exclude_filter_fields = ("cpf_", "comments")  # Must be a tuple
 
     class Meta:
         ordering = ["content_type", "name"]
