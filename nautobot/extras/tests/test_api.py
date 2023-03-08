@@ -1378,7 +1378,7 @@ class JobTest(
         data = {
             "data": job_data,
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "name": "test",
                 "interval": "future",
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
@@ -1581,7 +1581,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
@@ -1621,7 +1621,7 @@ class JobTest(
         data = {
             "data": {},
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
@@ -1632,7 +1632,7 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            response.data["scheduled_job"]["interval"][0],
+            response.data["schedule"]["interval"][0],
             "Unable to schedule job: Job may have sensitive input variables",
         )
 
@@ -1652,7 +1652,7 @@ class JobTest(
         data = {
             "data": {},
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "interval": "immediately",
                 "name": "test",
             },
@@ -1676,7 +1676,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "interval": "immediately",
                 "name": "test",
             },
@@ -1702,7 +1702,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "start_time": str(datetime.now() - timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
@@ -1722,7 +1722,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "scheduled_job": {
+            "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "hourly",
                 "name": "test",

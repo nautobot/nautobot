@@ -15,8 +15,9 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
-from nautobot.core.api.serializers import BaseModelSerializer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxySerializer
+from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
@@ -26,7 +27,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedPlatformSerializer,
     NestedRackSerializer,
 )
-from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack
+from nautobot.dcim.models import DeviceType, Location, Platform
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -65,6 +66,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
@@ -88,6 +90,7 @@ from .nested_serializers import (  # noqa: F401
     NestedComputedFieldSerializer,
     NestedConfigContextSchemaSerializer,
     NestedConfigContextSerializer,
+    NestedCustomFieldChoiceSerializer,
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
     NestedDynamicGroupSerializer,
@@ -104,6 +107,7 @@ from .nested_serializers import (  # noqa: F401
     NestedRelationshipSerializer,
     NestedRoleSerializer,
     NestedScheduledJobSerializer,
+    NestedScheduledJobCreationSerializer,
     NestedSecretSerializer,
     NestedSecretsGroupSerializer,
     NestedSecretsGroupAssociationSerializer,
@@ -334,7 +338,16 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "data",
         ]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ConfigContextOwner",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                FeatureQuery("config_context_owners").list_subclasses(), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -371,7 +384,16 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
             "data_schema",
         ]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ConfigContextSchemaOwner",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                FeatureQuery("config_context_owners").list_subclasses(), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -550,7 +572,16 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
             "file_extension",
         ]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ExportTemplateOwner",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                FeatureQuery("export_template_owners").list_subclasses(), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_owner(self, obj):
         if obj.owner is None:
             return None
@@ -666,19 +697,19 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
         return data
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ImageAttachmentParent",
+            resource_type_field_name="object_type",
+            serializers=[
+                NestedDeviceSerializer,
+                NestedLocationSerializer,
+                NestedRackSerializer,
+            ],
+        )
+    )
     def get_parent(self, obj):
-
-        # Static mapping of models to their nested serializers
-        if isinstance(obj.parent, Device):
-            serializer = NestedDeviceSerializer
-        elif isinstance(obj.parent, Location):
-            serializer = NestedLocationSerializer
-        elif isinstance(obj.parent, Rack):
-            serializer = NestedRackSerializer
-        else:
-            raise Exception("Unexpected type of parent object for ImageAttachment")
-
+        serializer = get_serializer_for_model(obj.parent, prefix="Nested")
         return serializer(obj.parent, context={"request": self.context["request"]}).data
 
 
@@ -918,7 +949,7 @@ class JobHookSerializer(NautobotModelSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
-    scheduled_job = NestedScheduledJobSerializer(required=False)
+    schedule = NestedScheduledJobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -1006,7 +1037,14 @@ class NoteSerializer(BaseModelSerializer):
             "slug",
         ]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="NoteAssignedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(NotesMixin), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None
@@ -1049,7 +1087,16 @@ class ObjectChangeSerializer(BaseModelSerializer):
             "object_data",
         ]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ObjectChangeChangedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(
+                ChangeLoggedModelsQuery().list_subclasses(), prefix="Nested"
+            ),
+            allow_null=True,
+        )
+    )
     def get_changed_object(self, obj):
         """
         Serialize a nested representation of the changed object.

@@ -5,6 +5,7 @@ from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
+from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -261,6 +262,14 @@ class NautobotFilterExtension(DjangoFilterExtension):
     """
 
     target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
+
+
+class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExtension):
+    """
+    Extend the PolymorphicProxySerializerExtension to cover Nautobot's PolymorphicProxySerializer class.
+    """
+
+    target_class = "nautobot.core.api.serializers.PolymorphicProxySerializer"
 
 
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):

@@ -105,6 +105,25 @@ class ContentTypeField(RelatedField):
         return f"{obj.app_label}.{obj.model}"
 
 
+class ObjectTypeField(serializers.CharField):
+    """
+    Represent the ContentType of this serializer's model as "<app_label>.<model>".
+    """
+
+    def __init__(self, *args, read_only=True, **kwargs):  # pylint: disable=useless-parent-delegation
+        """Default read_only to True as this should never be a writable field."""
+        super().__init__(*args, read_only=read_only, **kwargs)
+
+    def to_representation(self, _value):
+        """
+        Get the content-type of this serializer's model.
+
+        Implemented this way because `_value` may be None when generating the schema.
+        """
+        model = self.parent.Meta.model
+        return f"{model._meta.app_label}.{model._meta.model_name}"
+
+
 class SerializedPKRelatedField(PrimaryKeyRelatedField):
     """
     Extends PrimaryKeyRelatedField to return a serialized object on read. This is useful for representing related
