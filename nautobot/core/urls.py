@@ -62,7 +62,7 @@ if settings.DEBUG:
 
 if settings.METRICS_ENABLED:
     urlpatterns += [
-        path("metrics/", custom_app_metric_view),
+        path("metrics/", custom_app_metric_view, name="metrics"),
     ]
 
 handler404 = "nautobot.core.views.resource_not_found"
