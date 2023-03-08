@@ -1387,7 +1387,7 @@ from nautobot_animal_sounds.models import Animal
 
 
 def metric_animals():
-    gauges = GaugeMetricFamily("nautobot_noisy_animals_count", "Nautobot Example Count Metric", labels=[])
+    gauges = GaugeMetricFamily("nautobot_noisy_animals_count", "Nautobot Noisy Animals Count", labels=[])
     screaming_animal_count = Animal.objects.filter(loudness="noisy").count()
     gauges.add_metric(labels=[], value=screaming_animal_count)
     yield gauges
