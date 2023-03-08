@@ -1,18 +1,35 @@
-import { Flex, Box, Link } from "@nautobot/nautobot-ui"
+import { Flex, Box, Link, Button } from "@nautobot/nautobot-ui"
 import { Spacer, Image, Menu, MenuButton, MenuDivider, MenuList, MenuGroup, MenuItem } from "@chakra-ui/react"
-import { faRightToBracket } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSignIn, faSignOut } from "@fortawesome/free-solid-svg-icons";
 import { Fragment } from "react"
-import { NavLink } from "react-router-dom"
+import { NavLink, redirect, useNavigate} from "react-router-dom"
+import {useState, useEffect} from "react"
 import useSWR from "swr"
+import axios from "axios";
 
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
-  const { data, error } = useSWR("/api/get-menu/", fetcher)
+  const navigate = useNavigate();
+
+  const { data, error } = useSWR("/api/ui/get-menu/", fetcher)
+  const [ isLoggedIn, setIsLoggedIn] = useState(false)
+  useEffect(() => {
+    // Check if `nautobot-user` exist in localStorage; if found set setIsLoggedIn to true else false
+    setIsLoggedIn(localStorage.getItem("nautobot-user") != null)
+  }, [])
+
+  const logout = () => {
+    axios.get("/api/users/tokens/logout/")
+    setIsLoggedIn(false)
+    localStorage.removeItem("nautobot-user")
+    navigate("/login")
+  }
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
+
 
   return (
     <Flex minWidth="max-content">
@@ -45,7 +62,18 @@ export default function BSNavBar() {
         ))
       }
       <Spacer/>
-      <Link href="/login/">Login</Link>
+        {
+            isLoggedIn ?
+                <span role="button" className="border-0 btn-success cusor-pointer" onClick={() => logout()}>
+                  <FontAwesomeIcon icon={faSignOut} />
+                  {" Logout"}
+                </span>
+            :
+                <Link href="/login/">
+                  <FontAwesomeIcon icon={faSignIn} />
+                  {" Login"}
+                </Link>
+        }
     </Flex>
   )
 }
