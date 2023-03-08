@@ -94,6 +94,7 @@ class IPAddressToInterfaceTest(TestCase):
             m2m_int_ipv4_2.clean()
         m2m_int_ipv4_2.is_primary_for_device = False
         m2m_int_ipv4_2.save()
+        m2m_int_ipv4_1.clean()
         m2m_int_ipv4_2.clean()
 
         # create new ipv6 m2m with is_primary_for_device=True, should raise ValidationError
@@ -106,6 +107,7 @@ class IPAddressToInterfaceTest(TestCase):
             m2m_int_ipv6_2.clean()
         m2m_int_ipv6_2.is_primary_for_device = False
         m2m_int_ipv6_2.save()
+        m2m_int_ipv6_1.clean()
         m2m_int_ipv6_2.clean()
 
         # vminterface ipv4 m2m with is_primary_for_device=True
@@ -136,8 +138,12 @@ class IPAddressToInterfaceTest(TestCase):
                 is_primary_for_device=True,
             )
             m2m_vmint_ipv4_2.clean()
+        m2m_vmint_ipv4_2.is_primary_for_device = False
+        m2m_vmint_ipv4_2.save()
+        m2m_vmint_ipv4_1.clean()
+        m2m_vmint_ipv4_2.clean()
 
-        # create new ipv4 m2m with is_primary_for_device=True, should raise ValidationError
+        # create new ipv6 m2m with is_primary_for_device=True, should raise ValidationError
         with self.assertRaises(ValidationError):
             m2m_vmint_ipv6_2 = IPAddressToInterface.objects.create(
                 ip_address=test_ipv6_2,
@@ -145,6 +151,10 @@ class IPAddressToInterfaceTest(TestCase):
                 is_primary_for_device=True,
             )
             m2m_vmint_ipv6_2.clean()
+        m2m_vmint_ipv6_2.is_primary_for_device = False
+        m2m_vmint_ipv6_2.save()
+        m2m_vmint_ipv6_1.clean()
+        m2m_vmint_ipv6_2.clean()
 
         # assert that vminterface relationships did not affect interface relationships
         m2m_int_ipv4_1.refresh_from_db()

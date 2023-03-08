@@ -983,7 +983,7 @@ class IPAddressToInterface(BaseModel):
                 parent_q = Q(vm_interface__virtual_machine=parent)
 
             family = self.ip_address.family
-            conflicting_instances = Q(ip_address__host__family=family) & parent_q
+            conflicting_instances = Q(ip_address__host__family=family, is_primary_for_device=True) & parent_q
             if IPAddressToInterface.objects.filter(conflicting_instances).exclude(ip_address=self.ip_address).exists():
                 raise ValidationError(
                     {"is_primary_for_device": f"IPv{family} primary IP address is already set for {parent!s}"}
