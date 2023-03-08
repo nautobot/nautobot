@@ -1374,10 +1374,10 @@ except ImportError:
 
 +++ 1.5.?
 
-It is possible for Nautobot apps to provide their own Prometheus metrics. There are two general ways to achieve this:
+It is possible for Nautobot apps to provide their own [Prometheus metrics](../additional-features/prometheus-metrics.md). There are two general ways to achieve this:
 
-1. Use the prometheus_client library directly in your app code. Depending on whether that code runs in the web server or the worker context, the metric will show up in the respective `/metrics` endpoint(s).
-2. If the metric cannot be generated alongside existing code, a mechanism similar to that of Jobs in apps can be used. A list called `metrics` residing in a file called `metrics.py` can be provided at the root of the app. Nautobot will automatically read these and expose them via its `/metrics` endpoint. The following code snippet shows an example metric defined this way:
+1. Use the `prometheus_client` library directly in your app code. Depending on whether that code runs in the web server or the worker context, the metric will show up in the respective `/metrics` endpoint(s).
+2. If the metric cannot be generated alongside existing code, apps can implement individual metric generator functions and register them into a list called `metrics` in a file named `metrics.py`at the root of the app. Nautobot will automatically read these and expose them via its `/metrics` endpoint. The following code snippet shows an example metric defined this way:
 
 ```python
 # metrics.py
