@@ -84,7 +84,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
         model = VRF
         fields = [
             "name",
-            "rd",
+            # "rd",
             "enforce_unique",
             "description",
             "import_targets",

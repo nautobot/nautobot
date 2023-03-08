@@ -40,12 +40,11 @@ class IPAMRootView(APIRootView):
 
 class VRFViewSet(NautobotModelViewSet):
     queryset = (
-        VRF.objects.select_related("tenant")
-        .prefetch_related("import_targets", "export_targets", "tags")
-        .annotate(
-            ipaddress_count=count_related(IPAddress, "vrf"),
-            prefix_count=count_related(Prefix, "vrf"),
-        )
+        VRF.objects.select_related("tenant").prefetch_related("import_targets", "export_targets", "tags")
+        # .annotate(
+        #     ipaddress_count=count_related(IPAddress, "vrf"),
+        #     prefix_count=count_related(Prefix, "vrf"),
+        # )
     )
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet

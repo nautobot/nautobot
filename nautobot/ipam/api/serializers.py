@@ -76,7 +76,7 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = [
             "url",
             "name",
-            "rd",
+            # "rd",
             "tenant",
             "enforce_unique",
             "description",
@@ -217,7 +217,7 @@ class PrefixSerializer(
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
     location = NestedLocationSerializer(required=False, allow_null=True)
-    vrf = NestedVRFSerializer(required=False, allow_null=True)
+    # vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
     rir = NestedRIRSerializer(required=False, allow_null=True)
@@ -230,7 +230,7 @@ class PrefixSerializer(
             "prefix",
             "type",
             "location",
-            "vrf",
+            # "vrf",
             "tenant",
             "vlan",
             "status",

@@ -48,7 +48,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "rd": "icontains",
+            # "rd": "icontains",
             "description": "icontains",
         },
     )
@@ -78,7 +78,8 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "enforce_unique"]
+        # fields = ["id", "name", "rd", "enforce_unique"]
+        fields = ["id", "name", "enforce_unique"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):

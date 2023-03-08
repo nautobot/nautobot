@@ -19,3 +19,5 @@ class IPAMConfig(NautobotConfig):
 
         # Register VarbinaryIPField to be converted to a string type
         convert_django_field.register(VarbinaryIPField)(convert_field_to_string)
+
+        from nautobot.ipam import signals  # noqa

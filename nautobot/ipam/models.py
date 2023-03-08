@@ -6,12 +6,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, Q
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
@@ -46,6 +47,41 @@ __all__ = (
 logger = logging.getLogger(__name__)
 
 
+class Namespace(PrimaryModel):
+    """Container for unique IPAM objects."""
+
+    name = models.CharField(max_length=255, unique=True, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+
+def get_default_namespace():
+    """Return the Global namespace for use in default value for foreign keys."""
+    return Namespace.objects.get_or_create(name="Global")
+
+
+class RouteDistinguisher(PrimaryModel):
+    namespace = models.ForeignKey(
+        "ipam.Namespace",
+        on_delete=models.PROTECT,
+        related_name="route_distinguishers",
+        default=get_default_namespace,
+    )
+    rd = models.CharField(
+        max_length=VRF_RD_MAX_LENGTH,
+        verbose_name="Route distinguisher",
+        help_text="Unique route distinguisher (as defined in RFC 4364)",
+        db_index=True,
+    )
+
+    def __str__(self):
+        return self.rd
+
+    class Meta:
+        unique_together = ("namespace", "rd")
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -61,13 +97,22 @@ class VRF(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    rd = models.CharField(
-        max_length=VRF_RD_MAX_LENGTH,
-        unique=True,
-        blank=True,
-        null=True,
-        verbose_name="Route distinguisher",
-        help_text="Unique route distinguisher (as defined in RFC 4364)",
+    namespace = models.ForeignKey(
+        "ipam.Namespace",
+        on_delete=models.PROTECT,
+        related_name="vrfs",
+        default=get_default_namespace,
+    )
+    devices = models.ManyToManyField(
+        to="dcim.Device",
+        related_name="vrfs",
+        through="ipam.VRFDeviceAssignment",
+        through_fields=("vrf", "device"),
+    )
+    prefixes = models.ManyToManyField(
+        to="ipam.Prefix",
+        related_name="vrfs",
+        through="ipam.VRFPrefixAssignment",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -85,7 +130,8 @@ class VRF(PrimaryModel):
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
-    csv_headers = ["name", "rd", "tenant", "enforce_unique", "description"]
+    # csv_headers = ["name", "rd", "tenant", "enforce_unique", "description"]
+    csv_headers = ["name", "tenant", "enforce_unique", "description"]
     clone_fields = [
         "tenant",
         "enforce_unique",
@@ -93,7 +139,8 @@ class VRF(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ("name", "rd")  # (name, rd) may be non-unique
+        ordering = ("namespace", "name")  # (name, rd) may be non-unique
+        unique_together = ("namespace", "name")
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
@@ -114,9 +161,47 @@ class VRF(PrimaryModel):
 
     @property
     def display(self):
-        if self.rd:
-            return f"{self.name} ({self.rd})"
+        if self.namespace:
+            return f"{self.namespace}: ({self.name})"
         return self.name
+
+
+class VRFDeviceAssignment(BaseModel):
+    vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="vrf_assignments")
+    rd = models.ForeignKey(
+        "ipam.RouteDistinguisher", on_delete=models.CASCADE, blank=True, null=True, related_name="vrf_assignments"
+    )
+
+    class Meta:
+        unique_together = ["vrf", "device"]
+
+    def __str__(self):
+        return f"{self.vrf} (RD: {self.rd})"
+
+    def clean(self):
+        super().clean()
+
+        # If RD is set, then its namespace must match that of the VRF.
+        if self.rd and self.rd.namespace != self.vrf.namespace:
+            raise ValidationError({"rd": "RD must be in same namespace as VRF"})
+
+
+class VRFPrefixAssignment(BaseModel):
+    vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
+    prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
+
+    class Meta:
+        unique_together = ["vrf", "prefix"]
+
+    def __str__(self):
+        return f"{self.vrf}: {self.prefix}"
+
+    def clean(self):
+        super().clean()
+
+        if self.prefix.namespace != self.vrf.namespace:
+            raise ValidationError({"prefix": "Prefix must be in same namespace as VRF"})
 
 
 @extras_features(
@@ -247,13 +332,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         blank=True,
         null=True,
     )
-    vrf = models.ForeignKey(
-        to="ipam.VRF",
+    namespace = models.ForeignKey(
+        to="ipam.Namespace",
         on_delete=models.PROTECT,
         related_name="prefixes",
-        blank=True,
-        null=True,
-        verbose_name="VRF",
+        default=get_default_namespace,
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -320,11 +403,22 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     class Meta:
         ordering = (
-            F("vrf__name").asc(nulls_first=True),
+            "namespace",
             "network",
             "prefix_length",
         )  # (vrf, prefix) may be non-unique
+        unique_together = ("namespace", "network", "prefix_length")
         verbose_name_plural = "prefixes"
+
+    def validate_unique(self, exclude=None):
+        if self.namespace is None:
+            if Prefix.objects.filter(
+                network=self.network, prefix_length=self.prefix_length, namespace__isnull=True
+            ).exists():
+                raise ValidationError(
+                    {"__all__": "Prefix with this Namespace, Network and Prefix length already exists."}
+                )
+        super().validate_unique(exclude)
 
     def __init__(self, *args, **kwargs):
         prefix = kwargs.pop("prefix", None)
@@ -359,16 +453,22 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         if self.prefix:
 
+            # Why not??
+            """
             # /0 masks are not acceptable
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
+            """
 
+            # Nope
+            """
             # Enforce unique IP space (if applicable)
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
                 duplicate_prefixes = self.get_duplicates()
                 if duplicate_prefixes:
                     vrf = f"VRF {self.vrf}" if self.vrf else "global table"
                     raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
+            """
 
         # Validate location
         if self.location is not None:
@@ -559,14 +659,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    vrf = models.ForeignKey(
-        to="ipam.VRF",
-        on_delete=models.PROTECT,
-        related_name="ip_addresses",
-        blank=True,
-        null=True,
-        verbose_name="VRF",
-    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -595,7 +687,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     csv_headers = [
         "address",
-        "vrf",
+        # "vrf",
         "tenant",
         "status",
         "role",
@@ -604,7 +696,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         "description",
     ]
     clone_fields = [
-        "vrf",
+        # "vrf",
         "tenant",
         "status",
         "role",
