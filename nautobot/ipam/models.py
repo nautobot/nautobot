@@ -982,18 +982,12 @@ class IPAddressToInterface(BaseModel):
                 parent = self.vm_interface.parent
                 parent_q = Q(vm_interface__virtual_machine=parent)
 
-            if self.ip_address.family == 4 and parent.primary_ip4 != self.ip_address:
-                IPAddressToInterface.objects.filter(
-                    Q(ip_address__in=IPAddress.objects.ip_family(4)) & parent_q
-                ).exclude(id=self.id).update(is_primary_for_device=False)
-                parent.primary_ip4 = self.ip_address
-                parent.save()
-            if self.ip_address.family == 6 and parent.primary_ip6 != self.ip_address:
-                IPAddressToInterface.objects.filter(
-                    Q(ip_address__in=IPAddress.objects.ip_family(6)) & parent_q
-                ).exclude(id=self.id).update(is_primary_for_device=False)
-                parent.primary_ip6 = self.ip_address
-                parent.save()
+            family = self.ip_address.family
+            conflicting_instances = Q(ip_address__host__family=family) & parent_q
+            if IPAddressToInterface.objects.filter(conflicting_instances).exclude(ip_address=self.ip_address).exists():
+                raise ValidationError(
+                    {"is_primary_for_device": f"IPv{family} primary IP address is already set for {parent!s}"}
+                )
 
     def __str__(self):
         if self.interface:
