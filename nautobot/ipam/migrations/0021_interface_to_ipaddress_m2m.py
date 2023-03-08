@@ -23,27 +23,37 @@ class Migration(migrations.Migration):
                         default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
                     ),
                 ),
-                ("source", models.BooleanField(default=False)),
-                ("destination", models.BooleanField(default=False)),
-                ("default", models.BooleanField(default=False)),
-                ("preferred", models.BooleanField(default=False)),
-                ("primary", models.BooleanField(default=False)),
-                ("secondary", models.BooleanField(default=False)),
-                ("standby", models.BooleanField(default=False)),
-                ("primary_for_device", models.BooleanField(default=False)),
+                ("is_source", models.BooleanField(default=False)),
+                ("is_destination", models.BooleanField(default=False)),
+                ("is_default", models.BooleanField(default=False)),
+                ("is_preferred", models.BooleanField(default=False)),
+                ("is_primary", models.BooleanField(default=False)),
+                ("is_secondary", models.BooleanField(default=False)),
+                ("is_standby", models.BooleanField(default=False)),
+                ("is_primary_for_device", models.BooleanField(default=False)),
                 (
                     "interface",
                     models.ForeignKey(
-                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="dcim.interface"
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ip_address_assignments",
+                        to="dcim.interface",
                     ),
                 ),
-                ("ip_address", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="ipam.ipaddress")),
+                (
+                    "ip_address",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="+", to="ipam.ipaddress"
+                    ),
+                ),
                 (
                     "vm_interface",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ip_address_assignments",
                         to="virtualization.vminterface",
                     ),
                 ),

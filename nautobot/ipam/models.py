@@ -942,17 +942,25 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 class IPAddressToInterface(BaseModel):
-    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE)
-    interface = models.ForeignKey("dcim.Interface", blank=True, null=True, on_delete=models.CASCADE)
-    vm_interface = models.ForeignKey("virtualization.VMInterface", blank=True, null=True, on_delete=models.CASCADE)
-    source = models.BooleanField(default=False, help_text="Source address")
-    destination = models.BooleanField(default=False, help_text="Destination address")
-    default = models.BooleanField(default=False, help_text="Default address")
-    preferred = models.BooleanField(default=False, help_text="Preferred address")
-    primary = models.BooleanField(default=False, help_text="Primary address")
-    secondary = models.BooleanField(default=False, help_text="Secondary address")
-    standby = models.BooleanField(default=False, help_text="Standby address")
-    primary_for_device = models.BooleanField(default=False, help_text="Primary address for parent device")
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+    interface = models.ForeignKey(
+        "dcim.Interface", blank=True, null=True, on_delete=models.CASCADE, related_name="ip_address_assignments"
+    )
+    vm_interface = models.ForeignKey(
+        "virtualization.VMInterface",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="ip_address_assignments",
+    )
+    is_source = models.BooleanField(default=False, help_text="Is source address on interface")
+    is_destination = models.BooleanField(default=False, help_text="Is destination address on interface")
+    is_default = models.BooleanField(default=False, help_text="Is default address on interface")
+    is_preferred = models.BooleanField(default=False, help_text="Is preferred address on interface")
+    is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
+    is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
+    is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
+    is_primary_for_device = models.BooleanField(default=False, help_text="Is primary address for parent device")
 
     def clean(self):
         super().clean()
@@ -966,7 +974,7 @@ class IPAddressToInterface(BaseModel):
             raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
 
         # if primary_for_device=True, set primary_for_device=False for all other instances on the same device in the same address family
-        if self.primary_for_device and self.present_in_database:
+        if self.is_primary_for_device and self.present_in_database:
             if self.interface is not None:
                 parent = self.interface.parent
                 parent_q = Q(interface__device=parent)
@@ -977,13 +985,13 @@ class IPAddressToInterface(BaseModel):
             if self.ip_address.family == 4 and parent.primary_ip4 != self.ip_address:
                 IPAddressToInterface.objects.filter(
                     Q(ip_address__in=IPAddress.objects.ip_family(4)) & parent_q
-                ).exclude(id=self.id).update(primary_for_device=False)
+                ).exclude(id=self.id).update(is_primary_for_device=False)
                 parent.primary_ip4 = self.ip_address
                 parent.save()
             if self.ip_address.family == 6 and parent.primary_ip6 != self.ip_address:
                 IPAddressToInterface.objects.filter(
                     Q(ip_address__in=IPAddress.objects.ip_family(6)) & parent_q
-                ).exclude(id=self.id).update(primary_for_device=False)
+                ).exclude(id=self.id).update(is_primary_for_device=False)
                 parent.primary_ip6 = self.ip_address
                 parent.save()
 

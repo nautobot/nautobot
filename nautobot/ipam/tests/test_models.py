@@ -58,118 +58,118 @@ class IPAddressToInterfaceTest(TestCase):
             status=vmint_status,
         )
 
-    def test_primary_for_device(self):
+    def test_is_primary_for_device(self):
         test_ipv4_1 = IPAddress.objects.ip_family(4).first()
         test_ipv4_2 = IPAddress.objects.ip_family(4).last()
         test_ipv6_1 = IPAddress.objects.ip_family(6).first()
         test_ipv6_2 = IPAddress.objects.ip_family(6).last()
 
-        # ipv4 m2m with primary_for_device=True
+        # ipv4 m2m with is_primary_for_device=True
         m2m_int_ipv4_1 = IPAddressToInterface.objects.create(
             ip_address=test_ipv4_1,
             interface=self.test_int1,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_int_ipv4_1.clean()
         self.test_device.refresh_from_db()
-        self.assertTrue(m2m_int_ipv4_1.primary_for_device)
+        self.assertTrue(m2m_int_ipv4_1.is_primary_for_device)
         self.assertEqual(self.test_device.primary_ip4, test_ipv4_1)
 
         # creation of ipv6 m2m does not affect ipv4 m2m
         m2m_int_ipv6_1 = IPAddressToInterface.objects.create(
             ip_address=test_ipv6_1,
             interface=self.test_int2,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_int_ipv6_1.clean()
         m2m_int_ipv4_1.refresh_from_db()
         self.test_device.refresh_from_db()
-        self.assertTrue(m2m_int_ipv4_1.primary_for_device)
-        self.assertTrue(m2m_int_ipv6_1.primary_for_device)
+        self.assertTrue(m2m_int_ipv4_1.is_primary_for_device)
+        self.assertTrue(m2m_int_ipv6_1.is_primary_for_device)
         self.assertEqual(self.test_device.primary_ip6, test_ipv6_1)
 
-        # create new ipv4 m2m with primary_for_device=True, should set previous ipv4 primary_for_device to False
+        # create new ipv4 m2m with is_primary_for_device=True, should set previous ipv4 is_primary_for_device to False
         m2m_int_ipv4_2 = IPAddressToInterface.objects.create(
             ip_address=test_ipv4_2,
             interface=self.test_int2,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_int_ipv4_2.clean()
         m2m_int_ipv4_1.refresh_from_db()
         self.test_device.refresh_from_db()
-        self.assertFalse(m2m_int_ipv4_1.primary_for_device)
-        self.assertTrue(m2m_int_ipv4_2.primary_for_device)
+        self.assertFalse(m2m_int_ipv4_1.is_primary_for_device)
+        self.assertTrue(m2m_int_ipv4_2.is_primary_for_device)
         self.assertEqual(self.test_device.primary_ip4, test_ipv4_2)
 
-        # create new ipv6 m2m with primary_for_device=True, should set previous ipv6 primary_for_device to False
+        # create new ipv6 m2m with is_primary_for_device=True, should set previous ipv6 is_primary_for_device to False
         m2m_int_ipv6_2 = IPAddressToInterface.objects.create(
             ip_address=test_ipv6_2,
             interface=self.test_int1,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_int_ipv6_2.clean()
         m2m_int_ipv4_1.refresh_from_db()
         m2m_int_ipv4_2.refresh_from_db()
         m2m_int_ipv6_1.refresh_from_db()
         self.test_device.refresh_from_db()
-        self.assertFalse(m2m_int_ipv4_1.primary_for_device)
-        self.assertFalse(m2m_int_ipv6_1.primary_for_device)
-        self.assertTrue(m2m_int_ipv4_2.primary_for_device)
-        self.assertTrue(m2m_int_ipv6_2.primary_for_device)
+        self.assertFalse(m2m_int_ipv4_1.is_primary_for_device)
+        self.assertFalse(m2m_int_ipv6_1.is_primary_for_device)
+        self.assertTrue(m2m_int_ipv4_2.is_primary_for_device)
+        self.assertTrue(m2m_int_ipv6_2.is_primary_for_device)
         self.assertEqual(self.test_device.primary_ip6, test_ipv6_2)
 
-        # vminterface ipv4 m2m with primary_for_device=True
+        # vminterface ipv4 m2m with is_primary_for_device=True
         m2m_vmint_ipv4_1 = IPAddressToInterface.objects.create(
             ip_address=test_ipv4_1,
             vm_interface=self.test_vmint1,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_vmint_ipv4_1.clean()
         self.test_vm.refresh_from_db()
-        self.assertTrue(m2m_vmint_ipv4_1.primary_for_device)
+        self.assertTrue(m2m_vmint_ipv4_1.is_primary_for_device)
         self.assertEqual(self.test_vm.primary_ip4, test_ipv4_1)
 
         # creation of ipv6 m2m does not affect ipv4 m2m
         m2m_vmint_ipv6_1 = IPAddressToInterface.objects.create(
             ip_address=test_ipv6_1,
             vm_interface=self.test_vmint2,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_vmint_ipv6_1.clean()
         m2m_vmint_ipv4_1.refresh_from_db()
         self.test_vm.refresh_from_db()
-        self.assertTrue(m2m_vmint_ipv4_1.primary_for_device)
-        self.assertTrue(m2m_vmint_ipv6_1.primary_for_device)
+        self.assertTrue(m2m_vmint_ipv4_1.is_primary_for_device)
+        self.assertTrue(m2m_vmint_ipv6_1.is_primary_for_device)
         self.assertEqual(self.test_vm.primary_ip6, test_ipv6_1)
 
-        # create new ipv4 m2m with primary_for_device=True, should set previous ipv4 primary_for_device to False
+        # create new ipv4 m2m with is_primary_for_device=True, should set previous ipv4 is_primary_for_device to False
         m2m_vmint_ipv4_2 = IPAddressToInterface.objects.create(
             ip_address=test_ipv4_2,
             vm_interface=self.test_vmint2,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_vmint_ipv4_2.clean()
         m2m_vmint_ipv4_1.refresh_from_db()
         self.test_vm.refresh_from_db()
-        self.assertFalse(m2m_vmint_ipv4_1.primary_for_device)
-        self.assertTrue(m2m_vmint_ipv4_2.primary_for_device)
+        self.assertFalse(m2m_vmint_ipv4_1.is_primary_for_device)
+        self.assertTrue(m2m_vmint_ipv4_2.is_primary_for_device)
         self.assertEqual(self.test_vm.primary_ip4, test_ipv4_2)
 
-        # create new ipv4 m2m with primary_for_device=True, should set previous ipv4 primary_for_device to False
+        # create new ipv4 m2m with is_primary_for_device=True, should set previous ipv4 is_primary_for_device to False
         m2m_vmint_ipv6_2 = IPAddressToInterface.objects.create(
             ip_address=test_ipv6_2,
             vm_interface=self.test_vmint1,
-            primary_for_device=True,
+            is_primary_for_device=True,
         )
         m2m_vmint_ipv6_2.clean()
         m2m_vmint_ipv4_1.refresh_from_db()
         m2m_vmint_ipv4_2.refresh_from_db()
         m2m_vmint_ipv6_1.refresh_from_db()
         self.test_vm.refresh_from_db()
-        self.assertFalse(m2m_vmint_ipv4_1.primary_for_device)
-        self.assertFalse(m2m_vmint_ipv6_1.primary_for_device)
-        self.assertTrue(m2m_vmint_ipv4_2.primary_for_device)
-        self.assertTrue(m2m_vmint_ipv6_2.primary_for_device)
+        self.assertFalse(m2m_vmint_ipv4_1.is_primary_for_device)
+        self.assertFalse(m2m_vmint_ipv6_1.is_primary_for_device)
+        self.assertTrue(m2m_vmint_ipv4_2.is_primary_for_device)
+        self.assertTrue(m2m_vmint_ipv6_2.is_primary_for_device)
         self.assertEqual(self.test_vm.primary_ip6, test_ipv6_2)
 
         # assert that vminterface relationships did not affect interface relationships
@@ -177,10 +177,10 @@ class IPAddressToInterfaceTest(TestCase):
         m2m_int_ipv4_2.refresh_from_db()
         m2m_int_ipv6_1.refresh_from_db()
         m2m_int_ipv6_2.refresh_from_db()
-        self.assertFalse(m2m_int_ipv4_1.primary_for_device)
-        self.assertFalse(m2m_int_ipv6_1.primary_for_device)
-        self.assertTrue(m2m_int_ipv4_2.primary_for_device)
-        self.assertTrue(m2m_int_ipv6_2.primary_for_device)
+        self.assertFalse(m2m_int_ipv4_1.is_primary_for_device)
+        self.assertFalse(m2m_int_ipv6_1.is_primary_for_device)
+        self.assertTrue(m2m_int_ipv4_2.is_primary_for_device)
+        self.assertTrue(m2m_int_ipv6_2.is_primary_for_device)
 
 
 class TestVarbinaryIPField(TestCase):
