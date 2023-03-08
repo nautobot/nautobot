@@ -246,12 +246,18 @@ class NautobotAppMetricsCollector(Collector):
 def custom_app_metric_view(request):
     """Exports /metrics.
 
-    This overwrites the default django_prometheus view to inject metrics from Nautobot apps."""
+    This overwrites the default django_prometheus view to inject metrics from Nautobot apps.
+
+    Note that we cannot use `prometheus_django.ExportToDjangoView`, as that is a simple function, and we need access to
+    the `prometheus_registry` variable that is defined inside of it."""
     if "PROMETHEUS_MULTIPROC_DIR" in os.environ or "prometheus_multiproc_dir" in os.environ:
         prometheus_registry = prometheus_client.CollectorRegistry()
         multiprocess.MultiProcessCollector(prometheus_registry)
     else:
         prometheus_registry = prometheus_client.REGISTRY
+    # Instantiate and register the collector. Note that this has to be done every time this view is accessed, because
+    # the registry for multiprocess metrics is also instantiated every time this view is accessed. As a result, the
+    # same goes for the registration of the collector to the registry.
     nb_app_collector = NautobotAppMetricsCollector()
     prometheus_registry.register(nb_app_collector)
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
