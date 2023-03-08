@@ -852,7 +852,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     group_name = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Buttons with the same group will appear as a dropdown menu",
+        help_text="Buttons with the same group will appear as a dropdown menu. Group dropdown buttons will inherit the button class from the button with the lowest weight in the group.",
     )
     button_class = models.CharField(
         max_length=30,
