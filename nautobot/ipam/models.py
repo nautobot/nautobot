@@ -965,7 +965,27 @@ class IPAddressToInterface(BaseModel):
         if self.interface is None and self.vm_interface is None:
             raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
 
-        # TODO: if primary_for_device=True, set primary_for_device=False for all other assocations on this device in the same address family
+        # if primary_for_device=True, set primary_for_device=False for all other instances on the same device in the same address family
+        if self.primary_for_device and self.present_in_database:
+            if self.interface is not None:
+                parent = self.interface.parent
+                parent_q = Q(interface__device=parent)
+            else:
+                parent = self.vm_interface.parent
+                parent_q = Q(vm_interface__virtual_machine=parent)
+
+            if self.ip_address.family == 4 and parent.primary_ip4 != self.ip_address:
+                IPAddressToInterface.objects.filter(
+                    Q(ip_address__in=IPAddress.objects.ip_family(4)) & parent_q
+                ).exclude(id=self.id).update(primary_for_device=False)
+                parent.primary_ip4 = self.ip_address
+                parent.save()
+            if self.ip_address.family == 6 and parent.primary_ip6 != self.ip_address:
+                IPAddressToInterface.objects.filter(
+                    Q(ip_address__in=IPAddress.objects.ip_family(6)) & parent_q
+                ).exclude(id=self.id).update(primary_for_device=False)
+                parent.primary_ip6 = self.ip_address
+                parent.save()
 
     def __str__(self):
         if self.interface:
