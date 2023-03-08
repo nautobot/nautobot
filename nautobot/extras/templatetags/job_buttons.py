@@ -116,6 +116,7 @@ def job_buttons(context, obj):
             try:
                 text_rendered = render_jinja2(jb.text, button_context)
                 if text_rendered:
+                    template_args["button_text"] = text_rendered
                     if jb.confirmation:
                         buttons_html += CONFIRM_BUTTON.format(**template_args)
                         forms_html += CONFIRM_MODAL.format(**template_args)
@@ -146,6 +147,7 @@ def job_buttons(context, obj):
             try:
                 text_rendered = render_jinja2(jb.text, button_context)
                 if text_rendered:
+                    template_args["button_text"] = text_rendered
                     if jb.confirmation:
                         buttons_rendered += "<li>" + CONFIRM_BUTTON.format(**template_args) + "</li>"
                         forms_html += CONFIRM_MODAL.format(**template_args)
