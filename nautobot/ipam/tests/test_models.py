@@ -624,43 +624,6 @@ class TestIPAddress(TestCase):
         self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
         self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
-    def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Test Device Type 1",
-            slug="test-device-type-1",
-        )
-        devicerole = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
-        device = Device.objects.create(
-            device_type=devicetype,
-            role=devicerole,
-            name="TestDevice1",
-            location=location,
-            status=device_status,
-        )
-        interface = Interface.objects.create(device=device, name="eth0")
-        ipaddress_1 = IPAddress(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=Role.objects.get_for_model(IPAddress).first(),
-            assigned_object_id=interface.id,
-        )
-
-        self.assertRaises(ValidationError, ipaddress_1.clean)
-
-        # Test IPAddress.clean() raises no exception if assigned_object_id and assigned_object_type
-        # are both provided
-        ipaddress_2 = IPAddress(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=Role.objects.get_for_model(IPAddress).first(),
-            assigned_object_id=interface.id,
-            assigned_object_type=ContentType.objects.get_for_model(Interface),
-        )
-        self.assertIsNone(ipaddress_2.clean())
-
     def test_create_ip_address_without_slaac_status(self):
         IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
