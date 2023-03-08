@@ -21,8 +21,10 @@ from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, Ser
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
+    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -47,6 +49,32 @@ from .nested_serializers import (  # noqa: F401
     NestedVLANSerializer,
     NestedVRFSerializer,
 )
+
+#
+# Namespaces
+#
+
+
+class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:namespace-detail")
+
+    class Meta:
+        model = Namespace
+        fields = "__all__"
+
+
+#
+# Route Distinguishers
+#
+
+
+class RouteDistinguisherSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:routedistinguisher-detail")
+
+    class Meta:
+        model = RouteDistinguisher
+        fields = "__all__"
+
 
 #
 # VRFs

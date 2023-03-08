@@ -55,8 +55,10 @@ from .constants import (
 from .models import (
     IPAddress,
     IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
+    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -72,6 +74,28 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 
 
 #
+# Namespaces
+#
+
+
+class NamespaceForm(NautobotModelForm):
+    class Meta:
+        model = Namespace
+        fields = ["name"]
+
+
+#
+# RouteDistinguishers
+#
+
+
+class RouteDistinguisherForm(NautobotModelForm):
+    class Meta:
+        model = RouteDistinguisher
+        fields = ["rd", "namespace"]
+
+
+#
 # VRFs
 #
 
@@ -79,12 +103,13 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
+    rd = DynamicModelChoiceField(queryset=RouteDistinguisher.objects.all(), required=False)
 
     class Meta:
         model = VRF
         fields = [
             "name",
-            # "rd",
+            "rd",
             "enforce_unique",
             "description",
             "import_targets",
@@ -93,12 +118,14 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "tenant",
             "tags",
         ]
+        """
         labels = {
             "rd": "RD",
         }
         help_texts = {
             "rd": "Route distinguisher in any format",
         }
+        """
 
 
 class VRFCSVForm(CustomFieldModelCSVForm):

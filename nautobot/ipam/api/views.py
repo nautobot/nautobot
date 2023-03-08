@@ -13,8 +13,10 @@ from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
+    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -31,6 +33,28 @@ class IPAMRootView(APIRootView):
 
     def get_view_name(self):
         return "IPAM"
+
+
+#
+# Namespace
+#
+
+
+class NamespaceViewSet(NautobotModelViewSet):
+    queryset = Namespace.objects.all()
+    serializer_class = serializers.NamespaceSerializer
+    filterset_class = filters.NamespaceFilterSet
+
+
+#
+# Route Distinguishers
+#
+
+
+class RouteDistinguisherViewSet(NautobotModelViewSet):
+    queryset = RouteDistinguisher.objects.all()
+    serializer_class = serializers.RouteDistinguisherSerializer
+    filterset_class = filters.RouteDistinguisherFilterSet
 
 
 #

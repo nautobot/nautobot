@@ -12,112 +12,189 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0037_ipam__namespaces'),
-        ('extras', '0067_rename_model_fields'),
-        ('ipam', '0023_delete_aggregate'),
+        ("dcim", "0037_ipam__namespaces"),
+        ("extras", "0067_rename_model_fields"),
+        ("ipam", "0023_delete_aggregate"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Namespace',
+            name="Namespace",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(db_index=True, max_length=255, unique=True)),
-                ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(db_index=True, max_length=255, unique=True)),
+                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.CreateModel(
-            name='RouteDistinguisher',
+            name="RouteDistinguisher",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('rd', models.CharField(db_index=True, max_length=21)),
-                ('namespace', models.ForeignKey(default=nautobot.ipam.models.get_default_namespace, on_delete=django.db.models.deletion.PROTECT, related_name='route_distinguishers', to='ipam.namespace')),
-                ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("rd", models.CharField(db_index=True, max_length=21)),
+                (
+                    "namespace",
+                    models.ForeignKey(
+                        default=nautobot.ipam.models.get_default_namespace,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="route_distinguishers",
+                        to="ipam.namespace",
+                    ),
+                ),
+                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'unique_together': {('namespace', 'rd')},
+                "unique_together": {("namespace", "rd")},
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.AlterModelOptions(
-            name='prefix',
-            options={'ordering': ('namespace', 'network', 'prefix_length'), 'verbose_name_plural': 'prefixes'},
+            name="prefix",
+            options={"ordering": ("namespace", "network", "prefix_length"), "verbose_name_plural": "prefixes"},
         ),
         migrations.AlterModelOptions(
-            name='vrf',
-            options={'ordering': ('namespace', 'name'), 'verbose_name': 'VRF', 'verbose_name_plural': 'VRFs'},
+            name="vrf",
+            options={"ordering": ("namespace", "name"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
         ),
         migrations.RemoveField(
-            model_name='ipaddress',
-            name='vrf',
+            model_name="ipaddress",
+            name="vrf",
         ),
         migrations.CreateModel(
-            name='VRFPrefixAssignment',
+            name="VRFPrefixAssignment",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('prefix', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='vrf_assignments', to='ipam.prefix')),
-                ('vrf', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='ipam.vrf')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                (
+                    "prefix",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="vrf_assignments", to="ipam.prefix"
+                    ),
+                ),
+                (
+                    "vrf",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="+", to="ipam.vrf"),
+                ),
             ],
             options={
-                'unique_together': {('vrf', 'prefix')},
+                "unique_together": {("vrf", "prefix")},
             },
         ),
         migrations.CreateModel(
-            name='VRFDeviceAssignment',
+            name="VRFDeviceAssignment",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('device', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='vrf_assignments', to='dcim.device')),
-                ('rd', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='vrf_assignments', to='ipam.routedistinguisher')),
-                ('vrf', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='ipam.vrf')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                (
+                    "device",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="vrf_assignments", to="dcim.device"
+                    ),
+                ),
+                (
+                    "rd",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="vrf_assignments",
+                        to="ipam.routedistinguisher",
+                    ),
+                ),
+                (
+                    "vrf",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="+", to="ipam.vrf"),
+                ),
             ],
             options={
-                'unique_together': {('vrf', 'device')},
+                "unique_together": {("vrf", "device")},
             },
         ),
         migrations.AddField(
-            model_name='prefix',
-            name='namespace',
-            field=models.ForeignKey(default=nautobot.ipam.models.get_default_namespace, on_delete=django.db.models.deletion.PROTECT, related_name='prefixes', to='ipam.namespace'),
+            model_name="prefix",
+            name="namespace",
+            field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="prefixes",
+                to="ipam.namespace",
+            ),
         ),
         migrations.AddField(
-            model_name='vrf',
-            name='devices',
-            field=models.ManyToManyField(related_name='vrfs', through='ipam.VRFDeviceAssignment', to='dcim.Device'),
+            model_name="vrf",
+            name="devices",
+            field=models.ManyToManyField(related_name="vrfs", through="ipam.VRFDeviceAssignment", to="dcim.Device"),
         ),
         migrations.AddField(
-            model_name='vrf',
-            name='namespace',
-            field=models.ForeignKey(default=nautobot.ipam.models.get_default_namespace, on_delete=django.db.models.deletion.PROTECT, related_name='vrfs', to='ipam.namespace'),
+            model_name="vrf",
+            name="namespace",
+            field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="vrfs",
+                to="ipam.namespace",
+            ),
         ),
         migrations.AddField(
-            model_name='vrf',
-            name='prefixes',
-            field=models.ManyToManyField(related_name='vrfs', through='ipam.VRFPrefixAssignment', to='ipam.Prefix'),
+            model_name="vrf",
+            name="prefixes",
+            field=models.ManyToManyField(related_name="vrfs", through="ipam.VRFPrefixAssignment", to="ipam.Prefix"),
         ),
         migrations.AlterUniqueTogether(
-            name='prefix',
-            unique_together={('namespace', 'network', 'prefix_length')},
+            name="prefix",
+            unique_together={("namespace", "network", "prefix_length")},
         ),
         migrations.AlterUniqueTogether(
-            name='vrf',
-            unique_together={('namespace', 'name')},
+            name="vrf",
+            unique_together={("namespace", "name")},
         ),
         migrations.RemoveField(
-            model_name='prefix',
-            name='vrf',
+            model_name="prefix",
+            name="vrf",
         ),
         migrations.RemoveField(
-            model_name='vrf',
-            name='rd',
+            model_name="vrf",
+            name="rd",
         ),
     ]

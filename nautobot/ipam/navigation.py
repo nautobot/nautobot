@@ -7,6 +7,28 @@ menu_items = (
         weight=300,
         groups=(
             NavMenuGroup(
+                name="Namespaces",
+                weight=50,
+                items=(
+                    NavMenuItem(
+                        link="ipam:namespace_list",
+                        name="Namespaces",
+                        weight=100,
+                        permissions=[
+                            "ipam.view_namespace",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="ipam:namespace_add",
+                                permissions=[
+                                    "ipam.add_namespace",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="IP Addresses",
                 weight=100,
                 items=(
@@ -106,6 +128,28 @@ menu_items = (
                                 link="ipam:vrf_import",
                                 permissions=[
                                     "ipam.add_vrf",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="ipam:routedistinguisher_list",
+                        name="Route Distinguishers",
+                        weight=150,
+                        permissions=[
+                            "ipam.view_routedistinguisher",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="ipam:routedistinguisher_add",
+                                permissions=[
+                                    "ipam.add_routedistinguisher",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="ipam:routedistinguisher_import",
+                                permissions=[
+                                    "ipam.add_routedistinguisher",
                                 ],
                             ),
                         ),

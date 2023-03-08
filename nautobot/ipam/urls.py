@@ -1,5 +1,6 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from . import views
 from .models import (
@@ -14,6 +15,11 @@ from .models import (
 )
 
 app_name = "ipam"
+
+router = NautobotUIViewSetRouter()
+router.register("namespaces", views.NamespaceUIViewSet)
+router.register("route-distinguishers", views.RouteDistinguisherUIViewSet)
+
 urlpatterns = [
     # VRFs
     path("vrfs/", views.VRFListView.as_view(), name="vrf_list"),
@@ -304,3 +310,5 @@ urlpatterns = [
         kwargs={"model": Service},
     ),
 ]
+
+urlpatterns += router.urls

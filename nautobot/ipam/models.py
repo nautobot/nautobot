@@ -55,6 +55,9 @@ class Namespace(PrimaryModel):
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return reverse("ipam:namespace", args=[self.pk])
+
 
 def get_default_namespace():
     """Return the Global namespace for use in default value for foreign keys."""
@@ -80,6 +83,9 @@ class RouteDistinguisher(PrimaryModel):
 
     class Meta:
         unique_together = ("namespace", "rd")
+
+    def get_absolute_url(self):
+        return reverse("ipam:routedistinguisher", args=[self.pk])
 
 
 @extras_features(

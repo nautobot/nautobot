@@ -22,8 +22,10 @@ from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
+    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -34,8 +36,10 @@ from .models import (
 
 __all__ = (
     "IPAddressFilterSet",
+    "NamespaceFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
+    "RouteDistinguisherFilterSet",
     "RouteTargetFilterSet",
     "ServiceFilterSet",
     "VLANFilterSet",
@@ -44,11 +48,37 @@ __all__ = (
 )
 
 
+class NamespaceFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+        },
+    )
+    tags = TagFilter()
+
+    class Meta:
+        model = Namespace
+        fields = "__all__"
+
+
+class RouteDistinguisherFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "rd": "icontains",
+        },
+    )
+    tags = TagFilter()
+
+    class Meta:
+        model = RouteDistinguisher
+        fields = "__all__"
+
+
 class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            # "rd": "icontains",
+            "rd__rd": "icontains",
             "description": "icontains",
         },
     )
@@ -74,12 +104,17 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Export target (ID or name)",
     )
+    rd = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="rd",
+        queryset=RouteDistinguisher.objects.all(),
+        to_field_name="rd",
+        label="Route distinguiqhser (ID or rd)",
+    )
     tag = TagFilter()
 
     class Meta:
         model = VRF
-        # fields = ["id", "name", "rd", "enforce_unique"]
-        fields = ["id", "name", "enforce_unique"]
+        fields = ["id", "name", "rd", "enforce_unique"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):

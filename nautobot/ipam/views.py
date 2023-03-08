@@ -5,15 +5,18 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.views import generic
+from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Interface
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
+from nautobot.ipam.api import serializers
 from nautobot.ipam import choices
 from .models import (
     IPAddress,
+    Namespace,
     Prefix,
+    RouteDistinguisher,
     RIR,
     RouteTarget,
     Service,
@@ -26,6 +29,48 @@ from .utils import (
     add_available_prefixes,
     add_available_vlans,
 )
+
+
+#
+# Namespaces
+#
+
+
+class NamespaceUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
+):
+    lookup_field = "pk"
+    form_class = forms.NamespaceForm
+    filterset_class = filters.NamespaceFilterSet
+    queryset = Namespace.objects.all()
+    serializer_class = serializers.NamespaceSerializer
+    table_class = tables.NamespaceTable
+
+
+#
+# Route Distinguishers
+#
+
+
+class RouteDistinguisherUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
+):
+    lookup_field = "pk"
+    form_class = forms.RouteDistinguisherForm
+    filterset_class = filters.RouteDistinguisherFilterSet
+    queryset = RouteDistinguisher.objects.all()
+    serializer_class = serializers.RouteDistinguisherSerializer
+    table_class = tables.RouteDistinguisherTable
 
 
 #

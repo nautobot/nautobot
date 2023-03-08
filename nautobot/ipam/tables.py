@@ -20,8 +20,10 @@ from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
+    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -211,6 +213,35 @@ VLANGROUP_ADD_VLAN = """
 {% endwith %}
 """
 
+
+#
+# Namespaces
+#
+
+
+class NamespaceTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = Namespace
+        fields = ("pk", "name")
+
+
+#
+# Route Distinguishers
+#
+
+
+class RouteDistinguisherTable(BaseTable):
+    pk = ToggleColumn()
+    rd = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = RouteDistinguisher
+        fields = ("pk", "rd", "namespace")
+
+
 #
 # VRFs
 #
@@ -243,7 +274,7 @@ class VRFTable(BaseTable):
 
 
 #
-# Route targets
+#
 #
 
 
