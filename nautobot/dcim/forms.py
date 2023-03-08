@@ -62,7 +62,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -2539,6 +2539,12 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "location": "null",
         },
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP Addresses",
+        brief_mode=False,
+    )
 
     class Meta:
         model = Interface
@@ -2552,6 +2558,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "bridge",
             "lag",
             "mac_address",
+            "ip_addresses",
             "mtu",
             "mgmt_only",
             "description",
