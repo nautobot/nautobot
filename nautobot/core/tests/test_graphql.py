@@ -786,7 +786,7 @@ class GraphQLQueryTest(TestCase):
         )
         cls.ip_statuses = list(Status.objects.get_for_model(IPAddress))[:2]
         cls.ipaddr1 = IPAddress.objects.create(
-            address="10.0.1.1/24", status=cls.ip_statuses[0], assigned_object=cls.interface11
+            address="10.0.1.1/24", status=cls.ip_statuses[0]
         )
 
         cls.device2 = Device.objects.create(
@@ -811,7 +811,7 @@ class GraphQLQueryTest(TestCase):
             name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
         )
         cls.ipaddr2 = IPAddress.objects.create(
-            address="10.0.2.1/30", status=cls.ip_statuses[1], assigned_object=cls.interface12
+            address="10.0.2.1/30", status=cls.ip_statuses[1]
         )
 
         cls.device3 = Device.objects.create(

@@ -6,16 +6,16 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ipam', '0022_interface_ipaddress_m2m_data_migration'),
+        ("ipam", "0022_interface_ipaddress_m2m_data_migration"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='ipaddress',
-            name='assigned_object_id',
+            model_name="ipaddress",
+            name="assigned_object_id",
         ),
         migrations.RemoveField(
-            model_name='ipaddress',
-            name='assigned_object_type',
+            model_name="ipaddress",
+            name="assigned_object_type",
         ),
     ]
