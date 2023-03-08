@@ -1,1 +1,1 @@
-Add Prometheus metric extensibility capability.
+Added option for apps to extend Nautobot's Prometheus metrics, based on `nautobot_capacity_metrics`.
