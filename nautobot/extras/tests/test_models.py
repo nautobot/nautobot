@@ -10,6 +10,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
+from django.test import override_settings
+
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
@@ -28,6 +30,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     ExportTemplate,
     FileAttachment,
     FileProxy,
@@ -119,6 +122,21 @@ class ConfigContextTest(TestCase):
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
+        self.dynamic_groups = DynamicGroup.objects.create(
+            name="Dynamic Group",
+            content_type=ContentType.objects.get_for_model(Device),
+            filter={"name": ["Device 1", "Device 2"]},
+        )
+        self.dynamic_group_2 = DynamicGroup.objects.create(
+            name="Dynamic Group 2",
+            content_type=ContentType.objects.get_for_model(Device),
+            filter={"name": ["Device 2"]},
+        )
+        self.vm_dynamic_group = DynamicGroup.objects.create(
+            name="VM Dynamic Group",
+            content_type=ContentType.objects.get_for_model(VirtualMachine),
+            filter={"name": ["VM 1"]},
+        )
 
         self.device = Device.objects.create(
             name="Device 1",
@@ -189,6 +207,10 @@ class ConfigContextTest(TestCase):
         tenant_context.tenants.add(self.tenant)
         tag_context = ConfigContext.objects.create(name="tag", weight=100, data={"tag": 1})
         tag_context.tags.add(self.tag)
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic group", weight=100, data={"dynamic_group": 1}
+        )
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
 
         device = Device.objects.create(
             name="Device 2",
@@ -203,7 +225,7 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "platform", "tenant_group", "tenant", "tag"]:
+        for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
@@ -232,6 +254,10 @@ class ConfigContextTest(TestCase):
         )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
+        dynamic_group_context = ConfigContext.objects.create(
+            name="vm dynamic group", weight=100, data={"vm_dynamic_group": 1}
+        )
+        dynamic_group_context.dynamic_groups.add(self.vm_dynamic_group)
 
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
@@ -244,6 +270,7 @@ class ConfigContextTest(TestCase):
 
         annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
+
         self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
         for key in [
             "location",
@@ -253,6 +280,7 @@ class ConfigContextTest(TestCase):
             "tag",
             "cluster_group",
             "cluster",
+            "vm_dynamic_group",
         ]:
             self.assertIn(key, vm_context)
 
@@ -314,6 +342,36 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_dynamic_group_assignment_uniqueness(self):
+        """
+        Assert that a Device in a given Dynamic Group with a Config Context associated to it
+        does not have a Config Context applied that is associated to another Dynamic Group that
+        the device is not a member of.
+        """
+
+        device2 = Device.objects.create(
+            name="Device 2",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            device_type=self.devicetype,
+        )
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic context 1", weight=100, data={"dynamic_group": "dynamic context 1"}
+        )
+        dynamic_group_context_2 = ConfigContext.objects.create(
+            name="dynamic context 2", weight=100, data={"dynamic_group": "dynamic context 2"}
+        )
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        dynamic_group_context_2.dynamic_groups.add(self.dynamic_group_2)
+
+        self.assertIn("dynamic context 1", self.device.get_config_context().values())
+        self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
+        self.assertIn("dynamic context 2", device2.get_config_context().values())
+        self.assertNotIn("dynamic context 1", device2.get_config_context().values())
 
 
 class ConfigContextSchemaTestCase(TestCase):
