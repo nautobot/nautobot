@@ -30,7 +30,6 @@ class Migration(migrations.Migration):
                 ("is_primary", models.BooleanField(default=False)),
                 ("is_secondary", models.BooleanField(default=False)),
                 ("is_standby", models.BooleanField(default=False)),
-                ("is_primary_for_device", models.BooleanField(default=False)),
                 (
                     "interface",
                     models.ForeignKey(

@@ -960,7 +960,6 @@ class IPAddressToInterface(BaseModel):
     is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
-    is_primary_for_device = models.BooleanField(default=False, help_text="Is primary address for parent device")
 
     def clean(self):
         super().clean()
@@ -972,22 +971,6 @@ class IPAddressToInterface(BaseModel):
 
         if self.interface is None and self.vm_interface is None:
             raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
-
-        # if primary_for_device=True, set primary_for_device=False for all other instances on the same device in the same address family
-        if self.is_primary_for_device and self.present_in_database:
-            if self.interface is not None:
-                parent = self.interface.parent
-                parent_q = Q(interface__device=parent)
-            else:
-                parent = self.vm_interface.parent
-                parent_q = Q(vm_interface__virtual_machine=parent)
-
-            family = self.ip_address.family
-            conflicting_instances = Q(ip_address__host__family=family, is_primary_for_device=True) & parent_q
-            if IPAddressToInterface.objects.filter(conflicting_instances).exclude(ip_address=self.ip_address).exists():
-                raise ValidationError(
-                    {"is_primary_for_device": f"IPv{family} primary IP address is already set for {parent!s}"}
-                )
 
     def __str__(self):
         if self.interface:
