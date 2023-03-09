@@ -13,7 +13,6 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import render_boolean
 from nautobot.dcim.models import Interface
 from nautobot.dcim.tables import InterfaceTable
-from nautobot.dcim.tables.template_code import INTERFACE_BUTTONS
 from nautobot.dcim.tables.devices import DeviceComponentTable
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
