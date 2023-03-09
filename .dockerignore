@@ -15,3 +15,5 @@
 
 # Add specific exclusions
 **/__pycache__
+nautobot/ui/build
+nautobot/ui/node_modules
