@@ -94,19 +94,24 @@ class Command(BaseCommand):
             message (str): Message to display when command is executed
         """
         self.stdout.write(self.style.WARNING(message))
+        self.stdout.write(f"Running '{command}' in '{cwd}'...")
 
         try:
-            out = subprocess.run(
+            result = subprocess.run(
                 shlex.split(command),
                 check=False,
                 cwd=cwd,
                 env={**os.environ.copy()},
+                encoding="utf-8",
+                capture_output=True,
             )
         except FileNotFoundError as err:
-            raise CommandError(f"`{command}` failed with error: {err}")
+            raise CommandError(f"'{command}' failed with error: {err}")
 
-        if out.returncode:
-            raise CommandError(f"`{command}` failed with exit code {out.returncode}")
+        if result.returncode:
+            self.stdout.write(self.style.NOTICE(result.stdout))
+            self.stderr.write(self.style.ERROR(result.stderr))
+            raise CommandError(f"'{command}' failed with exit code {result.returncode}")
 
     def handle(self, *args, **options):
         verbosity = options["verbosity"]
@@ -118,7 +123,7 @@ class Command(BaseCommand):
 
         verbosity_map = {
             0: "silent",
-            1: "silent",  # Default is "notice" but still too chatty, so "silent".
+            1: "notice",
             2: "info",
             3: "silly",  # MAXIMUM OVERDEBUG
         }
