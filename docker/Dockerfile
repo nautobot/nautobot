@@ -226,7 +226,15 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 # hadolint ignore=DL3006
 FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt install -y nodejs && npm install --global markdownlint-cli@0.31.1
+# Install node.js 18.x (LTS)
+# hadolint ignore=DL3008,DL4006
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install --no-install-recommends -y nodejs && \
+    apt-get autoremove -y && \
+    apt-get clean all && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN npm install --global markdownlint-cli@0.31.1
 
 # Nautobot wheel build is no longer a direct previous layer
 # /source from build-nautobot will include docs from build-docs as well
