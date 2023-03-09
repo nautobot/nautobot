@@ -63,12 +63,12 @@
   },
   "jest": {
     "moduleNameMapper": {
-      "^@components(.*)$": "src/components$1",
-      "@utils(.*)$": "src/utils$1",
-      "@views(.*)$": "src/views$1",
-      "@layouts(.*)$": "src/components/layouts$1",
-      "@common(.*)$": "src/components/common$1",
-      "@core(.*)$": "src/components/core$1"
+      "^@components(.*)$": "<rootDir>/src/components$1",
+      "@utils(.*)$": "<rootDir>/src/utils$1",
+      "@views(.*)$": "<rootDir>/src/views$1",
+      "@layouts(.*)$": "<rootDir>/src/components/layouts$1",
+      "@common(.*)$": "<rootDir>/src/components/common$1",
+      "@core(.*)$": "<rootDir>/src/components/core$1"
     }
   }
 }

@@ -7,7 +7,8 @@ describe('create_app_tab', () => {
     it('should render a tab with correct content', async () => {
       const mockTab = { title: 'Test Tab', url: 'http://example.com/test' };
       const mockHTML = '<div id="legacy-content">Test HTML Tab</div>';
-  
+
+      // Spy on the global fetch function and provide a custom implementation to simulate a response
       jest.spyOn(global, 'fetch').mockImplementation(() =>
         Promise.resolve({
           text: () => Promise.resolve(mockHTML),

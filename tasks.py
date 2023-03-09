@@ -164,8 +164,8 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, **kwargs):
-    """Wrapper to run a command locally or inside the nautobot container."""
+def run_command(context, command, docker_container="nautobot", **kwargs):
+    """Wrapper to run a command locally or inside the `docker_container` container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
@@ -175,7 +175,6 @@ def run_command(context, command, **kwargs):
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
-        docker_container = kwargs.pop("container", "nautobot")
         if "nautobot" in results.stdout:
             compose_command = f"exec {docker_container} {command}"
         else:
@@ -841,10 +840,10 @@ def ui_unittest(
     label=None,
 ):
     """Run Nautobot UI unit tests."""
-    command = "npm run test"
+    command = "npm run test -- --watchAll=false"
     if label:
         command += f" {label}"
-    run_command(context, command, container="nodejs")
+    run_command(context, command, docker_container="nodejs")
 
 @task(
     help={
