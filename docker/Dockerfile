@@ -232,9 +232,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install --no-install-recommends -y nodejs && \
     apt-get autoremove -y && \
     apt-get clean all && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN npm install --global markdownlint-cli@0.31.1
+    rm -rf /var/lib/apt/lists/* && \
+    npm install --global markdownlint-cli@0.31.1
 
 # Nautobot wheel build is no longer a direct previous layer
 # /source from build-nautobot will include docs from build-docs as well
