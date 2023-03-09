@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -210,6 +211,7 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """
 
+    permission_classes = [IsAuthenticated]
     queryset = ContentType.objects.order_by("app_label", "model")
     serializer_class = serializers.ContentTypeSerializer
     filterset_class = filters.ContentTypeFilterSet
