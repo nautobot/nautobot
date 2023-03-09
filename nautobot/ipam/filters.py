@@ -374,29 +374,15 @@ class IPAddressFilterSet(
         field_name="pk",
         label="Virtual machine (ID)",
     )
-    interface = NaturalKeyOrPKMultipleChoiceFilter(
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
-        label="Interface (ID or name)",
+        label="Interfaces (ID or name)",
     )
-    interface_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="interface",
-        queryset=Interface.objects.all(),
-        label="Interface (ID) - Deprecated (use interface filter)",
-    )
-    vminterface = NaturalKeyOrPKMultipleChoiceFilter(
+    vm_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
         to_field_name="name",
-        label="VM interface (ID or name)",
-    )
-    vminterface_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="vminterface",
-        queryset=VMInterface.objects.all(),
-        label="VM interface (ID) - Deprecated (use vminterface filter)",
-    )
-    assigned_to_interface = django_filters.BooleanFilter(
-        method="_assigned_to_interface",
-        label="Is assigned to an interface",
+        label="VM interfaces (ID or name)",
     )
     tag = TagFilter()
 
@@ -437,7 +423,7 @@ class IPAddressFilterSet(
         interface_ids = []
         for device in devices:
             interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
-        return queryset.filter(interface__in=interface_ids)
+        return queryset.filter(interfaces__in=interface_ids)
 
     def filter_virtual_machine(self, queryset, name, value):
         virtual_machines = VirtualMachine.objects.filter(**{f"{name}__in": value})
@@ -446,10 +432,7 @@ class IPAddressFilterSet(
         interface_ids = []
         for vm in virtual_machines:
             interface_ids.extend(vm.interfaces.values_list("id", flat=True))
-        return queryset.filter(vminterface__in=interface_ids)
-
-    def _assigned_to_interface(self, queryset, name, value):
-        return queryset.exclude(assigned_object_id__isnull=value)
+        return queryset.filter(vm_interfaces__in=interface_ids)
 
 
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):

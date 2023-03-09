@@ -434,82 +434,78 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="10.0.0.1/24",
             tenant=None,
             vrf=None,
-            assigned_object=None,
             status=status_map["active"],
             dns_name="ipaddress-a",
         )
-        IPAddress.objects.create(
+        ip0 = IPAddress.objects.create(
             address="10.0.0.2/24",
             tenant=tenants[0],
             vrf=vrfs[0],
-            assigned_object=interfaces[0],
             status=status_map["active"],
             dns_name="ipaddress-b",
         )
-        IPAddress.objects.create(
+        interfaces[0].add_ip_addresses(ip0)
+        ip1 = IPAddress.objects.create(
             address="10.0.0.3/24",
             tenant=tenants[1],
             vrf=vrfs[1],
-            assigned_object=interfaces[1],
             status=status_map["reserved"],
             role=roles[0],
             dns_name="ipaddress-c",
         )
-        IPAddress.objects.create(
+        interfaces[1].add_ip_addresses(ip1)
+        ip2 = IPAddress.objects.create(
             address="10.0.0.4/24",
             tenant=tenants[2],
             vrf=vrfs[2],
-            assigned_object=interfaces[2],
             status=status_map["deprecated"],
             role=roles[1],
             dns_name="ipaddress-d",
         )
+        interfaces[2].add_ip_addresses(ip2)
         IPAddress.objects.create(
             address="10.0.0.1/25",
             tenant=None,
             vrf=None,
-            assigned_object=None,
             status=status_map["active"],
         )
         cls.ipv6_address = IPAddress.objects.create(
             address="2001:db8::1/64",
             tenant=None,
             vrf=None,
-            assigned_object=None,
             status=status_map["active"],
             dns_name="ipaddress-a",
         )
-        IPAddress.objects.create(
+        ip3 = IPAddress.objects.create(
             address="2001:db8::2/64",
             tenant=tenants[0],
             vrf=vrfs[0],
-            assigned_object=vminterfaces[0],
             status=status_map["active"],
             dns_name="ipaddress-b",
         )
-        IPAddress.objects.create(
+        vminterfaces[0].add_ip_addresses(ip3)
+        ip4 = IPAddress.objects.create(
             address="2001:db8::3/64",
             tenant=tenants[1],
             vrf=vrfs[1],
-            assigned_object=vminterfaces[1],
             status=status_map["reserved"],
             role=roles[2],
             dns_name="ipaddress-c",
         )
-        IPAddress.objects.create(
+        vminterfaces[1].add_ip_addresses(ip4)
+        ip5 = IPAddress.objects.create(
             address="2001:db8::4/64",
             tenant=tenants[2],
             vrf=vrfs[2],
-            assigned_object=vminterfaces[2],
             status=status_map["deprecated"],
             role=roles[1],
             dns_name="ipaddress-d",
         )
+        vminterfaces[2].add_ip_addresses(ip5)
         IPAddress.objects.create(
             address="2001:db8::1/65",
             tenant=None,
             vrf=None,
-            assigned_object=None,
             status=status_map["active"],
         )
 
@@ -631,13 +627,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         params = {"device_id": [devices[0].pk, devices[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__in=devices[0].interfaces.all() | devices[1].interfaces.all()),
+            self.queryset.filter(interfaces__in=devices[0].interfaces.all() | devices[1].interfaces.all()),
         )
 
         params = {"device": [devices[0].name, devices[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__in=devices[0].interfaces.all() | devices[1].interfaces.all()),
+            self.queryset.filter(interfaces__in=devices[0].interfaces.all() | devices[1].interfaces.all()),
         )
 
     def test_virtual_machine(self):
@@ -647,7 +643,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(
-                assigned_object_id__in=virtual_machines[0].interfaces.all() | virtual_machines[1].interfaces.all()
+                vm_interfaces__in=virtual_machines[0].interfaces.all() | virtual_machines[1].interfaces.all()
             ),
         )
 
@@ -655,48 +651,24 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(
-                assigned_object_id__in=virtual_machines[0].interfaces.all() | virtual_machines[1].interfaces.all()
+                vm_interfaces__in=virtual_machines[0].interfaces.all() | virtual_machines[1].interfaces.all()
             ),
         )
 
-    def test_interface(self):
+    def test_interfaces(self):
         interfaces = list(Interface.objects.filter(ip_addresses__isnull=False)[:2])
-        params = {"interface_id": [interfaces[0].pk, interfaces[1].pk]}
+        params = {"interfaces": [interfaces[0].pk, interfaces[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__in=[interfaces[0].pk, interfaces[1].pk]),
+            self.queryset.filter(interfaces__in=[interfaces[0], interfaces[1]]),
         )
 
-        params = {"interface": [interfaces[0].pk, interfaces[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__in=[interfaces[0].pk, interfaces[1].pk]),
-        )
-
-    def test_vminterface(self):
+    def test_vm_interfaces(self):
         vm_interfaces = list(VMInterface.objects.filter(ip_addresses__isnull=False)[:2])
-        params = {"vminterface_id": [vm_interfaces[0].pk, vm_interfaces[1].pk]}
+        params = {"vm_interfaces": [vm_interfaces[0].pk, vm_interfaces[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__in=[vm_interfaces[0].pk, vm_interfaces[1].pk]),
-        )
-
-        params = {"vminterface": [vm_interfaces[0].pk, vm_interfaces[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__in=[vm_interfaces[0].pk, vm_interfaces[1].pk]),
-        )
-
-    def test_assigned_to_interface(self):
-        params = {"assigned_to_interface": "true"}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__isnull=False),
-        )
-        params = {"assigned_to_interface": "false"}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(assigned_object_id__isnull=True),
+            self.queryset.filter(vm_interfaces__in=[vm_interfaces[0], vm_interfaces[1]]),
         )
 
     def test_status(self):
