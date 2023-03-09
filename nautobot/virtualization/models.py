@@ -484,11 +484,28 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
             related_object=self.virtual_machine,
         )
 
-    def add_ip_addresses(self, ip_addresses):
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
         """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
 
         Args:
             ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
 
         Returns:
             Number of instances added.
@@ -496,7 +513,17 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         if not isinstance(ip_addresses, (tuple, list)):
             ip_addresses = [ip_addresses]
         for ip in ip_addresses:
-            instance = self.ip_addresses.through(ip_address=ip, vm_interface=self)
+            instance = self.ip_addresses.through(
+                ip_address=ip,
+                vm_interface=self,
+                is_source=is_source,
+                is_destination=is_destination,
+                is_default=is_default,
+                is_preferred=is_preferred,
+                is_primary=is_primary,
+                is_secondary=is_secondary,
+                is_standby=is_standby,
+            )
             instance.validated_save()
         return len(ip_addresses)
 
