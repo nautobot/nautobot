@@ -1,5 +1,4 @@
 from django import forms
-from django.db.models import Q
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -27,7 +26,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Interface, Location, Rack
+from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
@@ -43,7 +42,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
+from nautobot.virtualization.models import Cluster, VirtualMachine
 from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
