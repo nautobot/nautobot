@@ -114,6 +114,7 @@ from .nested_serializers import (  # noqa: F401
     NestedTagSerializer,
     NestedWebhookSerializer,
     NestedJobHookSerializer,
+    NestedJobButtonSerializer,
 )
 
 #

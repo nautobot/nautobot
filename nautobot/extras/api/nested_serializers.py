@@ -148,6 +148,14 @@ class NestedJobHookSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name"]
 
 
+class NestedJobButtonSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
+
+    class Meta:
+        model = models.JobButton
+        fields = ["id", "url", "name"]
+
+
 class NestedJobLogEntrySerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
 
