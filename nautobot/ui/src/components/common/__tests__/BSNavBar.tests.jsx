@@ -24,7 +24,7 @@ describe("BSNavBar Test", () => {
         expect(container.innerHTML).toBe("")
     })
 
-    it("should render nav correctly, if api request successfull", async () => {
+    it("should render nav correctly, if api request is successful", async () => {
         const menuData = [
             {
                 name: "Menu 1",
@@ -42,7 +42,7 @@ describe("BSNavBar Test", () => {
         useSWR.mockReturnValue({
             data: menuData,
         });
-        // Using BrowserRouter here because BSNavBar can only be utilized withing a Router
+        // Using BrowserRouter here because BSNavBar can only be utilized within a Router
         const { container } = render(<BrowserRouter><BSNavBar /></BrowserRouter>);
         container.querySelector("nav")
         await screen.findByText('Menu 1')

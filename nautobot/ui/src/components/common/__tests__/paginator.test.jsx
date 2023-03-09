@@ -25,7 +25,7 @@ describe('Paginator', () => {
         const pageTwoButton = allPaginationButton.snapshotItem(2)
         const pageThreeButton = allPaginationButton.snapshotItem(3)
 
-        // Assert we only have 7 buttons, i.e First, 1, 2, 3 and Last
+        // Assert we only have 5 buttons, i.e First, 1, 2, 3 and Last
         expect(allPaginationButton.snapshotLength).toBe(5)
 
         // Assert all has approriate href links
