@@ -175,10 +175,11 @@ def run_command(context, command, **kwargs):
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
+        docker_container = kwargs.pop("container", "nautobot")
         if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
+            compose_command = f"exec {docker_container} {command}"
         else:
-            compose_command = f"run --entrypoint '{command}' nautobot"
+            compose_command = f"run --entrypoint '{command}' {docker_container}"
 
         docker_compose(context, compose_command, pty=True)
 
@@ -829,6 +830,21 @@ def performance_test(
         performance_snapshot=performance_snapshot,
     )
 
+
+@task(
+    help={
+        "label": "Specify a directory to test instead of running all Nautobot UI tests.",
+    },
+)
+def ui_unittest(
+    context,
+    label=None,
+):
+    """Run Nautobot UI unit tests."""
+    command = "npm run test"
+    if label:
+        command += f" {label}"
+    run_command(context, command, container="nodejs")
 
 @task(
     help={
