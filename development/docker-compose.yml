@@ -21,13 +21,15 @@ services:
     healthcheck:
       interval: 5s
       timeout: 5s
-      start_period: 45s
+      start_period: 10m  # intentionally conservative upper bound for `npm install` time in a fresh setup
       retries: 3
       test:
         - "CMD"
         - "curl"
         - "-f"
         - "http://localhost:8080/health/"
+    volumes:
+      - node_modules:/source/nautobot/ui/node_modules
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:
@@ -89,3 +91,5 @@ services:
     tty: true
     ports:
       - "8001:8001"
+volumes:
+  node_modules:
