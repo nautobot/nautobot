@@ -724,6 +724,7 @@ class JobButtonFilterSet(BaseFilterSet):
         },
     )
     content_types = ContentTypeFilter()
+    job = NaturalKeyOrPKMultipleChoiceFilter(queryset=Job.objects.all(), label="Job (slug or ID)")
 
     class Meta:
         model = JobButton
