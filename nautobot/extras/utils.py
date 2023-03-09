@@ -138,6 +138,7 @@ class FeatureQuery:
         # `registry` record being used by `FeatureQuery`.
         # As the `populate_model_features_registry` can be resource-intensive. The check the conditional check is used to
         # avoid calling the function multiple times and optimize the performance of the application.
+        # TODO(timizuo): Provide a better solution for this; check https://github.com/nautobot/nautobot/pull/3360/files#r1131373797 comment.
         if not registry["model_features"].get("relationships"):
             populate_model_features_registry()
         query = Q()
