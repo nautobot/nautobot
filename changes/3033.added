@@ -1,0 +1,1 @@
+Added `JobButton` model to create single click execution buttons in the web UI to run jobs based on a single object.
