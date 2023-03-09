@@ -107,7 +107,8 @@ class PrefixViewSet(NautobotModelViewSet):
         "status",
         "tenant",
         "vlan",
-        "vrf__tenant",
+        # "vrf__tenant",
+        "namespace",
     ).prefetch_related("tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
@@ -292,8 +293,8 @@ class IPAddressViewSet(NautobotModelViewSet):
         "status",
         "role",
         "tenant",
-        "vrf__tenant",
-    ).prefetch_related("tags", "nat_outside_list")
+        # "vrf__tenant",
+    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 

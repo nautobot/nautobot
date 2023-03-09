@@ -1,19 +1,16 @@
 import re
-import uuid
 
 import netaddr
 from django.db.models import (
     Count,
-    ExpressionWrapper,
     IntegerField,
     F,
     OuterRef,
     Subquery,
     Q,
-    UUIDField,
     Value,
 )
-from django.db.models.functions import Coalesce, Length
+from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
@@ -215,28 +212,16 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         """
         # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
         # The value itself has no meaning, so we just generate a random UUID for the query.
-        FAKE_UUID = uuid.uuid4()
 
         from nautobot.ipam.models import Prefix
 
         return self.annotate(
             parents=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
+                Prefix.objects.filter(
                     Q(prefix_length__lt=OuterRef("prefix_length"))
                     & Q(network__lte=OuterRef("network"))
                     & Q(broadcast__gte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
+                    & Q(namespace=OuterRef("namespace"))
                 )
                 .order_by()
                 .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
@@ -246,22 +231,11 @@ class PrefixQuerySet(BaseNetworkQuerySet):
                 output_field=IntegerField(),
             ),
             children=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
+                Prefix.objects.filter(
                     Q(prefix_length__gt=OuterRef("prefix_length"))
                     & Q(network__gte=OuterRef("network"))
                     & Q(broadcast__lte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
+                    & Q(namespace=OuterRef("namespace"))
                 )
                 .order_by()
                 .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause

@@ -103,20 +103,32 @@ class RouteDistinguisherForm(NautobotModelForm):
 class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
-    rd = DynamicModelChoiceField(queryset=RouteDistinguisher.objects.all(), required=False)
+    # rd = DynamicModelChoiceField(queryset=RouteDistinguisher.objects.all(), required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
+    devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
+        required=False,
+        query_params={
+            "namespace": "$namespace",
+        },
+    )
 
     class Meta:
         model = VRF
         fields = [
             "name",
-            "rd",
-            "enforce_unique",
+            # "rd",
+            "namespace",
+            # "enforce_unique",
             "description",
             "import_targets",
             "export_targets",
             "tenant_group",
             "tenant",
             "tags",
+            "devices",
+            "prefixes",
         ]
         """
         labels = {
@@ -273,6 +285,7 @@ class RIRFilterForm(NautobotFilterForm):
 
 
 class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
+    """
     vrf = DynamicModelChoiceField(
         empty_label="Global",
         null_option="Global",
@@ -280,6 +293,8 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VRF",
     )
+    """
+
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -298,12 +313,14 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         },
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
 
     class Meta:
         model = Prefix
         fields = [
             "prefix",
-            "vrf",
+            "namespace",
+            # "vrf",
             "location",
             "vlan",
             "status",
@@ -324,7 +341,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
 
         super().__init__(*args, **kwargs)
 
-        self.fields["vrf"].empty_label = "Global"
+        # self.fields["vrf"].empty_label = "Global"
 
 
 class PrefixCSVForm(

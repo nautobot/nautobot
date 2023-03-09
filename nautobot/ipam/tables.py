@@ -250,7 +250,7 @@ class RouteDistinguisherTable(BaseTable):
 class VRFTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    rd = tables.Column(verbose_name="RD")
+    # rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
     enforce_unique = BooleanColumn(verbose_name="Unique")
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
@@ -262,15 +262,17 @@ class VRFTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "rd",
+            # "rd",
+            "namespace",
             "tenant",
-            "enforce_unique",
+            # "enforce_unique",
             "description",
             "import_targets",
             "export_targets",
             "tags",
         )
-        default_columns = ("pk", "name", "rd", "tenant", "description")
+        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "namespace", "tenant", "description")
 
 
 #
@@ -337,7 +339,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
-    vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
+    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
@@ -352,7 +354,8 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "type",
             "status",
             "children",
-            "vrf",
+            # "vrf",
+            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -366,7 +369,8 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "prefix",
             "type",
             "status",
-            "vrf",
+            # "vrf",
+            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -390,8 +394,9 @@ class PrefixDetailTable(PrefixTable):
             "type",
             "status",
             "children",
-            "vrf",
+            # "vrf",
             "utilization",
+            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -405,8 +410,9 @@ class PrefixDetailTable(PrefixTable):
             "type",
             "status",
             "children",
-            "vrf",
+            # "vrf",
             "utilization",
+            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -425,7 +431,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     address = tables.TemplateColumn(
         template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
     )
-    vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
+    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
     # TODO: add interface M2M
 
@@ -434,7 +440,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "address",
-            "vrf",
+            # "vrf",
             "status",
             "role",
             "tenant",
@@ -456,7 +462,7 @@ class IPAddressDetailTable(IPAddressTable):
         fields = (
             "pk",
             "address",
-            "vrf",
+            # "vrf",
             "status",
             "role",
             "tenant",
@@ -469,7 +475,7 @@ class IPAddressDetailTable(IPAddressTable):
         default_columns = (
             "pk",
             "address",
-            "vrf",
+            # "vrf",
             "status",
             "role",
             "tenant",
@@ -488,7 +494,7 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
         fields = (
             "address",
             "dns_name",
-            "vrf",
+            # "vrf",
             "status",
             "role",
             "tenant",
@@ -503,12 +509,13 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     """
 
     address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
-    vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
+    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
         model = IPAddress
-        fields = ("address", "vrf", "status", "role", "tenant", "description")
+        # fields = ("address", "vrf", "status", "role", "tenant", "description")
+        fields = ("address", "status", "role", "tenant", "description")
 
 
 class IPAddressInterfaceTable(InterfaceTable):

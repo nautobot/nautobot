@@ -61,7 +61,7 @@ class Namespace(PrimaryModel):
 
 def get_default_namespace():
     """Return the Global namespace for use in default value for foreign keys."""
-    return Namespace.objects.get_or_create(name="Global")
+    return Namespace.objects.get_or_create(name="Global")[0].pk
 
 
 class RouteDistinguisher(PrimaryModel):
@@ -380,7 +380,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     csv_headers = [
         "prefix",
         "type",
-        "vrf",
+        # "vrf",
         "tenant",
         "location",
         "vlan_group",
@@ -401,11 +401,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "tenant",
         "type",
         "vlan",
-        "vrf",
+        # "vrf",
     ]
+    """
     dynamic_group_filter_fields = {
         "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
     }
+    """
 
     class Meta:
         ordering = (
@@ -497,7 +499,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         return (
             self.prefix,
             self.get_type_display(),
-            self.vrf.name if self.vrf else None,
+            # self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.location.name if self.location else None,
             self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,
@@ -532,27 +534,34 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         return None
 
     def get_duplicates(self):
-        return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
+        # return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
+        return Prefix.objects.none()
 
     def get_child_prefixes(self):
         """
         Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
         Prefixes belonging to any VRF.
         """
+        return Prefix.objects.net_contained(self.prefix).filter(namespace=self.namespace)
+        """
         if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             return Prefix.objects.net_contained(self.prefix)
         else:
             return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
+        """
 
     def get_child_ips(self):
         """
         Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
         child IPAddresses belonging to any VRF.
         """
+        return IPAddress.objects.net_host_contained(self.prefix)
+        """
         if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
             return IPAddress.objects.net_host_contained(self.prefix)
         else:
             return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
+        """
 
     def get_available_prefixes(self):
         """
@@ -619,7 +628,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             UtilizationData (namedtuple): (numerator, denominator)
         """
         if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
+            # queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
+            queryset = Prefix.objects.net_contained(self.prefix).filter(namespace=self.namespace)
             child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 

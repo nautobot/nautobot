@@ -259,6 +259,7 @@ class PrefixSerializer(
             "type",
             "location",
             # "vrf",
+            "namespace",
             "tenant",
             "vlan",
             "status",

@@ -471,6 +471,38 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 else:
                     return redirect(self.get_return_url(request, obj))
 
+            # TODO(jathan): This is a temporary workaround for legacy generic views in support of
+            # PrefixEditView/PrefixForm where `unique_together` constraint raises an IntegrityError
+            # because `network` & `prefix_length` are excluded from the form and are therefore not
+            # passed to `full_clean()`. This results in `form.is_valid()` always returning `True`,
+            # and any exceptions end up getting bubbled up when `form.save()` is called. Therefore
+            # the error(s) have to be handled here.
+            #
+            # The problem is that the error from `IntegrityError` is hideous, and looks like this:
+            #
+            # IntegrityError: duplicate key value violates unique constraint "ipam_prefix_namespace_id_network_prefix_length_b2dd8b57_uniq"
+            # DETAIL:  Key (namespace_id, network, prefix_length)=(e0b0aa8d-d24d-4312-a2e5-f185c41281e6, \x0a000000, 8) already exists.
+            #
+            # So, there is a `pre_save` signal handler to forcibly call `Prefix.full_clean` without
+            # field exclusions which results in a `ValidationError` that looks pretty, like so:
+            #
+            # ValidationError: {'__all__': ['Prefix with this Namespace, Network and Prefix length already exists.']}
+            #
+            # No extra work shall be spent on this as the form validation is being replaced with
+            # JSON schema forms in the v2 UI and all of this should go away because validation will
+            # be performed by serializers instead. When `serializer.is_valid()` is called, it
+            # actually returns `False` and properly shows the errors:
+            #
+            # >>> serializer.is_valid()
+            # False
+            #
+            # >>> serializer.errors
+            # {'__all__': [ErrorDetail(string='Prefix with this Namespace, Network and Prefix length already exists.', code='unique_together')]}
+            except ValidationError as err:
+                msg = f"{obj} failed validation: {err}"
+                logger.debug(msg)
+                messages.error(self.request, msg)
+
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)

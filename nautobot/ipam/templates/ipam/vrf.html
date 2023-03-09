@@ -36,4 +36,6 @@
 {% block content_right_page %}
         {% include 'panel_table.html' with table=import_targets_table heading="Import Route Targets" %}
         {% include 'panel_table.html' with table=export_targets_table heading="Export Route Targets" %}
+	{% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
+	{% include 'panel_table.html' with table=device_table heading="Assigned Devices" %}
 {% endblock content_right_page %}

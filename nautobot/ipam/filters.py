@@ -78,7 +78,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "rd__rd": "icontains",
+            # "rd__rd": "icontains",
             "description": "icontains",
         },
     )
@@ -104,17 +104,25 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Export target (ID or name)",
     )
+    """
     rd = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="rd",
         queryset=RouteDistinguisher.objects.all(),
         to_field_name="rd",
         label="Route distinguiqhser (ID or rd)",
     )
+    """
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
     tag = TagFilter()
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "enforce_unique"]
+        # fields = ["id", "name", "rd", "enforce_unique"]
+        fields = ["id", "name"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -210,6 +218,7 @@ class PrefixFilterSet(
     mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
     mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
     mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
+    """
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         label="VRF (ID) - Deprecated (use vrf filter)",
@@ -232,6 +241,7 @@ class PrefixFilterSet(
         to_field_name="rd",
         label="VRF (RD)",
     )
+    """
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
         label="VLAN (ID)",
@@ -249,6 +259,11 @@ class PrefixFilterSet(
         label="Has RIR",
     )
     type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
     tag = TagFilter()
 
     class Meta:
