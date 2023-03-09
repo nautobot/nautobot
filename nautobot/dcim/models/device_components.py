@@ -779,6 +779,40 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                         }
                     )
 
+    def add_ip_addresses(self, ip_addresses):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances added.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        for ip in ip_addresses:
+            instance = self.ip_addresses.through(ip_address=ip, interface=self)
+            instance.validated_save()
+        return len(ip_addresses)
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        count = 0
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        for ip in ip_addresses:
+            qs = self.ip_addresses.through.filter(ip_address=ip, interface=self)
+            count += qs.count()
+            qs.delete()
+        return count
+
     @property
     def is_connectable(self):
         return self.type not in NONCONNECTABLE_IFACE_TYPES

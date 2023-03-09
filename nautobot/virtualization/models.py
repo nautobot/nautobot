@@ -484,6 +484,40 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
             related_object=self.virtual_machine,
         )
 
+    def add_ip_addresses(self, ip_addresses):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances added.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        for ip in ip_addresses:
+            instance = self.ip_addresses.through(ip_address=ip, vm_interface=self)
+            instance.validated_save()
+        return len(ip_addresses)
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        count = 0
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        for ip in ip_addresses:
+            qs = self.ip_addresses.through.filter(ip_address=ip, vm_interface=self)
+            count += qs.count()
+            qs.delete()
+        return count
+
     @property
     def parent(self):
         return self.virtual_machine
