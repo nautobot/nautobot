@@ -6,7 +6,6 @@ class IPAMConfig(NautobotConfig):
     verbose_name = "IPAM"
     searchable_models = [
         "vrf",
-        "aggregate",
         "prefix",
         "ipaddress",
         "vlan",

@@ -462,12 +462,12 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
     if job_model.has_sensitive_variables:
         if (
-            "scheduled_job" in request.data
-            and "interval" in request.data["scheduled_job"]
-            and request.data["scheduled_job"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+            "schedule" in request.data
+            and "interval" in request.data["schedule"]
+            and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
         ):
             raise ValidationError(
-                {"scheduled_job": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
+                {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
         if job_model.approval_required:
             raise ValidationError(
@@ -534,7 +534,7 @@ def _run_job(request, job_model, legacy_response=False):
         data = input_serializer.validated_data.get("data", {})
         commit = input_serializer.validated_data.get("commit", None)
         task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
-        schedule_data = input_serializer.validated_data.get("scheduled_job", None)
+        schedule_data = input_serializer.validated_data.get("schedule", None)
 
     if commit is None:
         commit = job_model.commit_default

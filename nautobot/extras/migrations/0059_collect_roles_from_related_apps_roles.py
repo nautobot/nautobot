@@ -130,7 +130,7 @@ def clear_populated_roles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0057_role_and_alter_status"),
+        ("extras", "0058_role_and_alter_status"),
     ]
 
     operations = [

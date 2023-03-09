@@ -1,6 +1,7 @@
 from itertools import count, groupby
 import json
 
+from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
 from django.utils.tree import Node
@@ -15,6 +16,16 @@ def array_to_string(array):
     """
     group = (list(x) for _, x in groupby(sorted(array), lambda x, c=count(): next(c) - x))
     return ", ".join("-".join(map(str, (g[0], g[-1])[: len(g)])) for g in group)
+
+
+def get_all_concrete_models(base_class):
+    """Get a list of all non-abstract models that inherit from the given base_class."""
+    models = []
+    for appconfig in apps.get_app_configs():
+        for model in appconfig.get_models():
+            if issubclass(model, base_class) and not model._meta.abstract:
+                models.append(model)
+    return sorted(models, key=lambda model: (model._meta.app_label, model._meta.model_name))
 
 
 def is_taggable(obj):

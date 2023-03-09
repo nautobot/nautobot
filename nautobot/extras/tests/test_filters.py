@@ -3,6 +3,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.test import override_settings
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import FilterTestCases
@@ -322,6 +323,18 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextFilterSet.dynamic_group` is present when feature flag is enabled."""
+        filter_set = ConfigContextFilterSet()
+        self.assertIn("dynamic_groups", filter_set.filters)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Tests that `ConfigContextFilterSet.dynamic_group` is NOT present when feature flag is disabled."""
+        filter_set = ConfigContextFilterSet()
+        self.assertNotIn("dynamic_groups", filter_set.filters)
 
 
 class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):

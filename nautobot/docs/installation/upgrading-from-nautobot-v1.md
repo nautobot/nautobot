@@ -39,16 +39,16 @@
 | ConfigContextSchema     | `schema`                                | `config_context_schema`                        |
 |                         | `device_set`                            | `devices`                                      |
 |                         | `virtualmachine_set`                    | `virtual_machines`                             |
-| ContentType             | `dcim_device_related`                   | `devices`                                      |
-|                         | `virtualization_virtualmachine_related` | `virtual_machines`                             |
 | ContentType             | `computedfield_set`                     | `computed_fields`                              |
 |                         | `configcontext_set`                     | `config_contexts`                              |
 |                         | `configcontextschema_set`               | `config_context_schemas`                       |
 |                         | `customlink_set`                        | `custom_links`                                 |
+|                         | `dcim_device_related`                   | `devices`                                      |
 |                         | `dynamicgroup_set`                      | `dynamic_groups`                               |
 |                         | `exporttemplate_set`                    | `export_templates`                             |
 |                         | `imageattachment_set`                   | `image_attachments`                            |
 |                         | `note_set`                              | `notes`                                        |
+|                         | `virtualization_virtualmachine_related` | `virtual_machines`                             |
 | CustomFieldChoice       | `field`                                 | `custom_field`                                 |
 | CustomField             | `choices`                               | `custom_field_choices`                         |
 | Device                  | `consoleports`                          | `console_ports`                                |
@@ -97,6 +97,7 @@
 | Relationship            | `associations`                          | `relationship_associations`                    |
 | Secret                  | `groups`                                | `secrets_groups`                               |
 |                         | `secretsgroupassociation_set`           | `secrets_group_associations`                   |
+| RIR                     | `aggregates`                            | [`prefixes`](#aggregate-migrated-to-prefix)    |
 | SecretsGroup            | `device_set`                            | `devices`                                      |
 |                         | `deviceredundancygroup_set`             | `device_redundancy_groups`                     |
 |                         | `gitrepository_set`                     | `git_repositories`                             |
@@ -160,20 +161,43 @@
 
 ### Replaced Models
 
+#### Generic Role Model
+
 The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed and replaced by a single `extras.Role` model. This means that any references to the removed models in the code now use the `extras.Role` model instead.
+
+| Removed Model     | Replaced With  |
+|-------------------|----------------|
+| `dcim.DeviceRole` | `extras.Role`  |
+| `dcim.RackRole`   | `extras.Role`  |
+| `ipam.Role`       | `extras.Role`  |
+
+#### Site and Region Models
 
 The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim.Location` model. This means that any references to the removed models in the code now use the `dcim.Location` model instead with `LocationType` "Site" and "Region".
 
 !!! important
     If you are a Nautobot App developer, or have any Apps installed that include data models that reference `Site` or `Region`, please review the [Region and Site Related Data Model Migration Guide](../installation/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide-for-existing-nautobot-app-installations) to learn how to migrate your apps and models from `Site` and `Region` to `Location`.
 
-| Removed Model     | Replaced With   |
-|-------------------|-----------------|
-| `dcim.DeviceRole` | `extras.Role`   |
-| `dcim.RackRole`   | `extras.Role`   |
-| `dcim.Region`     | `dcim.Location` |
-| `dcim.Site`       | `dcim.Location` |
-| `ipam.Role`       | `extras.Role`   |
+| Removed Model     | Replaced With  |
+|-------------------|----------------|
+| `dcim.Region`     | `dcim.Location`|
+| `dcim.Site`       | `dcim.Location`|
+
+#### Aggregate Migrated to Prefix
+
+The `ipam.Aggregate` model has been removed and all existing Aggregates will be migrated to `ipam.Prefix` records with their `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00` UTC. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the equivalent fields on the new `Prefix`. ObjectChanges, Tags, Notes, Permissions, Custom Fields, Custom Links, Computed Fields and Relationships will be migrated to relate to the new `Prefix` as well.
+
+If a `Prefix` already exists with the same network and prefix length as a previous `Aggregate`, the `rir` and `date_added` fields will be copied to the `rir` and `date_allocated` fields on the existing Prefix object. Messages will be output during migration (`nautobot-server migrate` or `nautobot-server post_upgrade`) if the `tenant`, `description` or `type` fields need to be manually migrated.
+
+| Aggregate        | Prefix               |
+|------------------|----------------------|
+| `broadcast`      | `broadcast`          |
+| **`date_added`** | **`date_allocated`** |
+| `description`    | `description`        |
+| `network`        | `network`            |
+| `prefix_length`  | `prefix_length`      |
+| `rir`            | `rir`                |
+| `tenant`         | `tenant`             |
 
 ## GraphQL and REST API Changes
 
@@ -558,9 +582,11 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 | Site                    | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `tenant_group_id`     |                                                                                               |
-| Tenant                  | `group_id`            |                                                                                               |
+| Tenant                  | `aggregates`          |                                                                                               |
+|                         | `group_id`            |                                                                                               |
+|                         | `has_aggregates`      |                                                                                               |
 |                         | `has_sites`           |                                                                                               |
-|                         | `sites`               |
+|                         | `sites`               |                                                                                               |
 | TenantGroup             | `parent_id`           |                                                                                               |
 | VirtualChassis          | `master_id`           |                                                                                               |
 |                         | `region`              |                                                                                               |

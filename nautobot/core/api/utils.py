@@ -1,4 +1,5 @@
 from collections import namedtuple
+import logging
 import platform
 import sys
 
@@ -9,6 +10,9 @@ from rest_framework import status
 from rest_framework.utils import formatting
 
 from nautobot.core.api import exceptions
+
+
+logger = logging.getLogger(__name__)
 
 
 def dict_to_filter_params(d, prefix=""):
@@ -93,6 +97,9 @@ def versioned_serializer_selector(obj, serializer_choices, default_serializer):
 def get_serializer_for_model(model, prefix=""):
     """
     Dynamically resolve and return the appropriate serializer for a model.
+
+    Raises:
+        SerializerNotFound: if the requested serializer cannot be located.
     """
     app_name, model_name = model._meta.label.split(".")
     # Serializers for Django's auth models are in the users app
@@ -103,10 +110,29 @@ def get_serializer_for_model(model, prefix=""):
         serializer_name = f"nautobot.{serializer_name}"
     try:
         return dynamic_import(serializer_name)
-    except AttributeError:
+    except AttributeError as exc:
         raise exceptions.SerializerNotFound(
             f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
-        )
+        ) from exc
+
+
+def get_serializers_for_models(models, prefix=""):
+    """
+    Dynamically resolve and return the appropriate serializers for a list of models.
+
+    Unlike get_serializer_for_model, this will skip any models for which an appropriate serializer cannot be found,
+    logging a message instead of raising the SerializerNotFound exception.
+
+    Used primarily in OpenAPI schema generation.
+    """
+    serializers = []
+    for model in models:
+        try:
+            serializers.append(get_serializer_for_model(model, prefix=prefix))
+        except exceptions.SerializerNotFound as exc:
+            logger.error("%s", exc)
+            continue
+    return serializers
 
 
 def is_api_request(request):

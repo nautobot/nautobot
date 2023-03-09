@@ -343,12 +343,12 @@ class MappedPredicatesFilterMixin:
         super().__init__(*args, **kwargs)
 
         # Generate the query with a sentinel value to validate it and surface parse errors.
-        self.generate_query(value="", filter_predicates=self.filter_predicates)
+        self.generate_query(value="")
 
-    def generate_query(self, value, filter_predicates=None, **kwargs):
+    def generate_query(self, value, **kwargs):
         """
-        Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
-        predicate=value.
+        Given a `value`, return a `Q` object for 2-tuple of `predicate=value`. Filter predicates are
+        read from the instance filter. Any `kwargs` are ignored.
         """
 
         def noop(v):
@@ -356,7 +356,7 @@ class MappedPredicatesFilterMixin:
             return v
 
         query = models.Q()
-        for field_name, lookup_info in filter_predicates.items():
+        for field_name, lookup_info in self.filter_predicates.items():
             # Unless otherwise specified, set the default prepreprocssor
             if isinstance(lookup_info, str):
                 lookup_expr = lookup_info
@@ -367,7 +367,7 @@ class MappedPredicatesFilterMixin:
 
             # Or set it to what was defined by caller
             elif isinstance(lookup_info, dict):
-                lookup_expr = lookup_info["lookup_expr"]
+                lookup_expr = lookup_info.get("lookup_expr")
                 preprocessor = lookup_info.get("preprocessor")
                 if not callable(preprocessor):
                     raise TypeError("Preprocessor {preprocessor} must be callable!")
@@ -393,7 +393,7 @@ class MappedPredicatesFilterMixin:
             return qs
 
         # Evaluate the query and stash it for later use (such as introspection or debugging)
-        query = self.generate_query(value=value, filter_predicates=self.filter_predicates)
+        query = self.generate_query(value=value)
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()

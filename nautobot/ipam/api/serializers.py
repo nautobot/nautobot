@@ -10,11 +10,14 @@ from nautobot.core.api import (
     ContentTypeField,
     SerializedPKRelatedField,
 )
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.serializers import PolymorphicProxySerializer
+from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
 )
+from nautobot.dcim.models import BaseInterface
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     RoleModelSerializerMixin,
@@ -24,7 +27,6 @@ from nautobot.extras.api.serializers import (
 from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -39,11 +41,10 @@ from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# Not all of these variable(s) are actually used anywhere in this file, but are required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import (  # noqa: F401
     IPFieldSerializer,
-    NestedAggregateSerializer,
     NestedIPAddressSerializer,
     NestedPrefixSerializer,
     NestedRIRSerializer,
@@ -113,13 +114,13 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
 
 
 #
-# RIRs/aggregates
+# RIRs
 #
 
 
 class RIRSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
-    aggregate_count = serializers.IntegerField(read_only=True)
+    assigned_prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RIR
@@ -129,33 +130,13 @@ class RIRSerializer(NautobotModelSerializer):
             "slug",
             "is_private",
             "description",
-            "aggregate_count",
+            "assigned_prefix_count",
         ]
-
-
-class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
-    prefix = IPFieldSerializer()
-    rir = NestedRIRSerializer()
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-
-    class Meta:
-        model = Aggregate
-        fields = [
-            "url",
-            "family",
-            "prefix",
-            "rir",
-            "tenant",
-            "date_added",
-            "description",
-        ]
-        read_only_fields = ["family"]
 
 
 #
 # VLANs
+#
 
 
 class VLANGroupSerializer(NautobotModelSerializer):
@@ -246,6 +227,7 @@ class PrefixSerializer(
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
+    rir = NestedRIRSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Prefix
@@ -260,6 +242,8 @@ class PrefixSerializer(
             "vlan",
             "status",
             "role",
+            "rir",
+            "date_allocated",
             "description",
         ]
         read_only_fields = ["family"]
@@ -349,7 +333,14 @@ class IPAddressSerializer(
         ]
         read_only_fields = ["family"]
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="IPAddressAssignedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(BaseInterface), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_assigned_object(self, obj):
         if obj.assigned_object is None:
             return None

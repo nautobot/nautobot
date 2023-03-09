@@ -86,9 +86,9 @@ django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.14.0"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.25.0", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.26.0", extras = ["sidecar"]}
 # Git integrations for Python
-GitPython = "~3.1.30"
+GitPython = "~3.1.31"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -116,7 +116,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.4.0"
+netutils = "^1.4.1"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter

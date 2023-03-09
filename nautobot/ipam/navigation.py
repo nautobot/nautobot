@@ -60,34 +60,6 @@ menu_items = (
                             ),
                         ),
                     ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Aggregates",
-                weight=300,
-                items=(
-                    NavMenuItem(
-                        link="ipam:aggregate_list",
-                        name="Aggregates",
-                        weight=100,
-                        permissions=[
-                            "ipam.view_aggregate",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="ipam:aggregate_add",
-                                permissions=[
-                                    "ipam.add_aggregate",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:aggregate_import",
-                                permissions=[
-                                    "ipam.add_aggregate",
-                                ],
-                            ),
-                        ),
-                    ),
                     NavMenuItem(
                         link="ipam:rir_list",
                         name="RIRs",
