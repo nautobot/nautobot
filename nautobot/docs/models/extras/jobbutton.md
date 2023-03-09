@@ -1,0 +1,166 @@
+# Job Buttons
+
+Job Buttons are predefined buttons that allow users to run jobs directly from within Nautobot object views. It uses the object where the button was pressed as the only input to the job. These are helpful when you want to start a job that requires minimal or no input without having to use the standard job form. For example, you may have a job that only requires a user to select a device. Instead, they can now go to that device in the web UI and click the associated Job Button instead.
+
+Job Buttons can be created in web UI located in the navbar under Jobs > Job Buttons. Each button can be associated with multiple Nautobot object types (site, device, prefix, etc.) and will be displayed on all of the associated object detail views. The text displayed on the button supports Jinja2 templating which allows for using [context data](#context-data) to dynamically update or [even be hidden under certain conditions](#conditional-rendering).
+
+The buttons appear at the top right corner of an object's individual detail page for each object type they are associated to. They can be either individual buttons or grouped together in a dropdown for better organization. In either case, the order of the buttons are influenced by the `weight` number configured for each button.
+
+## Configuration
+
+* **Name** - A unique name for the Job Button.
+* **Object type(s)** - The type or types of Nautobot object that the button will be associated to.
+* **Text** - The text that will be displayed on the button.
+* **Job** - The [Job Button Receiver](#job-button-receivers) that this button will run.
+* **Weight** - The number used for determining the order the buttons will appear.
+* **Group** - The name of the dropdown group to add this button into (optional).
+* **Button Class** - The button CSS class, which dictates the color.
+* **Confirmation** - Should the button pop up a confirmation dialog before running.
+
+!!! warning
+    As you can see, there is no `commit` option for a Job Button like there is for a normal Job. All Job Buttons will run `commit=True` **implicitly**.
+
+## Job Button Receivers
+
+Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](../../additional-features/jobs.md#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
+
+### The `receive_job_button()` Method
+
+All `JobButtonReceiver` subclasses must implement a `receive_job_button()` method. This method accepts only one argument:
+
+1. `obj` - An instance of the object where the button was pressed
+
+### Example Job Button Receiver
+
+```py
+from nautobot.extras.jobs import JobButtonReceiver
+
+
+class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
+    class Meta:
+        name = "Example Simple Job Button Receiver"
+
+    def receive_job_button(self, obj):
+        self.log_info(obj=obj, message="Running Job Button Receiver.")
+        # Add job logic here
+```
+
+### Job Buttons for Multiple Types
+
+Since Job Buttons can be associated to multiple object types, it would be trivial to create a Job that can change what it runs based on the object type.
+
+```py
+from nautobot.dcim.models import Device, Site
+from nautobot.extras.jobs import JobButtonReceiver
+
+
+class ExampleComplexJobButtonReceiver(JobButtonReceiver):
+    class Meta:
+        name = "Example Complex Job Button Receiver"
+
+    def _run_site_job(self, obj):
+        self.log_info(obj=obj, message="Running Site Job Button Receiver.")
+        # Run Site Job function
+
+    def _run_device_job(self, obj):
+        self.log_info(obj=obj, message="Running Device Job Button Receiver.")
+        # Run Device Job function
+
+    def receive_job_button(self, obj):
+        if isinstance(obj, Site):
+            self._run_site_job(obj)
+        elif isinstance(obj, Device):
+            self._run_device_job(obj)
+        else:
+            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+```
+
+### Add a Job Button to Existing Jobs
+
+As was explained above, Job Buttons may only be associated to JobButtonReceiver subclasses. If you have an existing Job that would work as a Job Button, you can either rewrite it to be a JobButtonReceiver (as above) or you can move the existing logic to a callable that each Job subclass would call. This would allow the existing Job to remain while also adding the Job Button functionality.
+
+```py
+from nautobot.dcim.models import Device, Site
+from nautobot.extras.jobs import Job, ObjectVar, JobButtonReceiver
+
+
+class ExampleSiteObjectJob(Job):
+    site = ObjectVar(model=Site)
+
+    class Meta:
+        name = "Example Site Object Job"
+
+    def run(self, data, commit):
+        site = data["site"]
+        if commit:
+            _run_site_job(self, site)
+
+
+class ExampleDeviceObjectJob(Job):
+    device = ObjectVar(model=Device)
+
+    class Meta:
+        name = "Example Device Object Job"
+
+    def run(self, data, commit):
+        device = data["device"]
+        if commit:
+            _run_device_job(self, device)
+
+
+class ExampleJobButtonReceiverOtherJobs(JobButtonReceiver):
+    class Meta:
+        name = "Example Job Button Receiver for Other Jobs"
+
+    def receive_job_button(self, obj):
+        if isinstance(obj, Site):
+            _run_site_job(self, obj)
+        elif isinstance(obj, Device):
+            _run_device_job(self, obj)
+        else:
+            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+
+
+def _run_site_job(job_class, obj):
+    job_class.log_info(obj=obj, message="Running Site Job.")
+    # Add Site job logic here
+
+
+def _run_device_job(job_class, obj):
+    job_class.log_info(obj=obj, message="Running Device Job.")
+    # Add Device job logic here
+```
+
+## Context Data
+
+The following context data is available within the template when rendering a Job Button's text.
+
+| Variable | Description |
+|----------|-------------|
+| `obj`      | The Nautobot object being displayed |
+| `debug`    | A boolean indicating whether debugging is enabled |
+| `request`  | The current WSGI request |
+| `user`     | The current user (if authenticated) |
+| `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
+
+All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
+
+## Conditional Rendering
+
+Only buttons which render with non-empty text are included on the page. You can employ conditional Jinja2 logic to control the conditions under which a button gets rendered.
+
+For example, if you only want to display a button for active devices, you could set the button text to
+
+```jinja2
+{% if obj.status.slug == 'active' %}Provision{% endif %}
+```
+
+The button will not appear when viewing a device with any status other than `Active`.
+
+As another example, if you wanted to show only devices belonging to a certain manufacturer, you could do something like this:
+
+```jinja2
+{% if obj.device_type.manufacturer.name == 'Cisco' %}Provision{% endif %}
+```
+
+The button will only appear when viewing a device with a manufacturer name of `Cisco`.
