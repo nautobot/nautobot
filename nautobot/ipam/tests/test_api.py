@@ -397,7 +397,6 @@ class ParallelPrefixTest(APITransactionTestCase):
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
     brief_fields = ["address", "display", "family", "id", "url"]
-    choices_fields = ["assigned_object_type"]
 
     @classmethod
     def setUpTestData(cls):

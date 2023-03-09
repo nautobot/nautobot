@@ -865,10 +865,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
-    def to_objectchange(self, action, related_object=None, **kwargs):
-        # Annotate the assigned object, if any
-        return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
-
     def to_csv(self):
 
         # Determine if this IP is primary for a Device
