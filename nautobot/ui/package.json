@@ -63,7 +63,7 @@
   },
   "jest": {
     "moduleNameMapper": {
-      "^@components(.*)$": "<rootDir>/src/components$1",
+      "^@components(.*)$": "src/components$1",
       "@utils(.*)$": "src/utils$1",
       "@views(.*)$": "src/views$1",
       "@layouts(.*)$": "src/components/layouts$1",

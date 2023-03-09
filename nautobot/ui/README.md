@@ -22,7 +22,8 @@ nautobot-server runserver 0.0.0.0:8080 --insecure
 
 ## Running test
 
-To run all test suite, cd into ui directory and run 
+To run all test suite, cd into ui directory and run
+
 ```
 npm run test
 ```
