@@ -145,6 +145,10 @@ class FeatureQuery:
         """
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
 
+    def list_subclasses(self):
+        """Return a list of model classes that declare this feature."""
+        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+
 
 @deconstructible
 class TaggableClassesQuery(FeaturedQueryMixin):

@@ -1,6 +1,7 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
-from nautobot.core.api import BaseModelSerializer, TreeModelSerializerMixin, WritableNestedSerializer
+from nautobot.core.api import TreeModelSerializerMixin, WritableNestedSerializer
 from nautobot.dcim import models
 
 __all__ = [
@@ -88,6 +89,7 @@ class NestedRackReservationSerializer(WritableNestedSerializer):
         model = models.RackReservation
         fields = ["id", "url", "user", "units"]
 
+    @extend_schema_field(str)
     def get_user(self, obj):
         return obj.user.username
 
@@ -296,7 +298,7 @@ class NestedInventoryItemSerializer(WritableNestedSerializer, TreeModelSerialize
 #
 
 
-class NestedCableSerializer(BaseModelSerializer):
+class NestedCableSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
 
     class Meta:

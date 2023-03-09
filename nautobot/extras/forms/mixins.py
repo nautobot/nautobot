@@ -75,6 +75,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
         custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
+        self.custom_fields = []
         for cf in custom_fields:
             # 2.0 TODO: #824 cf.name to cf.slug throughout
             field_name = f"cf_{cf.name}"
@@ -84,6 +85,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
                 )
             else:
                 self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
+            self.custom_fields.append(field_name)
 
 
 class CustomFieldModelFormMixin(forms.ModelForm):

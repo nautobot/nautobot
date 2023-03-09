@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0066_replace_related_names"),
+        ("extras", "0067_replace_related_names"),
     ]
 
     operations = [

@@ -1,4 +1,5 @@
 import django_filters
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
@@ -266,6 +267,16 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tag (slug)",
     )
     role = ConfigContextRoleFilter()
+
+    # Conditional enablement of dynamic groups filtering
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                queryset=DynamicGroup.objects.all(),
+                label="Dynamic Groups (slug or ID)",
+            )
 
     class Meta:
         model = ConfigContext

@@ -28,6 +28,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     Job,
@@ -413,6 +414,7 @@ def update_git_config_contexts(repository_record, job_result):
         "tenant_groups",
         "tenants",
         "tags",
+        "dynamic_groups",
     ):
         if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
             job_result.log(
@@ -558,6 +560,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         ("tenant_groups", TenantGroup),
         ("tenants", Tenant),
         ("tags", Tag),
+        ("dynamic_groups", DynamicGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):
