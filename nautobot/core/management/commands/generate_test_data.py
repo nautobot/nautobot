@@ -97,7 +97,10 @@ class Command(BaseCommand):
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(40)  # we need more locations with sites since it can be nested now.
+        # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
+        LocationFactory.create_batch(7, has_parent=True)
+        LocationFactory.create_batch(23)
+        LocationFactory.create_batch(10, has_parent=False)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
