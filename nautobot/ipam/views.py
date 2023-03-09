@@ -573,6 +573,31 @@ class IPAddressBulkDeleteView(generic.BulkDeleteView):
     table = tables.IPAddressTable
 
 
+class IPAddressInterfacesView(generic.ObjectView):
+    queryset = IPAddress.objects.all()
+    template_name = "ipam/ipaddress_interfaces.html"
+
+    def get_extra_context(self, request, instance):
+        interfaces = (
+            instance.interfaces.restrict(request.user, "view")
+            .prefetch_related(
+                Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
+                Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
+                "_path__destination",
+                "tags",
+            )
+            .select_related("lag", "cable")
+        )
+        interface_table = tables.IPAddressInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
+            interface_table.columns.show("pk")
+
+        return {
+            "interface_table": interface_table,
+            "active_tab": "interfaces",
+        }
+
+
 #
 # VLAN groups
 #

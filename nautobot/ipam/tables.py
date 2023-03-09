@@ -12,6 +12,10 @@ from nautobot.core.tables import (
 )
 from nautobot.core.templatetags.helpers import render_boolean
 from nautobot.dcim.models import Interface
+from nautobot.dcim.tables import InterfaceTable
+from nautobot.dcim.tables.template_code import INTERFACE_BUTTONS
+from nautobot.dcim.tables.devices import DeviceComponentTable
+from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
@@ -475,6 +479,66 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     class Meta(BaseTable.Meta):
         model = IPAddress
         fields = ("address", "vrf", "status", "role", "tenant", "description")
+
+
+class IPAddressInterfaceTable(InterfaceTable):
+    name = tables.TemplateColumn(
+        template_code='<i class="mdi mdi-{% if iface.mgmt_only %}wrench{% elif iface.is_lag %}drag-horizontal-variant'
+        "{% elif iface.is_virtual %}circle{% elif iface.is_wireless %}wifi{% else %}ethernet"
+        '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
+        attrs={"td": {"class": "text-nowrap"}},
+    )
+    parent_interface = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
+    lag = tables.Column(linkify=True, verbose_name="LAG")
+
+    class Meta(DeviceComponentTable.Meta):
+        model = Interface
+        fields = (
+            "pk",
+            "name",
+            "device",
+            "status",
+            "label",
+            "enabled",
+            "type",
+            "parent_interface",
+            "bridge",
+            "lag",
+            "mgmt_only",
+            "mtu",
+            "mode",
+            "mac_address",
+            "description",
+            "cable",
+            "cable_peer",
+            "connection",
+            "tags",
+            "ip_addresses",
+            "untagged_vlan",
+            "tagged_vlans",
+        )
+        default_columns = [
+            "pk",
+            "device",
+            "name",
+            "status",
+            "label",
+            "enabled",
+            "type",
+            "parent_interface",
+            "lag",
+            "mtu",
+            "mode",
+            "description",
+            "ip_addresses",
+            "cable",
+            "connection",
+        ]
+        row_attrs = {
+            "style": cable_status_color_css,
+            "data-name": lambda record: record.name,
+        }
 
 
 #

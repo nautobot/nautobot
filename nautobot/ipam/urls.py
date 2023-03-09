@@ -182,6 +182,11 @@ urlpatterns = [
         kwargs={"model": IPAddress},
     ),
     path(
+        "ip-addresses/<uuid:pk>/interfaces/",
+        views.IPAddressInterfacesView.as_view(),
+        name="ipaddress_interfaces",
+    ),
+    path(
         "ip-addresses/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="ipaddress_notes",
