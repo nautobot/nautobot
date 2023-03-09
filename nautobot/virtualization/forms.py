@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
 from nautobot.core.forms import (
@@ -49,7 +48,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddressToInterface, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -302,25 +301,33 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                 interface_ids = self.instance.interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.ip_family(family).filter(
-                    assigned_object_type=ContentType.objects.get_for_model(VMInterface),
-                    assigned_object_id__in=interface_ids,
-                )
-                if interface_ips:
-                    ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
+                interface_ip_assignments = IPAddressToInterface.objects.filter(
+                    vm_interface__in=interface_ids
+                ).prefetch_related("ip_address")
+                if interface_ip_assignments.exists():
+                    ip_list = [
+                        (
+                            assignment.ip_address.id,
+                            f"{assignment.ip_address.address} ({assignment.vm_interface})",
+                        )
+                        for assignment in interface_ip_assignments
+                        if assignment.ip_address.family == family
+                    ]
                     ip_choices.append(("Interface IPs", ip_list))
-                # Collect NAT IPs
-                nat_ips = (
-                    IPAddress.objects.select_related("nat_inside")
-                    .ip_family(family)
-                    .filter(
-                        nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
-                        nat_inside__assigned_object_id__in=interface_ids,
-                    )
-                )
-                if nat_ips:
-                    ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]
-                    ip_choices.append(("NAT IPs", ip_list))
+
+                    # Collect NAT IPs
+                    nat_ips = []
+                    for ip_assignment in interface_ip_assignments:
+                        if not ip_assignment.ip_address.nat_outside_list.exists():
+                            continue
+                        nat_ips.extend(
+                            [
+                                (ip.id, f"{ip.address} (NAT)")
+                                for ip in ip_assignment.ip_address.nat_outside_list.all()
+                                if ip.family == family
+                            ]
+                        )
+                    ip_choices.append(("NAT IPs", nat_ips))
                 self.fields[f"primary_ip{family}"].choices = ip_choices
 
         else:
