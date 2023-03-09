@@ -376,7 +376,7 @@ class MappedPredicatesFilterMixin:
 
             # Or set it to what was defined by caller
             elif isinstance(lookup_info, dict):
-                lookup_expr = lookup_info["lookup_expr"]
+                lookup_expr = lookup_info.get("lookup_expr")
                 preprocessor = lookup_info.get("preprocessor")
                 if not callable(preprocessor):
                     raise TypeError("Preprocessor {preprocessor} must be callable!")
