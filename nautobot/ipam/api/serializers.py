@@ -20,7 +20,6 @@ from nautobot.extras.api.serializers import (
 from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -35,11 +34,10 @@ from nautobot.virtualization.api.nested_serializers import (
     NestedVirtualMachineSerializer,
 )
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# Not all of these variable(s) are actually used anywhere in this file, but are required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import (  # noqa: F401
     IPFieldSerializer,
-    NestedAggregateSerializer,
     NestedIPAddressSerializer,
     NestedPrefixSerializer,
     NestedRIRSerializer,
@@ -109,13 +107,13 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
 
 
 #
-# RIRs/aggregates
+# RIRs
 #
 
 
 class RIRSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
-    aggregate_count = serializers.IntegerField(read_only=True)
+    assigned_prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RIR
@@ -125,33 +123,13 @@ class RIRSerializer(NautobotModelSerializer):
             "slug",
             "is_private",
             "description",
-            "aggregate_count",
+            "assigned_prefix_count",
         ]
-
-
-class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
-    prefix = IPFieldSerializer()
-    rir = NestedRIRSerializer()
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-
-    class Meta:
-        model = Aggregate
-        fields = [
-            "url",
-            "family",
-            "prefix",
-            "rir",
-            "tenant",
-            "date_added",
-            "description",
-        ]
-        read_only_fields = ["family"]
 
 
 #
 # VLANs
+#
 
 
 class VLANGroupSerializer(NautobotModelSerializer):
@@ -242,6 +220,7 @@ class PrefixSerializer(
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
+    rir = NestedRIRSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Prefix
@@ -256,6 +235,8 @@ class PrefixSerializer(
             "vlan",
             "status",
             "role",
+            "rir",
+            "date_allocated",
             "description",
         ]
         read_only_fields = ["family"]

@@ -5,16 +5,6 @@ from nautobot.extras.models import DynamicGroup
 from nautobot.ipam import models, filters
 
 
-class AggregateType(gql_optimizer.OptimizedDjangoObjectType):
-    """Graphql Type Object for Aggregate model."""
-
-    prefix = graphene.String()
-
-    class Meta:
-        model = models.Aggregate
-        filterset_class = filters.AggregateFilterSet
-
-
 class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for IPAddress model."""
 

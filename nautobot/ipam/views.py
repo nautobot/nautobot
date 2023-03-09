@@ -1,5 +1,4 @@
 from django.db.models import Prefetch, Q, Count, F
-from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.functional import classproperty
 from django_tables2 import RequestConfig
@@ -13,7 +12,6 @@ from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from nautobot.ipam import choices
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -150,7 +148,7 @@ class RouteTargetBulkDeleteView(generic.BulkDeleteView):
 
 
 class RIRListView(generic.ObjectListView):
-    queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     filterset = filters.RIRFilterSet
     filterset_form = forms.RIRFilterForm
     table = tables.RIRTable
@@ -161,19 +159,19 @@ class RIRView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
 
-        # Aggregates
-        aggregates = Aggregate.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
+        # Prefixes
+        assigned_prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
 
-        aggregate_table = tables.AggregateTable(aggregates)
+        assigned_prefix_table = tables.PrefixTable(assigned_prefixes)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(aggregate_table)
+        RequestConfig(request, paginate).configure(assigned_prefix_table)
 
         return {
-            "aggregate_table": aggregate_table,
+            "assigned_prefix_table": assigned_prefix_table,
         }
 
 
@@ -193,116 +191,9 @@ class RIRBulkImportView(generic.BulkImportView):
 
 
 class RIRBulkDeleteView(generic.BulkDeleteView):
-    queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     filterset = filters.RIRFilterSet
     table = tables.RIRTable
-
-
-#
-# Aggregates
-#
-
-
-class AggregateListView(generic.ObjectListView):
-    queryset = Aggregate.objects.annotate(
-        child_count=RawSQL(
-            "SELECT COUNT(*) FROM ipam_prefix "
-            "WHERE ipam_prefix.prefix_length >= ipam_aggregate.prefix_length "
-            "AND ipam_prefix.network >= ipam_aggregate.network "
-            "AND ipam_prefix.broadcast <= ipam_aggregate.broadcast",
-            (),
-        )
-    ).select_related("rir")
-    filterset = filters.AggregateFilterSet
-    filterset_form = forms.AggregateFilterForm
-    table = tables.AggregateDetailTable
-    template_name = "ipam/aggregate_list.html"
-
-    def extra_context(self):
-        ipv4_total = 0
-        ipv6_total = 0
-
-        for aggregate in self.queryset:
-            if aggregate.prefix.version == 6:
-                # Report equivalent /64s for IPv6 to keep things sane
-                ipv6_total += int(aggregate.prefix.size / 2**64)
-            else:
-                ipv4_total += aggregate.prefix.size
-
-        return {
-            "ipv4_total": ipv4_total,
-            "ipv6_total": ipv6_total,
-        }
-
-
-class AggregateView(generic.ObjectView):
-    queryset = Aggregate.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Find all child prefixes contained by this aggregate
-        child_prefixes = (
-            Prefix.objects.restrict(request.user, "view")
-            .net_contained_or_equal(instance.prefix)
-            .select_related("location", "role")
-            .order_by("network")
-            .annotate_tree()
-        )
-
-        # Add available prefixes to the table if requested
-        if request.GET.get("show_available", "true") == "true":
-            child_prefixes = add_available_prefixes(instance.prefix, child_prefixes)
-
-        prefix_table = tables.PrefixDetailTable(child_prefixes)
-        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
-            prefix_table.columns.show("pk")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(prefix_table)
-
-        # Compile permissions list for rendering the object table
-        permissions = {
-            "add": request.user.has_perm("ipam.add_prefix"),
-            "change": request.user.has_perm("ipam.change_prefix"),
-            "delete": request.user.has_perm("ipam.delete_prefix"),
-        }
-
-        return {
-            "prefix_table": prefix_table,
-            "permissions": permissions,
-            "show_available": request.GET.get("show_available", "true") == "true",
-        }
-
-
-class AggregateEditView(generic.ObjectEditView):
-    queryset = Aggregate.objects.all()
-    model_form = forms.AggregateForm
-    template_name = "ipam/aggregate_edit.html"
-
-
-class AggregateDeleteView(generic.ObjectDeleteView):
-    queryset = Aggregate.objects.all()
-
-
-class AggregateBulkImportView(generic.BulkImportView):
-    queryset = Aggregate.objects.all()
-    model_form = forms.AggregateCSVForm
-    table = tables.AggregateTable
-
-
-class AggregateBulkEditView(generic.BulkEditView):
-    queryset = Aggregate.objects.select_related("rir")
-    filterset = filters.AggregateFilterSet
-    table = tables.AggregateTable
-    form = forms.AggregateBulkEditForm
-
-
-class AggregateBulkDeleteView(generic.BulkDeleteView):
-    queryset = Aggregate.objects.select_related("rir")
-    filterset = filters.AggregateFilterSet
-    table = tables.AggregateTable
 
 
 #
@@ -335,7 +226,9 @@ class PrefixListView(generic.ObjectListView):
         ):
             return cls._queryset
 
-        cls._queryset = Prefix.objects.select_related("location", "vrf__tenant", "tenant", "vlan", "role", "status")
+        cls._queryset = Prefix.objects.select_related(
+            "location", "vrf__tenant", "tenant", "vlan", "rir", "role", "status"
+        )
         if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
             cls._queryset = cls._queryset.annotate(parents=Count(None)).order_by(
                 F("vrf__name").asc(nulls_first=True),
@@ -352,6 +245,7 @@ class PrefixListView(generic.ObjectListView):
 
 class PrefixView(generic.ObjectView):
     queryset = Prefix.objects.select_related(
+        "rir",
         "role",
         "location",
         "status",
@@ -361,11 +255,6 @@ class PrefixView(generic.ObjectView):
     )
 
     def get_extra_context(self, request, instance):
-        try:
-            aggregate = Aggregate.objects.restrict(request.user, "view").net_contains_or_equals(instance.prefix).first()
-        except Aggregate.DoesNotExist:
-            aggregate = None
-
         # Parent prefixes table
         parent_prefixes = (
             Prefix.objects.restrict(request.user, "view")
@@ -389,7 +278,6 @@ class PrefixView(generic.ObjectView):
         duplicate_prefix_table.exclude = ("vrf",)
 
         return {
-            "aggregate": aggregate,
             "parent_prefix_table": parent_prefix_table,
             "duplicate_prefix_table": duplicate_prefix_table,
         }

@@ -46,16 +46,6 @@ class BaseNetworkFormTest:
         self.assertEqual("CIDR mask (e.g. /24) is required.", form.errors[self.field_name][0])
 
 
-class AggregateFormTest(BaseNetworkFormTest, TestCase):
-    form_class = forms.AggregateForm
-    field_name = "prefix"
-    object_name = "aggregate"
-
-    def setUp(self):
-        super().setUp()
-        self.extra_data = {"rir": models.RIR.objects.first()}
-
-
 class PrefixFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.PrefixForm
     field_name = "prefix"
@@ -63,7 +53,11 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(slug="active"), "type": "network"}
+        self.extra_data = {
+            "status": Status.objects.get(slug="active"),
+            "type": "network",
+            "rir": models.RIR.objects.first(),
+        }
 
 
 class IPAddressFormTest(BaseNetworkFormTest, TestCase):

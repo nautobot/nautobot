@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("ipam", "0022_interface_ipaddress_m2m_data_migration"),
+        ("ipam", "0025_interface_ipaddress_m2m_data_migration"),
     ]
 
     operations = [

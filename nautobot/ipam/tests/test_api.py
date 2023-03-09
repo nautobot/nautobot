@@ -14,7 +14,6 @@ from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Man
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -78,7 +77,7 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
 
 class RIRTest(APIViewTestCases.APIViewTestCase):
     model = RIR
-    brief_fields = ["aggregate_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["assigned_prefix_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "RIR 4",
@@ -114,34 +113,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
         return [rir.pk for rir in RIRs]
 
 
-class AggregateTest(APIViewTestCases.APIViewTestCase):
-    model = Aggregate
-    brief_fields = ["display", "family", "id", "prefix", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-
-    @classmethod
-    def setUpTestData(cls):
-
-        rir = RIR.objects.filter(is_private=False).first()
-
-        cls.create_data = [
-            {
-                "prefix": "12.0.0.0/8",
-                "rir": rir.pk,
-            },
-            {
-                "prefix": "2d00::/8",
-                "rir": rir.pk,
-            },
-            {
-                "prefix": "17.0.0.0/16",
-                "rir": rir.pk,
-            },
-        ]
-
-
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     brief_fields = ["display", "family", "id", "prefix", "url"]
@@ -149,16 +120,21 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        rir = RIR.objects.filter(is_private=False).first()
         cls.statuses = Status.objects.get_for_model(Prefix)
         cls.status_active = cls.statuses.get(slug="active")
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
                 "status": cls.status_active.pk,
+                "rir": rir.pk,
+                "type": choices.PrefixTypeChoices.TYPE_POOL,
             },
             {
                 "prefix": "2001:db8:abcd:12::/80",
                 "status": cls.status_active.pk,
+                "rir": rir.pk,
+                "type": choices.PrefixTypeChoices.TYPE_NETWORK,
             },
             {
                 "prefix": "192.168.6.0/24",

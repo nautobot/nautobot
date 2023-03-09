@@ -4,7 +4,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -143,35 +143,13 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"comments": Tenant.objects.exclude(comments__exact="").values_list("comments", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_aggregates(self):
-        """Test the `aggregates` filter."""
-        aggregates = list(Aggregate.objects.filter(tenant__isnull=False))[:2]
-        params = {"aggregates": [aggregates[0].pk, aggregates[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__in=aggregates).distinct(),
-        )
-
-    def test_has_aggregates(self):
-        """Test the `has_aggregates` filter."""
-        params = {"has_aggregates": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__isnull=False).distinct(),
-        )
-        params = {"has_aggregates": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__isnull=True).distinct(),
-        )
-
     def test_circuits(self):
         """Test the `circuits` filter."""
         circuits = list(Circuit.objects.filter(tenant__isnull=False))[:2]
         params = {"circuits": [circuits[0].pk, circuits[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(circuits__in=circuits),
+            self.queryset.filter(circuits__in=circuits).distinct(),
         )
 
     def test_has_circuits(self):

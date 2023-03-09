@@ -4,6 +4,7 @@ from factory.django import DjangoModelFactory
 import factory.random
 import itertools
 
+from nautobot.core import constants
 from nautobot.extras.models import Tag
 
 
@@ -184,7 +185,14 @@ class NautobotBoolIterator(factory.Iterator):
         factory.random.randgen.shuffle(iterator)
         return iterator
 
-    def __init__(self, *args, cycle=True, getter=None, chance_of_getting_true=50, length=8):
+    def __init__(
+        self,
+        *args,
+        cycle=True,
+        getter=None,
+        chance_of_getting_true=constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY,
+        length=constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_LENGTH,
+    ):
         super().__init__(None, cycle=cycle, getter=getter)
 
         if cycle:

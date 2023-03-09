@@ -12,7 +12,6 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -69,20 +68,9 @@ class RouteTargetViewSet(NautobotModelViewSet):
 
 
 class RIRViewSet(NautobotModelViewSet):
-    queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     serializer_class = serializers.RIRSerializer
     filterset_class = filters.RIRFilterSet
-
-
-#
-# Aggregates
-#
-
-
-class AggregateViewSet(NautobotModelViewSet):
-    queryset = Aggregate.objects.select_related("rir").prefetch_related("tags")
-    serializer_class = serializers.AggregateSerializer
-    filterset_class = filters.AggregateFilterSet
 
 
 #
