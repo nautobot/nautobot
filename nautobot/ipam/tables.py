@@ -29,6 +29,7 @@ from .models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
 )
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
@@ -240,6 +241,18 @@ class RouteDistinguisherTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = RouteDistinguisher
         fields = ("pk", "rd", "namespace")
+
+
+class VRFDeviceAssignmentTable(BaseTable):
+    """Table for displaying VRF Device Assignments with RD."""
+
+    vrf = tables.LinkColumn(verbose_name="VRF")
+    tenant = tables.Column(accessor="vrf.tenant", linkify=True)
+    device = tables.LinkColumn()
+
+    class Meta(BaseTable.Meta):
+        model = VRFDeviceAssignment
+        fields = ("vrf", "device", "tenant")
 
 
 #

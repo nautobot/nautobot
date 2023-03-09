@@ -1,9 +1,14 @@
 from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save, m2m_changed
+from django.dispatch import receiver
 
-from nautobot.ipam.models import Prefix, VRF, VRFDeviceAssignment, VRFPrefixAssignment
+from nautobot.ipam.models import Prefix, VRF
 
 
+@receiver(pre_save, sender=Prefix)
+@receiver(pre_save, sender=VRF)
+@receiver(pre_save, sender=VRF.devices.through)
+@receiver(pre_save, sender=VRF.prefixes.through)
 def ipam_object_created(sender, instance, raw=False, **kwargs):
     """
     Forcibly call `full_clean()` when a new IPAM object
@@ -14,12 +19,7 @@ def ipam_object_created(sender, instance, raw=False, **kwargs):
     instance.full_clean()
 
 
-pre_save.connect(ipam_object_created, sender=Prefix)
-pre_save.connect(ipam_object_created, sender=VRF)
-pre_save.connect(ipam_object_created, sender=VRFDeviceAssignment)
-pre_save.connect(ipam_object_created, sender=VRFPrefixAssignment)
-
-
+@receiver(m2m_changed, sender=VRF.prefixes.through)
 def vrf_prefix_associated(sender, instance, action, reverse, model, pk_set, **kwargs):
     """
     Disallow adding Prefixes if the namespace doesn't match.
@@ -29,6 +29,3 @@ def vrf_prefix_associated(sender, instance, action, reverse, model, pk_set, **kw
         prefixes = model.objects.filter(pk__in=pk_set).exclude(namespace=instance.namespace)
         if prefixes.exists():
             raise ValidationError({"prefixes": "Prefix must match namespace of VRF"})
-
-
-m2m_changed.connect(vrf_prefix_associated, sender=VRF.prefixes.through)

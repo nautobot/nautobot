@@ -501,7 +501,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             except ValidationError as err:
                 msg = f"{obj} failed validation: {err}"
                 logger.debug(msg)
-                messages.error(self.request, msg)
+                form.add_error("prefix", msg)
 
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"

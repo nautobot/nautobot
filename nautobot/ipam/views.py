@@ -73,6 +73,16 @@ class RouteDistinguisherUIViewSet(
     serializer_class = serializers.RouteDistinguisherSerializer
     table_class = tables.RouteDistinguisherTable
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            vrfs = instance.vrf_assignments.restrict(request.user, "view")
+            vrf_table = tables.VRFDeviceAssignmentTable(vrfs, orderable=False)
+            context["vrf_table"] = vrf_table
+
+        return context
+
 
 #
 # VRFs
@@ -407,7 +417,7 @@ class PrefixIPAddressesView(generic.ObjectView):
             instance.get_child_ips()
             .restrict(request.user, "view")
             # .select_related("vrf", "status")
-            .select_related("namespace", "status")
+            .select_related("status")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")
         )
 
