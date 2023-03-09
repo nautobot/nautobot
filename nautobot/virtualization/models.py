@@ -513,7 +513,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         if not isinstance(ip_addresses, (tuple, list)):
             ip_addresses = [ip_addresses]
         for ip in ip_addresses:
-            qs = self.ip_addresses.through.filter(ip_address=ip, vm_interface=self)
+            qs = self.ip_addresses.through.objects.filter(ip_address=ip, vm_interface=self)
             count += qs.count()
             qs.delete()
         return count

@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster, VMInterface
 
@@ -80,3 +80,43 @@ class VMInterfaceTestCase(TestCase):
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
+
+    def test_add_ip_addresses(self):
+        """Test the `add_ip_addresses` helper method on `VMInterface`"""
+        vm_interface = VMInterface.objects.create(name="Int1", virtual_machine=self.virtualmachine)
+        ips = list(IPAddress.objects.all()[:10])
+
+        # baseline (no vm_interface to ip address relationships exists)
+        self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
+
+        # add single instance
+        vm_interface.add_ip_addresses(ips[-1])
+        self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], vm_interface=vm_interface).count(), 1)
+
+        # add multiple instances
+        vm_interface.add_ip_addresses(ips[:5])
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 6)
+        for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, vm_interface=vm_interface).count(), 1)
+
+    def test_remove_ip_addresses(self):
+        """Test the `remove_ip_addresses` helper method on `VMInterface`"""
+        vm_interface = VMInterface.objects.create(name="Int1", virtual_machine=self.virtualmachine)
+        ips = list(IPAddress.objects.all()[:10])
+
+        # baseline (no vm_interface to ip address relationships exists)
+        self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
+
+        vm_interface.add_ip_addresses(ips)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 10)
+
+        # remove single instance
+        vm_interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 9)
+
+        # remove multiple instances
+        vm_interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 4)
+
+        vm_interface.remove_ip_addresses(ips)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 0)
