@@ -41,4 +41,4 @@ def populate_model_features_registry():
 With this only Models which have fields names of `source_for_associations` and `destination_for_associations`, which in turn has the attribute `related_model=RelationshipAssociation`, would be a valid model for the feature `relationships`.
 
 !!! note
-   Only add a feature to `lookup_confs` if it does not require the use of `@extras_features`.
+   `populate_model_features_registry()` and `lookup_confs` provide an alternative to the older method of feature flagging models via the `@extras_features` decorator. In general new feature flags should preferentially be implemented via additions to `lookup_confs`, *not* by any new additions to `extras_features`.
