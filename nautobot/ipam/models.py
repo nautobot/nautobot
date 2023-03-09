@@ -961,6 +961,20 @@ class IPAddressToInterface(BaseModel):
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
 
+    def validate_unique(self, exclude=None):
+        """
+        Check uniqueness on combination of `ip_address`, `interface` and `vm_interface` fields
+        and raise ValidationError if check failed.
+        """
+        if IPAddressToInterface.objects.filter(
+            ip_address=self.ip_address,
+            interface=self.interface,
+            vm_interface=self.vm_interface,
+        ).exists():
+            raise ValidationError(
+                "IPAddressToInterface with this ip_address, interface and vm_interface already exists."
+            )
+
     def clean(self):
         super().clean()
 
