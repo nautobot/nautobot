@@ -356,16 +356,20 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
 
 
 class ContentTypeTest(APITestCase):
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
-    def test_list_objects(self):
+    """
+    ContentTypeViewSet does not have permission checks,
+    So It should be accessible with or without permission override
+    e.g. @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
+    """
+
+    def test_list_objects_with_or_without_permission(self):
         contenttype_count = ContentType.objects.count()
 
         response = self.client.get(reverse("extras-api:contenttype-list"), **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], contenttype_count)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
-    def test_get_object(self):
+    def test_get_object_with_or_without_permission(self):
         contenttype = ContentType.objects.first()
 
         url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
