@@ -37,6 +37,7 @@ from nautobot.extras.filters import (
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
     JobFilterSet,
+    JobButtonFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
@@ -61,6 +62,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -922,6 +924,55 @@ class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"q": "hook1"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
+    queryset = JobButton.objects.all()
+    filterset = JobButtonFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        job_buttons = (
+            JobButton.objects.create(
+                name="JobButton1",
+                text="JobButton1",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=True,
+            ),
+            JobButton.objects.create(
+                name="JobButton2",
+                text="JobButton2",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=False,
+            ),
+            JobButton.objects.create(
+                name="JobButton3",
+                text="JobButton3",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                confirmation=True,
+                weight=50,
+            ),
+        )
+
+        site_ct = ContentType.objects.get_for_model(Site)
+        for jb in job_buttons:
+            jb.content_types.set([site_ct])
+
+    def test_name(self):
+        params = {"name": ["JobButton1"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_job(self):
+        params = {"job": [Job.objects.get(job_class_name="TestJobButtonReceiverSimple").pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_weight(self):
+        params = {"weight": [50]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        params = {"q": "JobButton"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
 class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
