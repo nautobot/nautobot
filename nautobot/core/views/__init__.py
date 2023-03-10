@@ -243,7 +243,7 @@ class NautobotAppMetricsCollector(Collector):
         yield gauge
 
 
-def custom_app_metric_view(request):
+def nautobot_metrics_view(request):
     """Exports /metrics.
 
     This overwrites the default django_prometheus view to inject metrics from Nautobot apps.

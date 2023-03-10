@@ -3,7 +3,7 @@ from django.conf.urls import include
 from django.urls import path
 from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, custom_app_metric_view
+from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, nautobot_metrics_view
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -62,7 +62,7 @@ if settings.DEBUG:
 
 if settings.METRICS_ENABLED:
     urlpatterns += [
-        path("metrics/", custom_app_metric_view, name="metrics"),
+        path("metrics/", nautobot_metrics_view, name="metrics"),
     ]
 
 handler404 = "nautobot.core.views.resource_not_found"
