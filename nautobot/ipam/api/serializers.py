@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -8,14 +7,10 @@ from nautobot.core.api import (
     ChoiceField,
     SerializedPKRelatedField,
 )
-from nautobot.core.api.serializers import PolymorphicProxySerializer
-from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
-from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
 )
-from nautobot.dcim.models import BaseInterface
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     RoleModelSerializerMixin,
@@ -321,21 +316,6 @@ class IPAddressSerializer(
             "description",
         ]
         read_only_fields = ["family"]
-
-    @extend_schema_field(
-        PolymorphicProxySerializer(
-            component_name="IPAddressAssignedObject",
-            resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(BaseInterface), prefix="Nested"),
-            allow_null=True,
-        )
-    )
-    def get_assigned_object(self, obj):
-        if obj.assigned_object is None:
-            return None
-        serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
-        context = {"request": self.context["request"]}
-        return serializer(obj.assigned_object, context=context).data
 
 
 class AvailableIPSerializer(serializers.Serializer):

@@ -99,7 +99,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating Locations...")
         # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
         LocationFactory.create_batch(7, has_parent=True)
-        LocationFactory.create_batch(23)
+        LocationFactory.create_batch(40)
         LocationFactory.create_batch(10, has_parent=False)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
@@ -113,7 +113,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Prefixes and IP Addresses...")
-        PrefixFactory.create_batch(20)
+        PrefixFactory.create_batch(30)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
