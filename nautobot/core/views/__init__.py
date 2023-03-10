@@ -258,7 +258,11 @@ def custom_app_metric_view(request):
     # Instantiate and register the collector. Note that this has to be done every time this view is accessed, because
     # the registry for multiprocess metrics is also instantiated every time this view is accessed. As a result, the
     # same goes for the registration of the collector to the registry.
-    nb_app_collector = NautobotAppMetricsCollector()
-    prometheus_registry.register(nb_app_collector)
+    try:
+        nb_app_collector = NautobotAppMetricsCollector()
+        prometheus_registry.register(nb_app_collector)
+    except ValueError:
+        # Collector already registered, we are running without multiprocessing
+        pass
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
     return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
