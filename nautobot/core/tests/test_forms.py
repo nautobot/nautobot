@@ -581,7 +581,8 @@ class PrefixFieldMixinTest(TestCase):
 
     def setUp(self):
         """Setting up shared variables for the PrefixFieldMixin."""
-        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
+        status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), status=status)
         self.initial = {"prefix": self.prefix.prefix}
 
     def test_prefix_initial(self):

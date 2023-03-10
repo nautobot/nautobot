@@ -8,7 +8,6 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Interface
-from nautobot.dcim.tables import DeviceTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from nautobot.ipam.api import serializers
@@ -90,7 +89,7 @@ class VRFView(generic.ObjectView):
         prefix_count = prefixes.count()
         prefix_table = tables.PrefixTable(prefixes.select_related("namespace"), orderable=False)
 
-        devices = instance.devices.restrict(request.user, "view")
+        # devices = instance.devices.restrict(request.user, "view")
         # device_count = devices.count()
         # device_table = DeviceTable(devices.all(), orderable=False)
 

@@ -286,11 +286,12 @@ class PrefixFactory(PrimaryModelFactory):
         ),
         None,
     )
-    vrf = factory.Maybe(
-        "has_vrf",
-        factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
-        None,
-    )
+    # TODO: Update for M2M tests
+    # vrf = factory.Maybe(
+    #     "has_vrf",
+    #     factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
+    #     None,
+    # )
     rir = factory.Maybe("has_rir", random_instance(RIR, allow_null=False), None)
     date_allocated = factory.Maybe("has_date_allocated", factory.Faker("date_time", tzinfo=datetime.timezone.utc), None)
 
@@ -348,7 +349,7 @@ class PrefixFactory(PrimaryModelFactory):
                 children_remaining = child_count - created
                 # Randomly skip addresses if there's enough space left in the prefix
                 if faker.Faker().pybool() or addresses_available <= children_remaining:
-                    method(address=str(address), vrf=self.vrf, is_ipv6=is_ipv6, **kwargs)
+                    method(address=str(address), is_ipv6=is_ipv6, **kwargs)
                     created += 1
         else:
             # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
@@ -366,7 +367,6 @@ class PrefixFactory(PrimaryModelFactory):
                     location=self.location,
                     children__max_count=4,
                     is_ipv6=is_ipv6,
-                    vrf=self.vrf,
                     has_rir=False,
                     **kwargs,
                 )
@@ -400,7 +400,6 @@ class IPAddressFactory(PrimaryModelFactory):
         has_nat_inside = NautobotBoolIterator()
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
-        has_vrf = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
     address = factory.Maybe(
@@ -426,8 +425,3 @@ class IPAddressFactory(PrimaryModelFactory):
         random_instance(lambda: Status.objects.get_for_model(IPAddress).exclude(name="SLAAC"), allow_null=False),
     )
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
-    vrf = factory.Maybe(
-        "has_vrf",
-        factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
-        None,
-    )

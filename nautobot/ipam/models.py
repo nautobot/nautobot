@@ -782,7 +782,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     csv_headers = [
         "address",
-        # "vrf",
         "tenant",
         "status",
         "role",
@@ -791,7 +790,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         "description",
     ]
     clone_fields = [
-        # "vrf",
         "tenant",
         "status",
         "role",
@@ -833,9 +831,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     def get_absolute_url(self):
         return reverse("ipam:ipaddress", args=[self.pk])
-
-    def get_duplicates(self):
-        return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
@@ -905,7 +900,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
         return (
             self.address,
-            self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
             self.role.name if self.role else None,

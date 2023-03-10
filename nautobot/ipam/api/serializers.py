@@ -283,7 +283,7 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
     family = serializers.IntegerField(read_only=True)
     prefix = serializers.CharField(read_only=True)
-    vrf = NestedVRFSerializer(read_only=True)
+    # vrf = NestedVRFSerializer(read_only=True)
 
     def to_representation(self, instance):
         if self.context.get("vrf"):
@@ -294,7 +294,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
             [
                 ("family", instance.version),
                 ("prefix", str(instance)),
-                ("vrf", vrf),
             ]
         )
 
@@ -310,7 +309,6 @@ class IPAddressSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
-    vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
     nat_outside = NestedIPAddressSerializer(read_only=True, many=True, source="nat_outside_list")
@@ -321,7 +319,6 @@ class IPAddressSerializer(
             "url",
             "family",
             "address",
-            "vrf",
             "tenant",
             "status",
             "role",
@@ -340,18 +337,15 @@ class AvailableIPSerializer(serializers.Serializer):
 
     family = serializers.IntegerField(read_only=True)
     address = serializers.CharField(read_only=True)
-    vrf = NestedVRFSerializer(read_only=True)
+    # vrf = NestedVRFSerializer(read_only=True)
+    # TODO: Should be requesting a prefix instead
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = NestedVRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
                 ("family", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                ("vrf", vrf),
+                # ("vrf", vrf),
             ]
         )
 
