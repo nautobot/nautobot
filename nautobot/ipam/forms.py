@@ -527,7 +527,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
     def __init__(self, *args, **kwargs):
 
         # Initialize helper selectors
-        instance = kwargs.get("instance")
+        # instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
         # if instance:
