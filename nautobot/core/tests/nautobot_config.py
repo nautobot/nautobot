@@ -46,3 +46,6 @@ TEST_USE_FACTORIES = True
 TEST_FACTORY_SEED = "Nautobot"
 # File in which all performance-specifc test baselines are stored
 TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+
+# Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
+METRICS_ENABLED = True
