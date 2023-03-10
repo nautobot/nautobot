@@ -46,11 +46,9 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Manufacturer(OrganizationalModel):
@@ -78,12 +76,10 @@ class Manufacturer(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class DeviceType(PrimaryModel):
@@ -328,7 +324,7 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features("custom_validators", "graphql")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
@@ -391,14 +387,12 @@ class Platform(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -890,12 +884,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class VirtualChassis(PrimaryModel):
@@ -963,13 +955,11 @@ class VirtualChassis(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )

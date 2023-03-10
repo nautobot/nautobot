@@ -29,13 +29,11 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class PowerPanel(PrimaryModel):
@@ -98,12 +96,10 @@ class PowerPanel(PrimaryModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )

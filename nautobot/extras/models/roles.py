@@ -7,12 +7,10 @@ from nautobot.extras.utils import RoleModelsQuery, extras_features
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Role(NameColorContentTypesModel):

@@ -37,12 +37,10 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
 )
 class RackGroup(TreeModel, OrganizationalModel):
     """
@@ -108,14 +106,12 @@ class RackGroup(TreeModel, OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -512,12 +508,10 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class RackReservation(PrimaryModel):

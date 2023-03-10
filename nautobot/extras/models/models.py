@@ -245,10 +245,8 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ConfigContextSchema(OrganizationalModel):
     """
@@ -373,7 +371,6 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 
 @extras_features(
     "graphql",
-    "relationships",
 )
 class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned

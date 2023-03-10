@@ -211,6 +211,7 @@ nav:
       - Extending Models: "development/extending-models.md"
       - Testing: 'development/testing.md'
       - Application Registry: "development/application-registry.md"
+      - Model Features: "development/model-features.md"
       - Page Templates: "development/templates.md"
       - Navigation Menu: "development/navigation-menu.md"
       - Home Page Panels: "development/homepage.md"

@@ -48,12 +48,10 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -123,12 +121,10 @@ class VRF(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class RouteTarget(PrimaryModel):
@@ -170,10 +166,8 @@ class RouteTarget(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class RIR(OrganizationalModel):
     """
@@ -218,14 +212,12 @@ class RIR(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -541,13 +533,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -819,11 +809,9 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
     "locations",
-    "relationships",
 )
 class VLANGroup(OrganizationalModel):
     """
@@ -896,13 +884,11 @@ class VLANGroup(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -1033,12 +1019,10 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Service(PrimaryModel):

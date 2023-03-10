@@ -14,10 +14,8 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class TenantGroup(TreeModel, OrganizationalModel):
     """
@@ -49,12 +47,10 @@ class TenantGroup(TreeModel, OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Tenant(PrimaryModel):

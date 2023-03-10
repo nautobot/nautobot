@@ -786,9 +786,6 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
 
-!!! note
-    When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
-
 Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python

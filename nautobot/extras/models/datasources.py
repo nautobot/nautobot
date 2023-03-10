@@ -15,10 +15,8 @@ from nautobot.extras.utils import extras_features
 
 @extras_features(
     "config_context_owners",
-    "custom_fields",
     "export_template_owners",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class GitRepository(PrimaryModel):
