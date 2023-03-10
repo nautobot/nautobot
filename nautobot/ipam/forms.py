@@ -58,7 +58,6 @@ from .models import (
     Namespace,
     Prefix,
     RIR,
-    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -78,21 +77,10 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 #
 
 
-class NamespaceForm(NautobotModelForm):
+class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = Namespace
-        fields = ["name"]
-
-
-#
-# RouteDistinguishers
-#
-
-
-class RouteDistinguisherForm(NautobotModelForm):
-    class Meta:
-        model = RouteDistinguisher
-        fields = ["rd", "namespace"]
+        fields = ["name", "description", "location"]
 
 
 #
@@ -103,7 +91,6 @@ class RouteDistinguisherForm(NautobotModelForm):
 class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
-    # rd = DynamicModelChoiceField(queryset=RouteDistinguisher.objects.all(), required=False)
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     prefixes = DynamicModelMultipleChoiceField(
@@ -118,7 +105,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
         model = VRF
         fields = [
             "name",
-            # "rd",
+            "rd",
             "namespace",
             # "enforce_unique",
             "description",
@@ -130,14 +117,12 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "devices",
             "prefixes",
         ]
-        """
         labels = {
             "rd": "RD",
         }
         help_texts = {
-            "rd": "Route distinguisher in any format",
+            "rd": "Route distinguisher unique to this Namespace (as defined in RFC 4364)",
         }
-        """
 
 
 class VRFCSVForm(CustomFieldModelCSVForm):
@@ -155,6 +140,7 @@ class VRFCSVForm(CustomFieldModelCSVForm):
 
 class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     enforce_unique = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect(), label="Enforce unique space"
@@ -413,6 +399,7 @@ class PrefixBulkEditForm(
         label="VRF",
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)

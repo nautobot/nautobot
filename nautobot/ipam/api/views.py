@@ -16,7 +16,6 @@ from nautobot.ipam.models import (
     Namespace,
     Prefix,
     RIR,
-    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -44,17 +43,6 @@ class NamespaceViewSet(NautobotModelViewSet):
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     filterset_class = filters.NamespaceFilterSet
-
-
-#
-# Route Distinguishers
-#
-
-
-class RouteDistinguisherViewSet(NautobotModelViewSet):
-    queryset = RouteDistinguisher.objects.all()
-    serializer_class = serializers.RouteDistinguisherSerializer
-    filterset_class = filters.RouteDistinguisherFilterSet
 
 
 #

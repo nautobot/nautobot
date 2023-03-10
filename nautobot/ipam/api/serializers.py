@@ -24,7 +24,6 @@ from nautobot.ipam.models import (
     Namespace,
     Prefix,
     RIR,
-    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -60,20 +59,7 @@ class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Namespace
-        fields = "__all__"
-
-
-#
-# Route Distinguishers
-#
-
-
-class RouteDistinguisherSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:routedistinguisher-detail")
-
-    class Meta:
-        model = RouteDistinguisher
-        fields = "__all__"
+        fields = ["url", "name", "description", "location"]
 
 
 #
@@ -104,7 +90,7 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = [
             "url",
             "name",
-            # "rd",
+            "rd",
             "tenant",
             "enforce_unique",
             "description",

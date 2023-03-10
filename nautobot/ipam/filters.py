@@ -25,7 +25,6 @@ from .models import (
     Namespace,
     Prefix,
     RIR,
-    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
@@ -39,7 +38,6 @@ __all__ = (
     "NamespaceFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
-    "RouteDistinguisherFilterSet",
     "RouteTargetFilterSet",
     "ServiceFilterSet",
     "VLANFilterSet",
@@ -61,24 +59,11 @@ class NamespaceFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class RouteDistinguisherFilterSet(NautobotFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "rd": "icontains",
-        },
-    )
-    tags = TagFilter()
-
-    class Meta:
-        model = RouteDistinguisher
-        fields = "__all__"
-
-
 class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            # "rd__rd": "icontains",
+            "rd": "icontains",
             "description": "icontains",
         },
     )
@@ -104,14 +89,6 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Export target (ID or name)",
     )
-    """
-    rd = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="rd",
-        queryset=RouteDistinguisher.objects.all(),
-        to_field_name="rd",
-        label="Route distinguiqhser (ID or rd)",
-    )
-    """
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
@@ -122,7 +99,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     class Meta:
         model = VRF
         # fields = ["id", "name", "rd", "enforce_unique"]
-        fields = ["id", "name"]
+        fields = ["id", "rd", "name"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -218,6 +195,8 @@ class PrefixFilterSet(
     mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
     mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
     mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
+    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
+    # FK, Filtering on the VRF by ID or RD needs to be inverted to filter on the m2m.
     """
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
@@ -362,6 +341,10 @@ class IPAddressFilterSet(
         method="filter_mask_length",
         label="Mask length",
     )
+    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
+    # FK, Filtering on the VRF by ID or RD needs to be inherited from the parent prefix, after
+    # Prefix -> IPAddress parenting has been implemented.
+    """
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         label="VRF (ID) - Deprecated (use vrf filter)",
@@ -384,6 +367,7 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (RD)",
     )
+    """
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",

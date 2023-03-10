@@ -17,7 +17,6 @@ from .models import (
     IPAddress,
     Namespace,
     Prefix,
-    RouteDistinguisher,
     RIR,
     RouteTarget,
     Service,
@@ -52,34 +51,19 @@ class NamespaceUIViewSet(
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
 
-
-#
-# Route Distinguishers
-#
-
-
-class RouteDistinguisherUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
-    lookup_field = "pk"
-    form_class = forms.RouteDistinguisherForm
-    filterset_class = filters.RouteDistinguisherFilterSet
-    queryset = RouteDistinguisher.objects.all()
-    serializer_class = serializers.RouteDistinguisherSerializer
-    table_class = tables.RouteDistinguisherTable
-
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
-            vrfs = instance.vrf_assignments.restrict(request.user, "view")
-            vrf_table = tables.VRFDeviceAssignmentTable(vrfs, orderable=False)
+            vrfs = instance.vrfs.restrict(request.user, "view")
+            vrf_table = tables.VRFTable(vrfs, orderable=False)
             context["vrf_table"] = vrf_table
+
+            prefixes = instance.prefixes.restrict(request.user, "view")
+            prefix_count = prefixes.count()
+            prefix_table = tables.PrefixTable(prefixes, orderable=False)
+            context["prefix_count"] = prefix_count
+            context["prefix_table"] = prefix_table
 
         return context
 
@@ -100,13 +84,15 @@ class VRFView(generic.ObjectView):
     queryset = VRF.objects.all()
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
         prefixes = instance.prefixes.restrict(request.user, "view")
         prefix_count = prefixes.count()
         prefix_table = tables.PrefixTable(prefixes.select_related("namespace"), orderable=False)
 
         devices = instance.devices.restrict(request.user, "view")
         # device_count = devices.count()
-        device_table = DeviceTable(devices.all(), orderable=False)
+        # device_table = DeviceTable(devices.all(), orderable=False)
 
         import_targets_table = tables.RouteTargetTable(
             instance.import_targets.select_related("tenant"), orderable=False
@@ -115,13 +101,25 @@ class VRFView(generic.ObjectView):
             instance.export_targets.select_related("tenant"), orderable=False
         )
 
-        return {
-            "prefix_count": prefix_count,
-            "prefix_table": prefix_table,
-            "device_table": device_table,
-            "import_targets_table": import_targets_table,
-            "export_targets_table": export_targets_table,
-        }
+        # TODO(jathan): This table might need to live on Device and on VRFs
+        # (possibly replacing `device_table` above.
+        vrfs = instance.device_assignments.restrict(request.user, "view")
+        vrf_table = tables.VRFDeviceAssignmentTable(vrfs, orderable=False)
+        vrf_table.exclude = ("vrf",)
+        # context["vrf_table"] = vrf_table
+
+        context.update(
+            {
+                "device_table": vrf_table,
+                # "device_table": device_table,
+                "prefix_count": prefix_count,
+                "prefix_table": prefix_table,
+                "import_targets_table": import_targets_table,
+                "export_targets_table": export_targets_table,
+            }
+        )
+
+        return context
 
 
 class VRFEditView(generic.ObjectEditView):
@@ -352,7 +350,12 @@ class PrefixView(generic.ObjectView):
         duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes), orderable=False)
         # duplicate_prefix_table.exclude = ("vrf",)
 
+        vrfs = instance.vrf_assignments.restrict(request.user, "view")
+        vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
+        vrf_table.exclude = ("prefix",)
+
         return {
+            "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
             "duplicate_prefix_table": duplicate_prefix_table,
         }

@@ -1,0 +1,32 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Namespace</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>{{ object.name }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description }}</td>
+                </tr>
+                <tr>
+                    <td>Location</td>
+                    <td>{{ object.location | hyperlinked_object }}</td>
+                </tr>
+            </table>
+        </div>
+    {% include "utilities/obj_table.html" with table=prefix_table table_template="panel_table.html" heading="Prefixes" disable_pagination=False %}
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+{% comment %}
+    {% include 'panel_table.html' with table=vrf_table heading="VRFs" %}
+{% endcomment %}
+    {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="VRFs" disable_pagination=False %}
+{% endblock content_right_page %}

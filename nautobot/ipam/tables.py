@@ -23,13 +23,13 @@ from .models import (
     Namespace,
     Prefix,
     RIR,
-    RouteDistinguisher,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
     VRF,
     VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
@@ -223,36 +223,11 @@ VLANGROUP_ADD_VLAN = """
 class NamespaceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    tags = TagColumn(url_name="ipam:namespace_list")
 
     class Meta(BaseTable.Meta):
         model = Namespace
-        fields = ("pk", "name")
-
-
-#
-# Route Distinguishers
-#
-
-
-class RouteDistinguisherTable(BaseTable):
-    pk = ToggleColumn()
-    rd = tables.LinkColumn()
-
-    class Meta(BaseTable.Meta):
-        model = RouteDistinguisher
-        fields = ("pk", "rd", "namespace")
-
-
-class VRFDeviceAssignmentTable(BaseTable):
-    """Table for displaying VRF Device Assignments with RD."""
-
-    vrf = tables.LinkColumn(verbose_name="VRF")
-    tenant = tables.Column(accessor="vrf.tenant", linkify=True)
-    device = tables.LinkColumn()
-
-    class Meta(BaseTable.Meta):
-        model = VRFDeviceAssignment
-        fields = ("vrf", "device", "tenant")
+        fields = ("pk", "name", "description", "location")
 
 
 #
@@ -286,6 +261,34 @@ class VRFTable(BaseTable):
         )
         # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
         default_columns = ("pk", "name", "namespace", "tenant", "description")
+
+
+class VRFDeviceAssignmentTable(BaseTable):
+    """Table for displaying VRF Device Assignments with RD."""
+
+    vrf = tables.LinkColumn(verbose_name="VRF")
+    device = tables.LinkColumn()
+    rd = tables.Column(verbose_name="VRF RD")
+    name = tables.Column(verbose_name="VRF Name")
+    tenant = TenantColumn(accessor="vrf.tenant")
+
+    class Meta(BaseTable.Meta):
+        model = VRFDeviceAssignment
+        fields = ("vrf", "device", "name", "rd", "tenant")
+
+
+class VRFPrefixAssignmentTable(BaseTable):
+    """Table for displaying VRF Prefix Assignments."""
+
+    vrf = tables.LinkColumn(verbose_name="VRF")
+    prefix = tables.LinkColumn()
+    name = tables.Column(accessor="vrf.name")
+    rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
+    tenant = TenantColumn(accessor="vrf.tenant")
+
+    class Meta(BaseTable.Meta):
+        model = VRFPrefixAssignment
+        fields = ("vrf", "prefix", "name", "rd", "tenant")
 
 
 #

@@ -128,4 +128,5 @@
                 {% include 'panel_table.html' with table=duplicate_prefix_table heading='Duplicate Prefixes' panel_class='danger' %}
             {% endif %}
             {% include 'panel_table.html' with table=parent_prefix_table heading='Parent Prefixes' panel_class='default' %}
+            {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="Assigned VRFs" disable_pagination=False %}
 {% endblock content_right_page %}

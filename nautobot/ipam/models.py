@@ -47,10 +47,29 @@ __all__ = (
 logger = logging.getLogger(__name__)
 
 
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "locations",
+    "relationships",
+    "webhooks",
+)
 class Namespace(PrimaryModel):
     """Container for unique IPAM objects."""
 
     name = models.CharField(max_length=255, unique=True, db_index=True)
+    description = models.CharField(max_length=200, blank=True)
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="namespaces",
+        blank=True,
+        null=True,
+    )
 
     def __str__(self):
         return self.name
@@ -61,31 +80,11 @@ class Namespace(PrimaryModel):
 
 def get_default_namespace():
     """Return the Global namespace for use in default value for foreign keys."""
-    return Namespace.objects.get_or_create(name="Global")[0].pk
-
-
-class RouteDistinguisher(PrimaryModel):
-    namespace = models.ForeignKey(
-        "ipam.Namespace",
-        on_delete=models.PROTECT,
-        related_name="route_distinguishers",
-        default=get_default_namespace,
-    )
-    rd = models.CharField(
-        max_length=VRF_RD_MAX_LENGTH,
-        verbose_name="Route distinguisher",
-        help_text="Unique route distinguisher (as defined in RFC 4364)",
-        db_index=True,
+    obj, _ = Namespace.objects.get_or_create(
+        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
     )
 
-    def __str__(self):
-        return self.rd
-
-    class Meta:
-        unique_together = ("namespace", "rd")
-
-    def get_absolute_url(self):
-        return reverse("ipam:routedistinguisher", args=[self.pk])
+    return obj.pk
 
 
 @extras_features(
@@ -103,6 +102,13 @@ class VRF(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
+    rd = models.CharField(
+        max_length=VRF_RD_MAX_LENGTH,
+        blank=True,
+        null=True,
+        verbose_name="Route distinguisher",
+        help_text="Unique route distinguisher (as defined in RFC 4364)",
+    )
     namespace = models.ForeignKey(
         "ipam.Namespace",
         on_delete=models.PROTECT,
@@ -127,6 +133,7 @@ class VRF(PrimaryModel):
         blank=True,
         null=True,
     )
+    # TODO(jathan): Nuke enforce_unique
     enforce_unique = models.BooleanField(
         default=True,
         verbose_name="Enforce unique space",
@@ -136,8 +143,7 @@ class VRF(PrimaryModel):
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
-    # csv_headers = ["name", "rd", "tenant", "enforce_unique", "description"]
-    csv_headers = ["name", "tenant", "enforce_unique", "description"]
+    csv_headers = ["name", "rd", "tenant", "enforce_unique", "description"]
     clone_fields = [
         "tenant",
         "enforce_unique",
@@ -146,7 +152,10 @@ class VRF(PrimaryModel):
 
     class Meta:
         ordering = ("namespace", "name")  # (name, rd) may be non-unique
-        unique_together = ("namespace", "name")
+        unique_together = [
+            ["namespace", "name"],
+            ["namespace", "rd"],
+        ]
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
@@ -171,26 +180,96 @@ class VRF(PrimaryModel):
             return f"{self.namespace}: ({self.name})"
         return self.name
 
+    def add_device(self, device, rd="", name=""):
+        """
+        Add a `device` to this VRF, optionally overloading `rd` and `name`.
+
+        If `rd` or `name` are not provided, the values from this VRF will be inherited.
+
+        Args:
+            device (Device): Device instance
+            rd (str): (Optional) RD of the VRF when associated with this Device
+            name (str): (Optional) Name of the VRF when associated with this Device
+
+        Returns:
+            VRFDeviceAssignment instance
+        """
+        instance = self.devices.through(vrf=self, device=device, rd=rd, name=name)
+        instance.validated_save()
+        return instance
+
+    def remove_device(self, device):
+        """
+        Remove a `device` from this VRF.
+
+        Args:
+            device (Device): Device instance
+
+        Returns:
+            tuple (int, dict): Number of objects deleted and a dict with number of deletions.
+        """
+        instance = self.devices.through.objects.get(vrf=self, device=device)
+        return instance.delete()
+
+    def add_prefix(self, prefix):
+        """
+        Add a `prefix` to this VRF. Each object must be in the same Namespace.
+
+        Args:
+            prefix (Prefix): Prefix instance
+
+        Returns:
+            VRFPrefixAssignment instance
+        """
+        instance = self.prefixes.through(vrf=self, prefix=prefix)
+        instance.validated_save()
+        return instance
+
+    def remove_prefix(self, prefix):
+        """
+        Remove a `prefix` from this VRF.
+
+        Args:
+            prefix (Prefix): Prefix instance
+
+        Returns:
+            tuple (int, dict): Number of objects deleted and a dict with number of deletions.
+        """
+        instance = self.prefixes.through.objects.get(vrf=self, prefix=prefix)
+        return instance.delete()
+
 
 class VRFDeviceAssignment(BaseModel):
-    vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
+    vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
     device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="vrf_assignments")
-    rd = models.ForeignKey(
-        "ipam.RouteDistinguisher", on_delete=models.CASCADE, blank=True, null=True, related_name="vrf_assignments"
+    rd = models.CharField(
+        max_length=VRF_RD_MAX_LENGTH,
+        blank=True,
+        null=True,
+        verbose_name="Route distinguisher",
+        help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    name = models.CharField(blank=True, max_length=100)
 
     class Meta:
-        unique_together = ["vrf", "device"]
+        unique_together = [
+            ["vrf", "device"],
+            ["device", "rd", "name"],
+        ]
 
     def __str__(self):
-        return f"{self.vrf} (RD: {self.rd})"
+        return f"{self.vrf} [{self.device}] (rd: {self.rd}, name: {self.name})"
 
     def clean(self):
         super().clean()
 
-        # If RD is set, then its namespace must match that of the VRF.
-        if self.rd and self.rd.namespace != self.vrf.namespace:
-            raise ValidationError({"rd": "RD must be in same namespace as VRF"})
+        # If RD is not set, inherit it from `vrf.rd`.
+        if not self.rd:
+            self.rd = self.vrf.rd
+
+        # If name is not set, inherit it from `vrf.name`.
+        if not self.name:
+            self.name = self.vrf.name
 
 
 class VRFPrefixAssignment(BaseModel):

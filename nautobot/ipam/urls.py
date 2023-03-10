@@ -18,7 +18,6 @@ app_name = "ipam"
 
 router = NautobotUIViewSetRouter()
 router.register("namespaces", views.NamespaceUIViewSet)
-router.register("route-distinguishers", views.RouteDistinguisherUIViewSet)
 
 urlpatterns = [
     # VRFs

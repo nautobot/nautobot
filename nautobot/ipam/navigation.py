@@ -133,28 +133,6 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="ipam:routedistinguisher_list",
-                        name="Route Distinguishers",
-                        weight=150,
-                        permissions=[
-                            "ipam.view_routedistinguisher",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="ipam:routedistinguisher_add",
-                                permissions=[
-                                    "ipam.add_routedistinguisher",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:routedistinguisher_import",
-                                permissions=[
-                                    "ipam.add_routedistinguisher",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="ipam:routetarget_list",
                         name="Route Targets",
                         weight=200,

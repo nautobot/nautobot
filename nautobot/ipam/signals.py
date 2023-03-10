@@ -9,10 +9,10 @@ from nautobot.ipam.models import Prefix, VRF
 @receiver(pre_save, sender=VRF)
 @receiver(pre_save, sender=VRF.devices.through)
 @receiver(pre_save, sender=VRF.prefixes.through)
-def ipam_object_created(sender, instance, raw=False, **kwargs):
+def ipam_object_saved(sender, instance, raw=False, **kwargs):
     """
-    Forcibly call `full_clean()` when a new IPAM object
-    is manually created to prevent inadvertantly creating invalid objects.
+    Forcibly call `full_clean()` when a new IPAM object is manually saved to prevent creation of
+    invalid objects.
     """
     if raw:
         return
@@ -29,3 +29,16 @@ def vrf_prefix_associated(sender, instance, action, reverse, model, pk_set, **kw
         prefixes = model.objects.filter(pk__in=pk_set).exclude(namespace=instance.namespace)
         if prefixes.exists():
             raise ValidationError({"prefixes": "Prefix must match namespace of VRF"})
+
+
+@receiver(m2m_changed, sender=VRF.devices.through)
+def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kwargs):
+    """
+    Assert validation on m2m when devices are associated with a VRF.
+    """
+
+    # TODO(jathan): Temporary workaround until a formset to add/remove/update VRFs <-> Devices and
+    # optionally setting RD/name on assignment. k
+    if action == "post_add":
+        for assignment in instance.device_assignments.iterator():
+            assignment.validated_save()
