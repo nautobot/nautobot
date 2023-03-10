@@ -721,12 +721,14 @@ def register_override_views(override_views, plugin):
 
 
 def discover_metrics(sender, *, apps, metrics, **kwargs):
-    """Callback to discover metrics.
+    """
+    Callback to discover metrics.
 
     This is necessary because we need to actually evaluate the metric generator fully to discover which metrics it
     provides. This allows us to give an accurate overview on the plugin detail page. However, because the metrics might
     import models themselves, they can only be run after migrations have taken place. This is ensured by connecting
-    this signal handler to the nautobot_database_ready signal for each app."""
+    this signal handler to the nautobot_database_ready signal for each app.
+    """
     if not metrics:
         return
     for metric in metrics:
