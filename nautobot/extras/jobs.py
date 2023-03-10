@@ -303,6 +303,15 @@ class BaseJob:
         """
         return self.job_result.data if self.job_result else None
 
+    def as_form_class(self):
+        """
+        Dynamically generate a Django form class corresponding to the variables in this Job.
+
+        In most cases you should use `.as_form()` instead of calling this method directly.
+        """
+        fields = {name: var.as_field() for name, var in self._get_vars().items()}
+        return type("JobForm", (JobForm,), fields)
+
     def as_form(self, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
@@ -310,10 +319,8 @@ class BaseJob:
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
         """
-        fields = {name: var.as_field() for name, var in self._get_vars().items()}
-        FormClass = type("JobForm", (JobForm,), fields)
 
-        form = FormClass(data, files, initial=initial)
+        form = self.as_form_class()(data, files, initial=initial)
 
         try:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
