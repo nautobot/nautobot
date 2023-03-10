@@ -12,7 +12,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0067_rename_model_fields"),
+        ("extras", "0068_rename_model_fields"),
         ("dcim", "0037_ipam__namespaces"),
         ("ipam", "0023_delete_aggregate"),
     ]

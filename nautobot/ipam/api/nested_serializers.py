@@ -7,6 +7,7 @@ from nautobot.ipam import models
 __all__ = [
     "IPFieldSerializer",
     "NestedIPAddressSerializer",
+    "NestedNamespaceSerializer",
     "NestedPrefixSerializer",
     "NestedRIRSerializer",
     "NestedRouteTargetSerializer",
@@ -30,6 +31,19 @@ class IPFieldSerializer(serializers.CharField):
             raise serializers.ValidationError(f"Invalid IP address format: {value}")
         except (TypeError, ValueError) as e:
             raise serializers.ValidationError(e)
+
+
+#
+# Namespaces
+#
+
+
+class NestedNamespaceSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:namespace-detail")
+
+    class Meta:
+        model = models.Namespace
+        fields = ["url", "name", "description", "location"]
 
 
 #

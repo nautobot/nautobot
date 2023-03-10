@@ -40,6 +40,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from .nested_serializers import (  # noqa: F401
     IPFieldSerializer,
     NestedIPAddressSerializer,
+    NestedNamespaceSerializer,
     NestedPrefixSerializer,
     NestedRIRSerializer,
     NestedRouteTargetSerializer,
@@ -286,10 +287,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
     # vrf = NestedVRFSerializer(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = NestedVRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
                 ("family", instance.version),
