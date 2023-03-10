@@ -1,0 +1,1 @@
+Changed Homepage ObjectChange query to not join User table, use record cache for latest entries instead.
