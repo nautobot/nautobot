@@ -24,6 +24,6 @@ nautobot-server runserver 0.0.0.0:8080 --insecure
 
 To run all test suite, run:
 
-```
+```no-highlight
 invoke ui-unittest
 ```
