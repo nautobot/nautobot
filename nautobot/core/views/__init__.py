@@ -235,8 +235,8 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        for metric in registry["app_metrics"]:
-            yield from metric()
+        for metric_generator in registry["app_metrics"]:
+            yield from metric_generator()
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
