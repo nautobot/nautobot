@@ -25,7 +25,7 @@ services:
     image: node:18
     environment:
       PORT: "3000"
-      # DEBUG: "express:*" # nodejs web server debug logging
+      DEBUG: "express:*" # nodejs web server debug logging
     ports:
       - "3000:3000"
     working_dir: /opt/node/nautobot

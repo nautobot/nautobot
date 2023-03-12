@@ -10,10 +10,11 @@ from django.shortcuts import render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
-from django.views.decorators.csrf import requires_csrf_token
+from django.views.decorators.csrf import requires_csrf_token, ensure_csrf_cookie
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
+from django.utils.decorators import method_decorator
 from packaging import version
 from graphene_django.views import GraphQLView
 
@@ -174,6 +175,14 @@ class SearchView(View):
                 "results": results,
             },
         )
+
+
+class CSRFRefreshView(View):
+
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, request):
+        from django.http import HttpResponse
+        return HttpResponse("PONG!")
 
 
 class StaticMediaFailureView(View):
