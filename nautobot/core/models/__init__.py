@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import quote_plus
 
 from django.db import models
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
@@ -69,8 +70,20 @@ class BaseModel(NaturalKeyModel):
             vals.append(val)
         return vals
 
+    natural_key_separator = "/"
+
+    @property
+    def natural_key_slug(self):
+        """Less naive implementation than django-natural-keys provides by default, based around URL percent-encoding."""
+        return self.natural_key_separator.join(
+            quote_plus(str(value) if value is not None else "\0") for value in self.natural_key()
+        )
+
     @classmethod
     def get_natural_key_def(cls):
+        """
+        Extend django-natural-keys implementation to recognize that UUIDFields are not relevant to the natural key.
+        """
         if hasattr(cls, "_natural_key"):
             return cls._natural_key
 

@@ -1,3 +1,5 @@
+from urllib.parse import unquote_plus
+
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from natural_keys.models import NaturalKeyQuerySet
@@ -17,6 +19,20 @@ def count_related(model, field):
 
 
 class RestrictedQuerySet(NaturalKeyQuerySet):
+    def filter(self, *args, **kwargs):
+        """Implement custom version of natural-key slug filtering from django-natural-keys."""
+        natural_key_slug = kwargs.pop("natural_key_slug", None)
+        if natural_key_slug and isinstance(natural_key_slug, str):
+            keys = [unquote_plus(key) for key in natural_key_slug.split(self.model.natural_key_separator)]
+            # Map null strings back to None
+            keys = [key if key != "\0" else None for key in keys]
+            fields = self.model.get_natural_key_fields()
+            if len(keys) != len(fields):
+                return self.none()
+            kwargs.update(self.natural_key_kwargs(*keys))
+
+        return super().filter(*args, **kwargs)
+
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
