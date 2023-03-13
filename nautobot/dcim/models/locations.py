@@ -8,7 +8,7 @@ from timezone_field import TimeZoneField
 
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
+from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
@@ -114,10 +114,28 @@ class LocationType(TreeModel, OrganizationalModel):
 
 
 class LocationQuerySet(TreeQuerySet):
+    @classmethod
+    def as_manager(cls, with_tree_fields=False):
+        """Get an appropriate TreeManager subclass for working with Locations."""
+        LocationManager = TreeManager.from_queryset(cls)
+        LocationManager._built_with_as_manager = True
+        LocationManager._with_tree_fields = with_tree_fields
+        return LocationManager()
+
     def get_for_model(self, model):
         """Filter locations to only those that can accept the given model class."""
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(location_type__content_types=content_type)
+
+    def natural_key_kwargs(self, *args):
+        """
+        Handle variadic args so that the user doesn't have to specify an arbitrary number of `None` for ancestors.
+
+        In other words, treat `(grandparent, parent, me)` as synonymous with `(None, None, grandparent, parent, me)`.
+        """
+        natural_key = self.model.get_natural_key_fields()
+        natural_key = natural_key[-len(args) :]
+        return dict(zip(natural_key, args))
 
 
 @extras_features(
@@ -250,6 +268,24 @@ class Location(TreeModel, StatusModel, PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def get_natural_key_fields(cls):
+        natural_key = []
+        name = "name"
+        for _ in range(cls.objects.max_tree_depth() + 1):
+            natural_key.append(name)
+            name = f"parent__{name}"
+        return list(reversed(natural_key))
+
+    def natural_key(self):
+        """
+        Custom natural key implementation for Location.
+
+        Needed because with the uniqueness constraint of (parent, name) we end up with a theoretically infinite
+        recursive natural key.
+        """
+        return [ancestor.name for ancestor in self.ancestors(include_self=True)]
 
     def get_absolute_url(self):
         return reverse("dcim:location", args=[self.slug])

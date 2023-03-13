@@ -1,14 +1,16 @@
 from celery import states
 from django.utils import timezone
+from django_celery_beat.managers import ExtendedManager
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
+from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 # TODO(jathan): This subclass is a hack. We'll fix it in post. Realistically the work for
 # `django-natural-keys` and establishing managers vs. querysets.as_manager() patterns across the
 # board will be the right palce to do this, as we can then just subclass the manager class.
-class JobResultManager(RestrictedQuerySet.as_manager().__class__, TaskResultManager):
+class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResultManager):
     @transaction_retry(max_retries=2)
     def store_result(
         self,
@@ -98,3 +100,7 @@ class JobResultManager(RestrictedQuerySet.as_manager().__class__, TaskResultMana
             obj.save(using=using)
 
         return obj
+
+
+class ScheduledJobsManager(BaseManager.from_queryset(RestrictedQuerySet), ExtendedManager):
+    pass

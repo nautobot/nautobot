@@ -21,7 +21,7 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
@@ -125,7 +125,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
-    objects = ConfigContextQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextQuerySet)()
 
     class Meta:
         ordering = ["weight", "name"]
@@ -688,7 +688,7 @@ class Note(BaseModel, ChangeLoggedModel):
 
     slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
-    objects = NotesQuerySet.as_manager()
+    objects = BaseManager.from_queryset(NotesQuerySet)()
 
     class Meta:
         ordering = ["created"]

@@ -10,7 +10,7 @@ from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
@@ -185,7 +185,7 @@ class RIR(OrganizationalModel):
 
     csv_headers = ["name", "slug", "is_private", "description"]
 
-    objects = RIRQuerySet.as_manager()
+    objects = BaseManager.from_queryset(RIRQuerySet)()
 
     class Meta:
         ordering = ["name"]
@@ -286,7 +286,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    objects = PrefixQuerySet.as_manager()
+    objects = BaseManager.from_queryset(PrefixQuerySet)()
 
     csv_headers = [
         "prefix",
@@ -612,7 +612,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     ]
     dynamic_group_skip_missing_fields = True  # Problematic form labels for `vminterface` and `interface`
 
-    objects = IPAddressQuerySet.as_manager()
+    objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
     class Meta:
         ordering = ("host", "prefix_length")  # address may be non-unique

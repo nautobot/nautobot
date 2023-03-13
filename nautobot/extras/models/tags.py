@@ -4,7 +4,7 @@ from django.urls import reverse
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
@@ -49,7 +49,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     csv_headers = ["name", "slug", "color", "description"]
 
-    objects = TagQuerySet.as_manager()
+    objects = BaseManager.from_queryset(TagQuerySet)()
 
     class Meta:
         ordering = ["name"]

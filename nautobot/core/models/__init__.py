@@ -57,6 +57,18 @@ class BaseModel(NaturalKeyModel):
         self.full_clean()
         self.save()
 
+    def natural_key(self):
+        """See https://github.com/wq/django-natural-keys/issues/18."""
+        vals = []
+        for name_list in [name.split("__") for name in self.get_natural_key_fields()]:
+            val = self
+            for attr_name in name_list:
+                val = getattr(val, attr_name)
+                if val is None:
+                    break
+            vals.append(val)
+        return vals
+
     @classmethod
     def get_natural_key_def(cls):
         if hasattr(cls, "_natural_key"):
