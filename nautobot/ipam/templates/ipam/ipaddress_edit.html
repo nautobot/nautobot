@@ -29,30 +29,6 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Interface Assignment</strong>
-        </div>
-        <div class="panel-body">
-            {% with vm_tab_active=form.initial.vminterface %}
-                <ul class="nav nav-tabs" role="tablist">
-                    <li role="presentation"{% if not vm_tab_active %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
-                    <li role="presentation"{% if vm_tab_active %} class="active"{% endif %}><a href="#virtualmachine" role="tab" data-toggle="tab">Virtual Machine</a></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane{% if not vm_tab_active %} active{% endif %}" id="device">
-                        {% render_field form.device %}
-                        {% render_field form.interface %}
-                    </div>
-                    <div class="tab-pane{% if vm_tab_active %} active{% endif %}" id="virtualmachine">
-                        {% render_field form.virtual_machine %}
-                        {% render_field form.vminterface %}
-                    </div>
-                </div>
-            {% endwith %}
-            {% render_field form.primary_for_parent %}
-        </div>
-    </div>
-    <div class="panel panel-default">
         <div class="panel-heading"><strong>NAT IP (Inside)</strong></div>
         <div class="panel-body">
             <ul class="nav nav-tabs" role="tablist">
