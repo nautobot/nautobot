@@ -615,7 +615,7 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 ## Logging Changes
 
-Where applicable, `logging.getLogger("module_name")` is repalced to `logging.getLogger(__name__)` or `logging.getLogger(__name__ + ".MyFeature")`.
+Where applicable, `logging.getLogger("module_name")` is replaced with `logging.getLogger(__name__)` or `logging.getLogger(__name__ + ".MyFeature")`.
 
 Below is a table documenting changes in logger names that could potentially affect existing deployments with expectations around specific logger names used for specific purposes.
 
@@ -624,7 +624,6 @@ Below is a table documenting changes in logger names that could potentially affe
 | `nautobot.authentication`                | `nautobot.core.authentication`                        |
 | `nautobot.datasources.git`               | `nautobot.extras.datasources.git`                     |
 | `nautobot.datasources.utils`             | `nautobot.extras.datasources.utils`                   |
-| `nautobot.dcim.cable`                    | `nautobot.dcim.signals.cable`                         |
 | `nautobot.dcim.cable`                    | `nautobot.dcim.signals.cable`                         |
 | `nautobot.graphql.generators`            | `nautobot.core.graphql.generators`                    |
 | `nautobot.graphql.schema`                | `nautobot.core.graphql.schema`                        |
