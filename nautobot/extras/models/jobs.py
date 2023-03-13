@@ -859,7 +859,10 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         choices=ButtonClassChoices,
         default=ButtonClassChoices.CLASS_DEFAULT,
     )
-    confirmation = models.BooleanField(help_text="Enable confirmation pop-up box", default=True)
+    confirmation = models.BooleanField(
+        help_text="Enable confirmation pop-up box. <font color='#ff0000'>WARNING: unselecting this option will allow the Job to run (and commit changes) with a single click!</font>",
+        default=True,
+    )
 
     class Meta:
         ordering = ["group_name", "weight", "name"]
