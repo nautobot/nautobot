@@ -404,7 +404,7 @@ def reassign_model_instances_to_locations(apps, model):
     web_hooks = WebHook.objects.filter(content_types=model_ct)
     for wh in web_hooks:
         wh.content_types.add(location_ct)
-    
+
     object_permissions = ObjectPermission.objects.filter(object_types=model_ct)
     for op in object_permissions:
         op.object_types.add(location_ct)

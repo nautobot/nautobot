@@ -994,7 +994,9 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             self.assertEqual(loc_clusters[1].location.name, "Test Location 0")
 
         with self.subTest("Testing Users app model migration"):
-            region_permissions = self.object_permission.objects.filter(name__in=["Test Region Permission 1", "Test Region Permission 2"])
+            region_permissions = self.object_permission.objects.filter(
+                name__in=["Test Region Permission 1", "Test Region Permission 2"]
+            )
             self.assertEqual(
                 [self.location_ct.model, self.location_type_ct.model, self.region_ct.model],
                 sorted(list(region_permissions[0].object_types.values_list("model", flat=True))),
@@ -1003,7 +1005,9 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
                 [self.location_ct.model, self.location_type_ct.model, self.region_ct.model],
                 sorted(list(region_permissions[1].object_types.values_list("model", flat=True))),
             )
-            site_permissions = self.object_permission.objects.filter(name__in=["Test Site Permission 1", "Test Site Permission 2"])
+            site_permissions = self.object_permission.objects.filter(
+                name__in=["Test Site Permission 1", "Test Site Permission 2"]
+            )
             self.assertEqual(
                 [self.location_ct.model, self.location_type_ct.model, self.site_ct.model],
                 sorted(list(site_permissions[0].object_types.values_list("model", flat=True))),
