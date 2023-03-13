@@ -336,6 +336,12 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
         return (None, False)
+    if issubclass(job_class, JobHookReceiver) and issubclass(job_class, JobButtonReceiver):
+        logger.error(
+            'Job class "%s" must not sub-class from both JobHookReceiver and JobButtonReceiver!',
+            job_class.__name__,
+        )
+        return (None, False)
 
     # Recoverable errors
     if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
