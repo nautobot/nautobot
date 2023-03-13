@@ -54,6 +54,7 @@ from .constants import (
 )
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Prefix,
     RIR,
     RouteTarget,
@@ -527,21 +528,23 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
     def __init__(self, *args, **kwargs):
 
         # Initialize helper selectors
-        # instance = kwargs.get("instance")
+        instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
-        # if instance:
-        #     if instance.nat_inside:
-        #         TODO: Is this enforcement still needed when associating the nat relationships?
-        #         nat_inside_parent = instance.nat_inside.assigned_object
-        #         if isinstance(nat_inside_parent, Interface):
-        #             initial["nat_location"] = nat_inside_parent.device.location.pk
-        #             if nat_inside_parent.device.rack:
-        #                 initial["nat_rack"] = nat_inside_parent.device.rack.pk
-        #             initial["nat_device"] = nat_inside_parent.device.pk
-        #         elif isinstance(nat_inside_parent, VMInterface):
-        #             initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
-        #             initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
+        if instance:
+            if instance.nat_inside:
+                # TODO: Does this make sense with ip address to interface relationship changing to m2m?
+                nat_inside_parent = IPAddressToInterface.objects.filter(ip_address=instance.nat_inside)
+                if nat_inside_parent.count() == 1:
+                    nat_inside_parent = nat_inside_parent.first()
+                    if nat_inside_parent.interface is not None:
+                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
+                        if nat_inside_parent.interface.device.rack:
+                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
+                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                    elif nat_inside_parent.vm_interface is not None:
+                        initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
+                        initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
