@@ -120,6 +120,7 @@ __all__ = (
     "ImageAttachmentForm",
     "JobForm",
     "JobButtonForm",
+    "JobButtonBulkEditForm",
     "JobButtonFilterForm",
     "JobEditForm",
     "JobFilterForm",
@@ -1043,6 +1044,25 @@ class JobButtonForm(BootstrapMixin, forms.ModelForm):
             "button_class",
             "confirmation",
         )
+
+
+class JobButtonBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit form for `JobButton` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=JobButton.objects.all(), widget=forms.MultipleHiddenInput)
+    content_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        label="Object Types",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+        required=False,
+    )
+    weight = forms.IntegerField(required=False)
+    group_name = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = ["group_name"]
 
 
 class JobButtonFilterForm(BootstrapMixin, forms.Form):

@@ -1578,6 +1578,7 @@ class JobLogEntryTableView(View):
 
 
 class JobButtonUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobButtonBulkEditForm
     filterset_class = filters.JobButtonFilterSet
     filterset_form_class = forms.JobButtonFilterForm
     form_class = forms.JobButtonForm
