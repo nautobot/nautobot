@@ -4,7 +4,7 @@ from django.conf import settings
 
 from nautobot.dcim.models import Device, Site
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import IntegerVar, ObjectVar, Job, JobHookReceiver, JobButtonReceiver
+from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver, JobButtonReceiver
 
 
 name = "ExamplePlugin jobs"
@@ -108,61 +108,18 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         # Run Device Job function
 
     def receive_job_button(self, obj):
+        user = self.request.user
         if isinstance(obj, Site):
-            self._run_site_job(obj)
-        elif isinstance(obj, Device):
-            self._run_device_job(obj)
-        else:
-            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
-
-
-class ExampleSiteObjectJob(Job):
-    site = ObjectVar(model=Site)
-
-    class Meta:
-        name = "Example Object Job - Site"
-        description = "I'm an example job that takes a Site object as an input"
-
-    def run(self, data, commit):
-        site = data["site"]
-        if commit:
-            _run_site_job(self, site)
-
-
-class ExampleDeviceObjectJob(Job):
-    device = ObjectVar(model=Device)
-
-    class Meta:
-        name = "Example Object Job - Device"
-        description = "I'm an example job that takes a Device object as an input"
-
-    def run(self, data, commit):
-        device = data["device"]
-        if commit:
-            _run_device_job(self, device)
-
-
-class ExampleJobButtonReceiverOtherJobs(JobButtonReceiver):
-    class Meta:
-        name = "Example Job Button Receiver for Other Jobs"
-
-    def receive_job_button(self, obj):
-        if isinstance(obj, Site):
-            _run_site_job(self, obj)
-        elif isinstance(obj, Device):
-            _run_device_job(self, obj)
-        else:
-            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
-
-
-def _run_site_job(job_class, obj):
-    job_class.log_info(obj=obj, message="Running Site Job.")
-    # Add Site job logic here
-
-
-def _run_device_job(job_class, obj):
-    job_class.log_info(obj=obj, message="Running Device Job.")
-    # Add Device job logic here
+            if not user.has_perm("dcim.add_site"):
+                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Site.")
+                return
+            return self._run_site_job(obj)
+        if isinstance(obj, Device):
+            if not user.has_perm("dcim.add_device"):
+                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
+                return
+            return self._run_device_job(obj)
+        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
 
 
 jobs = (
@@ -172,7 +129,4 @@ jobs = (
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
-    ExampleSiteObjectJob,
-    ExampleDeviceObjectJob,
-    ExampleJobButtonReceiverOtherJobs,
 )
