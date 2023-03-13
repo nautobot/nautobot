@@ -6,6 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
         ("virtualization", "0015_rename_foreignkey_fields"),
     ]
 

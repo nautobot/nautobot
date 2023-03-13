@@ -57,14 +57,12 @@ class Command(BaseCommand):
             from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.dcim.factory import (
-                RegionFactory,
-                SiteFactory,
                 LocationTypeFactory,
                 LocationFactory,
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
-                AggregateFactory,
+                PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
                 VLANGroupFactory,
@@ -96,15 +94,10 @@ class Command(BaseCommand):
         self.stdout.write("Creating Tenants...")
         TenantFactory.create_batch(10, has_tenant_group=False)
         TenantFactory.create_batch(10, has_tenant_group=True)
-        self.stdout.write("Creating Regions...")
-        RegionFactory.create_batch(15, has_parent=False)
-        RegionFactory.create_batch(5, has_parent=True)
-        self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(25)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(40)  # we need more locations with sites since it can be nested now.
+        LocationFactory.create_batch(65)  # we need more locations with sites since it can be nested now.
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
@@ -116,10 +109,8 @@ class Command(BaseCommand):
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
-        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
-        AggregateFactory.create_batch(5, has_tenant_group=True)
-        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
-        AggregateFactory.create_batch(10)
+        self.stdout.write("Creating Prefixes and IP Addresses...")
+        PrefixFactory.create_batch(20)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")

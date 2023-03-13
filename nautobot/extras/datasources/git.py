@@ -28,6 +28,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     Job,
@@ -413,6 +414,7 @@ def update_git_config_contexts(repository_record, job_result):
         "tenant_groups",
         "tenants",
         "tags",
+        "dynamic_groups",
     ):
         if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
             job_result.log(
@@ -535,6 +537,17 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     context_metadata.setdefault("description", "")
     context_metadata.setdefault("is_active", True)
 
+    # Context Metadata `schema` has been updated to `config_context_schema`,
+    # but for backwards compatibility `schema` is still supported.
+    if "schema" in context_metadata and "config_context_schema" not in context_metadata:
+        job_result.log(
+            "`schema` is deprecated in `_metadata`, please use `config_context_schema` instead.",
+            level_choice=LogLevelChoices.LOG_WARNING,
+            grouping="config context",
+            logger=logger,
+        )
+        context_metadata["config_context_schema"] = context_metadata.pop("schema")
+
     # Translate relationship queries/filters to lists of related objects
     relations = {}
     for key, model_class in [
@@ -547,6 +560,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         ("tenant_groups", TenantGroup),
         ("tenants", Tenant),
         ("tags", Tag),
+        ("dynamic_groups", DynamicGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):
@@ -597,23 +611,23 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         data = context_data.copy()
         del data["_metadata"]
 
-        if context_metadata.get("schema"):
-            if getattr(context_record.schema, "name", None) != context_metadata["schema"]:
+        if context_metadata.get("config_context_schema"):
+            if getattr(context_record.config_context_schema, "name", None) != context_metadata["config_context_schema"]:
                 try:
-                    schema = ConfigContextSchema.objects.get(name=context_metadata["schema"])
-                    context_record.schema = schema
+                    schema = ConfigContextSchema.objects.get(name=context_metadata["config_context_schema"])
+                    context_record.config_context_schema = schema
                     modified = True
                 except ConfigContextSchema.DoesNotExist:
                     job_result.log(
-                        f"ConfigContextSchema {context_metadata['schema']} does not exist.",
+                        f"ConfigContextSchema {context_metadata['config_context_schema']} does not exist.",
                         obj=context_record,
                         level_choice=LogLevelChoices.LOG_FAILURE,
                         grouping="config contexts",
                         logger=logger,
                     )
         else:
-            if context_record.schema is not None:
-                context_record.schema = None
+            if context_record.config_context_schema is not None:
+                context_record.config_context_schema = None
                 modified = True
 
         if context_record.data != data:

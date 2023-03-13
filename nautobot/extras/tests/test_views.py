@@ -202,7 +202,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -211,7 +211,9 @@ class ConfigContextTestCase(
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Config Context with schema").schema.pk, schema.pk)
+        self.assertEqual(
+            self._get_queryset().get(name="Config Context with schema").config_context_schema.pk, schema.pk
+        )
 
     def test_schema_validation_fails(self):
         """
@@ -239,7 +241,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -414,10 +416,10 @@ class CustomFieldTestCase(
             "filter_logic": "loose",
             "weight": 100,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
-            "choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
-            "choices-INITIAL_FORMS": "1",
-            "choices-MIN_NUM_FORMS": "0",
-            "choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
         }
 
     def test_create_object_without_permission(self):
@@ -500,6 +502,31 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_saved_filter(self):
+        """Test that editing a filter works using the edit view."""
+        self.add_permissions("extras.add_dynamicgroup", "extras.change_dynamicgroup")
+
+        # Create the object first.
+        data = self.form_data.copy()
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        # Now update it.
+        instance = self._get_queryset().get(name=data["name"])
+        data["filter-serial"] = ["abc123"]
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter, {"serial": data["filter-serial"]})
 
 
 class ExportTemplateTestCase(
@@ -743,19 +770,19 @@ class SecretsGroupTestCase(
         )
 
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
@@ -766,10 +793,10 @@ class SecretsGroupTestCase(
             "slug": "group-4",
             "description": "Some description",
             # Management form fields required for the dynamic Secret formset
-            "secretsgroupassociation_set-TOTAL_FORMS": "0",
-            "secretsgroupassociation_set-INITIAL_FORMS": "1",
-            "secretsgroupassociation_set-MIN_NUM_FORMS": "0",
-            "secretsgroupassociation_set-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-TOTAL_FORMS": "0",
+            "secrets_group_associations-INITIAL_FORMS": "1",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
 
         cls.slug_source = "name"

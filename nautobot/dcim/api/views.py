@@ -53,8 +53,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.api.views import (
@@ -118,6 +116,7 @@ class PathEndpointMixin:
 
 
 class PassThroughPortMixin:
+    @extend_schema(filters=False, responses={200: serializers.CablePathSerializer(many=True)})
     @action(detail=True, url_path="paths")
     def paths(self, request, pk):
         """
@@ -128,28 +127,6 @@ class PassThroughPortMixin:
         serializer = serializers.CablePathSerializer(cablepaths, context={"request": request}, many=True)
 
         return Response(serializer.data)
-
-
-#
-# Regions
-#
-
-
-class RegionViewSet(NautobotModelViewSet):
-    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
-    serializer_class = serializers.RegionSerializer
-    filterset_class = filters.RegionFilterSet
-
-
-#
-# Sites
-#
-
-
-class SiteViewSet(NautobotModelViewSet):
-    queryset = Site.objects.select_related("region", "status", "tenant").prefetch_related("tags")
-    serializer_class = serializers.SiteSerializer
-    filterset_class = filters.SiteFilterSet
 
 
 #
@@ -214,8 +191,9 @@ class RackViewSet(NautobotModelViewSet):
     filterset_class = filters.RackFilterSet
 
     @extend_schema(
-        responses={200: serializers.RackUnitSerializer(many=True)},
+        filters=False,
         parameters=[serializers.RackElevationDetailFilterSerializer],
+        responses={200: serializers.RackUnitSerializer(many=True)},
     )
     @action(detail=True)
     @xframe_options_sameorigin
@@ -419,6 +397,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         return serializers.DeviceWithConfigContextSerializer
 
     @extend_schema(
+        filters=False,
         parameters=[OpenApiParameter(name="method", location="query", required=True, type=OpenApiTypes.STR)],
         responses={"200": serializers.DeviceNAPALMSerializer},
     )

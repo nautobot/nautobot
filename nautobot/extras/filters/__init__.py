@@ -1,4 +1,5 @@
 import django_filters
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
@@ -183,7 +184,7 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
     schema = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="schema",
+        field_name="config_context_schema",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug or PK)",
@@ -267,6 +268,16 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     role = ConfigContextRoleFilter()
 
+    # Conditional enablement of dynamic groups filtering
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                queryset=DynamicGroup.objects.all(),
+                label="Dynamic Groups (slug or ID)",
+            )
+
     class Meta:
         model = ConfigContext
         fields = ["id", "name", "is_active", "owner_content_type", "owner_object_id"]
@@ -339,12 +350,7 @@ class CustomFieldFilterSet(BaseFilterSet):
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
-    field_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="field",
-        queryset=CustomField.objects.all(),
-        label="Field (ID) - Deprecated (use field filter)",
-    )
-    field = NaturalKeyOrPKMultipleChoiceFilter(
+    custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
         to_field_name="name",
         label="Field (ID or name)",
@@ -847,13 +853,9 @@ class SecretsGroupFilterSet(
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
 
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Group (ID) - Deprecated (use group filter)",
-    )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SecretsGroup.objects.all(),
-        label="Group (ID or slug)",
+        label="Secrets Group (ID or slug)",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),

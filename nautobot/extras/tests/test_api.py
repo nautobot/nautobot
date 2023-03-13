@@ -27,6 +27,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
+from nautobot.extras.api.serializers import ConfigContextSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
@@ -276,10 +277,15 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         )
         self.add_permissions("extras.add_configcontext")
 
-        data = {"name": "Config Context with schema", "weight": 100, "data": {"foo": "bar"}, "schema": str(schema.pk)}
+        data = {
+            "name": "Config Context with schema",
+            "weight": 100,
+            "data": {"foo": "bar"},
+            "config_context_schema": str(schema.pk),
+        }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["config_context_schema"]["id"], str(schema.pk))
 
     def test_schema_validation_fails(self):
         """
@@ -296,10 +302,22 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
             "name": "Config Context with bad schema",
             "weight": 100,
             "data": {"foo": "bar"},
-            "schema": str(schema.pk),
+            "config_context_schema": str(schema.pk),
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextSerializer.dynamic_group` is present when feature flag is enabled."""
+        serializer = ConfigContextSerializer()
+        self.assertIn("dynamic_groups", serializer.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextSerializer.dynamic_group` is NOT present the when feature flag is disabled."""
+        serializer = ConfigContextSerializer()
+        self.assertNotIn("dynamic_groups", serializer.fields)
 
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
@@ -1387,16 +1405,16 @@ class JobTest(
         schedule = ScheduledJob.objects.last()
         self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1477,9 +1495,9 @@ class JobTest(
             get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
         )
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertIsNone(response.data["schedule"])
+        self.assertIsNone(response.data["scheduled_job"])
         # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
         data_job_result = response.data["job_result"]
         del data_job_result["url"]
@@ -1590,16 +1608,16 @@ class JobTest(
         schedule = ScheduledJob.objects.last()
         self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1730,16 +1748,16 @@ class JobTest(
 
         schedule = ScheduledJob.objects.last()
 
-        self.assertIn("schedule", response.data)
+        self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
         self.assertEqual(
-            response.data["schedule"]["url"],
+            response.data["scheduled_job"]["url"],
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
-        self.assertEqual(response.data["schedule"]["name"], schedule.name)
-        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
-        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
+        self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -1978,7 +1996,7 @@ class JobResultTest(
             status=JobResultStatusChoices.STATUS_SUCCESS,
             data={"output": "\nRan for 3 seconds"},
             task_kwargs=None,
-            schedule=None,
+            scheduled_job=None,
             task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
@@ -1990,7 +2008,7 @@ class JobResultTest(
             status=JobResultStatusChoices.STATUS_SUCCESS,
             data=None,
             task_kwargs={"repository_pk": uuid.uuid4()},
-            schedule=None,
+            scheduled_job=None,
             task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
@@ -2002,7 +2020,7 @@ class JobResultTest(
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
             task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
-            schedule=None,
+            scheduled_job=None,
             task_id=uuid.uuid4(),
         )
 
@@ -3109,13 +3127,13 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
         SecretsGroupAssociation.objects.create(
             secret=secrets[0],
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
         SecretsGroupAssociation.objects.create(
             secret=secrets[1],
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
@@ -3165,38 +3183,38 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
         SecretsGroupAssociation.objects.create(
             secret=secrets[0],
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
         SecretsGroupAssociation.objects.create(
             secret=secrets[1],
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
         SecretsGroupAssociation.objects.create(
             secret=secrets[2],
-            group=secrets_groups[2],
+            secrets_group=secrets_groups[2],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
 
         cls.create_data = [
             {
-                "group": secrets_groups[0].pk,
+                "secrets_group": secrets_groups[0].pk,
                 "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
                 "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 "secret": secrets[0].pk,
             },
             {
-                "group": secrets_groups[1].pk,
+                "secrets_group": secrets_groups[1].pk,
                 "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
                 "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 "secret": secrets[1].pk,
             },
             {
-                "group": secrets_groups[2].pk,
+                "secrets_group": secrets_groups[2].pk,
                 "access_type": SecretsGroupAccessTypeChoices.TYPE_SSH,
                 "secret_type": SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 "secret": secrets[2].pk,

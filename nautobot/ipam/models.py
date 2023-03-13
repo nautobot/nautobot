@@ -28,12 +28,11 @@ from .constants import (
     VRF_RD_MAX_LENGTH,
 )
 from .fields import VarbinaryIPField
-from .querysets import AggregateQuerySet, IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
+from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
 
 
 __all__ = (
-    "Aggregate",
     "IPAddress",
     "Prefix",
     "RIR",
@@ -49,12 +48,10 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -124,12 +121,10 @@ class VRF(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class RouteTarget(PrimaryModel):
@@ -171,10 +166,8 @@ class RouteTarget(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class RIR(OrganizationalModel):
     """
@@ -219,181 +212,12 @@ class RIR(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "webhooks",
-)
-class Aggregate(PrimaryModel):
-    """
-    An aggregate exists at the root level of the IP address space hierarchy in Nautobot. Aggregates are used to organize
-    the hierarchy and track the overall utilization of available address space. Each Aggregate is assigned to a RIR.
-    """
-
-    network = VarbinaryIPField(
-        null=False,
-        db_index=True,
-        help_text="IPv4 or IPv6 network address",
-    )
-    broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
-    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    rir = models.ForeignKey(
-        to="ipam.RIR",
-        on_delete=models.PROTECT,
-        related_name="aggregates",
-        verbose_name="RIR",
-    )
-    tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="aggregates",
-        blank=True,
-        null=True,
-    )
-    date_added = models.DateField(blank=True, null=True)
-    description = models.CharField(max_length=200, blank=True)
-
-    objects = AggregateQuerySet.as_manager()
-
-    csv_headers = ["prefix", "rir", "tenant", "date_added", "description"]
-    clone_fields = [
-        "rir",
-        "tenant",
-        "date_added",
-        "description",
-    ]
-
-    class Meta:
-        ordering = ("network", "broadcast", "pk")  # prefix may be non-unique
-
-    def __init__(self, *args, **kwargs):
-        prefix = kwargs.pop("prefix", None)
-        super(Aggregate, self).__init__(*args, **kwargs)
-        self._deconstruct_prefix(prefix)
-
-    def __str__(self):
-        return str(self.prefix)
-
-    def _deconstruct_prefix(self, pre):
-        if pre:
-            if isinstance(pre, str):
-                pre = netaddr.IPNetwork(pre)
-            # Note that our "broadcast" field is actually the last IP address in this prefix.
-            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
-            # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
-            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
-            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
-            #    We store this address as both the network and the "broadcast".
-            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
-            # of addresses and prefixes, not for packet forwarding. :-)
-            broadcast = pre.broadcast if pre.broadcast else pre[-1]
-            self.network = str(pre.network)
-            self.broadcast = str(broadcast)
-            self.prefix_length = pre.prefixlen
-
-    def get_absolute_url(self):
-        return reverse("ipam:aggregate", args=[self.pk])
-
-    def clean(self):
-        super().clean()
-
-        if self.prefix:
-
-            # Clear host bits from prefix
-            self.prefix = self.prefix.cidr
-
-            # /0 masks are not acceptable
-            if self.prefix.prefixlen == 0:
-                raise ValidationError({"prefix": "Cannot create aggregate with /0 mask."})
-
-            # Ensure that the aggregate being added is not covered by an existing aggregate
-            covering_aggregates = Aggregate.objects.net_contains_or_equals(self.prefix)
-            if self.present_in_database:
-                covering_aggregates = covering_aggregates.exclude(pk=self.pk)
-            if covering_aggregates:
-                raise ValidationError(
-                    {
-                        "prefix": (
-                            "Aggregates cannot overlap. "
-                            f"{self.prefix} is already covered by an existing aggregate ({covering_aggregates[0]})."
-                        )
-                    }
-                )
-
-            # Ensure that the aggregate being added does not cover an existing aggregate
-            covered_aggregates = Aggregate.objects.net_contained(self.prefix)
-            if self.present_in_database:
-                covered_aggregates = covered_aggregates.exclude(pk=self.pk)
-            if covered_aggregates:
-                raise ValidationError(
-                    {
-                        "prefix": f"Aggregates cannot overlap. {self.prefix} covers an existing aggregate ({covered_aggregates[0]})."
-                    }
-                )
-
-    def to_csv(self):
-        return (
-            self.prefix,
-            self.rir.name,
-            self.tenant.name if self.tenant else None,
-            self.date_added,
-            self.description,
-        )
-
-    @property
-    def cidr_str(self):
-        if self.network is not None and self.prefix_length is not None:
-            return f"{self.network}/{self.prefix_length}"
-        return None
-
-    @property
-    def prefix(self):
-        if self.cidr_str:
-            return netaddr.IPNetwork(self.cidr_str)
-        return None
-
-    @prefix.setter
-    def prefix(self, prefix):
-        self._deconstruct_prefix(prefix)
-
-    @property
-    def family(self):
-        if self.prefix:
-            return self.prefix.version
-        return None
-
-    def get_percent_utilized(self):
-        """Gets the percentage utilized from the get_utilization method.
-
-        Returns
-            float: Percentage utilization
-        """
-        utilization = self.get_utilization()
-        return int(utilization.numerator / float(utilization.denominator) * 100)
-
-    def get_utilization(self):
-        """Gets the numerator and denominator for calculating utilization of an Aggregrate.
-
-        Returns:
-            UtilizationData: Aggregate utilization (numerator=size of child prefixes, denominator=prefix size)
-        """
-        queryset = Prefix.objects.net_contained_or_equal(self.prefix)
-        child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
-        return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -447,6 +271,20 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         null=True,
         verbose_name="VLAN",
     )
+    rir = models.ForeignKey(
+        to="ipam.RIR",
+        on_delete=models.PROTECT,
+        related_name="prefixes",
+        blank=True,
+        null=True,
+        verbose_name="RIR",
+        help_text="Regional Internet Registry responsible for this prefix",
+    )
+    date_allocated = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Date this prefix was allocated to an RIR, reserved in IPAM, etc.",
+    )
     description = models.CharField(max_length=200, blank=True)
 
     objects = PrefixQuerySet.as_manager()
@@ -461,17 +299,21 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "vlan",
         "status",
         "role",
+        "rir",
+        "date_allocated",
         "description",
     ]
     clone_fields = [
-        "location",
-        "vrf",
-        "tenant",
-        "vlan",
-        "status",
-        "role",
+        "date_allocated",
         "description",
+        "location",
+        "rir",
+        "role",
+        "status",
+        "tenant",
         "type",
+        "vlan",
+        "vrf",
     ]
     dynamic_group_filter_fields = {
         "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
@@ -557,6 +399,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
             self.role.name if self.role else None,
+            self.rir.name if self.rir else None,
+            str(self.date_allocated),
             self.description,
         )
 
@@ -689,13 +533,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -967,11 +809,9 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
     "locations",
-    "relationships",
 )
 class VLANGroup(OrganizationalModel):
     """
@@ -1044,13 +884,11 @@ class VLANGroup(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -1181,12 +1019,10 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Service(PrimaryModel):

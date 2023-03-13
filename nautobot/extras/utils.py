@@ -17,7 +17,7 @@ from taggit.managers import _TaggableManager
 from nautobot.core.models.fields import slugify_dots_to_dashes
 
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.core.models.utils import is_taggable  # noqa: F401
+from nautobot.core.models.utils import find_models_with_matching_fields, is_taggable  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -129,6 +129,18 @@ class FeatureQuery:
         """
         Given an extras feature, return a Q object for content type lookup
         """
+
+        # The `populate_model_features_registry` function is called in the `FeatureQuery().get_query` method instead of
+        # `ExtrasConfig.ready` because `FeatureQuery().get_query` is called before `ExtrasConfig.ready`.
+        # This is because `FeatureQuery` is a helper class used in `Forms` and `Serializers` that are called during the
+        # initialization of the application, before `ExtrasConfig.ready` is called.
+        # Calling `populate_model_features_registry` in `ExtrasConfig.ready` would lead to an outdated `model_features`
+        # `registry` record being used by `FeatureQuery`.
+        # As the `populate_model_features_registry` can be resource-intensive. The check the conditional check is used to
+        # avoid calling the function multiple times and optimize the performance of the application.
+        # TODO(timizuo): Provide a better solution for this; check https://github.com/nautobot/nautobot/pull/3360/files#r1131373797 comment.
+        if not registry["model_features"].get("relationships"):
+            populate_model_features_registry()
         query = Q()
         for app_label, models in registry["model_features"][self.feature].items():
             query |= Q(app_label=app_label, model__in=models)
@@ -144,6 +156,10 @@ class FeatureQuery:
             [('dcim.device', 13), ('dcim.rack', 34)]
         """
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+
+    def list_subclasses(self):
+        """Return a list of model classes that declare this feature."""
+        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
 
 
 @deconstructible
@@ -205,6 +221,51 @@ def extras_features(*features):
         return model_class
 
     return wrapper
+
+
+def populate_model_features_registry():
+    """
+    Populate the registry model features with new apps.
+
+    This function updates the registry model features.
+
+    Behavior:
+    - Defines a list of dictionaries called lookup_confs. Each dictionary contains:
+        - 'feature_name': The name of the feature to be updated in the registry.
+        - 'field_names': A list of names of fields that must be present in order for the model to be considered
+                        a valid model_feature.
+        - 'field_attributes': Optional dictionary of attributes to filter the fields by. Only model which fields match
+                            all the attributes specified in the dictionary will be considered. This parameter can be
+                            useful to narrow down the search for fields that match certain criteria. For example, if
+                            `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
+                            a related model of RelationshipAssociation will be considered.
+    - Looks up all the models in the installed apps.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - Groups the results by app and updates the registry model features for each app.
+    """
+    RelationshipAssociation = apps.get_model(app_label="extras", model_name="relationshipassociation")
+
+    lookup_confs = [
+        {
+            "feature_name": "custom_fields",
+            "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "relationships",
+            "field_names": ["source_for_associations", "destination_for_associations"],
+            "field_attributes": {"related_model": RelationshipAssociation},
+        },
+    ]
+
+    app_models = apps.get_models()
+    for lookup_conf in lookup_confs:
+        registry_items = find_models_with_matching_fields(
+            app_models=app_models,
+            field_names=lookup_conf["field_names"],
+            field_attributes=lookup_conf.get("field_attributes"),
+        )
+        feature_name = lookup_conf["feature_name"]
+        registry["model_features"][feature_name] = registry_items
 
 
 def generate_signature(request_body, secret):

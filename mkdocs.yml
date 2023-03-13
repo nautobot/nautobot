@@ -108,9 +108,10 @@ nav:
           - Nautobot Docker Images: "docker/index.md"
       - Migration:
           - Migrating from NetBox: "installation/migrating-from-netbox.md"
+          - Migrating from PostgreSQL to MySQL: "installation/migrating-from-postgresql.md"
           - Upgrading Nautobot: "installation/upgrading.md"
           - Upgrading Nautobot from v1.X to v2.0: "installation/upgrading-from-nautobot-v1.md"
-          - Migrating from PostgreSQL to MySQL: "installation/migrating-from-postgresql.md"
+          - Migrating from Region and Site to Location: "installation/region-and-site-data-migration-guide.md"
       - Configuration:
           - Configuring Nautobot: "configuration/index.md"
           - Required Settings: "configuration/required-settings.md"
@@ -210,6 +211,7 @@ nav:
       - Extending Models: "development/extending-models.md"
       - Testing: 'development/testing.md'
       - Application Registry: "development/application-registry.md"
+      - Model Features: "development/model-features.md"
       - Page Templates: "development/templates.md"
       - Navigation Menu: "development/navigation-menu.md"
       - Home Page Panels: "development/homepage.md"

@@ -1,6 +1,8 @@
 from itertools import count, groupby
 import json
 
+from django.apps import apps
+from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
 from django.utils.tree import Node
 from taggit.managers import _TaggableManager
@@ -14,6 +16,16 @@ def array_to_string(array):
     """
     group = (list(x) for _, x in groupby(sorted(array), lambda x, c=count(): next(c) - x))
     return ", ".join("-".join(map(str, (g[0], g[-1])[: len(g)])) for g in group)
+
+
+def get_all_concrete_models(base_class):
+    """Get a list of all non-abstract models that inherit from the given base_class."""
+    models = []
+    for appconfig in apps.get_app_configs():
+        for model in appconfig.get_models():
+            if issubclass(model, base_class) and not model._meta.abstract:
+                models.append(model)
+    return sorted(models, key=lambda model: (model._meta.app_label, model._meta.model_name))
 
 
 def is_taggable(obj):
@@ -131,3 +143,30 @@ def serialize_object_v2(obj):
         data = serialize_object(obj)
 
     return data
+
+
+def find_models_with_matching_fields(app_models, field_names, field_attributes=None):
+    """
+    Find all models that have fields with the specified names, and return them grouped by app.
+
+    Args:
+        app_models: A list of model classes to search through.
+        field_names: A list of names of fields that must be present in order for the model to be considered
+        field_attributes: Optional dictionary of attributes to filter the fields by.
+
+    Return:
+        A dictionary where the keys are app labels and the values are sets of model names.
+    """
+    registry_items = {}
+    field_attributes = field_attributes or {}
+    for model_class in app_models:
+        app_label, model_name = model_class._meta.label_lower.split(".")
+        for field_name in field_names:
+            try:
+                field = model_class._meta.get_field(field_name)
+                if all((getattr(field, item, None) == value for item, value in field_attributes.items())):
+                    registry_items.setdefault(app_label, set()).add(model_name)
+            except FieldDoesNotExist:
+                pass
+    registry_items = {key: sorted(value) for key, value in registry_items.items()}
+    return registry_items

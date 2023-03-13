@@ -20,9 +20,22 @@ from nautobot.dcim.models import (
     Manufacturer,
     RearPort,
 )
-from nautobot.extras.choices import DynamicGroupOperatorChoices
+from nautobot.extras.choices import (
+    CustomFieldFilterLogicChoices,
+    CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
+    RelationshipTypeChoices,
+)
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
+from nautobot.extras.models import (
+    CustomField,
+    DynamicGroup,
+    DynamicGroupMembership,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+    Status,
+)
 from nautobot.ipam.models import Prefix
 
 
@@ -406,7 +419,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Test that it's a dict with or without certain key fields.
         self.assertIsInstance(fields, dict)
         self.assertNotEqual(fields, {})
-        self.assertNotIn("q", fields)
+        self.assertNotIn("comments", fields)
         self.assertIn("name", fields)
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
@@ -509,7 +522,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         filter_fields = group.get_filter_fields()
         self.assertIsInstance(filter_fields, dict)
         self.assertNotEqual(filter_fields, {})
-        self.assertNotIn("q", filter_fields)
+        self.assertNotIn("comments", filter_fields)
         self.assertIn("name", filter_fields)
         self.assertIn("rack", filter_fields)
 
@@ -825,6 +838,107 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.nested_child.parents.clear()
         self.nested_child.delete()
 
+    def test_filter_relationships(self):
+        """Test that relationships can be used in filters."""
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+
+        device = self.devices[0]
+        prefix = Prefix.objects.first()
+
+        relationship = Relationship(
+            name="Device to Prefix",
+            slug="device_to_prefix",
+            source_type=self.device_ct,
+            source_label="My Prefixes",
+            source_filter=None,
+            destination_type=prefix_ct,
+            destination_label="My Devices",
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        relationship.validated_save()
+
+        ra = RelationshipAssociation(
+            relationship=relationship,
+            source=device,
+            destination=prefix,
+        )
+        ra.validated_save()
+
+        dg = DynamicGroup(
+            name="relationships",
+            slug="relationships",
+            description="I filter on relationships.",
+            filter={"cr_device_to_prefix__destination": [prefix.pk]},
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        # These should be the same length.
+        self.assertEqual(dg.count, 1)
+
+        # And have the same members...
+        self.assertIn(device, dg.members)
+        expected = [str(device)]
+        self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+    def test_filter_custom_fields(self):
+        """Test that relationships can be used in filters."""
+
+        device = self.devices[0]
+
+        cf = CustomField.objects.create(
+            name="favorite_food",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
+        )
+        cf.content_types.add(self.device_ct)
+
+        device._custom_field_data = {"favorite_food": "bacon"}
+        device.validated_save()
+        device.refresh_from_db()
+
+        dg = DynamicGroup(
+            name="custom_fields",
+            slug="custom_fields",
+            description="I filter on custom fields.",
+            filter={"cf_favorite_food": "bacon"},
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        # These should be the same length.
+        self.assertEqual(dg.count, 1)
+
+        # And have the same members...
+        self.assertIn(device, dg.members)
+        expected = [str(device)]
+        self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+    def test_filter_search(self):
+        """Test that search (`q` filter) can be used in filters."""
+
+        # Rename the device to explicitly match on search.
+        device = self.devices[0]
+        device.name = "pizza-party-machine"
+        device.save()
+
+        dg = DynamicGroup(
+            name="custom_fields",
+            slug="custom_fields",
+            description="I filter on the q field",
+            filter={"q": "party"},  # Let's party! 🎉
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        # These should be the same length.
+        self.assertEqual(dg.count, 1)
+
+        # And have the same members...
+        self.assertIn(device, dg.members)
+        expected = [str(device)]
+        self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
     """DynamicGroupMembership model tests."""
@@ -938,7 +1052,7 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_operator(self):
-        params = {"operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION}
+        params = {"operator": [DynamicGroupOperatorChoices.OPERATOR_INTERSECTION]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_weight(self):

@@ -8,16 +8,6 @@ from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.virtualization.graphql.types import VMInterfaceType
 
 
-class AggregateType(gql_optimizer.OptimizedDjangoObjectType):
-    """Graphql Type Object for Aggregate model."""
-
-    prefix = graphene.String()
-
-    class Meta:
-        model = models.Aggregate
-        filterset_class = filters.AggregateFilterSet
-
-
 class AssignedObjectType(graphene.Union):
     """GraphQL type object for IPAddress's assigned_object field."""
 

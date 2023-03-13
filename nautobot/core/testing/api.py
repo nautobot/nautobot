@@ -2,6 +2,7 @@ from typing import Optional, Sequence, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import ForeignKey
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.text import slugify
@@ -661,7 +662,8 @@ class APIViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_on_object(self):
-            if hasattr(self.model, "notes"):
+            notes = getattr(self.model, "notes", None)
+            if notes and isinstance(notes, ForeignKey):
                 instance1 = self._get_queryset().first()
                 # Add object-level permission
                 obj_perm = users_models.ObjectPermission(

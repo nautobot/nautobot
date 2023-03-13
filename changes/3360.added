@@ -1,0 +1,1 @@
+Added an alternate approach to updating model feature registry without having to decorate a model with `@extras_features`.

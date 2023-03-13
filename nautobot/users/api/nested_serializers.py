@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from nautobot.core.api import ContentTypeField, WritableNestedSerializer
@@ -57,8 +58,10 @@ class NestedObjectPermissionSerializer(WritableNestedSerializer):
             "actions",
         ]
 
+    @extend_schema_field(list)
     def get_groups(self, obj):
         return [g.name for g in obj.groups.all()]
 
+    @extend_schema_field(list)
     def get_users(self, obj):
         return [u.username for u in obj.users.all()]

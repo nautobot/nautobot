@@ -59,6 +59,10 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
+# Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
+# when a large number of dynamic groups are present
+CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
+
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
 # ENFORCE_GLOBAL_UNIQUE to True.

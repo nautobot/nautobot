@@ -52,8 +52,6 @@ from nautobot.dcim.filters import (
     RackReservationFilterSet,
     RearPortFilterSet,
     RearPortTemplateFilterSet,
-    RegionFilterSet,
-    SiteFilterSet,
     VirtualChassisFilterSet,
 )
 
@@ -88,8 +86,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status
@@ -106,73 +102,6 @@ def common_test_data(cls):
 
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
-
-    regions = (
-        Region.objects.create(name="Region 1", slug="region-1", description="A"),
-        Region.objects.create(name="Region 2", slug="region-2", description="B"),
-        Region.objects.create(name="Region 3", slug="region-3", description="C"),
-    )
-    cls.regions = regions
-
-    site_statuses = Status.objects.get_for_model(Site)
-    cls.site_status_map = {s.slug: s for s in site_statuses.all()}
-
-    cls.sites = (
-        Site.objects.create(
-            name="Site 1",
-            slug="site-1",
-            description="Site 1 description",
-            region=regions[0],
-            tenant=tenants[0],
-            status=cls.site_status_map["active"],
-            facility="Facility 1",
-            asn=65001,
-            latitude=10,
-            longitude=10,
-            contact_name="Contact 1",
-            contact_phone="123-555-0001",
-            contact_email="contact1@example.com",
-            physical_address="1 road st, albany, ny",
-            shipping_address="PO Box 1, albany, ny",
-            comments="comment1",
-            time_zone="America/Chicago",
-        ),
-        Site.objects.create(
-            name="Site 2",
-            slug="site-2",
-            description="Site 2 description",
-            region=regions[1],
-            tenant=tenants[1],
-            status=cls.site_status_map["planned"],
-            facility="Facility 2",
-            asn=65002,
-            latitude=20,
-            longitude=20,
-            contact_name="Contact 2",
-            contact_phone="123-555-0002",
-            contact_email="contact2@example.com",
-            physical_address="2 road st, albany, ny",
-            shipping_address="PO Box 2, albany, ny",
-            comments="comment2",
-            time_zone="America/Los_Angeles",
-        ),
-        Site.objects.create(
-            name="Site 3",
-            slug="site-3",
-            region=regions[2],
-            tenant=tenants[2],
-            status=cls.site_status_map["retired"],
-            facility="Facility 3",
-            asn=65003,
-            latitude=30,
-            longitude=30,
-            contact_name="Contact 3",
-            contact_phone="123-555-0003",
-            contact_email="contact3@example.com",
-            comments="comment3",
-            time_zone="America/Detroit",
-        ),
-    )
 
     lt1 = LocationType.objects.get(name="Campus")
     lt2 = LocationType.objects.get(name="Building")
@@ -648,211 +577,6 @@ def common_test_data(cls):
     )
 
 
-class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
-    queryset = Region.objects.all()
-    filterset = RegionFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        common_test_data(cls)
-
-        cls.parent_regions = list(Region.objects.filter(children__isnull=False)[:3])
-        cls.child_regions = list(Region.objects.filter(parent__in=cls.parent_regions)[:3])
-
-    def test_description(self):
-        regions = Region.objects.exclude(description="")[:2]
-        params = {"description": [regions[0].description, regions[1].description]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(description__in=[regions[0].description, regions[1].description]).count(),
-        )
-
-    def test_parent(self):
-        with self.subTest():
-            params = {"parent": [self.parent_regions[0].pk, self.parent_regions[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.distinct().count(),
-                self.queryset.filter(parent__in=[self.parent_regions[0].pk, self.parent_regions[1].pk]).count(),
-            )
-        with self.subTest():
-            params = {"parent": [self.parent_regions[0].slug, self.parent_regions[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.distinct().count(),
-                self.queryset.filter(parent__in=[self.parent_regions[0], self.parent_regions[1]]).count(),
-            )
-
-    def test_children(self):
-        with self.subTest():
-            params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__in=[self.child_regions[0], self.child_regions[1]]).distinct(),
-            )
-        with self.subTest():
-            params = {"children": [self.child_regions[0].pk, self.child_regions[2].pk]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk]).distinct(),
-            )
-
-    def test_has_children(self):
-        with self.subTest():
-            params = {"has_children": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=False).distinct(),
-            )
-        with self.subTest():
-            params = {"has_children": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=True).distinct(),
-            )
-
-    def test_sites(self):
-        regions = Region.objects.filter(sites__isnull=False).distinct()[:2]
-        sites = [regions[0].sites.first(), regions[1].sites.first()]
-        params = {"sites": [sites[0].pk, sites[1].slug]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__in=[sites[0].pk, sites[1].pk]).distinct(),
-        )
-
-    def test_has_sites(self):
-        with self.subTest():
-            params = {"has_sites": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=False).distinct().count(),
-            )
-        with self.subTest():
-            params = {"has_sites": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=True).count(),
-            )
-
-
-class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
-    queryset = Site.objects.all()
-    filterset = SiteFilterSet
-    tenancy_related_name = "sites"
-
-    @classmethod
-    def setUpTestData(cls):
-        common_test_data(cls)
-
-        cls.regions = Region.objects.filter(sites__isnull=True, parent__isnull=True, children__isnull=True)[:2]
-        Site.objects.create(name="Site 4", status=cls.site_status_map["retired"])
-        Site.objects.create(name="Site 5", region=cls.regions[0], status=cls.site_status_map["active"])
-        Site.objects.create(name="Site 6", region=cls.regions[1], status=cls.site_status_map["active"])
-
-    def test_facility(self):
-        params = {"facility": ["Facility 1", "Facility 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_asn(self):
-        params = {"asn": [65001, 65002]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(asn__in=[65001, 65002]).count()
-        )
-
-    def test_latitude(self):
-        params = {"latitude": [10, 20]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_longitude(self):
-        params = {"longitude": [10, 20]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_contact_name(self):
-        params = {"contact_name": ["Contact 1", "Contact 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_contact_phone(self):
-        params = {"contact_phone": ["123-555-0001", "123-555-0002"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_contact_email(self):
-        params = {"contact_email": ["contact1@example.com", "contact2@example.com"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_status(self):
-        statuses = list(Status.objects.get_for_model(Site)[:2])
-        params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(status__slug__in=params["status"]).count(),
-        )
-
-    def test_region(self):
-        with self.subTest():
-            params = {"region": [self.regions[0].pk, self.regions[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(region__in=[self.regions[0].pk, self.regions[1].pk]).distinct().count(),
-            )
-        with self.subTest():
-            params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(region__slug__in=[self.regions[0].slug, self.regions[1].slug]).distinct().count(),
-            )
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
-    def test_comments(self):
-        with self.subTest():
-            params = {"comments": "COMMENT"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
-        with self.subTest():
-            params = {"comments": "comment123"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
-        with self.subTest():
-            params = {"comments": "comment2"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_time_zone(self):
-        with self.subTest():
-            params = {"time_zone": ["America/Los_Angeles", "America/Chicago"]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(time_zone__in=params["time_zone"]).count(),
-            )
-        with self.subTest():
-            params = {"time_zone": [""]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(time_zone="").count()
-            )
-
-    def test_physical_address(self):
-        with self.subTest():
-            params = {"physical_address": "1 road st, albany, ny"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        with self.subTest():
-            params = {"physical_address": "nomatch"}
-            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-
-    def test_shipping_address(self):
-        with self.subTest():
-            params = {"shipping_address": "PO Box 1, albany, ny"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        with self.subTest():
-            params = {"shipping_address": "nomatch"}
-            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-
-    def test_description(self):
-        with self.subTest():
-            params = {"description": "Site 1 description"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        with self.subTest():
-            params = {"description": "nomatch"}
-            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-
-
 class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = LocationType.objects.all()
     filterset = LocationTypeFilterSet
@@ -1087,7 +811,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         with self.subTest():
             self.assertEqual(Rack.objects.exclude(outer_unit="").count(), 3)
         with self.subTest():
-            params = {"outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER}
+            params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
@@ -1208,13 +932,13 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
-            params = {"subdevice_role": SubdeviceRoleChoices.ROLE_PARENT}
+            params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_PARENT]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT),
             )
         with self.subTest():
-            params = {"subdevice_role": SubdeviceRoleChoices.ROLE_CHILD}
+            params = {"subdevice_role": [SubdeviceRoleChoices.ROLE_CHILD]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD),
@@ -1405,11 +1129,10 @@ class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_feed_leg(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A),
         )
 
 
@@ -1419,11 +1142,10 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
+        params = {"type": [InterfaceTypeChoices.TYPE_1GE_FIXED]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=InterfaceTypeChoices.TYPE_1GE_FIXED),
         )
 
     def test_mgmt_only(self):
@@ -1452,11 +1174,10 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
 
 
@@ -1483,11 +1204,10 @@ class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(**params),
+            self.queryset.filter(type=PortTypeChoices.TYPE_8P8C),
         )
 
     def test_positions(self):
@@ -1579,8 +1299,18 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         devices = Device.objects.all()
 
         # Create a device with no components for testing the "has_*" filters
+        device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturers[0],
+            comments="Non-component Device Type",
+            model="Non-component Model",
+            slug="non-component-model",
+            part_number="Part Number 1",
+            u_height=1,
+            is_full_depth=True,
+        )
+
         Device.objects.create(
-            device_type=DeviceType.objects.first(),
+            device_type=device_type,
             location=devices[0].location,
             name="Device 4",
             platform=Platform.objects.first(),
@@ -1636,8 +1366,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_face(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"face": DeviceFaceChoices.FACE_FRONT}
+        params = {"face": [DeviceFaceChoices.FACE_FRONT]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             Device.objects.filter(face=DeviceFaceChoices.FACE_FRONT),
@@ -1965,7 +1694,7 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
     def test_feed_leg(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
+        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_connected(self):
@@ -2248,8 +1977,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_mode(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"mode": InterfaceModeChoices.MODE_ACCESS}
+        params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_device_with_common_vc(self):
@@ -2419,8 +2147,7 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
@@ -2485,8 +2212,7 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PortTypeChoices.TYPE_8P8C}
+        params = {"type": [PortTypeChoices.TYPE_8P8C]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
@@ -2911,8 +2637,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_length_unit(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"length_unit": CableLengthUnitChoices.UNIT_FOOT}
+        params = {"length_unit": [CableLengthUnitChoices.UNIT_FOOT]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_device(self):
@@ -3086,20 +2811,17 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
 
     def test_type(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"type": PowerFeedTypeChoices.TYPE_PRIMARY}
+        params = {"type": [PowerFeedTypeChoices.TYPE_PRIMARY]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_supply(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"supply": PowerFeedSupplyChoices.SUPPLY_AC}
+        params = {"supply": [PowerFeedSupplyChoices.SUPPLY_AC]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_phase(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"phase": PowerFeedPhaseChoices.PHASE_3PHASE}
+        params = {"phase": [PowerFeedPhaseChoices.PHASE_3PHASE]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_connected(self):
@@ -3140,13 +2862,13 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
-            params = {"failover_strategy": "active-active"}
+            params = {"failover_strategy": ["active-active"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-active"),
             )
         with self.subTest():
-            params = {"failover_strategy": "active-passive"}
+            params = {"failover_strategy": ["active-passive"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive"),

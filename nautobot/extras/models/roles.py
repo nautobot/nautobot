@@ -7,12 +7,10 @@ from nautobot.extras.utils import RoleModelsQuery, extras_features
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Role(NameColorContentTypesModel):
@@ -38,7 +36,6 @@ class RoleField(ForeignKeyLimitedByContentTypes):
         kwargs.setdefault("to", Role)
         kwargs.setdefault("on_delete", models.PROTECT)
         kwargs.setdefault("blank", True)
-        kwargs.setdefault("related_name", "%(app_label)s_%(class)s_related")
         super().__init__(*args, **kwargs)
 
 

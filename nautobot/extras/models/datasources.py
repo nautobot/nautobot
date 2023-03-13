@@ -15,10 +15,8 @@ from nautobot.extras.utils import extras_features
 
 @extras_features(
     "config_context_owners",
-    "custom_fields",
     "export_template_owners",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class GitRepository(PrimaryModel):
@@ -71,6 +69,7 @@ class GitRepository(PrimaryModel):
         default=None,
         blank=True,
         null=True,
+        related_name="git_repositories",
     )
 
     # Data content types that this repo is a source of. Valid options are dynamically generated based on

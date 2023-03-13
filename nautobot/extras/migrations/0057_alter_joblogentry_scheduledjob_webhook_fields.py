@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0055_joblogentry_scheduledjob_webhook_data_migration"),
+        ("extras", "0056_joblogentry_scheduledjob_webhook_data_migration"),
     ]
 
     operations = [

@@ -43,7 +43,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType, DynamicGroupType
-from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
+from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,6 @@ registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
-registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
 registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType

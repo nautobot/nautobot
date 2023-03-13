@@ -9,9 +9,9 @@ from nautobot.core.filters import (
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.circuits.models import Circuit
-from nautobot.dcim.models import Device, Location, Rack, RackReservation, Site
+from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -65,14 +65,6 @@ class TenantFilterSet(NautobotFilterSet):
         queryset=TenantGroup.objects.all(),
         field_name="tenant_group",
         label="Tenant group (slug or ID)",
-    )
-    aggregates = django_filters.ModelMultipleChoiceFilter(
-        queryset=Aggregate.objects.all(),
-        label="Aggregates (ID)",
-    )
-    has_aggregates = RelatedMembershipBooleanFilter(
-        field_name="aggregates",
-        label="Has aggregates",
     )
     circuits = django_filters.ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
@@ -149,11 +141,6 @@ class TenantFilterSet(NautobotFilterSet):
     has_route_targets = RelatedMembershipBooleanFilter(
         field_name="route_targets",
         label="Has route targets",
-    )
-    sites = NaturalKeyOrPKMultipleChoiceFilter(queryset=Site.objects.all(), label="Sites (slug or ID)")
-    has_sites = RelatedMembershipBooleanFilter(
-        field_name="sites",
-        label="Has sites",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),

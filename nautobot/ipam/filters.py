@@ -10,6 +10,7 @@ from nautobot.core.filters import (
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
 )
@@ -20,7 +21,6 @@ from nautobot.ipam import choices
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -33,7 +33,6 @@ from .models import (
 
 
 __all__ = (
-    "AggregateFilterSet",
     "IPAddressFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
@@ -148,34 +147,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
         return qs.ip_family(value)
 
 
-class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin):
-    prefix = django_filters.CharFilter(
-        method="filter_prefix",
-        label="Prefix",
-    )
-    rir_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=RIR.objects.all(),
-        label="RIR (ID) - Deprecated (use rir filter)",
-    )
-    rir = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=RIR.objects.all(),
-        label="RIR (ID or slug)",
-    )
-    tag = TagFilter()
-
-    class Meta:
-        model = Aggregate
-        fields = ["id", "date_added"]
-
-    def filter_prefix(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        try:
-            return queryset.net_equals(netaddr.IPNetwork(value))
-        except (AddrFormatError, ValueError):
-            return queryset.none()
-
-
 class PrefixFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
@@ -233,12 +204,20 @@ class PrefixFilterSet(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )
+    rir = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RIR.objects.all(),
+        label="RIR (slug or ID)",
+    )
+    has_rir = RelatedMembershipBooleanFilter(
+        field_name="rir",
+        label="Has RIR",
+    )
     type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
     tag = TagFilter()
 
     class Meta:
         model = Prefix
-        fields = ["id", "type", "prefix"]
+        fields = ["date_allocated", "id", "type", "prefix"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()

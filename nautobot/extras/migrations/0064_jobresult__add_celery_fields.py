@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0063_remove_site_and_region_attributes_from_config_context"),
+        ("extras", "0063_rename_configcontext_role"),
     ]
 
     operations = [

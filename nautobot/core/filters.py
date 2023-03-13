@@ -183,7 +183,7 @@ class NumericArrayFilter(django_filters.NumberFilter):
 
 class ContentTypeFilterMixin:
     """
-    Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.site").
+    Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.location").
     """
 
     def filter(self, qs, value):
@@ -205,7 +205,7 @@ class ContentTypeFilterMixin:
 
 class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
     """
-    Allows character-based ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+    Allows character-based ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
 
     Does not support limiting of choices. Can be used without arguments on a `FilterSet`:
 
@@ -216,7 +216,7 @@ class ContentTypeFilter(ContentTypeFilterMixin, django_filters.CharFilter):
 class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilter):
     """
     Allows character-based ContentType filtering by <app_label>.<model> (e.g.
-    "dcim.site") but an explicit set of choices must be provided.
+    "dcim.location") but an explicit set of choices must be provided.
 
     Example use on a `FilterSet`:
 
@@ -228,7 +228,7 @@ class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilte
 
 class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
-    Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.site").
+    Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
 
     Defaults to joining multiple options with "AND". Pass `conjoined=False` to
     override this behavior to join with "OR" instead.
@@ -343,12 +343,12 @@ class MappedPredicatesFilterMixin:
         super().__init__(*args, **kwargs)
 
         # Generate the query with a sentinel value to validate it and surface parse errors.
-        self.generate_query(value="", filter_predicates=self.filter_predicates)
+        self.generate_query(value="")
 
-    def generate_query(self, value, filter_predicates=None, **kwargs):
+    def generate_query(self, value, **kwargs):
         """
-        Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
-        predicate=value.
+        Given a `value`, return a `Q` object for 2-tuple of `predicate=value`. Filter predicates are
+        read from the instance filter. Any `kwargs` are ignored.
         """
 
         def noop(v):
@@ -356,7 +356,7 @@ class MappedPredicatesFilterMixin:
             return v
 
         query = models.Q()
-        for field_name, lookup_info in filter_predicates.items():
+        for field_name, lookup_info in self.filter_predicates.items():
             # Unless otherwise specified, set the default prepreprocssor
             if isinstance(lookup_info, str):
                 lookup_expr = lookup_info
@@ -367,7 +367,7 @@ class MappedPredicatesFilterMixin:
 
             # Or set it to what was defined by caller
             elif isinstance(lookup_info, dict):
-                lookup_expr = lookup_info["lookup_expr"]
+                lookup_expr = lookup_info.get("lookup_expr")
                 preprocessor = lookup_info.get("preprocessor")
                 if not callable(preprocessor):
                     raise TypeError("Preprocessor {preprocessor} must be callable!")
@@ -393,7 +393,7 @@ class MappedPredicatesFilterMixin:
             return qs
 
         # Evaluate the query and stash it for later use (such as introspection or debugging)
-        query = self.generate_query(value=value, filter_predicates=self.filter_predicates)
+        query = self.generate_query(value=value)
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()
@@ -585,10 +585,6 @@ class BaseFilterSet(django_filters.FilterSet):
         ):
             lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
-        # These filter types support only negation
-        elif existing_filter.extra.get("choices"):
-            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
-
         elif isinstance(
             existing_filter,
             (
@@ -707,6 +703,16 @@ class BaseFilterSet(django_filters.FilterSet):
 
         filters.update(new_filters)
         return filters
+
+    @classmethod
+    def filter_for_lookup(cls, field, lookup_type):
+        """Override filter_for_lookup method to set ChoiceField Filter to MultipleChoiceFilter.
+
+        Note: Any CharField or IntegerField with choices set is a ChoiceField.
+        """
+        if lookup_type == "exact" and getattr(field, "choices", None):
+            return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+        return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)
