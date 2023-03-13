@@ -29,7 +29,7 @@ HIDDEN_INPUTS = """
 """
 
 NO_CONFIRM_BUTTON = """
-<button type="submit" form="form_id_{button_id}" class="btn btn-sm btn-{button_class}">{button_text}</button>
+<button type="submit" form="form_id_{button_id}" class="btn btn-sm btn-{button_class}" {disabled}>{button_text}</button>
 """
 
 NO_CONFIRM_FORM = """
@@ -39,7 +39,7 @@ NO_CONFIRM_FORM = """
 """
 
 CONFIRM_BUTTON = """
-<button type="button" class="btn btn-sm btn-{button_class}" data-toggle="modal" data-target="#confirm_modal_id_{button_id}">
+<button type="button" class="btn btn-sm btn-{button_class}" data-toggle="modal" data-target="#confirm_modal_id_{button_id}" {disabled}>
   {button_text}
 </button>
 """
@@ -104,6 +104,7 @@ def job_buttons(context, obj):
             "object": obj,
             "job": jb.job,
             "hidden_inputs": hidden_inputs,
+            "disabled": "" if context["user"].has_perms(("extras.run_jobbutton", "extras.run_job")) else "disabled",
         }
 
         # Organize job buttons by group
