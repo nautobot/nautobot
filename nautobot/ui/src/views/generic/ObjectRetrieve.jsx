@@ -1,5 +1,5 @@
 import { Tab, Tabs, TabList, TabPanel, TabPanels, Table } from "@nautobot/nautobot-ui"
-import { Card, CardHeader, CardBody, CardFooter } from "@chakra-ui/react"
+import { Card, CardHeader, CardBody, CardFooter } from "@chakra-ui/react"  // TODO: use nautobot-ui when available
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
 import { useParams } from "react-router-dom"

@@ -29,6 +29,7 @@ export default function Paginator({ url, data_count, page_size, active_page }) {
   }
 
   for (let i = 0; i < num_pages; i++) {
+    // TODO: come up with equivalent nautobot-ui pattern here; the below is from react-bootstrap
     /*
     if (i === active_page) {
       pages.push(<Pagination.Item active key={i} href={list_url + `?limit=${page_size}&offset=${page_size * i}`}>{i + 1}</Pagination.Item>)
@@ -42,6 +43,7 @@ export default function Paginator({ url, data_count, page_size, active_page }) {
     <Frame>
       <PaginatorForm start={start_range} end={end_range} total_count={data_count}></PaginatorForm>
     </Frame>
+    // TODO: come up with equivalent nautobot-ui pattern here; the below is from react-bootstrap
     /*
     <Row>
       <Col sm={9}>

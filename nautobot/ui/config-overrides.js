@@ -32,6 +32,7 @@ module.exports = function override(config) {
   config.output.assetModuleFilename = "static/media/[name].[ext]"
   config.output.chunkFilename = "static/js/[id]-[chunkhash].js" // DO have Webpack hash chunk filename
 
+  // TODO: tradeoffs here for performance, see https://webpack.js.org/configuration/devtool/
   config.devtool = 'eval-cheap-module-source-map'
   /*
   console.log(">> AFTER config.output:")

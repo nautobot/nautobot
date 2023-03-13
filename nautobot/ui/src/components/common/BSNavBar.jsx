@@ -1,4 +1,5 @@
 import { Flex, Box, Link, Button } from "@nautobot/nautobot-ui"
+// TODO: replace chakra-ui imports with nautobot-ui imports when available
 import { Spacer, Image, Menu, MenuButton, MenuDivider, MenuList, MenuGroup, MenuItem } from "@chakra-ui/react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSignIn, faSignOut } from "@fortawesome/free-solid-svg-icons";

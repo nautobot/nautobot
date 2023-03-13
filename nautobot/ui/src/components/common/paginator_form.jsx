@@ -20,6 +20,7 @@ export default function PaginatorForm({ start, end, total_count }) {
         {paginator_string}
       </Text>
     </Box>
+    // TODO: come up with equivalent nautobot-ui pattern to the below, from react-bootstrap
     /*
     <Col sm={3}>
       <Form.Control
