@@ -1,5 +1,5 @@
 from nautobot.utilities.choices import ChoiceSet
-
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 #
 # Banners (currently plugin-specific)
@@ -94,6 +94,16 @@ class ButtonClassChoices(ChoiceSet):
         (CLASS_DANGER, "Danger (red)"),
         (CLASS_LINK, "None (link)"),
     )
+
+
+#
+# CustomLinks
+#
+
+
+@class_deprecated_in_favor_of(ButtonClassChoices)
+class CustomLinkButtonClassChoices(ButtonClassChoices):
+    pass
 
 
 #
