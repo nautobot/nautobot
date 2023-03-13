@@ -20,6 +20,57 @@ The buttons appear at the top right corner of an object's individual detail page
 !!! warning
     As you can see, there is no `commit` option for a Job Button like there is for a normal Job. All Job Buttons will run `commit=True` **implicitly**.
 
+![Job Button Form](../../media/models/jobbutton_form.png "Job Button Form")
+
+## Required Permissions
+
+!!! note
+    In order to run any job via a Job Button, a user must be assigned the `extras.run_job` **as well as** the `extras.run_jobbutton` permissions. This is achieved by assigning the user (or group) a permission on the `extras > job` and `extras > jobbutton` objects and specifying the `run` action in the **Additional actions** section. Any user lacking these permissions may still see the button on the respective page(s) - if not using [conditional rendering](#conditional-rendering) - but they will be disabled.
+
+## Context Data
+
+The following context data is available within the template when rendering a Job Button's text.
+
+| Variable | Description |
+|----------|-------------|
+| `obj`      | The Nautobot object being displayed |
+| `debug`    | A boolean indicating whether debugging is enabled |
+| `request`  | The current WSGI request |
+| `user`     | The current user (if authenticated) |
+| `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
+
+All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
+
+## Conditional Rendering
+
+Only buttons which render with non-empty text are included on the page. You can employ conditional Jinja2 logic to control the conditions under which a button gets rendered.
+
+For example, if you only want to display a button for active devices, you could set the button text to
+
+```jinja2
+{% if obj.status.slug == 'active' %}Provision{% endif %}
+```
+
+The button will not appear when viewing a device with any status other than `Active`.
+
+As another example, if you wanted to show only devices belonging to a certain manufacturer, you could do something like this:
+
+```jinja2
+{% if obj.device_type.manufacturer.name == 'Cisco' %}Provision{% endif %}
+```
+
+The button will only appear when viewing a device with a manufacturer name of `Cisco`.
+
+As a last example, you can hide the button for users that lack the proper permissions to run a job like this:
+
+```jinja2
+{% if perms.extras.run_job %}Provision{% endif %}
+```
+
+The button will only appear if they have the permission to run jobs.
+
+![Job Buttons on Site object](../../media/models/site_jobbuttons.png "Job Buttons on Site object")
+
 ## Job Button Receivers
 
 Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](../../additional-features/jobs.md#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
@@ -67,100 +118,16 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         # Run Device Job function
 
     def receive_job_button(self, obj):
+        user = self.request.user
         if isinstance(obj, Site):
-            self._run_site_job(obj)
-        elif isinstance(obj, Device):
-            self._run_device_job(obj)
-        else:
-            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+            if not user.has_perm("dcim.add_site"):
+                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Site.")
+                return
+            return self._run_site_job(obj)
+        if isinstance(obj, Device):
+            if not user.has_perm("dcim.add_device"):
+                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
+                return
+            return self._run_device_job(obj)
+        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
 ```
-
-### Add a Job Button to Existing Jobs
-
-As was explained above, Job Buttons may only be associated to JobButtonReceiver subclasses. If you have an existing Job that would work as a Job Button, you can either rewrite it to be a JobButtonReceiver (as above) or you can move the existing logic to a callable that each Job subclass would call. This would allow the existing Job to remain while also adding the Job Button functionality.
-
-```py
-from nautobot.dcim.models import Device, Site
-from nautobot.extras.jobs import Job, ObjectVar, JobButtonReceiver
-
-
-class ExampleSiteObjectJob(Job):
-    site = ObjectVar(model=Site)
-
-    class Meta:
-        name = "Example Site Object Job"
-
-    def run(self, data, commit):
-        site = data["site"]
-        if commit:
-            _run_site_job(self, site)
-
-
-class ExampleDeviceObjectJob(Job):
-    device = ObjectVar(model=Device)
-
-    class Meta:
-        name = "Example Device Object Job"
-
-    def run(self, data, commit):
-        device = data["device"]
-        if commit:
-            _run_device_job(self, device)
-
-
-class ExampleJobButtonReceiverOtherJobs(JobButtonReceiver):
-    class Meta:
-        name = "Example Job Button Receiver for Other Jobs"
-
-    def receive_job_button(self, obj):
-        if isinstance(obj, Site):
-            _run_site_job(self, obj)
-        elif isinstance(obj, Device):
-            _run_device_job(self, obj)
-        else:
-            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
-
-
-def _run_site_job(job_class, obj):
-    job_class.log_info(obj=obj, message="Running Site Job.")
-    # Add Site job logic here
-
-
-def _run_device_job(job_class, obj):
-    job_class.log_info(obj=obj, message="Running Device Job.")
-    # Add Device job logic here
-```
-
-## Context Data
-
-The following context data is available within the template when rendering a Job Button's text.
-
-| Variable | Description |
-|----------|-------------|
-| `obj`      | The Nautobot object being displayed |
-| `debug`    | A boolean indicating whether debugging is enabled |
-| `request`  | The current WSGI request |
-| `user`     | The current user (if authenticated) |
-| `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
-
-All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
-
-## Conditional Rendering
-
-Only buttons which render with non-empty text are included on the page. You can employ conditional Jinja2 logic to control the conditions under which a button gets rendered.
-
-For example, if you only want to display a button for active devices, you could set the button text to
-
-```jinja2
-{% if obj.status.slug == 'active' %}Provision{% endif %}
-```
-
-The button will not appear when viewing a device with any status other than `Active`.
-
-As another example, if you wanted to show only devices belonging to a certain manufacturer, you could do something like this:
-
-```jinja2
-{% if obj.device_type.manufacturer.name == 'Cisco' %}Provision{% endif %}
-```
-
-The button will only appear when viewing a device with a manufacturer name of `Cisco`.
