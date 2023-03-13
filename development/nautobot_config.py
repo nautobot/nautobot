@@ -51,11 +51,11 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
     )
     SOCIAL_AUTH_KEYCLOAK_KEY = "nautobot"
     SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"
-    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8080/auth/realms/nautobot/").json()["public_key"]
+    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/").json()["public_key"]
     SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = (
-        f"{ os.getenv('SSO_HOST') }/auth/realms/nautobot/protocol/openid-connect/auth"
+        f"{ os.getenv('SSO_HOST') }/realms/nautobot/protocol/openid-connect/auth"
     )
-    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "https://keycloak:8443/auth/realms/nautobot/protocol/openid-connect/token"
+    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
 
 METRICS_ENABLED = True
