@@ -1,4 +1,5 @@
-import { Button, Card, Col, Form, Row } from "react-bootstrap"
+import { Button, FormControl, FormLabel, Input } from "@nautobot/nautobot-ui"
+import { Card, CardHeader, CardBody, CardFooter } from "@chakra-ui/react"
 import axios from "axios"
 
 
@@ -17,27 +18,23 @@ export default function Login() {
       .catch(err => alert(err.detail))
   }
   return (
-    <Row style={{ marginTop: "150px" }}>
-      <Col sm={{ span: 4, offset: 4 }}>
-        <Form method="POST" onSubmit={handleSubmit}>
-          <Card>
-            <Card.Header>Log In</Card.Header>
-            <Card.Body>
-              <Form.Group controlId="id_username">
-                <Form.Label>Username</Form.Label>
-                <Form.Control type="text" name="username" autoCapitalize="none" autoFocus autoComplete="username" maxLength={150} required />
-              </Form.Group>
-              <Form.Group controlId="id_password">
-                <Form.Label>Password</Form.Label>
-                <Form.Control type="password" name="password" autoCapitalize="none" autoComplete="current-password" required />
-              </Form.Group>
-            </Card.Body>
-            <Card.Footer className="text-end">
+      <Card>
+        <form method="POST" onSubmit={handleSubmit}>
+            <CardHeader>Log In</CardHeader>
+            <CardBody>
+              <FormControl>
+                <FormLabel>Username</FormLabel>
+                <Input isRequired={true} name="username"></Input>
+              </FormControl>
+              <FormControl>
+                <FormLabel>Password</FormLabel>
+                <Input isRequired={true} name="password" type="password"></Input>
+              </FormControl>
+            </CardBody>
+            <CardFooter>
               <Button type="submit">Log In</Button>
-            </Card.Footer>
-          </Card>
-        </Form>
-      </Col>
-    </Row>
+            </CardFooter>
+        </form>
+      </Card>
   )
 }

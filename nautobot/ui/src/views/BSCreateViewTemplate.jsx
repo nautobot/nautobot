@@ -1,5 +1,6 @@
 import axios from "axios"
-import { Button, Col, Card, Row } from "react-bootstrap"
+import { Button, Frame, Text } from "@nautobot/nautobot-ui"
+import { Card, CardHeader, CardBody } from "@chakra-ui/react"  // TODO import from nautobot-ui when available
 import Cookies from 'js-cookie'
 import { useState } from "react"
 // import { RJSFSchema } from "@rjsf/utils";
@@ -39,26 +40,24 @@ export default function BSCreateViewTemplate({ list_url }) {
   })
 
   return (
-    <Row>
-      <Col>
-        <h1>Add a new {model_name} "{list_url}"</h1>
-        <Card>
-          <Card.Body>
-            <Card.Title>{model_name_title}</Card.Title>
-              <Form
-                action={list_url}
-                method="post"
-                schema={post_schema}
-                validator={validator}
-                formData={formData}
-                onChange={e => setFormData(Object.assign(e.formData, {"csrfmiddlewaretoken": csrf_token}))}
-                onSubmit={onSubmit}
-              >
-                <Button type="submit">Create</Button>
-            </Form>
-          </Card.Body>
-        </Card>
-      </Col>
-    </Row>
+    <Frame>
+      <Card>
+        <CardHeader>Add a new {model_name} "{list_url}"</CardHeader>
+        <CardBody>
+          <Text>{model_name_title}</Text>
+          <Form
+            action={list_url}
+            method="post"
+            schema={post_schema}
+            validator={validator}
+            formData={formData}
+            onChange={e => setFormData(Object.assign(e.formData, {"csrfmiddlewaretoken": csrf_token}))}
+            onSubmit={onSubmit}
+          >
+            <Button type="submit">Create</Button>
+          </Form>
+        </CardBody>
+      </Card>
+    </Frame>
   );
 }

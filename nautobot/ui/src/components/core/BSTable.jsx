@@ -1,40 +1,40 @@
-import { Form, Table } from "react-bootstrap"
+import { Checkbox, Table, Thead, Tr, Th, Tbody, Td } from "@nautobot/nautobot-ui"
 
 import BSTableItem from "@components/core/BSTableItem"
 
 
 export default function NautobotTable({ data, headers }) {
   return (
-    <Table hover responsive>
-      <thead>
-        <tr>
-          <th>
-            <Form.Check type="checkbox" className="" id="" />
-          </th>
+    <Table>
+      <Thead>
+        <Tr>
+          <Th>
+            <Checkbox></Checkbox>
+          </Th>
           {headers.map(({ name, label }) => (
-            <th key={name}>{label}</th>
+            <Th key={name}>{label}</Th>
           ))}
-        </tr>
-      </thead>
-      <tbody>
+        </Tr>
+      </Thead>
+      <Tbody>
         {data.map((item) => (
-          <tr key={item.id}>
-            <td>
-              <Form.Check type="checkbox" className="" id="" />
-            </td>
+          <Tr key={item.id}>
+            <Td>
+              <Checkbox></Checkbox>
+            </Td>
             {headers.map((header, idx) => (
-              <td key={idx}>
+              <Td key={idx}>
                 <BSTableItem
                   name={header.name}
                   obj={item[header.name]}
                   url={window.location.pathname + item["id"]}
                   link={idx === 0}
                 />
-              </td>
+              </Td>
             ))}
-          </tr>
+          </Tr>
         ))}
-      </tbody>
+      </Tbody>
     </Table>
   );
 }

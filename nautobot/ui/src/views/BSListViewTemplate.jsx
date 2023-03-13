@@ -1,4 +1,5 @@
-import { Button, ButtonGroup, Col, Container, Row } from "react-bootstrap"
+import { Button, Frame, Link } from "@nautobot/nautobot-ui"
+import { ButtonGroup } from "@chakra-ui/react"  // TODO: import from nautobot-ui when available
 import * as Icon from "react-icons/tb"
 import { useLocation, useSearchParams } from "react-router-dom"
 import useSWR from "swr"
@@ -41,26 +42,14 @@ export default function BSListViewTemplate({ list_url }) {
   const tableHeader = data[1].formData.data
   const dataCount = data[0].formData.count
   return (
-    <Container>
-      <Row>
-        <Col>
-          <ButtonGroup>
-            <Button href={`${location.pathname}add`}><Icon.TbPlus /> Add</Button>{' '}
-            <Button variant="info"><Icon.TbDatabaseImport /> Import</Button>{' '}
-            <Button variant="success"><Icon.TbDatabaseExport /> Export</Button>{' '}
-          </ButtonGroup>
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <NautobotTable data={tableData} headers={tableHeader} />
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <Paginator url={location.pathname} data_count={dataCount} page_size={size} active_page={active_page_number}></Paginator>
-        </Col>
-      </Row>
-    </Container>
+    <Frame>
+      <ButtonGroup>
+        <Button><Link href={`${location.pathname}add`}><Icon.TbPlus /> Add</Link></Button>{' '}
+        <Button variant="secondary"><Icon.TbDatabaseImport /> Import</Button>{' '}
+        <Button variant="secondary"><Icon.TbDatabaseExport /> Export</Button>{' '}
+      </ButtonGroup>
+      <NautobotTable data={tableData} headers={tableHeader} />
+      <Paginator url={location.pathname} data_count={dataCount} page_size={size} active_page={active_page_number}></Paginator>
+    </Frame>
   );
 }

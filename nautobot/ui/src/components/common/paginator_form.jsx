@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Col, Form } from "react-bootstrap"
+import { Box, Text, Select } from "@nautobot/nautobot-ui"
 import { useSearchParams } from "react-router-dom"
 
 
@@ -9,6 +9,19 @@ export default function PaginatorForm({ start, end, total_count }) {
   const { setType } = useState("PaginatorForm");
 
   return (
+    <Box>
+      <Select>
+        <option>50</option>
+        <option>100</option>
+        <option>200</option>
+        <option>500</option>
+      </Select>
+      <Text>
+        {paginator_string}
+      </Text>
+    </Box>
+    // TODO: come up with equivalent nautobot-ui pattern to the below, from react-bootstrap
+    /*
     <Col sm={3}>
       <Form.Control
         as="select"
@@ -30,5 +43,6 @@ export default function PaginatorForm({ start, end, total_count }) {
         {paginator_string}
       </Form.Text>
     </Col >
+    */
   )
 }

@@ -29,9 +29,11 @@ module.exports = function override(config) {
   // config.output.path = path.resolve(__dirname, "build/static")  // Should be in STATICFILES_DIRS
   // config.output.publicPath = process.env.NAUTOBOT_STATIC_URL // Should match STATIC_URL
   config.output.filename =  "static/js/[name].js" // No filename hashing; Django collectstatic takes care of this
-  config.output.assetModuleFilename = "static/media/[name].[ext]",
+  config.output.assetModuleFilename = "static/media/[name].[ext]"
   config.output.chunkFilename = "static/js/[id]-[chunkhash].js" // DO have Webpack hash chunk filename
 
+  // TODO: tradeoffs here for performance, see https://webpack.js.org/configuration/devtool/
+  config.devtool = 'eval-cheap-module-source-map'
   /*
   console.log(">> AFTER config.output:")
   console.log(config.output)

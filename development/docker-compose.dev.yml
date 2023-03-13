@@ -21,19 +21,22 @@ services:
     volumes:
       - ../:/source
   nodejs:
-    image: node:slim
+    image: node:18-slim
     environment:
       PORT: "3000"
       # DEBUG: "express:*" # nodejs web server debug logging
     ports:
       - "3000:3000"
     working_dir: /opt/node/nautobot
-    user: node
+    # user: node  # Best practice, but "nautobot" container currently uses root --> permission issues for shared volume
     volumes:
       - ../nautobot/ui/:/opt/node/nautobot
       - ../examples/:/opt/examples
       - ../:/source
-    command: >
-      bash -c "npm install && npm run start"  # TODO: running npm install every time is slow, can we persist a volume?
+      - node_modules:/opt/node/nautobot/node_modules
+    # Wait for nautobot container to be fully ready, meaning that it's already run `npm install/build` successfully
     depends_on:
-      - nautobot
+      nautobot:
+        condition: service_healthy
+    command: >
+      bash -c "npm run start"
