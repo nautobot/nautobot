@@ -21,8 +21,7 @@ services:
     volumes:
       - ../:/source
   nodejs:
-    # Changed from node:slim because slim doesn't include git and openssh-client
-    image: node:18
+    image: node:18-slim
     environment:
       PORT: "3000"
       # DEBUG: "express:*" # nodejs web server debug logging
