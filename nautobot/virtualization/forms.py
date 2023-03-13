@@ -48,7 +48,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -477,6 +477,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "location_id": "null",
         },
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP Addresses",
+        brief_mode=False,
+    )
 
     class Meta:
         model = VMInterface
@@ -487,6 +493,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "parent_interface",
             "bridge",
             "mac_address",
+            "ip_addresses",
             "mtu",
             "description",
             "mode",
