@@ -860,7 +860,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         default=ButtonClassChoices.CLASS_DEFAULT,
     )
     confirmation = models.BooleanField(
-        help_text="Enable confirmation pop-up box. <font color='#ff0000'>WARNING: unselecting this option will allow the Job to run (and commit changes) with a single click!</font>",
+        help_text="Enable confirmation pop-up box. <span class='text-danger'>WARNING: unselecting this option will allow the Job to run (and commit changes) with a single click!</span>",
         default=True,
     )
 
