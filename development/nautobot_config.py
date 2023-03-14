@@ -57,4 +57,3 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
 
 METRICS_ENABLED = True
-
