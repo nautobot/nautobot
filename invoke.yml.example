@@ -34,6 +34,3 @@ nautobot:
 #     - "docker-compose.mysql.yml"
 #     - "docker-compose.dev.yml"
 #     - "docker-compose.keycloak.yml"
-#   enable_oidc: "True"
-#   sso_host: "http://localhost:8087"
-#   nautobot_host: "http://localhost:8080"

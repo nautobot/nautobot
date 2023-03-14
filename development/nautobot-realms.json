@@ -1,11 +1,4 @@
-{#
-	This template is an export from Keycloak.
-	See https://github.com/keycloak/keycloak-documentation/blob/main/server_admin/topics/export-import.adoc for instructions on how to run the export.
-	Once you have the export you want to variablize the public cert, private cert, and the endpoints.
 
-	Additionally, when you run the export from Keycloak it will export everything in the realm, this is not needed for import.
-	Look at the fields in the JSON and remove any additional fields that comes from your export that you don't need.
-#}
 {
   "id": "Nautobot Realm",
   "realm": "nautobot",
@@ -155,7 +148,6 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "7b1c3527-8702-4742-af69-2b74ee5742e8",
       "redirectUris": [
-        "{{ nautobot_host }}/complete/keycloak/",
         "http://localhost:8080/complete/keycloak/"
       ],
       "webOrigins": [],
