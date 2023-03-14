@@ -1,6 +1,6 @@
 # SSO Development Environment With Keycloak
 
-SSO in local development environments can be less than clear to setup at times. By simply defining `invoke.yml` and running `invoke provision-sso` Nautobot now provides a development environment with SSO fully configured and working.
+SSO in local development environments can be less than clear to setup at times. By simply using the `docker-compose.keycloak.yml` Docker compose file, Nautobot now provides a development environment with SSO fully configured and working.
 
 ## Keycloak Containers
 
@@ -34,16 +34,6 @@ nautobot:
     - "docker-compose.postgres.yml"
     - "docker-compose.dev.yml"
     - "docker-compose.keycloak.yml"
-```
-
-### Provisioning Keycloak
-
-Initial configuration of Keycloak is done via a templated JSON file that is generated via `invoke provision-sso`. This must be done before starting Keycloak and Nautobot, it is recommended to start with all services down to ensure services are provisioned correctly. Defining `invoke.yml` is required before attempting to provision the local SSO environment.
-
-```bash
-➜ invoke stop           # ensure all services are stopped
-➜ invoke provision-sso  # generate Keycloak configuration
-➜ invoke start          # start services
 ```
 
 ## Validating Setup
