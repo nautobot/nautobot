@@ -1,1 +1,0 @@
-Changed Homepage ObjectChange query to not join User or Content Type tables, use record cache for user entries instead.
