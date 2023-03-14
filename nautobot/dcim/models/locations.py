@@ -131,10 +131,10 @@ class LocationQuerySet(TreeQuerySet):
         """
         Handle variadic args so that the user doesn't have to specify an arbitrary number of `None` for ancestors.
 
-        In other words, treat `(grandparent, parent, me)` as synonymous with `(None, None, grandparent, parent, me)`.
+        In other words, treat `(me, parent, grandparent)` as synonymous with `(me, parent, grandparent, None, None)`.
         """
         natural_key = self.model.get_natural_key_fields()
-        natural_key = natural_key[-len(args) :]
+        natural_key = natural_key[: len(args)]
         return dict(zip(natural_key, args))
 
 
@@ -276,16 +276,24 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         for _ in range(cls.objects.max_tree_depth() + 1):
             natural_key.append(name)
             name = f"parent__{name}"
-        return list(reversed(natural_key))
+        return natural_key
 
     def natural_key(self):
         """
         Custom natural key implementation for Location.
 
-        Needed because with the uniqueness constraint of (parent, name) we end up with a theoretically infinite
+        Needed because with the uniqueness constraint of (name, parent) we end up with a theoretically infinite
         recursive natural key.
         """
-        return [ancestor.name for ancestor in self.ancestors(include_self=True)]
+        try:
+            return [ancestor.name for ancestor in reversed(self.ancestors(include_self=True))]
+        except Location.DoesNotExist:
+            instance = self
+            keys = []
+            while instance is not None:
+                keys.append(instance.name)
+                instance = instance.parent
+            return keys
 
     def get_absolute_url(self):
         return reverse("dcim:location", args=[self.slug])

@@ -80,9 +80,28 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         return errors
 
 
+class TaggedItemManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    def get_by_natural_key(self, *args):
+        return self.get(
+            tag__name=args[0],
+            content_type__app_label=args[1],
+            content_type__model=args[2],
+            object_id=args[3],
+        )
+
+
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
     object_id = models.UUIDField()
 
+    objects = TaggedItemManager()
+
     class Meta:
         index_together = ("content_type", "object_id")
+
+    @classmethod
+    def get_natural_key_fields(cls):
+        return ["tag__name", "content_type__app_label", "content_type__model", "object_id"]
+
+    def natural_key(self):
+        return [self.tag.name, self.content_type.app_label, self.content_type.model, self.object_id]

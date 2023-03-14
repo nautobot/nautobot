@@ -288,6 +288,16 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
+    # TODO: The current Prefix model has no appropriate natural key available yet.
+    #       However, since BaseModel now inherits from NaturalKeyModel, by default all Nautobot model classes
+    #       now have a `natural_key` property; but for this model, accessing the natural_key will raise an exception.
+    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
+    class AttributeRemover:
+        def __get__(self, instance, owner):
+            raise AttributeError("Prefix doesn't yet have a natural key!")
+
+    natural_key = AttributeRemover()
+
     csv_headers = [
         "prefix",
         "type",
@@ -879,6 +889,8 @@ class VLANGroup(OrganizationalModel):
         ]
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
+
+    _natural_key = ["name", "location"]
 
     def clean(self):
         super().clean()

@@ -14,7 +14,10 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         """
         Get the maximum depth of any tree in this queryset.
         """
-        return self.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first().tree_depth
+        deepest = self.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first()
+        if deepest is not None:
+            return deepest.tree_depth
+        return 0
 
 
 class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):

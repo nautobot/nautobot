@@ -12,7 +12,6 @@ from django.utils import timezone
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import flatten_dict
 
 

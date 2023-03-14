@@ -59,7 +59,12 @@ class BaseModel(NaturalKeyModel):
         self.save()
 
     def natural_key(self):
-        """See https://github.com/wq/django-natural-keys/issues/18."""
+        """
+        Smarter default implementation of natural key construction.
+
+        1. Handles nullable foreign keys (https://github.com/wq/django-natural-keys/issues/18)
+        2. Handles variadic natural-keys (e.g. Location model - [name, parent__name, parent__parent__name, ...].)
+        """
         vals = []
         for name_list in [name.split("__") for name in self.get_natural_key_fields()]:
             val = self
@@ -68,7 +73,13 @@ class BaseModel(NaturalKeyModel):
                 if val is None:
                     break
             vals.append(val)
-        return vals
+        # Strip trailing Nones from vals
+        cleaned_vals = []
+        for val in reversed(vals):
+            if val is None and not cleaned_vals:
+                continue
+            cleaned_vals = [val] + cleaned_vals
+        return cleaned_vals
 
     natural_key_separator = "/"
 

@@ -19,20 +19,6 @@ def count_related(model, field):
 
 
 class RestrictedQuerySet(NaturalKeyQuerySet):
-    def filter(self, *args, **kwargs):
-        """Implement custom version of natural-key slug filtering from django-natural-keys."""
-        natural_key_slug = kwargs.pop("natural_key_slug", None)
-        if natural_key_slug and isinstance(natural_key_slug, str):
-            keys = [unquote_plus(key) for key in natural_key_slug.split(self.model.natural_key_separator)]
-            # Map null strings back to None
-            keys = [key if key != "\0" else None for key in keys]
-            fields = self.model.get_natural_key_fields()
-            if len(keys) != len(fields):
-                return self.none()
-            kwargs.update(self.natural_key_kwargs(*keys))
-
-        return super().filter(*args, **kwargs)
-
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
@@ -115,3 +101,42 @@ class RestrictedQuerySet(NaturalKeyQuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
+
+    def filter(self, *args, **kwargs):
+        """
+        Extend base queryset with support for filtering by `natural_key_slug=...`.
+
+        This is an enhanced version of natural-key slug support from django-natural-keys.
+        Counterpart to BaseModel.natural_key_slug property. Specifically, this handles:
+
+        - Un-escaping of individual fields in the natural key slug (unquote_plus())
+        - Translation of null character as a slug field value back to a python None.
+        """
+        natural_key_slug = kwargs.pop("natural_key_slug", None)
+        if natural_key_slug and isinstance(natural_key_slug, str):
+            keys = [unquote_plus(key) for key in natural_key_slug.split(self.model.natural_key_separator)]
+            # Map null strings back to None
+            keys = [key if key != "\0" else None for key in keys]
+            fields = self.model.get_natural_key_fields()
+            if len(keys) > len(fields):
+                return self.none()
+            kwargs.update(self.natural_key_kwargs(*keys))
+
+        return super().filter(*args, **kwargs)
+
+    def natural_key_kwargs(self, *args):
+        """
+        Enhanced version of an API for django-natural-keys.
+
+        Specifically, this handles variadic natural key fields by inserting additional `None` args as needed.
+        """
+        natural_key_fields = self.model.get_natural_key_fields()
+        args = list(args)
+        while len(args) < len(natural_key_fields):
+            args.append(None)
+        if len(args) != len(natural_key_fields):
+            raise TypeError(
+                f"Wrong number of natural-key args for {self.model.__name__} -- "
+                f"expected {len(natural_key_fields)} but got {len(args)}"
+            )
+        return dict(zip(natural_key_fields, args))
