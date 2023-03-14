@@ -42,6 +42,20 @@ class UserViewSet(ModelViewSet):
         serializer = self.serializer_class(instance=request.user, context={"request": request})
         return Response(serializer.data)
 
+    @action(methods=["GET"], detail=False, url_path="session")
+    def session(self, request):
+        from django.conf import settings as django_settings
+        from nautobot.core.settings_funcs import sso_auth_enabled
+
+        serializer = self.serializer_class(instance=request.user, context={"request": request})
+
+        resp = {
+            "user": serializer.data,
+            "sso_enabled": sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS)
+        }
+
+        return Response(resp)
+
 
 @extend_schema_view(
     bulk_destroy=extend_schema(request=BulkOperationIntegerIDSerializer(many=True)),
