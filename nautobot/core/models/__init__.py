@@ -108,4 +108,8 @@ class BaseModel(NaturalKeyModel):
         if unique:
             return (unique[0].name,)
 
-        raise Exception("Add a UniqueConstraint to use natural-keys")
+        raise Exception(
+            f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
+            "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
+            "you probably need to explicitly declare a natural-key for this model."
+        )
