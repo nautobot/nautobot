@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
@@ -512,19 +512,20 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         """
         if not isinstance(ip_addresses, (tuple, list)):
             ip_addresses = [ip_addresses]
-        for ip in ip_addresses:
-            instance = self.ip_addresses.through(
-                ip_address=ip,
-                vm_interface=self,
-                is_source=is_source,
-                is_destination=is_destination,
-                is_default=is_default,
-                is_preferred=is_preferred,
-                is_primary=is_primary,
-                is_secondary=is_secondary,
-                is_standby=is_standby,
-            )
-            instance.validated_save()
+        with transaction.atomic():
+            for ip in ip_addresses:
+                instance = self.ip_addresses.through(
+                    ip_address=ip,
+                    vm_interface=self,
+                    is_source=is_source,
+                    is_destination=is_destination,
+                    is_default=is_default,
+                    is_preferred=is_preferred,
+                    is_primary=is_primary,
+                    is_secondary=is_secondary,
+                    is_standby=is_standby,
+                )
+                instance.validated_save()
         return len(ip_addresses)
 
     def remove_ip_addresses(self, ip_addresses):
@@ -539,10 +540,11 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         count = 0
         if not isinstance(ip_addresses, (tuple, list)):
             ip_addresses = [ip_addresses]
-        for ip in ip_addresses:
-            qs = self.ip_addresses.through.objects.filter(ip_address=ip, vm_interface=self)
-            count += qs.count()
-            qs.delete()
+        with transaction.atomic():
+            for ip in ip_addresses:
+                qs = self.ip_addresses.through.objects.filter(ip_address=ip, vm_interface=self)
+                deleted_count, _ = qs.delete()
+                count += deleted_count
         return count
 
     @property

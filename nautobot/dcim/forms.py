@@ -1711,10 +1711,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interface_ip_assignments = IPAddressToInterface.objects.filter(
                     interface__in=interface_ids
-                ).prefetch_related("ip_address")
+                ).select_related("ip_address")
                 if interface_ip_assignments.exists():
                     ip_list = [
                         (

@@ -90,11 +90,13 @@ class VMInterfaceTestCase(TestCase):
         self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
 
         # add single instance
-        vm_interface.add_ip_addresses(ips[-1])
+        count = vm_interface.add_ip_addresses(ips[-1])
+        self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], vm_interface=vm_interface).count(), 1)
 
         # add multiple instances
-        vm_interface.add_ip_addresses(ips[:5])
+        count = vm_interface.add_ip_addresses(ips[:5])
+        self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 6)
         for ip in ips[:5]:
             self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, vm_interface=vm_interface).count(), 1)
@@ -111,12 +113,15 @@ class VMInterfaceTestCase(TestCase):
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 10)
 
         # remove single instance
-        vm_interface.remove_ip_addresses(ips[-1])
+        count = vm_interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 9)
 
         # remove multiple instances
-        vm_interface.remove_ip_addresses(ips[:5])
+        count = vm_interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 4)
 
-        vm_interface.remove_ip_addresses(ips)
+        count = vm_interface.remove_ip_addresses(ips)
+        self.assertEqual(count, 4)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 0)
