@@ -30,4 +30,3 @@ htmlcov/*
 /examples/example_plugin/example_plugin/static/example_plugin/docs/
 # Allow separate ENV file for keycloak and ignore the templated keycloak configuration
 !keycloak.env
-nautobot-realms.json

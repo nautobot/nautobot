@@ -10,11 +10,6 @@ Keycloak is run in the same docker-compose project as Nautobot and has it own se
 
 The `invoke.yml` file must be updated to add `development/docker-compose.keycloak.yml` to the docker-compose project and to enable OIDC. These setting are solely for local development inside the Nautobot repository and is not applicable to any other deployment.
 
-* enable_oidc - Stringified boolean value that must be set to `"True"` for the `nautobot_config.py` load the SSO configuration.
-* sso_host - This is the base url for Keycloak that is accessible for the user, default value is for running the development environment on `localhost` only overload if performing remote development.
-* nautobot_host - This is the base url for Nautobot that is accessible for the user, default value is for running the development environment on `localhost` only overload if performing remote development.
-* compose_files - List of docker-compose files needed for nautobot deployment.
-
 #### Example invoke.yml
 
 Example running development environment on localhost.
@@ -27,7 +22,6 @@ nautobot:
     - "docker-compose.postgres.yml"
     - "docker-compose.dev.yml"
     - "docker-compose.keycloak.yml"
-  enable_oidc: "True"
 ```
 
 Example running development environment on remote host.
@@ -40,9 +34,6 @@ nautobot:
     - "docker-compose.postgres.yml"
     - "docker-compose.dev.yml"
     - "docker-compose.keycloak.yml"
-  enable_oidc: "True"
-  sso_host: "http://192.168.0.2:8087"
-  nautobot_host: "http://192.168.0.2:8080"
 ```
 
 ### Provisioning Keycloak
@@ -61,10 +52,10 @@ Once all steps are completed Nautobot should now have the `Continue to SSO` butt
 
 ### Keycloak Login Credentials
 
-Keycloak admin console is reachable via `http://localhost:8087/` with user `admin` and password `admin`. The below users are pre-configured within Keycloak, at this time their permissions are not directly mapped to any permissions provided by default by Nautobot. This will be a later enhancement to the local development environment.
+Keycloak admin console is reachable via `http://localhost:8087/admin/` with user `admin` and password `admin`. The below users are pre-configured within Keycloak, at this time their permissions are not directly mapped to any permissions provided by default by Nautobot. This will be a later enhancement to the local development environment.
 
 | Username         | Password  |
 +------------------+-----------+
 | nautobot_unpriv  | unpriv123 |
-| nautonot_admin   | admin123  |
+| nautobot_admin   | admin123  |
 | nautobot_auditor | audit123  |

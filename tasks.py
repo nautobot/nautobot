@@ -71,12 +71,6 @@ namespace.configure(
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
-            # Development SSO Configuration
-            "enable_saml": "False",
-            "enable_oidc": "False",
-            # Endpoint reachable by user's browser
-            "sso_host": "http://localhost:8087",
-            "nautobot_host": "http://localhost:8080",
         }
     }
 )
@@ -167,9 +161,6 @@ def docker_compose(context, command, **kwargs):
     env.update(
         {
             "PYTHON_VER": context.nautobot.python_ver,
-            "ENABLE_SAML": context.nautobot.enable_saml,
-            "ENABLE_OIDC": context.nautobot.enable_oidc,
-            "SSO_HOST": context.nautobot.sso_host,
         }
     )
     if "hide" not in kwargs:
