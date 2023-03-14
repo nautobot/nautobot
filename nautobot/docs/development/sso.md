@@ -24,18 +24,6 @@ nautobot:
     - "docker-compose.keycloak.yml"
 ```
 
-Example running development environment on remote host.
-
-```yaml
----
-nautobot:
-  compose_files:
-    - "docker-compose.yml"
-    - "docker-compose.postgres.yml"
-    - "docker-compose.dev.yml"
-    - "docker-compose.keycloak.yml"
-```
-
 ## Validating Setup
 
 Once all steps are completed Nautobot should now have the `Continue to SSO` button on the login screen and should immediately redirect the user to sign in with Keycloak.
