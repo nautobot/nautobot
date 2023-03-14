@@ -499,9 +499,13 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             # >>> serializer.errors
             # {'__all__': [ErrorDetail(string='Prefix with this Namespace, Network and Prefix length already exists.', code='unique_together')]}
             except ValidationError as err:
-                msg = f"{obj} failed validation: {err}"
-                logger.debug(msg)
-                form.add_error("prefix", msg)
+                # msg = f"{obj} failed validation: {err}"
+                logger.exception(err)
+                for field, errors in err.message_dict.items():
+                    if field == "__all__":
+                        field = None
+                    for error in errors:
+                        form.add_error(field, error)
 
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
