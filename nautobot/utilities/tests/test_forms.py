@@ -17,6 +17,7 @@ from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
 from nautobot.utilities.filters import MultiValueCharFilter
 from nautobot.utilities.forms.fields import (
     CSVDataField,
+    DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
     MultiMatchModelMultipleChoiceField,
@@ -456,33 +457,48 @@ class CSVDataFieldTest(TestCase):
             self.field.clean(input_)
 
 
+class DynamicModelChoiceFieldTest(TestCase):
+    """Tests for DynamicModelChoiceField."""
+
+    def setUp(self):
+        self.field = DynamicModelChoiceField(queryset=IPAddress.objects.all())
+        self.field_with_to_field_name = DynamicModelChoiceField(
+            queryset=IPAddress.objects.all(), to_field_name="address"
+        )
+
+    def test_prepare_value_invalid_uuid(self):
+        """A nonexistent UUID PK value should be handled gracefully."""
+        value = "c671a001-4c17-4ca1-80fd-fe1609bcadec"
+        self.assertEqual(self.field.prepare_value(value), value)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(value), value)
+
+    def test_prepare_value_valid_uuid(self):
+        """A UUID PK referring to an actual object should be handled correctly."""
+        address = IPAddress.objects.create(address="10.1.1.1/24")
+        self.assertEqual(self.field.prepare_value(address.pk), address.pk)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(address.pk), address.address)
+
+    def test_prepare_value_valid_object(self):
+        """An object reference should be handled correctly."""
+        address = IPAddress.objects.create(address="10.1.1.1/24")
+        self.assertEqual(self.field.prepare_value(address), address.pk)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
+
+
 class DynamicModelMultipleChoiceFieldTest(TestCase):
     """Tests for DynamicModelMultipleChoiceField."""
 
     def setUp(self):
         self.field = DynamicModelMultipleChoiceField(queryset=IPAddress.objects.all())
-
-    def test_prepare_value_single_str(self):
-        """A single string (UUID) value should be treated as a single-entry list."""
-        self.assertEqual(
-            self.field.prepare_value("c671a001-4c17-4ca1-80fd-fe1609bcadec"),
-            ["c671a001-4c17-4ca1-80fd-fe1609bcadec"],
+        self.field_with_to_field_name = DynamicModelMultipleChoiceField(
+            queryset=IPAddress.objects.all(), to_field_name="address"
         )
 
     def test_prepare_value_multiple_str(self):
         """A list of string (UUID) values should be handled as-is."""
-        self.assertEqual(
-            self.field.prepare_value(["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]),
-            ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"],
-        )
-
-    def test_prepare_value_single_object(self):
-        """A single object value should be translated to its corresponding PK."""
-        address = IPAddress.objects.create(address="10.1.1.1/24")
-        self.assertEqual(
-            self.field.prepare_value(address),
-            address.pk,
-        )
+        values = ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]
+        self.assertEqual(self.field.prepare_value(values), values)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(values), values)
 
     def test_prepare_value_multiple_object(self):
         """A list of object values should be translated to a list of PKs."""
@@ -491,6 +507,10 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
         self.assertEqual(
             self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
+        )
+        self.assertEqual(
+            self.field_with_to_field_name.prepare_value([address_1, address_2]),
+            [address_1.address, address_2.address],
         )
 
 

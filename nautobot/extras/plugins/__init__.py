@@ -1,5 +1,6 @@
 import collections
 import inspect
+from functools import partial
 from importlib import import_module
 from logging import getLogger
 
@@ -18,6 +19,7 @@ from nautobot.core.apps import (
     register_menu_items,
     register_homepage_panels,
 )
+from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
@@ -35,6 +37,7 @@ registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
+registry["app_metrics"] = []
 
 
 #
@@ -93,6 +96,7 @@ class NautobotAppConfig(NautobotConfig):
     homepage_layout = "homepage.layout"
     jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
+    metrics = "metrics.metrics"
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
@@ -146,6 +150,15 @@ class NautobotAppConfig(NautobotConfig):
         if jobs is not None:
             register_jobs(jobs)
             self.features["jobs"] = jobs
+
+        # Import metrics (if present)
+        metrics = import_object(f"{self.__module__}.{self.metrics}")
+        if metrics is not None:
+            register_metrics(metrics)
+            self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
+            # Inject the metrics to discover into the signal handler.
+            signal_callback = partial(discover_metrics, metrics=metrics)
+            nautobot_database_ready.connect(signal_callback, sender=self)
 
         # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
@@ -424,6 +437,16 @@ def register_jobs(class_list):
     # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
 
 
+def register_metrics(function_list):
+    """
+    Register a list of metric functions
+    """
+    for metric in function_list:
+        if not callable(metric):
+            raise TypeError(f"{metric} is not a callable.")
+        registry["app_metrics"].append(metric)
+
+
 class FilterExtension:
     """Class that may be returned by a registered Filter Extension function."""
 
@@ -695,3 +718,24 @@ def register_override_views(override_views, plugin):
         for pattern in app_resolver.url_patterns:
             if isinstance(pattern, URLPattern) and hasattr(pattern, "name") and pattern.name == view_name:
                 pattern.callback = view
+
+
+def discover_metrics(sender, *, apps, metrics, **kwargs):
+    """
+    Callback to discover metrics.
+
+    This is necessary because we need to actually evaluate the metric generator fully to discover which metrics it
+    provides. This allows us to give an accurate overview on the plugin detail page. However, because the metrics might
+    import models themselves, they can only be run after migrations have taken place. This is ensured by connecting
+    this signal handler to the nautobot_database_ready signal for each app.
+    """
+    if not metrics:
+        return
+    for metric in metrics:
+        # Iterate over all the metric instances in this metric. This is done because a single callable might
+        # return multiple metrics with different names. Note: If a metric is _always_ returned from its
+        # callable, there would be inconsistency in the 'features' dict. This would however be a bad practice on
+        # the metric definition side, as any metric that _could_ exist _should_ always also exist, even if set
+        # to some initial value (ref: https://prometheus.io/docs/practices/instrumentation/#avoid-missing-metrics).
+        for metric_instance in metric():
+            sender.features["metrics"].append(metric_instance.name)

@@ -520,6 +520,21 @@ class DynamicModelChoiceMixin:
 
         return attrs
 
+    def prepare_value(self, value):
+        """
+        Augment the behavior of forms.ModelChoiceField.prepare_value().
+
+        Specifically, if `value` is a PK, but we have `to_field_name` set, we need to look up the model instance
+        from the given PK, so that the base class will get the appropriate field value rather than just keeping the PK,
+        because the rendered form field needs this in order to correctly prepopulate a default selection.
+        """
+        if self.to_field_name and is_uuid(value):
+            try:
+                value = self.queryset.get(pk=value)
+            except ObjectDoesNotExist:
+                pass
+        return super().prepare_value(value)
+
     def get_bound_field(self, form, field_name):
         bound_field = BoundField(form, self, field_name)
 
@@ -580,20 +595,6 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultip
 
     filter = django_filters.ModelMultipleChoiceFilter
     widget = widgets.APISelectMultiple
-
-    def prepare_value(self, value):
-        """
-        Ensure that a single string value (i.e. UUID) is accurately represented as a list of one item.
-
-        This is necessary because otherwise the superclass will split the string into individual characters,
-        resulting in an error (https://github.com/nautobot/nautobot/issues/512).
-
-        Note that prepare_value() can also be called with an object instance or list of instances; in that case,
-        we do *not* want to convert a single instance to a list of one entry.
-        """
-        if isinstance(value, str):
-            value = [value]
-        return super().prepare_value(value)
 
 
 class LaxURLField(forms.URLField):
