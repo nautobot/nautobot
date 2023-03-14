@@ -29,8 +29,12 @@ __all__ = (
 #
 
 
-class UserManager(BaseManager.from_queryset(RestrictedQuerySet), UserManager_):
-    pass
+class UserManager(BaseManager, UserManager_):
+    """
+    Natural-key subclass of Django's UserManager.
+
+    Note that this is *NOT* based around RestrictedQuerySet.
+    """
 
 
 class User(BaseModel, AbstractUser):
@@ -42,7 +46,6 @@ class User(BaseModel, AbstractUser):
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
-    # We must use the stock UserManager instead of RestrictedQuerySet from BaseModel
     objects = UserManager()
 
     class Meta:
