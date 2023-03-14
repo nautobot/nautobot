@@ -650,6 +650,16 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     def get_duplicates(self):
         return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
+    # TODO: The current IPAddress model has no appropriate natural key available yet.
+    #       However, since BaseModel now inherits from NaturalKeyModel, by default all Nautobot model classes
+    #       now have a `natural_key` property; but for this model, accessing the natural_key will raise an exception.
+    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
+    class AttributeRemover:
+        def __get__(self, instance, owner):
+            raise AttributeError("IPAddress doesn't yet have a natural key!")
+
+    natural_key = AttributeRemover()
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
         """Return a cached "slaac" `Status` object for later reference."""
