@@ -5,14 +5,12 @@ from django.dispatch import receiver
 from nautobot.ipam.models import Prefix, VRF
 
 
-@receiver(pre_save, sender=Prefix)
-@receiver(pre_save, sender=VRF)
 @receiver(pre_save, sender=VRF.devices.through)
 @receiver(pre_save, sender=VRF.prefixes.through)
 def ipam_object_saved(sender, instance, raw=False, **kwargs):
     """
-    Forcibly call `full_clean()` when a new IPAM object is manually saved to prevent creation of
-    invalid objects.
+    Forcibly call `full_clean()` when a new IPAM intermediate model is manually saved to prevent
+    creation of invalid objects.
     """
     if raw:
         return
