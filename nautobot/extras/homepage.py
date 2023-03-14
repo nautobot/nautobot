@@ -14,7 +14,7 @@ def get_job_results(request):
 
 def get_changelog(request):
     """Callback function to collect changelog for panel."""
-    return ObjectChange.objects.restrict(request.user, "view").select_related("user", "changed_object_type")[:15]
+    return ObjectChange.objects.restrict(request.user, "view")[:15]
 
 
 layout = (
