@@ -289,6 +289,20 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            <tr>
+                                <td>App Metrics</td>
+                                <td>
+                                    {% if features.metrics %}
+                                        <ul class="list-unstyled">
+                                            {% for metric in features.metrics %}
+                                                <li><code>{{ metric }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ False | render_boolean }}
+                                    {% endif %}
+                                </td>
+                            </tr>
                         {% endwith %}
                     </table>
                 </div>

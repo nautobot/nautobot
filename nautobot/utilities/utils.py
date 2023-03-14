@@ -16,7 +16,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
-from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
+from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
 from django.template import engines
@@ -289,7 +289,7 @@ def dict_to_filter_params(d, prefix=""):
     return params
 
 
-def normalize_querydict(querydict):
+def normalize_querydict(querydict, form_class=None):
     """
     Convert a QueryDict to a normal, mutable dictionary, preserving list values. For example,
 
@@ -301,10 +301,28 @@ def normalize_querydict(querydict):
 
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
+
+    A `form_class` can be provided as a way to hint which query parameters should be treated as lists.
     """
-    if not querydict:
-        return {}
-    return {k: v if len(v) > 1 else v[0] for k, v in querydict.lists()}
+    result = {}
+    if querydict:
+        for key, value_list in querydict.lists():
+            if len(value_list) > 1:
+                # More than one value in the querydict for this key, so keep it as a list
+                # TODO: we could check here and de-listify value_list if the form_class field is a single-value one?
+                result[key] = value_list
+            elif (
+                form_class is not None
+                and key in form_class.base_fields
+                # ModelMultipleChoiceField is *not* itself a subclass of MultipleChoiceField, thanks Django!
+                and isinstance(form_class.base_fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
+            ):
+                # Even though there's only a single value in the querydict for this key, the form wants it as a list
+                result[key] = value_list
+            else:
+                # Only a single value in the querydict for this key, and no guidance otherwise, so make it single
+                result[key] = value_list[0]
+    return result
 
 
 def deepmerge(original, new):
@@ -357,26 +375,10 @@ def prepare_cloned_fields(instance):
     Compile an object's `clone_fields` list into a string of URL query parameters. Tags are automatically cloned where
     applicable.
     """
-    form_class = get_form_for_model(instance)
-    form = form_class() if form_class is not None else None
     params = []
     for field_name in getattr(instance, "clone_fields", []):
         field = instance._meta.get_field(field_name)
         field_value = field.value_from_object(instance)
-
-        # For foreign-key fields, if the ModelForm's field has a defined `to_field_name`,
-        # use that field from the related object instead of its PK.
-        # Example: Location.parent, LocationForm().fields["parent"].to_field_name = "slug", so use slug rather than PK.
-        if isinstance(field, ForeignKey):
-            related_object = getattr(instance, field_name)
-            if (
-                related_object is not None
-                and form is not None
-                and field_name in form.fields
-                and hasattr(form.fields[field_name], "to_field_name")
-                and form.fields[field_name].to_field_name is not None
-            ):
-                field_value = getattr(related_object, form.fields[field_name].to_field_name)
 
         # Swap out False with URL-friendly value
         if field_value is False:

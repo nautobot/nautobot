@@ -4,7 +4,9 @@ import urllib.parse
 from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
+from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.extras.registry import registry
 from nautobot.utilities.testing import TestCase
 
 
@@ -268,3 +270,27 @@ class LoginUI(TestCase):
         self.client.logout()
         sso_login_search_result = self.make_request()
         self.assertIsNotNone(sso_login_search_result)
+
+
+class MetricsViewTestCase(TestCase):
+    def query_and_parse_metrics(self):
+        response = self.client.get(reverse("metrics"))
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
+        page_content = response.content.decode(response.charset)
+        return text_string_to_metric_families(page_content)
+
+    def test_metrics_extensibility(self):
+        """Assert that the example metric from the example plugin shows up _exactly_ when the plugin is enabled."""
+        test_metric_name = "nautobot_example_metric_count"
+        metrics_with_plugin = self.query_and_parse_metrics()
+        metric_names_with_plugin = {metric.name for metric in metrics_with_plugin}
+        self.assertIn(test_metric_name, metric_names_with_plugin)
+        with override_settings(PLUGINS=[]):
+            # Clear out the app metric registry because it is not updated when settings are changed but Nautobot is not
+            # restarted.
+            registry["app_metrics"].clear()
+            metrics_without_plugin = self.query_and_parse_metrics()
+            metric_names_without_plugin = {metric.name for metric in metrics_without_plugin}
+            self.assertNotIn(test_metric_name, metric_names_without_plugin)
+        metric_names_with_plugin.remove(test_metric_name)
+        self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
