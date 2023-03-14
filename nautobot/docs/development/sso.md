@@ -4,7 +4,7 @@ SSO in local development environments can be less than clear to setup at times. 
 
 ## Keycloak Containers
 
-Keycloak is run in the same docker-compose project as Nautobot and has it own set of environment variables & docker-compose file. This is done to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak. This is solely meant for local development and testing, this is not a production ready reference for deploying Keycloak for SSO.
+Keycloak is run in the same docker-compose project as Nautobot and has its own set of environment variables & docker-compose file. This is done to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak. This is solely meant for local development and testing, this is not a production ready reference for deploying Keycloak for SSO.
 
 ### Update invoke.yml
 
