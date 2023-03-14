@@ -300,7 +300,7 @@ def reassign_model_instances_to_locations(apps, model):
     LocationType = apps.get_model("dcim", "locationtype")
     location_ct = ContentType.objects.get_for_model(Location)
     location_type_ct = ContentType.objects.get_for_model(LocationType)
-    model_class = apps.get_model("dcim", f"{model}")
+    model_class = apps.get_model("dcim", model)
     model_ct = ContentType.objects.get_for_model(model_class)
     if model == "region":
         model_lt = LocationType.objects.get(name="Region")
