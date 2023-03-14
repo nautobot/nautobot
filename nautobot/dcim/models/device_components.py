@@ -2,7 +2,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
 from django.urls import reverse
 
@@ -604,11 +604,12 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="interface",
+        through="ipam.IPAddressToInterface",
+        related_name="interfaces",
+        blank=True,
+        verbose_name="IP Addresses",
     )
 
     csv_headers = [
@@ -771,6 +772,69 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                             )
                         }
                     )
+
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
+
+        Returns:
+            Number of instances added.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        with transaction.atomic():
+            for ip in ip_addresses:
+                instance = self.ip_addresses.through(
+                    ip_address=ip,
+                    interface=self,
+                    is_source=is_source,
+                    is_destination=is_destination,
+                    is_default=is_default,
+                    is_preferred=is_preferred,
+                    is_primary=is_primary,
+                    is_secondary=is_secondary,
+                    is_standby=is_standby,
+                )
+                instance.validated_save()
+        return len(ip_addresses)
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        count = 0
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        with transaction.atomic():
+            for ip in ip_addresses:
+                qs = self.ip_addresses.through.objects.filter(ip_address=ip, interface=self)
+                deleted_count, _ = qs.delete()
+                count += deleted_count
+        return count
 
     @property
     def is_connectable(self):

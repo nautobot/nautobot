@@ -1336,11 +1336,14 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         # Assign primary IPs for filtering
         interfaces = Interface.objects.all()
         ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=interfaces[0]),
-            IPAddress.objects.create(address="192.0.2.2/24", assigned_object=interfaces[1]),
-            IPAddress.objects.create(address="2600::1/120", assigned_object=interfaces[0]),
-            IPAddress.objects.create(address="2600::0100/120", assigned_object=interfaces[1]),
+            IPAddress.objects.create(address="192.0.2.1/24"),
+            IPAddress.objects.create(address="192.0.2.2/24"),
+            IPAddress.objects.create(address="2600::1/120"),
+            IPAddress.objects.create(address="2600::0100/120"),
         )
+
+        interfaces[0].add_ip_addresses([ipaddresses[0], ipaddresses[2]])
+        interfaces[1].add_ip_addresses([ipaddresses[1], ipaddresses[3]])
 
         Device.objects.filter(pk=devices[0].pk).update(
             primary_ip4=ipaddresses[0],

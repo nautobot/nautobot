@@ -22,7 +22,7 @@ from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
 )
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.virtualization.models import (
     Cluster,
@@ -172,6 +172,12 @@ class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixi
         required=False,
         many=True,
     )
+    ip_addresses = SerializedPKRelatedField(
+        queryset=IPAddress.objects.all(),
+        serializer=NestedIPAddressSerializer,
+        required=False,
+        many=True,
+    )
     parent_interface = NestedVMInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
 
@@ -187,6 +193,7 @@ class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixi
             "bridge",
             "mtu",
             "mac_address",
+            "ip_addresses",
             "description",
             "mode",
             "untagged_vlan",
