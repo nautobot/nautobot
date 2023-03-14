@@ -57,6 +57,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         self.vlan_group = apps.get_model("ipam", "vlangroup")
         self.vlan = apps.get_model("ipam", "vlan")
         self.cluster_type = apps.get_model("virtualization", "clustertype")
+        self.object_permission = apps.get_model("users", "objectpermission")
         self.cluster = apps.get_model("virtualization", "cluster")
         self.status = apps.get_model("extras", "status")
         self.tag = apps.get_model("extras", "tag")
@@ -65,6 +66,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         self.region_ct = self.content_type.objects.get_for_model(self.region)
         self.site_ct = self.content_type.objects.get_for_model(self.site)
         self.location_ct = self.content_type.objects.get_for_model(self.location)
+        self.location_type_ct = self.content_type.objects.get_for_model(self.location_type)
         self.device_ct = self.content_type.objects.get_for_model(self.device)
 
         self.statuses = (
@@ -583,6 +585,29 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             ),
         )
 
+        self.object_permissions = (
+            self.object_permission.objects.create(
+                name="Test Region Permission 1",
+                actions=["view"],
+            ),
+            self.object_permission.objects.create(
+                name="Test Region Permission 2",
+                actions=["view", "add", "change"],
+            ),
+            self.object_permission.objects.create(
+                name="Test Site Permission 1",
+                actions=["view"],
+            ),
+            self.object_permission.objects.create(
+                name="Test Site Permission 2",
+                actions=["view", "delete"],
+            ),
+        )
+        self.object_permissions[0].object_types.add(self.region_ct)
+        self.object_permissions[1].object_types.add(self.region_ct)
+        self.object_permissions[2].object_types.add(self.site_ct)
+        self.object_permissions[3].object_types.add(self.site_ct)
+
     @skipIf(
         connection.vendor != "postgresql",
         "mysql does not support rollbacks",
@@ -967,3 +992,27 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             loc_clusters = self.cluster.objects.filter(name__in=["Cluster 3", "Cluster 4"])
             self.assertEqual(loc_clusters[0].location.name, "Test Location 0")
             self.assertEqual(loc_clusters[1].location.name, "Test Location 0")
+
+        with self.subTest("Testing Users app model migration"):
+            region_permissions = self.object_permission.objects.filter(
+                name__in=["Test Region Permission 1", "Test Region Permission 2"]
+            )
+            self.assertEqual(
+                [self.location_ct.model, self.location_type_ct.model, self.region_ct.model],
+                sorted(list(region_permissions[0].object_types.values_list("model", flat=True))),
+            )
+            self.assertEqual(
+                [self.location_ct.model, self.location_type_ct.model, self.region_ct.model],
+                sorted(list(region_permissions[1].object_types.values_list("model", flat=True))),
+            )
+            site_permissions = self.object_permission.objects.filter(
+                name__in=["Test Site Permission 1", "Test Site Permission 2"]
+            )
+            self.assertEqual(
+                [self.location_ct.model, self.location_type_ct.model, self.site_ct.model],
+                sorted(list(site_permissions[0].object_types.values_list("model", flat=True))),
+            )
+            self.assertEqual(
+                [self.location_ct.model, self.location_type_ct.model, self.site_ct.model],
+                sorted(list(site_permissions[1].object_types.values_list("model", flat=True))),
+            )
