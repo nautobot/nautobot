@@ -519,6 +519,8 @@ class FileProxy(BaseModel):
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
+    _natural_key = ["name", "uploaded_at"]
+
     def __str__(self):
         return self.name
 

@@ -1,8 +1,10 @@
 import uuid
 from urllib.parse import quote_plus
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
+from natural_keys.models import extract_nested_key
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 
@@ -10,6 +12,44 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 class BaseManager(NaturalKeyModelManager):
     def get_queryset(self):
         return self._queryset_class(self.model, using=self._db, hints=self._hints)
+
+    def get_by_natural_key(self, *args):
+        """
+        Return the object corresponding to the provided natural key.
+
+        (Extension of django-natural-keys implementation of this generic Django API.)
+        """
+        kwargs = self.natural_key_kwargs(*args)
+
+        # Since kwargs already has __ lookups in it, we could just do "return self.get(**kwargs)"
+        # But django-natural-keys wants to call each related model's get_by_natural_key in case it's overridden:
+        for name, rel_to in self.model.get_natural_key_info():
+            if not rel_to:
+                # Not a related object, no processing needed
+                continue
+
+            # Extract natural key for related object
+            try:
+                nested_key = extract_nested_key(kwargs, rel_to, name)
+            except AttributeError:
+                # Handle case where rel_to isn't a NaturalKeyModel, e.g. ContentType
+                nested_key = []
+                for key in kwargs.keys():
+                    if key.startswith(f"{name}__"):
+                        nested_key.append(kwargs[key])
+                if all(key is None for key in nested_key):
+                    nested_key = None
+
+            if nested_key:
+                # Update kwargs with related object
+                try:
+                    kwargs[name] = rel_to.objects.get_by_natural_key(*nested_key)
+                except rel_to.DoesNotExist as exc:
+                    raise self.model.DoesNotExist() from exc
+            else:
+                kwargs[name] = None
+
+        return self.get(**kwargs)
 
 
 class BaseModel(NaturalKeyModel):
@@ -124,3 +164,25 @@ class BaseModel(NaturalKeyModel):
             "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
             "you probably need to explicitly declare a natural-key for this model."
         )
+
+    @classmethod
+    def get_natural_key_fields(cls):
+        """
+        Determine actual natural key field list, incorporating the natural keys of related objects as needed.
+
+        Extends django-natural-key's implementation to handle related objects without natural keys (e.g. ContentType).
+        """
+        natural_key_fields = []
+        for name, rel_to in cls.get_natural_key_info():
+            if not rel_to:
+                natural_key_fields.append(name)
+            else:
+                try:
+                    nested_key = rel_to.get_natural_key_fields()
+                except AttributeError:
+                    if rel_to == ContentType:
+                        nested_key = ["app_label", "model"]
+                    else:
+                        raise
+                natural_key_fields.extend([name + "__" + nname for nname in nested_key])
+        return natural_key_fields

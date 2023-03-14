@@ -7,7 +7,7 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.models import Location, LocationType
 
 
-class CircuitTerminationModelTestCase(TestCase):
+class CircuitTerminationModelTestCase(TestCase):  # TODO: change to BaseModelTestCase
     @classmethod
     def setUpTestData(cls):
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")

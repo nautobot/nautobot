@@ -15,6 +15,7 @@ from django.test import override_settings
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -58,10 +59,12 @@ from nautobot.virtualization.models import (
 )
 
 
-class ComputedFieldTest(TestCase):
+class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `ComputedField` Model
     """
+
+    model = ComputedField
 
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
@@ -102,7 +105,7 @@ class ComputedFieldTest(TestCase):
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
-class ConfigContextTest(TestCase):
+class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
     """
     These test cases deal with the weighting, ordering, and deep merge logic of config context data.
 
@@ -374,10 +377,12 @@ class ConfigContextTest(TestCase):
         self.assertNotIn("dynamic context 1", device2.get_config_context().values())
 
 
-class ConfigContextSchemaTestCase(TestCase):
+class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
     """
     Tests for the ConfigContextSchema model
     """
+
+    model = ConfigContextSchema
 
     def setUp(self):
         context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
@@ -619,7 +624,7 @@ class ConfigContextSchemaTestCase(TestCase):
             invalid_schema.full_clean()
 
 
-class ExportTemplateTest(TestCase):
+class ExportTemplateTest(TestCase):  # TODO: change to BaseModelTestCase
     """
     Tests for the ExportTemplate model class.
     """
@@ -651,35 +656,35 @@ class ExportTemplateTest(TestCase):
         nonduplicate_template.validated_save()
 
 
-class FileProxyTest(TestCase):
+class FileProxyTest(ModelTestCases.BaseModelTestCase):
+    model = FileProxy
+
     def setUp(self):
         self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+        self.fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Now refresh it and make sure it was saved and retrieved correctly.
-        fp.refresh_from_db()
+        self.fp.refresh_from_db()
         self.test_file.seek(0)  # Reset cursor since it was previously read
-        self.assertEqual(fp.name, self.test_file.name)
-        self.assertEqual(fp.file.read(), self.test_file.read())
+        self.assertEqual(self.fp.name, self.test_file.name)
+        self.assertEqual(self.fp.file.read(), self.test_file.read())
 
     def test_delete_file_proxy(self):
         """Test deletion of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
-
         # Assert counts before delete
         self.assertEqual(FileProxy.objects.count(), 1)
         self.assertEqual(FileAttachment.objects.count(), 1)
 
         # Assert counts after delete
-        fp.delete()
+        self.fp.delete()
         self.assertEqual(FileProxy.objects.count(), 0)
         self.assertEqual(FileAttachment.objects.count(), 0)
 
 
-class GitRepositoryTest(TransactionTestCase):
+class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Tests for the GitRepository model class.
 
@@ -740,10 +745,12 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertTrue(os.path.isdir(new_path))
 
 
-class JobModelTest(TestCase):
+class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
     """
+
+    model = JobModel
 
     @classmethod
     def setUpTestData(cls):
@@ -950,10 +957,12 @@ class RoleTest(TestCase):
         self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
-class SecretTest(TestCase):
+class SecretTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Secret` model class.
     """
+
+    model = Secret
 
     def setUp(self):
         self.environment_secret = Secret.objects.create(
@@ -1267,10 +1276,12 @@ class SecretTest(TestCase):
         )
 
 
-class SecretsGroupTest(TestCase):
+class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `SecretsGroup` model class.
     """
+
+    model = SecretsGroup
 
     def setUp(self):
         self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
@@ -1339,10 +1350,12 @@ class SecretsGroupTest(TestCase):
         )
 
 
-class StatusTest(TestCase):
+class StatusTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Status` model class.
     """
+
+    model = Status
 
     def setUp(self):
         self.status = Status.objects.create(name="New Device Status")
@@ -1402,7 +1415,7 @@ class StatusTest(TestCase):
             self.assertEqual(str(self.status), test)
 
 
-class TagTest(TestCase):
+class TagTest(TestCase):  # TODO: change to BaseModelTestCase
     def test_create_tag_unicode(self):
         tag = Tag(name="Testing Unicode: 台灣")
         tag.save()
@@ -1410,7 +1423,7 @@ class TagTest(TestCase):
         self.assertEqual(tag.slug, "testing-unicode-台灣")
 
 
-class JobLogEntryTest(TestCase):
+class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
     Tests for the JobLogEntry Model.
     """
@@ -1478,7 +1491,7 @@ class JobLogEntryTest(TestCase):
         self.assertEqual(expected_data, csv_data)
 
 
-class WebhookTest(TestCase):
+class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
     def test_type_error_not_raised_when_calling_check_for_conflicts(self):
         """
         Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments
