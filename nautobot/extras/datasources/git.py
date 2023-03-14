@@ -15,7 +15,7 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
     JobResultStatusChoices,
@@ -26,6 +26,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     ExportTemplate,
     GitRepository,
     Job,
@@ -399,6 +400,7 @@ def update_git_config_contexts(repository_record, job_result):
     for filter_type in (
         "regions",
         "sites",
+        "locations",
         "device_types",
         "roles",
         "platforms",
@@ -407,6 +409,7 @@ def update_git_config_contexts(repository_record, job_result):
         "tenant_groups",
         "tenants",
         "tags",
+        "dynamic_groups",
     ):
         if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
             job_result.log(
@@ -534,6 +537,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
     for key, model_class in [
         ("regions", Region),
         ("sites", Site),
+        ("locations", Location),
         ("device_types", DeviceType),
         ("roles", DeviceRole),
         ("platforms", Platform),
@@ -542,6 +546,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         ("tenant_groups", TenantGroup),
         ("tenants", Tenant),
         ("tags", Tag),
+        ("dynamic_groups", DynamicGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):

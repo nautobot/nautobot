@@ -50,13 +50,14 @@ function colorPickerClassCopy(data, container) {
 */
 
 // Static choice selection
-function initializeStaticChoiceSelection(context){
+function initializeStaticChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-static').select2({
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
-        width: "off"
+        width: "off",
+        dropdownParent: dropdownParent
     });
 }
 
@@ -139,7 +140,7 @@ function initializeBulkEditNullification(context){
 }
 
 // Color Picker
-function initializeColorPicker(context){
+function initializeColorPicker(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-color-picker').select2({
         allowClear: true,
@@ -147,163 +148,170 @@ function initializeColorPicker(context){
         theme: "bootstrap",
         templateResult: colorPickerClassCopy,
         templateSelection: colorPickerClassCopy,
-        width: "off"
+        width: "off",
+        dropdownParent: dropdownParent
     });
 }
 
 // Dynamic Choice Selection
-function initializeDynamicChoiceSelection(context){
+function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
-    this_context.find('.nautobot-select2-api').select2({
-        allowClear: true,
-        placeholder: "---------",
-        theme: "bootstrap",
-        width: "off",
-        ajax: {
-            delay: 500,
+    this_context.find('.nautobot-select2-api').each(function(){
+        thisobj = $(this);
+        placeholder = thisobj.attr("data-null-option") || "---------";
+        thisobj.select2({
+            allowClear: true,
+            placeholder: placeholder,
+            theme: "bootstrap",
+            width: "off",
+            dropdownParent: dropdownParent,
+            ajax: {
+                delay: 500,
 
-            url: function(params) {
-                var element = this[0];
-                var url = parseURL(element.getAttribute("data-url"));
+                url: function(params) {
+                    var element = this[0];
+                    var url = parseURL(element.getAttribute("data-url"));
 
-                if (url.includes("{{")) {
-                    // URL is not fully rendered yet, abort the request
-                    return false;
-                }
-                return url;
-            },
+                    if (url.includes("{{")) {
+                        // URL is not fully rendered yet, abort the request
+                        return false;
+                    }
+                    return url;
+                },
 
-            data: function(params) {
-                var element = this[0];
-                // Paging. Note that `params.page` indexes at 1
-                var offset = (params.page - 1) * 50 || 0;
-                // Base query params
-                var parameters = {
-                    q: params.term,
-                    limit: 50,
-                    offset: offset,
-                };
+                data: function(params) {
+                    var element = this[0];
+                    // Paging. Note that `params.page` indexes at 1
+                    var offset = (params.page - 1) * 50 || 0;
+                    // Base query params
+                    var parameters = {
+                        q: params.term,
+                        limit: 50,
+                        offset: offset,
+                    };
 
-                // Set api_version
-                api_version = $(element).attr("data-api-version")
-                if(api_version)
-                parameters["api_version"] = api_version
+                    // Set api_version
+                    api_version = $(element).attr("data-api-version");
+                    if(api_version){
+                        parameters["api_version"] = api_version;
+                    }
 
 
-                // Allow for controlling the brief setting from within APISelect
-                parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                    // Allow for controlling the brief setting from within APISelect
+                    parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
 
-                // Attach any extra query parameters
-                $.each(element.attributes, function(index, attr){
-                    if (attr.name.includes("data-query-param-")){
-                        var param_name = attr.name.split("data-query-param-")[1];
+                    // Attach any extra query parameters
+                    $.each(element.attributes, function(index, attr){
+                        if (attr.name.includes("data-query-param-")){
+                            var param_name = attr.name.split("data-query-param-")[1];
 
-                        $.each($.parseJSON(attr.value), function(index, value) {
-                            // Referencing the value of another form field
-                            if (value.startsWith('$')) {
-                                let element_id = $(element).attr("id")
-                                let ref_field;
+                            $.each($.parseJSON(attr.value), function(index, value) {
+                                // Referencing the value of another form field
+                                if (value.startsWith('$')) {
+                                    let element_id = $(element).attr("id");
+                                    let ref_field;
 
-                                if(element_id.includes("id_form-")){
-                                    let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
-                                    ref_field = $("#" + id_prefix + value.slice(1));
+                                    if(element_id.includes("id_form-")){
+                                        let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
+                                        ref_field = $("#" + id_prefix + value.slice(1));
+                                    }
+                                    else {
+                                        ref_field = $('#id_' + value.slice(1));
+                                    }
+
+                                    if (ref_field.val() && ref_field.is(":visible")) {
+                                        value = ref_field.val();
+                                    } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
+                                        value = "null";
+                                    } else {
+                                        return true;  // Skip if ref_field has no value
+                                    }
                                 }
-                                else {
-                                    ref_field = $('#id_' + value.slice(1));
-                                }
-
-                                if (ref_field.val() && ref_field.is(":visible")) {
-                                    value = ref_field.val();
-                                } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
-                                    value = "null";
+                                if (param_name in parameters) {
+                                    if (Array.isArray(parameters[param_name])) {
+                                        parameters[param_name].push(value);
+                                    } else {
+                                        parameters[param_name] = [parameters[param_name], value];
+                                    }
                                 } else {
-                                    return true;  // Skip if ref_field has no value
+                                    parameters[param_name] = value;
                                 }
-                            }
-                            if (param_name in parameters) {
-                                if (Array.isArray(parameters[param_name])) {
-                                    parameters[param_name].push(value);
-                                } else {
-                                    parameters[param_name] = [parameters[param_name], value];
-                                }
-                            } else {
-                                parameters[param_name] = value;
-                            }
+                            });
+                        }
+                    });
+
+                    // Attach contenttype to parameters
+                    contenttype = $(element).attr("data-contenttype");
+                    if(contenttype){
+                        parameters["content_type"] = contenttype;
+                    }
+
+                    // This will handle params with multiple values (i.e. for list filter forms)
+                    return $.param(parameters, true);
+                },
+
+                processResults: function (data) {
+                    var element = this.$element[0];
+                    $(element).children('option').attr('disabled', false);
+                    var results = data.results;
+
+                    results = results.reduce((results,record,idx) => {
+                        record.text = record[element.getAttribute('display-field')] || record.name;
+                        if (record._depth) {
+                            // Annotate hierarchical depth for MPTT objects
+                            record.text = '--'.repeat(record._depth) + ' ' + record.text;
+                        }
+
+                        record.id = record[element.getAttribute('value-field')] || record.id;
+                        if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
+                            // The disabled-indicator equated to true, so we disable this option
+                            record.disabled = true;
+                        }
+
+                        if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
+                            results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
+                            results[record.site.name + ":" + record.group.name].children.push(record);
+                        }
+                        else if( record.group !== undefined && record.group !== null ) {
+                            results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
+                            results[record.group.name].children.push(record);
+                        }
+                        else if( record.site !== undefined && record.site !== null ) {
+                            results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
+                            results[record.site.name].children.push(record);
+                        }
+                        else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
+                            results['global'] = results['global'] || { text: 'Global', children: [] };
+                            results['global'].children.push(record);
+                        }
+                        else {
+                            results[idx] = record;
+                        }
+
+                        return results;
+                    },Object.create(null));
+
+                    results = Object.values(results);
+
+                    // Handle the null option, but only add it once
+                    if (element.getAttribute('data-null-option') && data.previous === null) {
+                        results.unshift({
+                            id: 'null',
+                            text: element.getAttribute('data-null-option')
                         });
                     }
-                });
 
-                // Attach contenttype to parameters
-                contenttype = $(element).attr("data-contenttype");
-                if(contenttype){
-                    parameters["content_type"] = contenttype;
+                    // Check if there are more results to page
+                    var page = data.next !== null;
+                    return {
+                        results: results,
+                        pagination: {
+                            more: page
+                        }
+                    };
                 }
-
-                // This will handle params with multiple values (i.e. for list filter forms)
-                return $.param(parameters, true);
-            },
-
-            processResults: function (data) {
-                var element = this.$element[0];
-                $(element).children('option').attr('disabled', false);
-                var results = data.results;
-
-                results = results.reduce((results,record,idx) => {
-                    record.text = record[element.getAttribute('display-field')] || record.name;
-                    if (record._depth) {
-                        // Annotate hierarchical depth for MPTT objects
-                        record.text = '--'.repeat(record._depth) + ' ' + record.text;
-                    }
-
-                    record.id = record[element.getAttribute('value-field')] || record.id;
-                    if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
-                        // The disabled-indicator equated to true, so we disable this option
-                        record.disabled = true;
-                    }
-
-                    if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
-                        results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
-                        results[record.site.name + ":" + record.group.name].children.push(record);
-                    }
-                    else if( record.group !== undefined && record.group !== null ) {
-                        results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
-                        results[record.group.name].children.push(record);
-                    }
-                    else if( record.site !== undefined && record.site !== null ) {
-                        results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
-                        results[record.site.name].children.push(record);
-                    }
-                    else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
-                        results['global'] = results['global'] || { text: 'Global', children: [] };
-                        results['global'].children.push(record);
-                    }
-                    else {
-                        results[idx] = record
-                    }
-
-                    return results;
-                },Object.create(null));
-
-                results = Object.values(results);
-
-                // Handle the null option, but only add it once
-                if (element.getAttribute('data-null-option') && data.previous === null) {
-                    results.unshift({
-                        id: 'null',
-                        text: element.getAttribute('data-null-option')
-                    });
-                }
-
-                // Check if there are more results to page
-                var page = data.next !== null;
-                return {
-                    results: results,
-                    pagination: {
-                        more: page
-                    }
-                };
             }
-        }
+        });
     });
 }
 
@@ -328,7 +336,7 @@ function initializeDateTimePicker(context){
     });
 }
 
-function initializeTags(context){
+function initializeTags(context, dropdownParent=null){
     this_context = $(context);
     this_tag_field = this_context.find('#id_tags.tagfield')
     var tags = this_tag_field;
@@ -354,6 +362,7 @@ function initializeTags(context){
         placeholder: "Tags",
         theme: "bootstrap",
         width: "off",
+        dropdownParent: dropdownParent,
         ajax: {
             delay: 250,
             url: nautobot_api_path + "extras/tags/",
@@ -439,7 +448,7 @@ function initializeVLANModeSelection(context){
     }
 }
 
-function initializeMultiValueChar(context){
+function initializeMultiValueChar(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-multi-value-char').select2({
         allowClear: true,
@@ -447,6 +456,7 @@ function initializeMultiValueChar(context){
         theme: "bootstrap",
         placeholder: "---------",
         multiple: true,
+        dropdownParent: dropdownParent,
         width: "off",
         "language": {
             "noResults": function(){
@@ -613,6 +623,15 @@ function initializeInputs(context) {
     initializeDynamicFilterForm(this_context)
     initializeSelectAllForm(this_context)
     initializeMultiValueChar(this_context)
+
+    $(this_context).find(".modal").each(function() {
+        this_modal = $(this)
+        initializeStaticChoiceSelection(this_modal, this_modal)
+        initializeColorPicker(this_modal, this_modal)
+        initializeDynamicChoiceSelection(this_modal, this_modal)
+        initializeTags(this_modal, this_modal)
+        initializeMultiValueChar(this_modal, this_modal)
+    })
 }
 
 function jsify_form(context) {

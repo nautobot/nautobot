@@ -23,6 +23,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
+from nautobot.extras.api.serializers import ConfigContextSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
@@ -298,6 +299,18 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextSerializer.dynamic_group` is present when feature flag is enabled."""
+        serializer = ConfigContextSerializer()
+        self.assertIn("dynamic_groups", serializer.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextSerializer.dynamic_group` is NOT present the when feature flag is disabled."""
+        serializer = ConfigContextSerializer()
+        self.assertNotIn("dynamic_groups", serializer.fields)
+
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContextSchema
@@ -343,16 +356,20 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
 
 
 class ContentTypeTest(APITestCase):
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
-    def test_list_objects(self):
+    """
+    ContentTypeViewSet does not have permission checks,
+    So It should be accessible with or without permission override
+    e.g. @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
+    """
+
+    def test_list_objects_with_or_without_permission(self):
         contenttype_count = ContentType.objects.count()
 
         response = self.client.get(reverse("extras-api:contenttype-list"), **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], contenttype_count)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["contenttypes.contenttype"])
-    def test_get_object(self):
+    def test_get_object_with_or_without_permission(self):
         contenttype = ContentType.objects.first()
 
         url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
@@ -1980,7 +1997,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2014,7 +2031,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2038,7 +2055,7 @@ class JobTestVersion13(
         self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
         self.assertEqual(
             response.data["schedule"]["url"],
-            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["schedule"]["name"], schedule.name)
         self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
@@ -2447,17 +2464,17 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             {
                 "note": "This is a test.",
                 "assigned_object_id": site1.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.site",
             },
             {
                 "note": "This is a test.",
                 "assigned_object_id": site2.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.site",
             },
             {
                 "note": "This is a note on Site 1.",
                 "assigned_object_id": site1.pk,
-                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+                "assigned_object_type": "dcim.site",
             },
         ]
         cls.bulk_update_data = {
@@ -2578,7 +2595,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[0].slug: {
                     "id": str(self.relationships[0].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
                     ),
                     "name": self.relationships[0].name,
@@ -2592,7 +2609,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[1].slug: {
                     "id": str(self.relationships[1].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
                     ),
                     "name": self.relationships[1].name,
@@ -2611,7 +2628,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.relationships[2].slug: {
                     "id": str(self.relationships[2].pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
                     ),
                     "name": self.relationships[2].name,
@@ -3024,7 +3041,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 self.relationship.slug: {
                     "id": str(self.relationship.pk),
                     "url": (
-                        "http://testserver"
+                        "http://nautobot.example.com"
                         + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
                     ),
                     "name": self.relationship.name,
@@ -3036,7 +3053,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[0].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[0].pk})
                                 ),
                                 "display": self.devices[0].display,
@@ -3045,7 +3062,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[1].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[1].pk})
                                 ),
                                 "display": self.devices[1].display,
@@ -3054,7 +3071,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                             {
                                 "id": str(self.devices[2].pk),
                                 "url": (
-                                    "http://testserver"
+                                    "http://nautobot.example.com"
                                     + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[2].pk})
                                 ),
                                 "display": self.devices[2].display,

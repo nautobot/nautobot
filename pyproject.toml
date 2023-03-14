@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.5.4-beta.1"
+version = "1.5.13-beta.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.16"
+Django = "~3.2.18"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -92,7 +92,7 @@ drf-spectacular = {version = "~0.24.2", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
-GitPython = "~3.1.29"
+GitPython = "~3.1.31"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -118,7 +118,9 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.3.0"
+# Note: netutils is limited in scope, dependencies, and observes semver, as such
+#       we permit a looser (^) version constraint here.
+netutils = "^1.4.1"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter
@@ -329,6 +331,7 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [tool.towncrier.fragment.added]
 [tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.dependencies]
 [tool.towncrier.fragment.deprecated]
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]

@@ -59,6 +59,10 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
+# Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
+# when a large number of dynamic groups are present
+CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
+
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
 # ENFORCE_GLOBAL_UNIQUE to True.
@@ -468,6 +472,7 @@ TEMPLATES = [
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
+            "environment": "jinja2.sandbox.SandboxedEnvironment",
         },
     },
 ]
@@ -737,6 +742,18 @@ CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "def
 # while exceeding the hard limit will result in a SIGKILL.
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
+
+# Ports for prometheus metric HTTP server running on the celery worker.
+# Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
+# sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
+# highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then
+# use the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in
+# that case. Set this to an empty string to disable it.
+CELERY_WORKER_PROMETHEUS_PORTS = []
+if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
+    CELERY_WORKER_PROMETHEUS_PORTS = [
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
+    ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization

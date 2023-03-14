@@ -1,0 +1,2 @@
+Updated version of `pyopenssl` in Nautobot dev environment and Docker images to 23.0.0 due to an incompatibility between older versions of `pyopenssl` and version 39.x of `cryptography`. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+Updated `cryptography` to 39.0.2. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.

@@ -54,7 +54,7 @@ class PasswordUITest(TestCase):
 
         sso_user = User.objects.create_user(username="sso_user", is_superuser=True)
 
-        self.request_factory = RequestFactory()
+        self.request_factory = RequestFactory(SERVER_NAME="nautobot.example.com")
         self.request = self.request_factory.get("/")
         SessionMiddleware(lambda: None).process_request(self.request)
 

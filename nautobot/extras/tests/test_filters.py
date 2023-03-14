@@ -3,6 +3,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.test import override_settings
 
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
@@ -10,6 +11,7 @@ from nautobot.dcim.models import (
     DeviceRole,
     DeviceType,
     Interface,
+    Location,
     Manufacturer,
     Platform,
     Rack,
@@ -17,6 +19,8 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
+    JobResultStatusChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -26,6 +30,7 @@ from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
     ContentTypeFilterSet,
+    CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
     GitRepositoryFilterSet,
@@ -34,6 +39,7 @@ from nautobot.extras.filters import (
     JobFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
+    JobResultFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
@@ -47,6 +53,8 @@ from nautobot.extras.filters import (
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    CustomField,
+    CustomFieldChoice,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -189,6 +197,8 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         )
         cls.platforms = platforms
 
+        cls.locations = Location.objects.all()[:3]
+
         cluster_groups = (
             ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
             ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
@@ -222,6 +232,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             c.clusters.set([clusters[i]])
             c.tenant_groups.set([cls.tenant_groups[i]])
             c.tenants.set([cls.tenants[i]])
+            c.locations.set([cls.locations[i]])
 
     def test_name(self):
         params = {"name": ["Config Context 1", "Config Context 2"]}
@@ -234,18 +245,26 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        regions = list(Region.objects.all()[:2])
+        filter_params = [
+            {"region_id": [regions[0].pk, regions[1].pk]},
+            {"region": [regions[0].slug, regions[1].pk]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(regions__in=regions).distinct()
+            )
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        sites = list(Site.objects.all()[:2])
+        filter_params = [
+            {"site_id": [sites[0].pk, sites[1].pk]},
+            {"site": [sites[0].pk, sites[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(sites__in=sites).distinct()
+            )
 
     def test_role(self):
         device_roles = self.device_roles[:2]
@@ -254,26 +273,50 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         params = {"role": [device_roles[0].slug, device_roles[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
+    def test_location(self):
+        locations = list(self.locations[:2])
+        filter_params = [
+            {"location_id": [locations[0].pk, locations[1].pk]},
+            {"location": [locations[0].pk, locations[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=locations).distinct()
+            )
+
     def test_type(self):
-        device_types = self.device_types[:2]
-        params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
-        params = {"device_type": [device_types[0].slug, device_types[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
+        device_types = list(self.device_types[:2])
+        filter_params = [
+            {"device_type_id": [device_types[0].pk, device_types[1].pk]},
+            {"device_type": [device_types[0].pk, device_types[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(device_types__in=device_types).distinct()
+            )
 
     def test_platform(self):
-        platforms = self.platforms[:2]
-        params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
-        params = {"platform": [platforms[0].slug, platforms[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
+        platforms = list(self.platforms[:2])
+        filter_params = [
+            {"platform_id": [platforms[0].pk, platforms[1].pk]},
+            {"platform": [platforms[0].pk, platforms[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(platforms__in=platforms).distinct()
+            )
 
     def test_cluster_group(self):
-        cluster_groups = ClusterGroup.objects.all()[:2]
-        params = {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"cluster_group": [cluster_groups[0].slug, cluster_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        cluster_groups = list(ClusterGroup.objects.all()[:2])
+        filter_params = [
+            {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
+            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(cluster_groups__in=cluster_groups).distinct(),
+            )
 
     def test_cluster(self):
         clusters = Cluster.objects.all()[:2]
@@ -281,23 +324,44 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant_group(self):
-        tenant_groups = self.tenant_groups[:2]
-        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        tenant_groups = list(self.tenant_groups[:2])
+        filter_params = [
+            {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]},
+            {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].pk]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(tenant_groups__in=tenant_groups).distinct(),
+            )
 
-    def test_tenant_id(self):
-        tenants = self.tenants[:2]
-        params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+    def test_tenant(self):
+        tenants = list(self.tenants[:2])
+        filter_params = [
+            {"tenant_id": [tenants[0].pk, tenants[1].pk]},
+            {"tenant": [tenants[0].slug, tenants[1].pk]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(tenants__in=tenants).distinct()
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups_enabled(self):
+        """Asserts that `ConfigContextFilterSet.dynamic_group` is present when feature flag is enabled."""
+        filter_set = ConfigContextFilterSet()
+        self.assertIn("dynamic_groups", filter_set.filters)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups_enabled(self):
+        """Tests that `ConfigContextFilterSet.dynamic_group` is NOT present when feature flag is disabled."""
+        filter_set = ConfigContextFilterSet()
+        self.assertNotIn("dynamic_groups", filter_set.filters)
 
 
 class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
@@ -375,6 +439,36 @@ class CustomLinkTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
+class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
+    queryset = CustomFieldChoice.objects.all()
+    filterset = CustomFieldChoiceFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        content_type = ContentType.objects.get_for_model(Site)
+        fields = [
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=f"field {num}", required=False)
+            for num in range(3)
+        ]
+        cls.fields = fields
+        for field in fields:
+            field.content_types.set([content_type])
+
+        for num in range(3):
+            CustomFieldChoice.objects.create(field=fields[num], value=f"Custom Field Choice {num}")
+
+    def test_field(self):
+        fields = list(self.fields[:2])
+        filter_params = [
+            {"field_id": [fields[0].pk, fields[1].pk]},
+            {"field": [fields[0].name, fields[1].pk]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(field__in=fields).distinct()
+            )
+
+
 class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = ExportTemplate.objects.all()
     filterset = ExportTemplateFilterSet
@@ -420,6 +514,11 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         # Create Three GitRepository records
+        secrets_groups = [
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+        ]
+        cls.secrets_groups = secrets_groups
         repos = (
             GitRepository(
                 name="Repo 1",
@@ -429,6 +528,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
                     "extras.configcontext",
                 ],
                 remote_url="https://example.com/repo1.git",
+                secrets_group=secrets_groups[0],
             ),
             GitRepository(
                 name="Repo 2",
@@ -439,6 +539,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
                     "extras.job",
                 ],
                 remote_url="https://example.com/repo2.git",
+                secrets_group=secrets_groups[1],
             ),
             GitRepository(
                 name="Repo 3",
@@ -476,6 +577,17 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"provided_contents": ["extras.job"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_secrets_group(self):
+        filter_params = [
+            {"secrets_group_id": [self.secrets_groups[0].pk, self.secrets_groups[1].pk]},
+            {"secrets_group": [self.secrets_groups[0].slug, self.secrets_groups[1].pk]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(secrets_group__in=self.secrets_groups).distinct(),
+            )
 
 
 class GraphQLTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -709,6 +821,36 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
+class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = JobResult.objects.all()
+    filterset = JobResultFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        jobs = Job.objects.all()[:3]
+        cls.jobs = jobs
+        for job in jobs:
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                user=User.objects.first(),
+                obj_type=ContentType.objects.get_for_model(Job),
+                status=JobResultStatusChoices.STATUS_RUNNING,
+                job_id=job.pk,
+            )
+
+    def test_job_model(self):
+        jobs = list(self.jobs[:2])
+        filter_params = [
+            {"job_model_id": [jobs[0].pk, jobs[1].pk]},
+            {"job_model": [jobs[0].pk, jobs[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(job_model__in=jobs).distinct()
+            )
+
+
 class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = JobHook.objects.all()
     filterset = JobHookFilterSet
@@ -894,10 +1036,15 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_user(self):
-        params = {"user_id": User.objects.filter(username__in=["user1", "user2"]).values_list("pk", flat=True)}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        params = {"user": ["user1", "user2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        users = list(User.objects.filter(username__in=["user1", "user2"]))
+        filter_params = [
+            {"user_id": [users[0].pk, users[1].pk]},
+            {"user": [users[0].pk, users[1].username]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(user__in=users).distinct()
+            )
 
     def test_user_name(self):
         params = {"user_name": ["user1", "user2"]}
@@ -1267,6 +1414,26 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             2,
         )
 
+    def test_regression_distinct_2963(self):
+        """
+        Regression tests for issue #2963 to  address `AssertionError` error when combining filtering on
+        relationships with concrete fields.
+
+        Ref: https://github.com/nautobot/nautobot/issues/2963
+        """
+        self.queryset = Device.objects.all()
+        self.filterset = DeviceFilterSet
+        self.assertEqual(
+            self.filterset(
+                {
+                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                    "manufacturer": ["manufacturer-1"],
+                },
+                self.queryset,
+            ).qs.count(),
+            2,
+        )
+
 
 class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Secret.objects.all()
@@ -1374,16 +1541,24 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_group(self):
-        params = {"group_id": [self.groups[0].pk, self.groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [self.groups[0].slug, self.groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        filter_params = [
+            {"group_id": [self.groups[0].pk, self.groups[1].pk]},
+            {"group": [self.groups[0].pk, self.groups[1].slug]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=self.groups[:2]).distinct()
+            )
 
     def test_secret(self):
-        params = {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"secret": [self.secrets[0].slug, self.secrets[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        filter_params = [
+            {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]},
+            {"secret": [self.secrets[0].slug, self.secrets[1].pk]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(secret__in=self.secrets[:2]).distinct()
+            )
 
     def test_access_type(self):
         params = {"access_type": [SecretsGroupAccessTypeChoices.TYPE_GENERIC]}

@@ -21,25 +21,25 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 | Branch      | Status |
 |-------------|------------|
-| **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
-| **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
-| **next** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **[main](https://github.com/nautobot/nautobot/tree/main)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **[develop](https://github.com/nautobot/nautobot/tree/develop)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **[next](https://github.com/nautobot/nautobot/tree/next)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
 
 ## Screenshots
 
-![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_main_page.png "Main page")
+![Gif of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
 
 ---
 
-![Screenshot of config contexts](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_config_contexts.png "Config Contexts")
+![Gif of config contexts](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_config_context.gif?raw=true "Config Contexts")
 
 ---
 
-![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_prefix_hierarchy.png "Prefix hierarchy")
+![Gif of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_prefix_hierarchy.gif?raw=true "Prefix hierarchy")
 
 ---
 
-![Screenshot of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_graphiql.png "GraphQL API")
+![Gif of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_graphql.gif?raw=true "GraphQL API")
 
 ## Installation
 
@@ -61,11 +61,11 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 
 #### Golden Config Plugin
 
-![Screenshot of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_golden_config.png "Golden config")
+![Gif of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_golden_config.gif?raw=true "Golden config")
 
 #### ChatOps Plugin
 
-![Screenshot of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_chatops.png "ChatOps")
+![Gif of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
 
 ## Providing Feedback
 

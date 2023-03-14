@@ -1,5 +1,5 @@
 ---
-version: "3.4"
+version: "3.9"
 services:
   nautobot:
     build:
@@ -12,9 +12,12 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - redis
-      - selenium
-      - db
+      redis:
+        condition: service_started
+      selenium:
+        condition: service_started
+      db:
+        condition: service_healthy
     env_file:
       - dev.env
     tty: true
@@ -30,6 +33,8 @@ services:
         - "http://localhost:8080/health/"
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    ports:
+      - "8081:8080"
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
     healthcheck:
       interval: 60s

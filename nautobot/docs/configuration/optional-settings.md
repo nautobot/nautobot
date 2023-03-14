@@ -257,6 +257,24 @@ The global Celery task hard timeout (in seconds). Any background task that excee
 
 ---
 
+## CELERY_WORKER_PROMETHEUS_PORTS
+
++++ 1.5.10
+
+Default: `[]` (disabled)
+
+Environment Variable: `NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS`
+
+Ports for Prometheus metric HTTP server running on the celery worker(s).
+
+Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
+sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
+highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then use
+the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in that
+case. Set this to an empty list to disable it.
+
+---
+
 ## CHANGELOG_RETENTION
 
 Default: `90`
@@ -268,6 +286,19 @@ The number of days to retain logged changes (object creations, updates, and dele
 
 +++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED`
+
+If `True`, it will be possible to apply Config Context objects to Devices and Virtual Machines via Dynamic Group membership. When set to `False` this behavior will not be available.
+
+!!! warning
+    With a large number of dynamic groups, enabling this could invoke a performance penalty when processing Config Contexts.
 
 ---
 
@@ -764,6 +795,8 @@ List of (regular expression, replacement pattern) tuples used by the `nautobot.u
 Default: `None` (local storage)
 
 The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
+
+An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../user-guides/s3-django-storage.md) user-guide.
 
 The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
 

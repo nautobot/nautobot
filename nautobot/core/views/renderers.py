@@ -3,11 +3,11 @@ import logging
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.core.forms import SearchForm
+from nautobot.core.utilities import check_filter_for_display
 from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
 from nautobot.extras.utils import get_base_template
 from nautobot.utilities.forms import (
@@ -21,7 +21,6 @@ from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewn
 from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     normalize_querydict,
-    get_filterable_params_from_filter_params,
 )
 
 
@@ -32,11 +31,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
-
-    def get_filter_params(self, view, request):
-        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params, view.filterset_class)
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -162,20 +156,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             form = data["form"]
         else:
             if view.action == "list":
-                filter_params = self.get_filter_params(view, request)
                 if view.filterset_class is not None:
-                    filterset = view.filterset_class(filter_params, view.queryset)
-                    view.queryset = filterset.qs
-                    if not filterset.is_valid():
-                        messages.error(
-                            request,
-                            mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-                        )
-                        view.queryset = view.queryset.none()
-
+                    view.queryset = view.filter_queryset(view.get_queryset())
+                    filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
-                        [field_name, values if isinstance(values, (list, tuple)) else [values]]
-                        for field_name, values in filter_params.items()
+                        check_filter_for_display(filterset_filters, field_name, values)
+                        for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(request.GET, label_suffix="")
@@ -184,7 +170,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
-                initial_data = normalize_querydict(request.GET)
+                initial_data = normalize_querydict(request.GET, form_class=form_class)
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":

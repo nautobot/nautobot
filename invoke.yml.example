@@ -4,6 +4,7 @@ nautobot:
   local: False
   python_ver: "3.7"
   compose_dir: "/full/path/to/nautobot/development"
+  cache_test_fixtures: False
   compose_files:
     - "docker-compose.yml"
     - "docker-compose.postgres.yml"

@@ -8,8 +8,7 @@ import os
 from nautobot.core.settings import *  # noqa: F401,F403
 from nautobot.core.settings_funcs import parse_redis_connection
 
-# No host checks required during tests
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["nautobot.example.com"]
 
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
@@ -47,3 +46,6 @@ TEST_USE_FACTORIES = True
 TEST_FACTORY_SEED = "Nautobot"
 # File in which all performance-specifc test baselines are stored
 TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+
+# Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
+METRICS_ENABLED = True

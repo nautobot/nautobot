@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
@@ -43,20 +44,26 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         else:
             locations = []
 
+        query = [
+            Q(regions__in=regions) | Q(regions=None),
+            Q(sites=obj.site) | Q(sites=None),
+            Q(locations__in=locations) | Q(locations=None),
+            Q(roles=role) | Q(roles=None),
+            Q(device_types=device_type) | Q(device_types=None),
+            Q(platforms=obj.platform) | Q(platforms=None),
+            Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
+            Q(clusters=cluster) | Q(clusters=None),
+            Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
+            Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
+            Q(tenants=obj.tenant) | Q(tenants=None),
+            Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
+        ]
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
+
         queryset = (
             self.filter(
-                Q(regions__in=regions) | Q(regions=None),
-                Q(sites=obj.site) | Q(sites=None),
-                Q(locations__in=locations) | Q(locations=None),
-                Q(roles=role) | Q(roles=None),
-                Q(device_types=device_type) | Q(device_types=None),
-                Q(platforms=obj.platform) | Q(platforms=None),
-                Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
-                Q(clusters=cluster) | Q(clusters=None),
-                Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
-                Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
-                Q(tenants=obj.tenant) | Q(tenants=None),
-                Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
+                *query,
                 is_active=True,
             )
             .order_by("weight", "name")
@@ -175,7 +182,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         my_groups = []
         # TODO(jathan): 3 queries per DynamicGroup instance
         for dynamic_group in eligible_groups.iterator():
-            if obj.pk in dynamic_group.members.values_list("pk", flat=True):
+            if dynamic_group.members.filter(pk=obj.pk).values_list("pk", flat=True).exists():
                 my_groups.append(dynamic_group.pk)
 
         # TODO(jathan): 1 query

@@ -21,7 +21,10 @@ class NautobotTestRunner(DiscoverRunner):
 
     exclude_tags = ["integration"]
 
-    def __init__(self, **kwargs):
+    def __init__(self, cache_test_fixtures=False, **kwargs):
+
+        self.cache_test_fixtures = cache_test_fixtures
+
         # Assert "integration" hasn't been provided w/ --tag
         incoming_tags = kwargs.get("tags") or []
         # Assert "exclude_tags" hasn't been provided w/ --exclude-tag; else default to our own.
@@ -34,6 +37,20 @@ class NautobotTestRunner(DiscoverRunner):
 
         super().__init__(**kwargs)
 
+    @classmethod
+    def add_arguments(cls, parser):
+        super().add_arguments(parser)
+        parser.add_argument(
+            "--cache-test-fixtures",
+            action="store_true",
+            help="Save test database to a json fixture file to re-use on subsequent tests.",
+        )
+
+    def setup_test_environment(self, **kwargs):
+        super().setup_test_environment(**kwargs)
+        # Remove 'testserver' that Django "helpfully" adds automatically to ALLOWED_HOSTS, masking issues like #3065
+        settings.ALLOWED_HOSTS.remove("testserver")
+
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)
 
@@ -42,6 +59,8 @@ class NautobotTestRunner(DiscoverRunner):
             command = ["generate_test_data", "--flush", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:
                 command += ["--seed", settings.TEST_FACTORY_SEED]
+            if self.cache_test_fixtures:
+                command += ["--cache-test-fixtures"]
             call_command(*command)
 
         return result

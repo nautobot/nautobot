@@ -40,7 +40,7 @@
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
     {% endif %}
     {% if filter_form or dynamic_filter_form %}
-        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters"><i class="mdi mdi-filter"></i> Filter</button>
+        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
     {% endif %}
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
@@ -56,29 +56,29 @@
 {% if filter_params %}
 <div class="filters-applied">
     <b>Filters:</b>
-    {% for field, values in filter_params %}
+    {% for field in filter_params %}
     <span class="filter-container" dir="ltr">
         <span
                 class="filter-selection">
-            <b>{{ field }}:</b>
+            <b>{{ field.display }}:</b>
             <span
                     class="remove-filter-param"
                     title="Remove all items"
                     data-field-type="parent"
-                    data-field-value={{ field }}
+                    data-field-value={{ field.name }}
             >×</span>
             <ul class="filter-selection-rendered">
-                {% for value in values %}
+                {% for value in field.values %}
                 <li
                         class="filter-selection-choice"
-                        title="{{ value }}"
+                        title="{{ value.name }}"
                 >
                     <span
                             class="filter-selection-choice-remove remove-filter-param"
                             data-field-type="child"
-                            data-field-parent={{ field }}
-                            data-field-value={{ value }}
-                    >×</span>{{ value }}
+                            data-field-parent={{ field.name }}
+                            data-field-value={{ value.name }}
+                    >×</span>{{ value.display }}
                 </li>
                 {% endfor %}
             </ul>
@@ -160,7 +160,7 @@
     clipboard.on('success', function (e) {});
 
     clipboard.on('error', function (e) {});
-    
+
     $('.formset_row-dynamic-filterform').formset({
         addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Filter',
         addCssClass: 'btn btn-primary add-row',
@@ -266,7 +266,28 @@
                 }
             }
         }
+    })
+    // On change of input field in default filter form
+    // Replicate that change into dynamic filter form and vice-versa
+    $("#default-filter form input, #advanced-filter input").on("change", function (e){
+        let field_name = $(this).attr("name");
+        let field_value = $(this).val();
+        let form_id = $(this).parents("form").attr("id");
+        let default_filters_field_dom = $(`#default-filter form input[name=${field_name}]`);
+        let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td input[name=${field_name}]`);
 
+        // Only apply logic if fields with same name attr are on both advanced and default filter form
+        if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+            // Only change field value if both fields do not have equal values
+            if (default_filters_field_dom.val() !== advanced_filters_field_dom.val()){
+                if(form_id === "dynamic-filter-form"){
+                    default_filters_field_dom.val(field_value);
+                }
+                else {
+                    advanced_filters_field_dom.val(field_value);
+                }
+            }
+        }
     })
 </script>
 {% endblock %}

@@ -23,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
+from nautobot.core.utilities import check_filter_for_display
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -244,6 +245,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
+            filterset_filters = filterset.get_filters()
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -253,7 +255,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 self.queryset = self.queryset.none()
 
             display_filter_params = [
-                [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                check_filter_for_display(filterset_filters, field_name, values)
                 for field_name, values in filter_params.items()
             ]
 
@@ -412,7 +414,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
-        initial_data = normalize_querydict(request.GET)
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
@@ -1146,11 +1148,16 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def post(self, request):
         logger = logging.getLogger("nautobot.views.BulkRenameView")
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
 
         if "_preview" in request.POST or "_apply" in request.POST:
-            form = self.form(request.POST, initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
-
+            form = self.form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
                 try:
                     with transaction.atomic():
@@ -1189,8 +1196,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     form.add_error(None, msg)
 
         else:
-            form = self.form(initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
+            form = self.form(initial={"pk": query_pks})
 
         return render(
             request,
@@ -1200,8 +1206,19 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
                 "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
             },
         )
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """
+        Return selected_objects parent name.
+
+        Args:
+            selected_objects: The objects being renamed
+        """
+
+        return ""
 
 
 class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):

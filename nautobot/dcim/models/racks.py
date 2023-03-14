@@ -400,7 +400,7 @@ class Rack(PrimaryModel, StatusModel):
             self.asset_tag,
             self.width,
             self.u_height,
-            self.desc_units,
+            str(self.desc_units),
             self.outer_width,
             self.outer_depth,
             self.outer_unit,
@@ -455,8 +455,7 @@ class Rack(PrimaryModel, StatusModel):
 
             # Retrieve all devices installed within the rack
             queryset = (
-                # v2 TODO(jathan): Replace prefetch_related with select_related
-                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
+                Device.objects.select_related("device_type", "device_type__manufacturer", "device_role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
@@ -498,8 +497,7 @@ class Rack(PrimaryModel, StatusModel):
         :param exclude: List of devices IDs to exclude (useful when moving a device within a rack)
         """
         # Gather all devices which consume U space within the rack
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        devices = self.devices.prefetch_related("device_type").filter(position__gte=1)
+        devices = self.devices.select_related("device_type").filter(position__gte=1)
         if exclude is not None:
             devices = devices.exclude(pk__in=exclude)
 

@@ -358,3 +358,19 @@ mime-file = /opt/nautobot/mime.types
 ```
 
 Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](http-server.md).
+
+### Test Redis Connectivity
+
+From a nautobot shell (`nautobot-server shell_plus`) use the following Python commands to test connectivity to your Redis server. If successful, python should not return any exceptions.
+
+```py
+import os
+import redis
+from nautobot.core.settings_funcs import parse_redis_connection
+
+connection = parse_redis_connection(0)
+client = redis.from_url(connection)
+client.ping() # test basic connectivity
+client.keys() # retrieve a list of keys in the redis database
+client.auth(password=os.getenv("NAUTOBOT_REDIS_PASSWORD")) # test password authentication
+```

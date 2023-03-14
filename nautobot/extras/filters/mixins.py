@@ -30,6 +30,7 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
+from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
@@ -136,13 +137,11 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
     )
     local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        label="Schema (ID)",
+        label="Schema (ID) - Deprecated (use local_context_schema filter)",
     )
-    local_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_context_schema__slug",
+    local_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        to_field_name="slug",
-        label="Schema (slug)",
+        label="Schema (ID or slug)",
     )
 
     def _local_context_data(self, queryset, name, value):
@@ -193,8 +192,16 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
                 ).values_list("source_id", flat=True)
 
                 values = list(destinations) + list(sources)
-            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
-            return qs
+
+            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
+            # unioned queryset is also distinct. We also need to conditionally check if the incoming
+            # `qs` is distinct in the case that a caller is manually passing in a queryset that may
+            # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
+            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
+            if qs.query.distinct:
+                union_qs = union_qs.distinct()
+
+            return qs & union_qs
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):
@@ -212,11 +219,16 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
-        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE, model)
+        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
+            destination_type=self.obj_type, destination_hidden=False
+        )
+        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
 
-        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
-        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION, model)
+        for rel in relationships.iterator():
+            if rel.source_type == self.obj_type and not rel.source_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
+            if rel.destination_type == self.obj_type and not rel.destination_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
         """
