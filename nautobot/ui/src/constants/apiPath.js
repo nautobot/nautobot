@@ -1,0 +1,1 @@
+export const API_USER_SESSION_INFO = '/api/users/users/session/';

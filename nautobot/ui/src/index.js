@@ -8,6 +8,7 @@ import "src/styles/globals.css"
 import Layout from '@components/layouts/BSLayout';
 import reportWebVitals from "src/reportWebVitals"
 import NautobotRouter from "src/router"
+import getApiClient from "@utils/api"
 
 
 const dev = process.env.NODE_ENV !== "production"
@@ -24,6 +25,9 @@ const dev = process.env.NODE_ENV !== "production"
 //   },
 //   enumerable: false
 // });
+
+
+const apiClient = getApiClient()
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
