@@ -785,13 +785,10 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 
 
 class ManufacturerForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = Manufacturer
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -1574,7 +1571,6 @@ class PlatformForm(NautobotModelForm):
         model = Platform
         fields = [
             "name",
-            "slug",
             "manufacturer",
             "napalm_driver",
             "napalm_args",

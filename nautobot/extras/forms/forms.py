@@ -471,7 +471,6 @@ class DynamicGroupForm(NautobotModelForm):
         model = DynamicGroup
         fields = [
             "name",
-            "slug",
             "description",
             "content_type",
         ]
@@ -707,14 +706,12 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 
 
 class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
-    slug = SlugField()
     query = TextField()
 
     class Meta:
         model = GraphQLQuery
         fields = (
             "name",
-            "slug",
             "query",
         )
 
@@ -1203,7 +1200,7 @@ class RoleForm(NautobotModelForm):
     class Meta:
         model = Role
         widgets = {"color": ColorSelect()}
-        fields = ["name", "slug", "weight", "description", "content_types", "color"]
+        fields = ["name", "weight", "description", "content_types", "color"]
 
 
 class RoleBulkEditForm(NautobotBulkEditForm):
@@ -1253,8 +1250,6 @@ def provider_choices():
 class SecretForm(NautobotModelForm):
     """Create/update form for `Secret` objects."""
 
-    slug = SlugField()
-
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
@@ -1263,7 +1258,6 @@ class SecretForm(NautobotModelForm):
         model = Secret
         fields = [
             "name",
-            "slug",
             "description",
             "provider",
             "parameters",
@@ -1307,13 +1301,10 @@ SecretsGroupAssociationFormSet = inlineformset_factory(
 class SecretsGroupForm(NautobotModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
-    slug = SlugField()
-
     class Meta:
         model = SecretsGroup
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -1337,7 +1328,7 @@ class StatusForm(NautobotModelForm):
     class Meta:
         model = Status
         widgets = {"color": ColorSelect()}
-        fields = ["name", "slug", "description", "content_types", "color"]
+        fields = ["name", "description", "content_types", "color"]
 
 
 class StatusCSVForm(CustomFieldModelCSVForm):

@@ -26,7 +26,7 @@ class AppTest(APITestCase):
 
 class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     model = ClusterType
-    brief_fields = ["cluster_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["cluster_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Cluster Type 4",
@@ -59,7 +59,7 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
 
 class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     model = ClusterGroup
-    brief_fields = ["cluster_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["cluster_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Cluster Group 4",

@@ -164,13 +164,10 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
 
 
 class CircuitTypeForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = CircuitType
         fields = [
             "name",
-            "slug",
             "description",
         ]
 

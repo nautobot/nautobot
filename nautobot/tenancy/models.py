@@ -24,7 +24,7 @@ class TenantGroup(TreeModel, OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "parent", "description"]
+    csv_headers = ["name", "parent", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -67,7 +67,7 @@ class Tenant(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "slug", "tenant_group", "description", "comments"]
+    csv_headers = ["name", "tenant_group", "description", "comments"]
     clone_fields = [
         "tenant_group",
         "description",

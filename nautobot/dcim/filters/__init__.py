@@ -475,7 +475,7 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = Manufacturer
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class DeviceTypeFilterSet(NautobotFilterSet):
@@ -748,7 +748,6 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = [
             "id",
             "name",
-            "slug",
             "napalm_driver",
             "description",
             "napalm_args",
@@ -1481,4 +1480,4 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = ["id", "name", "slug", "failover_strategy", "tags"]
+        fields = ["id", "name", "failover_strategy", "tags"]

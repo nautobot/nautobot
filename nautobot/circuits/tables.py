@@ -79,7 +79,7 @@ class CircuitTypeTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = CircuitType
-        fields = ("pk", "name", "circuit_count", "description", "slug", "actions")
+        fields = ("pk", "name", "circuit_count", "description", "actions")
         default_columns = (
             "pk",
             "name",

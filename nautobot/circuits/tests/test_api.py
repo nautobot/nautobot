@@ -17,7 +17,7 @@ class AppTest(APITestCase):
 
 class ProviderTest(APIViewTestCases.APIViewTestCase):
     model = Provider
-    brief_fields = ["circuit_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["circuit_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Provider 4",
@@ -91,7 +91,7 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     model = CircuitType
-    brief_fields = ["circuit_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["circuit_count", "display", "id", "name", "url"]
     create_data = (
         {
             "name": "Circuit Type 4",

@@ -210,13 +210,10 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
 
 
 class RIRForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = RIR
         fields = [
             "name",
-            "slug",
             "is_private",
             "description",
         ]

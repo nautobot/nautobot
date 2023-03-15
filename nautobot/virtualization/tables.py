@@ -47,7 +47,7 @@ class ClusterTypeTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ClusterType
-        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        fields = ("pk", "name", "cluster_count", "description", "actions")
         default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 
@@ -64,7 +64,7 @@ class ClusterGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ClusterGroup
-        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        fields = ("pk", "name", "cluster_count", "description", "actions")
         default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 

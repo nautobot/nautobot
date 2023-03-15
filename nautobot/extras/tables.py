@@ -514,7 +514,6 @@ class GraphQLQueryTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
         )
 
 
@@ -870,7 +869,7 @@ class RoleTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Role
-        fields = ["pk", "name", "slug", "color", "weight", "content_types", "description"]
+        fields = ["pk", "name", "color", "weight", "content_types", "description"]
 
 
 class RoleTableMixin(BaseTable):
@@ -948,7 +947,7 @@ class StatusTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ["pk", "name", "slug", "color", "content_types", "description"]
+        fields = ["pk", "name", "color", "content_types", "description"]
 
 
 class StatusTableMixin(BaseTable):

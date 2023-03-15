@@ -419,7 +419,6 @@ class DynamicGroupFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
@@ -429,7 +428,7 @@ class DynamicGroupFilterSet(NautobotFilterSet):
 
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "slug", "description")
+        fields = ("id", "name", "description")
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):
@@ -517,14 +516,15 @@ class GraphQLQueryFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "query": "icontains",
         },
     )
 
     class Meta:
         model = GraphQLQuery
-        fields = ["name", "slug"]
+        fields = [
+            "name",
+        ]
 
 
 #
@@ -606,7 +606,6 @@ class JobHookFilterSet(BaseFilterSet):
             "content_types",
             "enabled",
             "job",
-            "slug",
             "type_create",
             "type_update",
             "type_delete",
@@ -819,7 +818,6 @@ class SecretFilterSet(
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
         },
     )
     # TODO(Glenn): dynamic choices needed. The issue being that secrets providers are Python
@@ -828,7 +826,7 @@ class SecretFilterSet(
 
     class Meta:
         model = Secret
-        fields = ("id", "name", "slug", "provider", "created", "last_updated")
+        fields = ("id", "name", "provider", "created", "last_updated")
 
 
 class SecretsGroupFilterSet(
@@ -841,13 +839,12 @@ class SecretsGroupFilterSet(
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
         },
     )
 
     class Meta:
         model = SecretsGroup
-        fields = ("id", "name", "slug", "created", "last_updated")
+        fields = ("id", "name", "created", "last_updated")
 
 
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
@@ -884,7 +881,6 @@ class StatusFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "content_types__model": "icontains",
         },
     )
@@ -899,7 +895,6 @@ class StatusFilterSet(NautobotFilterSet):
             "content_types",
             "color",
             "name",
-            "slug",
             "created",
             "last_updated",
         ]
@@ -964,7 +959,6 @@ class RoleFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "content_types__model": "icontains",
         },
     )
@@ -985,7 +979,6 @@ class RoleFilterSet(NautobotFilterSet):
             "content_types",
             "color",
             "name",
-            "slug",
             "weight",
             "created",
             "last_updated",

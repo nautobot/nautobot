@@ -923,5 +923,5 @@ class DeviceRedundancyGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "slug", "status", "failover_strategy", "device_count", "secrets_group", "tags")
+        fields = ("pk", "name", "status", "failover_strategy", "device_count", "secrets_group", "tags")
         default_columns = ("pk", "name", "status", "failover_strategy", "device_count")

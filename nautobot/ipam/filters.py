@@ -120,7 +120,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
 class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = RIR
-        fields = ["id", "name", "slug", "is_private", "description"]
+        fields = ["id", "name", "is_private", "description"]
 
 
 class IPAMFilterSetMixin(django_filters.FilterSet):

@@ -120,7 +120,6 @@ class RIRSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "is_private",
             "description",
             "assigned_prefix_count",

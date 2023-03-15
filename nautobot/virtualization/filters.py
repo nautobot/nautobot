@@ -49,7 +49,7 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = ClusterType
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -65,7 +65,7 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = ClusterGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyModelFilterSetMixin):

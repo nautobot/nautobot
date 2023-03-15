@@ -89,7 +89,6 @@ class CircuitTypeSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "circuit_count",
         ]

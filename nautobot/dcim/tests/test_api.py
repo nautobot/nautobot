@@ -655,7 +655,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["device_type_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["device_type_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
@@ -2296,7 +2296,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
-    brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
+    brief_fields = ["display", "failover_strategy", "id", "name", "url"]
     choices_fields = ["failover_strategy"]
 
     @classmethod

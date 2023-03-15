@@ -60,7 +60,7 @@ class ProviderFilterSet(NautobotFilterSet):
 
     class Meta:
         model = Provider
-        fields = ["account", "admin_contact", "asn", "comments", "id", "name", "noc_contact", "portal_url", "slug"]
+        fields = ["account", "admin_contact", "asn", "comments", "id", "name", "noc_contact", "portal_url"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -115,7 +115,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = CircuitType
-        fields = ["id", "description", "name", "slug"]
+        fields = ["id", "description", "name"]
 
 
 class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):

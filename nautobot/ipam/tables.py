@@ -280,7 +280,6 @@ class RIRTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
             "is_private",
             "assigned_prefix_count",
             "description",

@@ -49,14 +49,13 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = TenantGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class TenantFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "description": "icontains",
             "comments": "icontains",
         },
@@ -176,7 +175,6 @@ class TenantFilterSet(NautobotFilterSet):
             "description",
             "id",
             "name",
-            "slug",
             "tags",
         ]
 

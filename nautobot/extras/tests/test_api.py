@@ -687,7 +687,7 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    brief_fields = ["content_type", "display", "id", "name", "url"]
     choices_fields = ["content_type"]
     create_data = [
         {
@@ -3047,7 +3047,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
     model = Secret
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     create_data = [
@@ -3103,7 +3103,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
 
 class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroup
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     slug_source = "name"
@@ -3224,7 +3224,7 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }
@@ -3572,7 +3572,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class RoleTest(APIViewTestCases.APIViewTestCase):
     model = Role
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }
