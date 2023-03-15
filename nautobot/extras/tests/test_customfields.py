@@ -33,16 +33,11 @@ class CustomFieldTest(TestCase):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
         instance = CustomField.objects.create(
             # 2.0 TODO: #824 remove name field
-            name="Custom Field",
+            label="Custom Field",
             slug="custom_field",
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         instance.validated_save()
-
-        instance.refresh_from_db()
-        instance.name = "Different Custom Field"
-        with self.assertRaises(ValidationError):
-            instance.validated_save()
 
         instance.refresh_from_db()
         instance.slug = "custom_field_2"
@@ -116,36 +111,34 @@ class CustomFieldTest(TestCase):
         obj_type = ContentType.objects.get_for_model(Location)
 
         for data in DATA:
-
             # Create a custom field
             # 2.0 TODO: #824 slug rather than name
-            cf = CustomField(type=data["field_type"], name="my_field", required=False)
+            cf = CustomField(type=data["field_type"], label="my_field", required=False)
             cf.save()  # not validated_save this time, as we're testing backwards-compatibility
             cf.content_types.set([obj_type])
             # Assert that slug and label were auto-populated correctly
             # 2.0 TODO: slug and label will become mandatory fields to specify.
             cf.refresh_from_db()
-            self.assertEqual(cf.label, cf.name)
-            self.assertEqual(cf.slug, cf.name)
+            self.assertEqual(cf.slug, cf.label)
 
             # Assign a value to the first Location
             location = Location.objects.get(slug="location-a")
             # 2.0 TODO: #824 cf.slug rather than cf.name
-            location.cf[cf.name] = data["field_value"]
+            location.cf[cf.slug] = data["field_value"]
             location.validated_save()
 
             # Retrieve the stored value
             location.refresh_from_db()
             # 2.0 TODO: #824 cf.slug rather than cf.name
-            self.assertEqual(location.cf[cf.name], data["field_value"])
+            self.assertEqual(location.cf[cf.slug], data["field_value"])
 
             # Delete the stored value
             # 2.0 TODO: #824 cf.slug rather than cf.name
-            location.cf.pop(cf.name)
+            location.cf.pop(cf.slug)
             location.save()
             location.refresh_from_db()
             # 2.0 TODO: #824 cf.slug rather than cf.name
-            self.assertIsNone(location.cf.get(cf.name))
+            self.assertIsNone(location.cf.get(cf.slug))
 
             # Delete the custom field
             cf.delete()
@@ -156,7 +149,7 @@ class CustomFieldTest(TestCase):
         # Create a custom field
         cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
-            name="my_field",
+            label="my_field",
             required=False,
         )
         cf.save()
@@ -169,21 +162,21 @@ class CustomFieldTest(TestCase):
         # Assign a value to the first Location
         location = Location.objects.get(slug="location-a")
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf[cf.name] = "Option A"
+        location.cf[cf.slug] = "Option A"
         location.validated_save()
 
         # Retrieve the stored value
         location.refresh_from_db()
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        self.assertEqual(location.cf[cf.name], "Option A")
+        self.assertEqual(location.cf[cf.slug], "Option A")
 
         # Delete the stored value
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf.pop(cf.name)
+        location.cf.pop(cf.slug)
         location.save()
         location.refresh_from_db()
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        self.assertIsNone(location.cf.get(cf.name))
+        self.assertIsNone(location.cf.get(cf.slug))
 
         # Delete the custom field
         cf.delete()
@@ -194,7 +187,7 @@ class CustomFieldTest(TestCase):
         # Create a custom field
         cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
-            name="my_field",
+            label="my_field",
             required=False,
         )
         cf.save()
@@ -207,21 +200,21 @@ class CustomFieldTest(TestCase):
         # Assign a value to the first Location
         location = Location.objects.get(slug="location-a")
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf[cf.name] = ["Option A", "Option B"]
+        location.cf[cf.slug] = ["Option A", "Option B"]
         location.validated_save()
 
         # Retrieve the stored value
         location.refresh_from_db()
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        self.assertEqual(location.cf[cf.name], ["Option A", "Option B"])
+        self.assertEqual(location.cf[cf.slug], ["Option A", "Option B"])
 
         # Delete the stored value
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf.pop(cf.name)
+        location.cf.pop(cf.slug)
         location.save()
         location.refresh_from_db()
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        self.assertIsNone(location.cf.get(cf.name))
+        self.assertIsNone(location.cf.get(cf.slug))
 
         # Delete the custom field
         cf.delete()
@@ -232,7 +225,7 @@ class CustomFieldTest(TestCase):
         # Create a custom field
         cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
-            name="my_field",
+            label="my_field",
             required=False,
         )
         cf.save()
@@ -246,13 +239,13 @@ class CustomFieldTest(TestCase):
         locations = Location.objects.all()
         # 2.0 TODO: #824 cf.slug rather than cf.name
         for location in locations:
-            location.cf[cf.name] = ["Option A", "Option B", "Option C"]
+            location.cf[cf.slug] = ["Option A", "Option B", "Option C"]
             location.validated_save()
 
             # Retrieve the stored value
             location.refresh_from_db()
             # 2.0 TODO: #824 cf.slug rather than cf.name
-            self.assertEqual(location.cf[cf.name], ["Option A", "Option B", "Option C"])
+            self.assertEqual(location.cf[cf.slug], ["Option A", "Option B", "Option C"])
 
         pk_list = list(Location.objects.values_list("pk", flat=True))
         data = {
@@ -281,7 +274,7 @@ class CustomFieldTest(TestCase):
         # Assert the values are unchanged after bulk edit
         for location in locations:
             location.refresh_from_db()
-            self.assertEqual(location.cf[cf.name], ["Option A", "Option B", "Option C"])
+            self.assertEqual(location.cf[cf.slug], ["Option A", "Option B", "Option C"])
 
         cf.delete()
 
@@ -291,7 +284,7 @@ class CustomFieldTest(TestCase):
         # Create a custom field
         cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_TEXT,
-            name="my_text_field",
+            label="my_text_field",
             required=False,
         )
         cf.save()
@@ -300,32 +293,32 @@ class CustomFieldTest(TestCase):
         # Assign a disallowed value (list) to the first Location
         location = Location.objects.get(slug="location-a")
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf[cf.name] = ["I", "am", "a", "list"]
+        location.cf[cf.slug] = ["I", "am", "a", "list"]
         with self.assertRaises(ValidationError) as context:
             location.validated_save()
         self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf[cf.name] = 2
+        location.cf[cf.slug] = 2
         with self.assertRaises(ValidationError) as context:
             location.validated_save()
         self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (bool) to the first Location
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf[cf.name] = True
+        location.cf[cf.slug] = True
         with self.assertRaises(ValidationError) as context:
             location.validated_save()
         self.assertIn("Value must be a string", str(context.exception))
 
         # Delete the stored value
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        location.cf.pop(cf.name)
+        location.cf.pop(cf.slug)
         location.save()
         location.refresh_from_db()
         # 2.0 TODO: #824 cf.slug rather than cf.name
-        self.assertIsNone(location.cf.get(cf.name))
+        self.assertIsNone(location.cf.get(cf.slug))
 
         # Delete the custom field
         cf.delete()
@@ -341,7 +334,7 @@ class CustomFieldTest(TestCase):
             # Create a custom field
             cf = CustomField(
                 type=cf_type,
-                name=f"cf_test_{cf_type}",
+                label=f"cf_test_{cf_type}",
                 required=False,
                 validation_regex="A.C[01]x?",
             )
@@ -357,14 +350,14 @@ class CustomFieldTest(TestCase):
                 with self.subTest(cf_type=cf_type, value=value):
                     with self.assertRaisesMessage(ValidationError, error_message):
                         # 2.0 TODO: #824 cf.slug rather than cf.name
-                        location.cf[cf.name] = value
+                        location.cf[cf.slug] = value
                         location.validated_save()
 
             matching_values = ["ABC1", "00AbC0", "00ABC0x00"]
             for value in matching_values:
                 with self.subTest(cf_type=cf_type, value=value):
                     # 2.0 TODO: #824 cf.slug rather than cf.name
-                    location.cf[cf.name] = value
+                    location.cf[cf.slug] = value
                     location.validated_save()
 
             # Delete the custom field
@@ -374,7 +367,7 @@ class CustomFieldTest(TestCase):
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
         content_type = ContentType.objects.get_for_model(Location)
-        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="text_field", default="foo")
+        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="text_field", default="foo")
         custom_field.save()
         custom_field.content_types.set([content_type])
 
@@ -396,14 +389,14 @@ class CustomFieldDataAPITest(APITestCase):
 
         # Text custom field
         cls.cf_text = CustomField(
-            type=CustomFieldTypeChoices.TYPE_TEXT, name="text_field", slug="text_cf", default="foo"
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", slug="text_cf", default="foo"
         )
         cls.cf_text.save()
         cls.cf_text.content_types.set([content_type])
 
         # Integer custom field
         cls.cf_integer = CustomField(
-            type=CustomFieldTypeChoices.TYPE_INTEGER, name="number_field", slug="number_cf", default=123
+            type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", slug="number_cf", default=123
         )
         cls.cf_integer.save()
         cls.cf_integer.content_types.set([content_type])
@@ -411,7 +404,7 @@ class CustomFieldDataAPITest(APITestCase):
         # Boolean custom field
         cls.cf_boolean = CustomField(
             type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-            name="boolean_field",
+            label="Boolean Field",
             slug="boolean_cf",
             default=False,
         )
@@ -421,7 +414,7 @@ class CustomFieldDataAPITest(APITestCase):
         # Date custom field
         cls.cf_date = CustomField(
             type=CustomFieldTypeChoices.TYPE_DATE,
-            name="date_field",
+            label="Date Field",
             slug="date_cf",
             default="2020-01-01",
         )
@@ -431,7 +424,7 @@ class CustomFieldDataAPITest(APITestCase):
         # URL custom field
         cls.cf_url = CustomField(
             type=CustomFieldTypeChoices.TYPE_URL,
-            name="url_field",
+            label="URL Field",
             slug="url_cf",
             default="http://example.com/1",
         )
@@ -441,7 +434,7 @@ class CustomFieldDataAPITest(APITestCase):
         # Select custom field
         cls.cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
-            name="choice_field",
+            label="Choice Field",
             slug="choice_cf",
         )
         cls.cf_select.save()
@@ -455,7 +448,7 @@ class CustomFieldDataAPITest(APITestCase):
         # Multi-select custom field
         cls.cf_multi_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
-            name="multi_choice_field",
+            label="Multiple Choice Field",
             slug="multi_choice_cf",
         )
         cls.cf_multi_select.save()
@@ -467,7 +460,7 @@ class CustomFieldDataAPITest(APITestCase):
         cls.cf_multi_select.save()
 
         if "example_plugin" in settings.PLUGINS:
-            cls.cf_plugin_field = CustomField.objects.get(name="example_plugin_auto_custom_field")
+            cls.cf_plugin_field = CustomField.objects.get(slug="example_plugin_auto_custom_field")
 
         cls.statuses = Status.objects.get_for_model(Location)
 
@@ -485,17 +478,17 @@ class CustomFieldDataAPITest(APITestCase):
         # Assign custom field values for location 2
         # 2.0 TODO: #824 replace .name with .slug
         cls.locations[1]._custom_field_data = {
-            cls.cf_text.name: "bar",
-            cls.cf_integer.name: 456,
-            cls.cf_boolean.name: True,
-            cls.cf_date.name: "2020-01-02",
-            cls.cf_url.name: "http://example.com/2",
-            cls.cf_select.name: "Bar",
-            cls.cf_multi_select.name: ["Bar", "Baz"],
+            cls.cf_text.slug: "bar",
+            cls.cf_integer.slug: 456,
+            cls.cf_boolean.slug: True,
+            cls.cf_date.slug: "2020-01-02",
+            cls.cf_url.slug: "http://example.com/2",
+            cls.cf_select.slug: "Bar",
+            cls.cf_multi_select.slug: ["Bar", "Baz"],
         }
         if "example_plugin" in settings.PLUGINS:
             # 2.0 TODO: #824 cf.slug rather than cf.name
-            cls.locations[1]._custom_field_data[cls.cf_plugin_field.name] = "Custom value"
+            cls.locations[1]._custom_field_data[cls.cf_plugin_field.slug] = "Custom value"
         cls.locations[1].save()
 
     def test_get_single_object_without_custom_field_data(self):
@@ -535,13 +528,13 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertEqual(response.data["name"], self.locations[1].name)
         # 1.4+ API behavior - custom fields keyed by cf.slug
         # 2.0 TODO: #824 replace location2_cfvs[name] with location2_cfvs[slug]
-        self.assertEqual(response.data["custom_fields"]["text_cf"], location2_cfvs["text_field"])
-        self.assertEqual(response.data["custom_fields"]["number_cf"], location2_cfvs["number_field"])
-        self.assertEqual(response.data["custom_fields"]["boolean_cf"], location2_cfvs["boolean_field"])
-        self.assertEqual(response.data["custom_fields"]["date_cf"], location2_cfvs["date_field"])
-        self.assertEqual(response.data["custom_fields"]["url_cf"], location2_cfvs["url_field"])
-        self.assertEqual(response.data["custom_fields"]["choice_cf"], location2_cfvs["choice_field"])
-        self.assertEqual(response.data["custom_fields"]["multi_choice_cf"], location2_cfvs["multi_choice_field"])
+        self.assertEqual(response.data["custom_fields"]["text_cf"], location2_cfvs["text_cf"])
+        self.assertEqual(response.data["custom_fields"]["number_cf"], location2_cfvs["number_cf"])
+        self.assertEqual(response.data["custom_fields"]["boolean_cf"], location2_cfvs["boolean_cf"])
+        self.assertEqual(response.data["custom_fields"]["date_cf"], location2_cfvs["date_cf"])
+        self.assertEqual(response.data["custom_fields"]["url_cf"], location2_cfvs["url_cf"])
+        self.assertEqual(response.data["custom_fields"]["choice_cf"], location2_cfvs["choice_cf"])
+        self.assertEqual(response.data["custom_fields"]["multi_choice_cf"], location2_cfvs["multi_choice_cf"])
 
     def test_create_single_object_with_defaults(self):
         """
@@ -573,13 +566,13 @@ class CustomFieldDataAPITest(APITestCase):
 
         # Validate database data
         location = Location.objects.get(pk=response.data["id"])
-        self.assertEqual(location.cf["text_field"], self.cf_text.default)
-        self.assertEqual(location.cf["number_field"], self.cf_integer.default)
-        self.assertEqual(location.cf["boolean_field"], self.cf_boolean.default)
-        self.assertEqual(str(location.cf["date_field"]), self.cf_date.default)
-        self.assertEqual(location.cf["url_field"], self.cf_url.default)
-        self.assertEqual(location.cf["choice_field"], self.cf_select.default)
-        self.assertEqual(location.cf["multi_choice_field"], self.cf_multi_select.default)
+        self.assertEqual(location.cf["text_cf"], self.cf_text.default)
+        self.assertEqual(location.cf["number_cf"], self.cf_integer.default)
+        self.assertEqual(location.cf["boolean_cf"], self.cf_boolean.default)
+        self.assertEqual(str(location.cf["date_cf"]), self.cf_date.default)
+        self.assertEqual(location.cf["url_cf"], self.cf_url.default)
+        self.assertEqual(location.cf["choice_cf"], self.cf_select.default)
+        self.assertEqual(location.cf["multi_choice_cf"], self.cf_multi_select.default)
         if "example_plugin" in settings.PLUGINS:
             self.assertEqual(location.cf["example_plugin_auto_custom_field"], self.cf_plugin_field.default)
 
@@ -627,13 +620,13 @@ class CustomFieldDataAPITest(APITestCase):
 
         # Validate database data
         location = Location.objects.get(pk=response.data["id"])
-        self.assertEqual(location.cf["text_field"], data_cf["text_cf"])
-        self.assertEqual(location.cf["number_field"], data_cf["number_cf"])
-        self.assertEqual(location.cf["boolean_field"], data_cf["boolean_cf"])
-        self.assertEqual(str(location.cf["date_field"]), data_cf["date_cf"])
-        self.assertEqual(location.cf["url_field"], data_cf["url_cf"])
-        self.assertEqual(location.cf["choice_field"], data_cf["choice_cf"])
-        self.assertEqual(location.cf["multi_choice_field"], data_cf["multi_choice_cf"])
+        self.assertEqual(location.cf["text_cf"], data_cf["text_cf"])
+        self.assertEqual(location.cf["number_cf"], data_cf["number_cf"])
+        self.assertEqual(location.cf["boolean_cf"], data_cf["boolean_cf"])
+        self.assertEqual(str(location.cf["date_cf"]), data_cf["date_cf"])
+        self.assertEqual(location.cf["url_cf"], data_cf["url_cf"])
+        self.assertEqual(location.cf["choice_cf"], data_cf["choice_cf"])
+        self.assertEqual(location.cf["multi_choice_cf"], data_cf["multi_choice_cf"])
         if "example_plugin" in settings.PLUGINS:
             self.assertEqual(
                 location.cf["example_plugin_auto_custom_field"], data_cf["example_plugin_auto_custom_field"]
@@ -672,7 +665,6 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertEqual(len(response.data), len(data))
 
         for i, _obj in enumerate(data):
-
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
             self.assertEqual(response_cf["text_cf"], self.cf_text.default)
@@ -687,13 +679,13 @@ class CustomFieldDataAPITest(APITestCase):
 
             # Validate database data
             location = Location.objects.get(pk=response.data[i]["id"])
-            self.assertEqual(location.cf["text_field"], self.cf_text.default)
-            self.assertEqual(location.cf["number_field"], self.cf_integer.default)
-            self.assertEqual(location.cf["boolean_field"], self.cf_boolean.default)
-            self.assertEqual(str(location.cf["date_field"]), self.cf_date.default)
-            self.assertEqual(location.cf["url_field"], self.cf_url.default)
-            self.assertEqual(location.cf["choice_field"], self.cf_select.default)
-            self.assertEqual(location.cf["multi_choice_field"], self.cf_multi_select.default)
+            self.assertEqual(location.cf["text_cf"], self.cf_text.default)
+            self.assertEqual(location.cf["number_cf"], self.cf_integer.default)
+            self.assertEqual(location.cf["boolean_cf"], self.cf_boolean.default)
+            self.assertEqual(str(location.cf["date_cf"]), self.cf_date.default)
+            self.assertEqual(location.cf["url_cf"], self.cf_url.default)
+            self.assertEqual(location.cf["choice_cf"], self.cf_select.default)
+            self.assertEqual(location.cf["multi_choice_cf"], self.cf_multi_select.default)
             if "example_plugin" in settings.PLUGINS:
                 self.assertEqual(location.cf["example_plugin_auto_custom_field"], self.cf_plugin_field.default)
 
@@ -743,7 +735,6 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertEqual(len(response.data), len(data))
 
         for i, _obj in enumerate(data):
-
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
             self.assertEqual(response_cf["text_cf"], custom_field_data["text_cf"])
@@ -761,13 +752,13 @@ class CustomFieldDataAPITest(APITestCase):
 
             # Validate database data
             location = Location.objects.get(pk=response.data[i]["id"])
-            self.assertEqual(location.cf["text_field"], custom_field_data["text_cf"])
-            self.assertEqual(location.cf["number_field"], custom_field_data["number_cf"])
-            self.assertEqual(location.cf["boolean_field"], custom_field_data["boolean_cf"])
-            self.assertEqual(str(location.cf["date_field"]), custom_field_data["date_cf"])
-            self.assertEqual(location.cf["url_field"], custom_field_data["url_cf"])
-            self.assertEqual(location.cf["choice_field"], custom_field_data["choice_cf"])
-            self.assertEqual(location.cf["multi_choice_field"], custom_field_data["multi_choice_cf"])
+            self.assertEqual(location.cf["text_cf"], custom_field_data["text_cf"])
+            self.assertEqual(location.cf["number_cf"], custom_field_data["number_cf"])
+            self.assertEqual(location.cf["boolean_cf"], custom_field_data["boolean_cf"])
+            self.assertEqual(str(location.cf["date_cf"]), custom_field_data["date_cf"])
+            self.assertEqual(location.cf["url_cf"], custom_field_data["url_cf"])
+            self.assertEqual(location.cf["choice_cf"], custom_field_data["choice_cf"])
+            self.assertEqual(location.cf["multi_choice_cf"], custom_field_data["multi_choice_cf"])
             if "example_plugin" in settings.PLUGINS:
                 self.assertEqual(
                     location.cf["example_plugin_auto_custom_field"],
@@ -797,11 +788,11 @@ class CustomFieldDataAPITest(APITestCase):
         response_cf = response.data["custom_fields"]
         self.assertEqual(response_cf["text_cf"], data["custom_fields"]["text_cf"])
         self.assertEqual(response_cf["number_cf"], data["custom_fields"]["number_cf"])
-        self.assertEqual(response_cf["boolean_cf"], original_cfvs["boolean_field"])
-        self.assertEqual(response_cf["date_cf"], original_cfvs["date_field"])
-        self.assertEqual(response_cf["url_cf"], original_cfvs["url_field"])
-        self.assertEqual(response_cf["choice_cf"], original_cfvs["choice_field"])
-        self.assertEqual(response_cf["multi_choice_cf"], original_cfvs["multi_choice_field"])
+        self.assertEqual(response_cf["boolean_cf"], original_cfvs["boolean_cf"])
+        self.assertEqual(response_cf["date_cf"], original_cfvs["date_cf"])
+        self.assertEqual(response_cf["url_cf"], original_cfvs["url_cf"])
+        self.assertEqual(response_cf["choice_cf"], original_cfvs["choice_cf"])
+        self.assertEqual(response_cf["multi_choice_cf"], original_cfvs["multi_choice_cf"])
         if "example_plugin" in settings.PLUGINS:
             self.assertEqual(
                 response_cf["example_plugin_auto_custom_field"], original_cfvs["example_plugin_auto_custom_field"]
@@ -809,16 +800,16 @@ class CustomFieldDataAPITest(APITestCase):
 
         # Validate database data
         location.refresh_from_db()
-        self.assertEqual(location.cf["text_field"], data["custom_fields"]["text_cf"])
+        self.assertEqual(location.cf["text_cf"], data["custom_fields"]["text_cf"])
         self.assertEqual(
-            location.cf["number_field"],
+            location.cf["number_cf"],
             data["custom_fields"]["number_cf"],
         )
-        self.assertEqual(location.cf["boolean_field"], original_cfvs["boolean_field"])
-        self.assertEqual(location.cf["date_field"], original_cfvs["date_field"])
-        self.assertEqual(location.cf["url_field"], original_cfvs["url_field"])
-        self.assertEqual(location.cf["choice_field"], original_cfvs["choice_field"])
-        self.assertEqual(location.cf["multi_choice_field"], original_cfvs["multi_choice_field"])
+        self.assertEqual(location.cf["boolean_cf"], original_cfvs["boolean_cf"])
+        self.assertEqual(location.cf["date_cf"], original_cfvs["date_cf"])
+        self.assertEqual(location.cf["url_cf"], original_cfvs["url_cf"])
+        self.assertEqual(location.cf["choice_cf"], original_cfvs["choice_cf"])
+        self.assertEqual(location.cf["multi_choice_cf"], original_cfvs["multi_choice_cf"])
         if "example_plugin" in settings.PLUGINS:
             self.assertEqual(
                 location.cf["example_plugin_auto_custom_field"], original_cfvs["example_plugin_auto_custom_field"]
@@ -960,19 +951,18 @@ class CustomFieldImportTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         custom_fields = (
-            CustomField(name="text", type=CustomFieldTypeChoices.TYPE_TEXT),
-            CustomField(name="integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
-            CustomField(name="boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
-            CustomField(name="date", type=CustomFieldTypeChoices.TYPE_DATE),
-            CustomField(name="url", type=CustomFieldTypeChoices.TYPE_URL),
+            CustomField(label="text", type=CustomFieldTypeChoices.TYPE_TEXT),
+            CustomField(label="integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
+            CustomField(label="boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
+            CustomField(label="date", type=CustomFieldTypeChoices.TYPE_DATE),
+            CustomField(label="url", type=CustomFieldTypeChoices.TYPE_URL),
             CustomField(
-                name="select",
+                label="select",
                 type=CustomFieldTypeChoices.TYPE_SELECT,
             ),
             CustomField(
-                name="multiselect",
+                label="multiselect",
                 type=CustomFieldTypeChoices.TYPE_MULTISELECT,
             ),
         )
@@ -980,12 +970,12 @@ class CustomFieldImportTest(TestCase):
             cf.validated_save()
             cf.content_types.set([ContentType.objects.get_for_model(Location)])
 
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="select"), value="Choice A")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="select"), value="Choice B")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="select"), value="Choice C")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="multiselect"), value="Choice A")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="multiselect"), value="Choice B")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(name="multiselect"), value="Choice C")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="select"), value="Choice A")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="select"), value="Choice B")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="select"), value="Choice C")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="multiselect"), value="Choice A")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="multiselect"), value="Choice B")
+        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="multiselect"), value="Choice C")
 
     def test_import(self):
         """
@@ -1084,7 +1074,7 @@ class CustomFieldImportTest(TestCase):
         Attempt to import an object missing a required custom field.
         """
         # Set one of our CustomFields to required
-        CustomField.objects.filter(name="text").update(required=True)
+        CustomField.objects.filter(label="text").update(required=True)
         lt = LocationType.objects.get(name="Campus")
         form_data = {
             "name": "Location 1",
@@ -1115,11 +1105,11 @@ class CustomFieldModelTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="foo")
+        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="foo")
         cf1.save()
         cf1.content_types.set([ContentType.objects.get_for_model(Location)])
 
-        cf2 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="bar")
+        cf2 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="bar")
         cf2.save()
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
         cls.lt = LocationType.objects.get(name="Campus")
@@ -1207,7 +1197,7 @@ class CustomFieldModelTest(TestCase):
         """
         Check that a ValidationError is raised if any required custom fields are not present.
         """
-        cf3 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="baz", required=True)
+        cf3 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="baz", required=True)
         cf3.save()
         cf3.content_types.set([ContentType.objects.get_for_model(Location)])
 
@@ -1271,18 +1261,18 @@ class CustomFieldFilterTest(TestCase):
         obj_type = ContentType.objects.get_for_model(Location)
 
         # Integer filtering
-        cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_INTEGER)
+        cf = CustomField(label="cf1", type=CustomFieldTypeChoices.TYPE_INTEGER)
         cf.save()
         cf.content_types.set([obj_type])
 
         # Boolean filtering
-        cf = CustomField(name="cf2", type=CustomFieldTypeChoices.TYPE_BOOLEAN)
+        cf = CustomField(label="cf2", type=CustomFieldTypeChoices.TYPE_BOOLEAN)
         cf.save()
         cf.content_types.set([obj_type])
 
         # Exact text filtering
         cf = CustomField(
-            name="cf3",
+            label="cf3",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
         )
@@ -1291,7 +1281,7 @@ class CustomFieldFilterTest(TestCase):
 
         # Loose text filtering
         cf = CustomField(
-            name="cf4",
+            label="cf4",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
         )
@@ -1299,13 +1289,13 @@ class CustomFieldFilterTest(TestCase):
         cf.content_types.set([obj_type])
 
         # Date filtering
-        cf = CustomField(name="cf5", type=CustomFieldTypeChoices.TYPE_DATE)
+        cf = CustomField(label="cf5", type=CustomFieldTypeChoices.TYPE_DATE)
         cf.save()
         cf.content_types.set([obj_type])
 
         # Exact URL filtering
         cf = CustomField(
-            name="cf6",
+            label="cf6",
             type=CustomFieldTypeChoices.TYPE_URL,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
         )
@@ -1314,7 +1304,7 @@ class CustomFieldFilterTest(TestCase):
 
         # Loose URL filtering
         cf = CustomField(
-            name="cf7",
+            label="cf7",
             type=CustomFieldTypeChoices.TYPE_URL,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
         )
@@ -1323,7 +1313,7 @@ class CustomFieldFilterTest(TestCase):
 
         # Selection filtering
         cf = CustomField(
-            name="cf8",
+            label="cf8",
             type=CustomFieldTypeChoices.TYPE_SELECT,
         )
         cf.save()
@@ -1334,7 +1324,7 @@ class CustomFieldFilterTest(TestCase):
 
         # Multi-select filtering
         cf = CustomField(
-            name="cf9",
+            label="cf9",
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
         )
         cf.save()
@@ -1717,7 +1707,7 @@ class CustomFieldChoiceTest(TestCase):
     def setUp(self):
         obj_type = ContentType.objects.get_for_model(Location)
         self.cf = CustomField(
-            name="cf1",
+            label="cf1",
             type=CustomFieldTypeChoices.TYPE_SELECT,
         )
         self.cf.save()
@@ -1773,7 +1763,7 @@ class CustomFieldChoiceTest(TestCase):
             # Create a custom field
             cf = CustomField(
                 type=cf_type,
-                name=f"cf_test_{cf_type}",
+                label=f"cf_test_{cf_type}",
                 required=False,
                 validation_regex="A.C[01]x?",
             )
@@ -1807,7 +1797,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location.save()
 
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
+        cf = CustomField(label="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
         cf.save()
         cf.content_types.set([obj_type])
 
@@ -1816,10 +1806,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location.cf["cf1"], "Foo")
 
     def test_delete_custom_field_data_task(self):
-
         obj_type = ContentType.objects.get_for_model(Location)
         cf = CustomField(
-            name="cf1",
+            label="cf1",
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         cf.save()
@@ -1844,7 +1833,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
         cf = CustomField(
-            name="cf1",
+            label="cf1",
             type=CustomFieldTypeChoices.TYPE_SELECT,
         )
         cf.save()
@@ -1875,19 +1864,19 @@ class CustomFieldTableTest(TestCase):
         content_type = ContentType.objects.get_for_model(Location)
 
         # Text custom field
-        cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="text_field", default="foo")
+        cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="text_field", default="foo")
         cf_text.validated_save()
         cf_text.content_types.set([content_type])
 
         # Integer custom field
-        cf_integer = CustomField(type=CustomFieldTypeChoices.TYPE_INTEGER, name="number_field", default=123)
+        cf_integer = CustomField(type=CustomFieldTypeChoices.TYPE_INTEGER, label="number_field", default=123)
         cf_integer.validated_save()
         cf_integer.content_types.set([content_type])
 
         # Boolean custom field
         cf_boolean = CustomField(
             type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-            name="boolean_field",
+            label="boolean_field",
             default=False,
         )
         cf_boolean.validated_save()
@@ -1896,7 +1885,7 @@ class CustomFieldTableTest(TestCase):
         # Date custom field
         cf_date = CustomField(
             type=CustomFieldTypeChoices.TYPE_DATE,
-            name="date_field",
+            label="date_field",
             default="2020-01-01",
         )
         cf_date.validated_save()
@@ -1905,7 +1894,7 @@ class CustomFieldTableTest(TestCase):
         # URL custom field
         cf_url = CustomField(
             type=CustomFieldTypeChoices.TYPE_URL,
-            name="url_field",
+            label="url_field",
             default="http://example.com/1",
         )
         cf_url.validated_save()
@@ -1914,7 +1903,7 @@ class CustomFieldTableTest(TestCase):
         # Select custom field
         cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
-            name="choice_field",
+            label="choice_field",
         )
         cf_select.validated_save()
         cf_select.content_types.set([content_type])
@@ -1927,7 +1916,7 @@ class CustomFieldTableTest(TestCase):
         # Multi-select custom field
         cf_multi_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
-            name="multi_choice_field",
+            label="multi_choice_field",
         )
         cf_multi_select.validated_save()
         cf_multi_select.content_types.set([content_type])
@@ -1948,13 +1937,13 @@ class CustomFieldTableTest(TestCase):
         # Assign custom field values for location 2
         # 2.0 TODO: #824 replace .name with .slug
         self.location._custom_field_data = {
-            cf_text.name: "bar",
-            cf_integer.name: 456,
-            cf_boolean.name: True,
-            cf_date.name: "2020-01-02",
-            cf_url.name: "http://example.com/2",
-            cf_select.name: "Bar",
-            cf_multi_select.name: ["Bar", "Baz"],
+            cf_text.slug: "bar",
+            cf_integer.slug: 456,
+            cf_boolean.slug: True,
+            cf_date.slug: "2020-01-02",
+            cf_url.slug: "http://example.com/2",
+            cf_select.slug: "Bar",
+            cf_multi_select.slug: ["Bar", "Baz"],
         }
         self.location.validated_save()
 

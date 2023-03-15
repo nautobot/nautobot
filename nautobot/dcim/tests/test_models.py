@@ -110,9 +110,9 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="field_1", default="value_1"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="field_2", default="value_2"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="field_3", default="value_3"),
         ]
         for custom_field in custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Interface)])

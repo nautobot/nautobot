@@ -145,8 +145,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        # 2.0 TODO: #824 instance.slug rather than instance.name
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.slug, pk_set))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them

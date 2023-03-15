@@ -221,7 +221,6 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
@@ -252,7 +251,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         user2 = User.objects.create_user(username="testuser2")
         user3 = User.objects.create_user(username="testuser3")
 
@@ -294,7 +292,6 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         powerpanels = (
@@ -318,7 +315,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.cable_connected = cable_statuses.get(slug="connected")
 
         cls.custom_fields = (
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="rack-colors", default=[]),
         )
 
         CustomFieldChoice.objects.create(custom_field=cls.custom_fields[0], value="red")
@@ -537,7 +534,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturer = Manufacturer.objects.first()
 
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
@@ -578,7 +574,6 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturers = (
             Manufacturer.objects.first(),
             Manufacturer.objects.last(),
@@ -776,7 +771,6 @@ device-bays:
         self.assertEqual(db1.name, "Device Bay 1")
 
     def test_devicetype_export(self):
-
         url = reverse("dcim:devicetype_list")
         self.add_permissions("dcim.view_devicetype")
 
@@ -1141,7 +1135,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturer = Manufacturer.objects.first()
         platform = Platform.objects.first()
 
@@ -1171,7 +1164,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1")
@@ -1204,7 +1196,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status_active = statuses.get(slug="active")
 
         cls.custom_fields = (
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, name="crash-counter", default=0),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="crash-counter", default=0),
         )
         cls.custom_fields[0].content_types.set([ContentType.objects.get_for_model(Device)])
 
@@ -2040,7 +2032,6 @@ class CableTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
@@ -2485,7 +2476,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -2568,7 +2558,6 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         rackgroups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=locations[0]),
@@ -2604,7 +2593,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         # Assign location generated to the class object for use later.
@@ -2731,7 +2719,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
 
         cls.form_data = {

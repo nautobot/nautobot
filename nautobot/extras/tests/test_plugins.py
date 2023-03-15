@@ -297,7 +297,7 @@ class PluginTest(TestCase):
         Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
+        cf = CustomField.objects.get(slug="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])

@@ -334,7 +334,6 @@ class CustomFieldModelFilterSet(CustomFieldModelFilterSetMixin):
 class CustomFieldFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
             "label": "icontains",
             "description": "icontains",
         },
@@ -345,15 +344,15 @@ class CustomFieldFilterSet(BaseFilterSet):
 
     class Meta:
         model = CustomField
-        fields = ["id", "content_types", "name", "required", "filter_logic", "weight"]
+        fields = ["id", "content_types", "required", "filter_logic", "weight"]
 
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
     custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
-        to_field_name="name",
-        label="Field (ID or name)",
+        to_field_name="label",
+        label="Field (ID or label)",
     )
 
     class Meta:
@@ -774,7 +773,6 @@ class RelationshipFilterSet(BaseFilterSet):
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
-
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__slug",
         queryset=Relationship.objects.all(),

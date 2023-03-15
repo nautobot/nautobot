@@ -473,13 +473,13 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "validation_regex",
         ]
 
-    def validate(self, data):
-        # 2.0 TODO: #824 remove `name` entirely from the model; for now it's required.
-        if self.instance is None:
-            if "slug" in data and "name" not in data:
-                data["name"] = data["slug"]
+    # def validate(self, data):
+    #     # 2.0 TODO: #824 remove `name` entirely from the model; for now it's required.
+    #     if self.instance is None:
+    #         if "slug" in data and "name" not in data:
+    #             data["name"] = data["slug"]
 
-        return super().validate(data)
+    #     return super().validate(data)
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):

@@ -13,7 +13,7 @@ class TestCreateLocationWithCustomField(Job):
 
     def run(self, data, commit):
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="-")
+        cf = CustomField(label="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="-")
         cf.validated_save()
         cf.content_types.set([obj_type])
 
@@ -23,8 +23,7 @@ class TestCreateLocationWithCustomField(Job):
         location_1 = Location.objects.create(
             name="Test Location", slug="test-location-one", location_type=location_type
         )
-        # 2.0 TODO: #824 cf.slug rather than cf.name
-        location_1.cf[cf.name] = "some-value"
+        location_1.cf[cf.slug] = "some-value"
         location_1.save()
         self.log_success(obj=location_1, message="Created a new location")
 

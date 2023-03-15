@@ -42,7 +42,6 @@ from nautobot.ipam.models import Prefix
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
-
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
         cls.lt = LocationType.objects.get(name="Campus")
@@ -887,7 +886,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device = self.devices[0]
 
         cf = CustomField.objects.create(
-            name="favorite_food",
+            label="favorite_food",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
         )

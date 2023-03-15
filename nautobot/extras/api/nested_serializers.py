@@ -69,7 +69,7 @@ class NestedCustomFieldSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.CustomField
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "slug"]
 
 
 class NestedCustomFieldChoiceSerializer(WritableNestedSerializer):
@@ -285,7 +285,6 @@ class NestedScheduledJobCreationSerializer(BaseModelSerializer):
                 )
 
             if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
-
                 if data.get("crontab") is None:
                     raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
                 try:

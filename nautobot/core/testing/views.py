@@ -196,12 +196,11 @@ class ViewTestCases:
             if self.custom_fields is not None:
                 for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(str(custom_field), response_body, msg=response_body)
-                    # 2.0 TODO: #824 custom_field.slug rather than custom_field.name
                     if custom_field.type == extras_choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-                        for value in instance.cf.get(custom_field.name):
+                        for value in instance.cf.get(custom_field.slug):
                             self.assertIn(str(value), response_body, msg=response_body)
                     else:
-                        self.assertIn(str(instance.cf.get(custom_field.name) or ""), response_body, msg=response_body)
+                        self.assertIn(str(instance.cf.get(custom_field.slug) or ""), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):

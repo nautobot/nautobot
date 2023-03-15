@@ -207,20 +207,11 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
     label = tables.Column(linkify=True)
-    # 2.0 TODO: #824 Remove name column
-    name = tables.TemplateColumn(
-        template_code="""
-{{ value }}
-{% if value != record.slug %}
-<span class="text-warning mdi mdi-alert" title="Name does not match slug '{{ record.slug }}'"></span>
-{% endif %}
-"""
-    )
     slug = tables.TemplateColumn(
         template_code="""
 {{ value }}
 {% if value != record.name %}
-<span class="text-warning mdi mdi-alert" title="Name '{{ record.name }}' does not match slug"></span>
+<span class="text-warning mdi mdi-alert" title="Label '{{ record.label }}' does not match slug"></span>
 {% endif %}
 """
     )
@@ -232,8 +223,6 @@ class CustomFieldTable(BaseTable):
         fields = (
             "pk",
             "label",
-            # 2.0 TODO: #824 Remove name column
-            "name",
             "slug",
             "content_types",
             "type",

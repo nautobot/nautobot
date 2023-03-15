@@ -55,7 +55,7 @@ class APIDocsTestCase(TestCase):
     def setUp(self):
         # Populate a CustomField to activate CustomFieldSerializer
         content_type = ContentType.objects.get_for_model(dcim_models.Location)
-        self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")
+        self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, label="test")
         self.cf_text.save()
         self.cf_text.content_types.set([content_type])
         self.cf_text.save()

@@ -22,9 +22,8 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        {% comment %}2.0 TODO: #824 remove name field{% endcomment %}
-                        <td>Name</td>
-                        <td><span>{{ object.name }}</span></td>
+                        <td>Label</td>
+                        <td><span>{{ object.label | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Type</td>
@@ -33,10 +32,6 @@
                     <tr>
                         <td>Weight</td>
                         <td><span>{{ object.weight }}</span></td>
-                    </tr>
-                    <tr>
-                        <td>Label</td>
-                        <td><span>{{ object.label | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Grouping</td>

@@ -381,9 +381,8 @@ class CustomFieldColumn(django_tables2.Column):
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
-        # 2.0 TODO: #824 replace customfield.name with customfield.slug
-        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.name}")
-        kwargs["verbose_name"] = customfield.label or customfield.name
+        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.slug}")
+        kwargs["verbose_name"] = customfield.label or customfield.slug
 
         super().__init__(*args, **kwargs)
 

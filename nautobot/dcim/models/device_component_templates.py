@@ -84,8 +84,7 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
         content_type = ContentType.objects.get_for_model(model)
         fields = CustomField.objects.filter(content_types=content_type)
         for field in fields:
-            # 2.0 TODO: #824 use field.slug
-            custom_field_data[field.name] = field.default
+            custom_field_data[field.slug] = field.default
 
         return model(
             device=device,

@@ -145,7 +145,6 @@ class ConfigContextTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         # Create three ConfigContexts
@@ -269,7 +268,6 @@ class ConfigContextSchemaTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
@@ -377,26 +375,23 @@ class CustomFieldTestCase(
         custom_fields = [
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-                name="Custom Field Boolean",
                 label="Custom Field Boolean",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
-                name="Custom Field Text",
                 label="Custom Field Text",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_INTEGER,
-                name="Custom Field Integer",
                 label="Custom Field Integer",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 # https://github.com/nautobot/nautobot/issues/1962
-                name="Custom field? With special / unusual characters!",
+                label="Custom field? With special / unusual characters!",
                 default="",
             ),
         ]
@@ -433,10 +428,6 @@ class CustomFieldTestCase(
         self.form_data = self.form_data.copy()
         self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
-        instance = self._get_queryset().get(slug="custom_field_boolean_2")
-        # 2.0 TODO: #824 removal of `name` field altogether
-        # Assure that `name` was auto-populated from the given slug
-        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
         # Can't have two CustomFields with the same "slug"
@@ -483,7 +474,6 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
@@ -635,7 +625,6 @@ class NoteTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Location)
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         user = User.objects.first()
@@ -1929,7 +1918,6 @@ class ObjectChangeTestCase(TestCase):
             oc.save()
 
     def test_objectchange_list(self):
-
         url = reverse("extras:objectchange_list")
         params = {
             "user": User.objects.first().pk,
@@ -1939,7 +1927,6 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -2148,7 +2135,6 @@ class StatusTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 
@@ -2322,7 +2308,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 

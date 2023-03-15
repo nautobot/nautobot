@@ -206,18 +206,17 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field.save()
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
-        # 2.0 TODO: #824 replace custom_field.name with custom_field.slug
-        device.cf[custom_field.name] = "This is some testing text"
+        device.cf[custom_field.slug] = "this-is-some-testing-text"
         device.validated_save()
         # Visit the device detail page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
         # Check the custom field appears in the primary information tab
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
-        self.assertTrue(self.browser.is_text_present("This is some testing text"))
+        self.assertTrue(self.browser.is_text_present("this-is-some-testing-text"))
         # Check the custom field does NOT appear in the advanced tab
         self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertFalse(self.browser.is_text_present("Device Custom Field"))
-        self.assertFalse(self.browser.is_text_present("This is some testing text"))
+        self.assertFalse(self.browser.is_text_present("this-is-some-testing-text"))
         # Set the custom_field to only show in the advanced tab
         custom_field.advanced_ui = True
         custom_field.save()
@@ -225,11 +224,11 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
         # Check the custom field does NOT appear in the primary information tab
         self.assertFalse(self.browser.is_text_present("Device Custom Field"))
-        self.assertFalse(self.browser.is_text_present("This is some testing text"))
+        self.assertFalse(self.browser.is_text_present("this-is-some-testing-text"))
         # Check the custom field appears in the advanced tab
         self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
-        self.assertTrue(self.browser.is_text_present("This is some testing text"))
+        self.assertTrue(self.browser.is_text_present("this-is-some-testing-text"))
 
     def test_json_type_with_valid_json(self):
         """

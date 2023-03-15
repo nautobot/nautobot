@@ -170,7 +170,6 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
 
         device_roles = Role.objects.get_for_model(Device)
@@ -365,7 +364,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["value"],
-        ["custom_field", "custom_field__name"],
+        ["custom_field", "custom_field__label"],
         ["weight"],
     )
 
@@ -373,7 +372,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Device)
         cfs = [
-            CustomField.objects.create(name=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
+            CustomField.objects.create(label=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
             for num in range(3)
         ]
         for cf in cfs:
@@ -444,7 +443,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         content_type = ContentType.objects.get_for_model(Location)
         fields = [
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=f"field {num}", required=False)
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=f"field {num}", required=False)
             for num in range(3)
         ]
         cls.fields = fields
@@ -457,7 +456,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def test_field(self):
         fields = list(self.fields[:2])
         filter_params = [
-            {"custom_field": [fields[0].name, fields[1].pk]},
+            {"custom_field": [fields[0].label, fields[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -471,7 +470,6 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         content_types = ContentType.objects.filter(model__in=["location", "rack", "device"])
 
         ExportTemplate.objects.create(
@@ -713,7 +711,6 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 

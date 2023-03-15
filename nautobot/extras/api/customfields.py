@@ -31,7 +31,7 @@ class CustomFieldDefaultValues:
         # Populate the default value for each CustomField
         value = {}
         for field in fields:
-            key = field.name
+            key = field.slug
             if field.default is not None:
                 value[key] = field.default
             else:
@@ -52,18 +52,10 @@ class CustomFieldsDataField(Field):
         return self._custom_fields
 
     def to_representation(self, obj):
-        # 2.0 TODO: #824 use cf.slug as lookup key instead of cf.name
-        return {cf.slug: obj.get(cf.name) for cf in self._get_custom_fields()}
+        return {cf.slug: obj.get(cf.slug) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
-        # Map slugs to names for the backend data
-        # 2.0 TODO: #824 remove this translation
-        new_data = {}
-        custom_fields = CustomField.objects.filter(slug__in=data.keys())
-        for cf in custom_fields.iterator():
-            new_data[cf.name] = data[cf.slug]
-        data = new_data
 
         # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:

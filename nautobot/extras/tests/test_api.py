@@ -479,7 +479,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     """Tests for the CustomField REST API."""
 
     model = CustomField
-    brief_fields = ["display", "id", "name", "url"]
+    brief_fields = ["display", "id", "slug", "url"]
     create_data = [
         {
             "content_types": ["dcim.location"],
@@ -529,14 +529,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         for cf in custom_fields:
             cf.validated_save()
             cf.content_types.add(location_ct)
-
-    def test_create_object(self):
-        super().test_create_object()
-        # 2.0 TODO: #824 remove name entirely
-        # For now, check that name is correctly populated in the model even though it's not an API field.
-        for create_data in self.create_data:
-            instance = self._get_queryset().get(slug=create_data["slug"])
-            self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_required_fields(self):
         """For this API version, `label` and `slug` are required fields."""
@@ -1866,7 +1858,6 @@ class JobTest(
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
-
     model = JobHook
     brief_fields = ["display", "id", "name", "url"]
     choices_fields = []
