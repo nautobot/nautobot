@@ -148,6 +148,31 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.13 (2023-03-14)
+
+### Added
+
+- [#766](https://github.com/nautobot/nautobot/issues/766) - Added option for apps to extend Nautobot's Prometheus metrics, based on `nautobot_capacity_metrics`.
+- [#3410](https://github.com/nautobot/nautobot/issues/3410) - Added `-time` index for ObjectChange records.
+
+### Changed
+
+- [#3410](https://github.com/nautobot/nautobot/issues/3410) - Changed Homepage ObjectChange query to not join User or Content Type tables, use record cache for user entries instead.
+- [#3416](https://github.com/nautobot/nautobot/issues/3416) - Updated Windows development documentation.
+
+### Dependencies
+
+- [#3405](https://github.com/nautobot/nautobot/issues/3405) - Updated version of `pyopenssl` in Nautobot dev environment and Docker images to 23.0.0 due to an incompatibility between older versions of `pyopenssl` and version 39.x of `cryptography`. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+- [#3405](https://github.com/nautobot/nautobot/issues/3405) - Updated `cryptography` to 39.0.2. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+
+### Fixed
+
+- [#3347](https://github.com/nautobot/nautobot/issues/3347) - Fixed (again) `Location.parent` not populating correctly in the form when editing an existing Location.
+
+### Removed
+
+- [#3407](https://github.com/nautobot/nautobot/issues/3407) - Removed permission checks for ContentTypeAPIViewSet.
+
 ## v1.5.12 (2023-03-03)
 
 ### Added
