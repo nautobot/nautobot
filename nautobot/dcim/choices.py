@@ -68,6 +68,7 @@ class RackTypeChoices(ChoiceSet):
     TYPE_WALLFRAME_VERTICAL = "wall-frame-vertical"
     TYPE_WALLCABINET = "wall-cabinet"
     TYPE_WALLCABINET_VERTICAL = "wall-cabinet-vertical"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (TYPE_2POST, "2-post frame"),
@@ -77,6 +78,7 @@ class RackTypeChoices(ChoiceSet):
         (TYPE_WALLFRAME_VERTICAL, "Wall-mounted frame (vertical)"),
         (TYPE_WALLCABINET, "Wall-mounted cabinet"),
         (TYPE_WALLCABINET_VERTICAL, "Wall-mounted cabinet (vertical)"),
+        (TYPE_OTHER, "Other"),
     )
 
 
@@ -1253,6 +1255,7 @@ class CableTypeChoices(ChoiceSet):
     TYPE_SMF_OS2 = "smf-os2"
     TYPE_AOC = "aoc"
     TYPE_POWER = "power"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (
@@ -1287,6 +1290,7 @@ class CableTypeChoices(ChoiceSet):
             ),
         ),
         (TYPE_POWER, "Power"),
+        ("Other", ((TYPE_OTHER, "Other"),)),
     )
 
 
