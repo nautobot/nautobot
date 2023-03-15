@@ -418,16 +418,19 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
         )
 
     # handle duplicate names by appending an incrementing counter to the end
-    existing_job_model = job_model_class.objects.filter(
-        source=job_source[:JOB_MAX_SOURCE_LENGTH],
-        git_repository=git_repository,
-        module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
-        job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
-    )
     default_job_name = job_class.name[:JOB_MAX_NAME_LENGTH]
     job_name = default_job_name
     append_counter = 2
-    while job_model_class.objects.filter(name=job_name).exclude(id__in=existing_job_model).exists():
+    while (
+        job_model_class.objects.filter(name=job_name)
+        .exclude(
+            source=job_source[:JOB_MAX_SOURCE_LENGTH],
+            git_repository=git_repository,
+            module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+            job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+        )
+        .exists()
+    ):
         job_name_append = f" ({append_counter})"
         max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
         job_name = default_job_name[:max_name_length] + job_name_append
