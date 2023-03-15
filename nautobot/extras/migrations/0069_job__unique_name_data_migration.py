@@ -14,18 +14,18 @@ def generate_unique_job_names_and_update_slug(apps, schema_editor):
     Job = apps.get_model("extras", "Job")
     job_names = []
     for job_model in Job.objects.all().order_by("created"):
-        default_job_name = job_model.name
-        job_name = default_job_name
+        original_job_name = job_model.name
+        job_name = original_job_name
         append_counter = 2
         while job_name in job_names:
             job_name_append = f" ({append_counter})"
             max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
-            job_name = default_job_name[:max_name_length] + job_name_append
+            job_name = original_job_name[:max_name_length] + job_name_append
             append_counter += 1
-        if job_name != default_job_name:
+        if job_name != original_job_name:
             print(
                 'Job class "%s" name "%s" is not unique, changing to "%s".'
-                % (job_model.job_class_name, default_job_name, job_name)
+                % (job_model.job_class_name, original_job_name, job_name)
             )
             job_model.name = job_name
             job_model.name_override = True
