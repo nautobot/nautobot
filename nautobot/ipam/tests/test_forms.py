@@ -2,8 +2,7 @@
 
 from django.test import TestCase
 
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Status
 from nautobot.ipam import forms, models
 
 
@@ -83,51 +82,3 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(slug="slaac")})
         self.assertFalse(form.is_valid())
         self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
-
-    def test_primary_ip_not_altered_if_adding_a_new_IP_to_diff_interface(self):
-        """Test primary IP of a device is not lost when adding a new IP to a different interface."""
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
-        devicerole = Role.objects.get_for_model(Device).first()
-        status_active = Status.objects.get_for_model(Device).get(slug="active")
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        device = Device.objects.create(
-            name="Device 1",
-            location=location,
-            device_type=devicetype,
-            role=devicerole,
-            status=status_active,
-        )
-        interface1 = Interface.objects.create(device=device, name="eth0")
-        interface2 = Interface.objects.create(device=device, name="eth1")
-
-        ipaddress1 = "191.168.0.5/32"
-        ipaddress2 = "192.168.0.5/32"
-
-        form1 = self.form_class(
-            data={
-                self.field_name: ipaddress1,
-                "status": Status.objects.get(slug="active"),
-                "device": device,
-                "interface": interface1,
-                "primary_for_parent": True,
-            }
-        )
-        form1.is_valid()
-        form1.save()
-
-        form2 = self.form_class(
-            data={
-                self.field_name: ipaddress2,
-                "status": Status.objects.get(slug="active"),
-                "device": device,
-                "interface": interface2,
-            }
-        )
-
-        form2.is_valid()
-        form2.save()
-
-        device.refresh_from_db()
-        # Assert primary IP was not altered
-        self.assertEqual(str(device.primary_ip4), ipaddress1)

@@ -6,10 +6,57 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase, override_settings
 
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim import choices as dcim_choices
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+
+
+class IPAddressToInterfaceTest(TestCase):
+    """Tests for `nautobot.ipam.models.IPAddressToInterface`."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.test_device = Device.objects.create(
+            name="device1",
+            role=Role.objects.get_for_model(Device).first(),
+            device_type=DeviceType.objects.first(),
+            location=Location.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        cls.test_int1 = Interface.objects.create(
+            device=cls.test_device,
+            name="int1",
+            status=int_status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        cls.test_int2 = Interface.objects.create(
+            device=cls.test_device,
+            name="int2",
+            status=int_status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        cluster_type = ClusterType.objects.create(name="cluster_type1")
+        cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
+        vmint_status = Status.objects.get_for_model(VMInterface).first()
+        cls.test_vm = VirtualMachine.objects.create(
+            name="vm1",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        cls.test_vmint1 = VMInterface.objects.create(
+            name="vmint1",
+            virtual_machine=cls.test_vm,
+            status=vmint_status,
+        )
+        cls.test_vmint2 = VMInterface.objects.create(
+            name="vmint2",
+            virtual_machine=cls.test_vm,
+            status=vmint_status,
+        )
 
 
 class TestVarbinaryIPField(TestCase):
@@ -486,43 +533,6 @@ class TestIPAddress(TestCase):
         self.assertEqual(nat_inside.nat_outside_list.count(), 2)
         self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
         self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
-    def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Test Device Type 1",
-            slug="test-device-type-1",
-        )
-        devicerole = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
-        device = Device.objects.create(
-            device_type=devicetype,
-            role=devicerole,
-            name="TestDevice1",
-            location=location,
-            status=device_status,
-        )
-        interface = Interface.objects.create(device=device, name="eth0")
-        ipaddress_1 = IPAddress(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=Role.objects.get_for_model(IPAddress).first(),
-            assigned_object_id=interface.id,
-        )
-
-        self.assertRaises(ValidationError, ipaddress_1.clean)
-
-        # Test IPAddress.clean() raises no exception if assigned_object_id and assigned_object_type
-        # are both provided
-        ipaddress_2 = IPAddress(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=Role.objects.get_for_model(IPAddress).first(),
-            assigned_object_id=interface.id,
-            assigned_object_type=ContentType.objects.get_for_model(Interface),
-        )
-        self.assertIsNone(ipaddress_2.clean())
 
     def test_create_ip_address_without_slaac_status(self):
         IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()

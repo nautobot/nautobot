@@ -23,7 +23,7 @@ from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
-logger = logging.getLogger("nautobot.extras.signals")
+logger = logging.getLogger(__name__)
 
 
 #

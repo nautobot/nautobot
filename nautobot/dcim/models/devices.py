@@ -579,6 +579,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         super().validate_unique(exclude)
 
     def clean(self):
+        from nautobot.ipam import models as ipam_models  # circular import workaround
+
         super().clean()
 
         # Validate location
@@ -667,10 +669,15 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         if self.primary_ip4:
             if self.primary_ip4.family != 4:
                 raise ValidationError({"primary_ip4": f"{self.primary_ip4} is not an IPv4 address."})
-            if self.primary_ip4.assigned_object in vc_interfaces:
+            if ipam_models.IPAddressToInterface.objects.filter(
+                ip_address=self.primary_ip4, interface__in=vc_interfaces
+            ).exists():
                 pass
             elif (
-                self.primary_ip4.nat_inside is not None and self.primary_ip4.nat_inside.assigned_object in vc_interfaces
+                self.primary_ip4.nat_inside is not None
+                and ipam_models.IPAddressToInterface.objects.filter(
+                    ip_address=self.primary_ip4.nat_inside, interface__in=vc_interfaces
+                ).exists()
             ):
                 pass
             else:
@@ -680,10 +687,15 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         if self.primary_ip6:
             if self.primary_ip6.family != 6:
                 raise ValidationError({"primary_ip6": f"{self.primary_ip6} is not an IPv6 address."})
-            if self.primary_ip6.assigned_object in vc_interfaces:
+            if ipam_models.IPAddressToInterface.objects.filter(
+                ip_address=self.primary_ip6, interface__in=vc_interfaces
+            ).exists():
                 pass
             elif (
-                self.primary_ip6.nat_inside is not None and self.primary_ip6.nat_inside.assigned_object in vc_interfaces
+                self.primary_ip6.nat_inside is not None
+                and ipam_models.IPAddressToInterface.objects.filter(
+                    ip_address=self.primary_ip6.nat_inside, interface__in=vc_interfaces
+                ).exists()
             ):
                 pass
             else:

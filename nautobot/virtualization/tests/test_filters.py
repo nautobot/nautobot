@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases
@@ -423,9 +422,11 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         # Assign primary IPs for filtering
         cls.ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=cls.interfaces[0]),
-            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=cls.interfaces[1]),
+            IPAddress.objects.create(address="192.0.2.1/24"),
+            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24"),
         )
+        cls.interfaces[0].add_ip_addresses(cls.ipaddresses[0])
+        cls.interfaces[1].add_ip_addresses(cls.ipaddresses[1])
 
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=cls.ipaddresses[0])
         VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip6=cls.ipaddresses[1])
@@ -696,10 +697,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
         # Assign primary IPs for filtering
         ip_address4 = IPAddress.objects.ip_family(4).first()
-        ip_address4.assigned_object = vminterfaces[0]
+        vminterfaces[0].add_ip_addresses(ip_address4)
         ip_address4.validated_save()
         ip_address6 = IPAddress.objects.ip_family(6).first()
-        ip_address6.assigned_object = vminterfaces[1]
+        vminterfaces[1].add_ip_addresses(ip_address6)
         ip_address6.validated_save()
 
         cls.tag = Tag.objects.get_for_model(VMInterface).first()
@@ -718,10 +719,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_ip_addresses(self):
-        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        ipaddresses = list(
-            IPAddress.objects.filter(assigned_object_id__isnull=False, assigned_object_type=vminterface_ct)[:2]
-        )
+        ipaddresses = list(IPAddress.objects.filter(vm_interfaces__isnull=False)[:2])
         params = {"ip_addresses": [ipaddresses[0].address, ipaddresses[1].id]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,

@@ -62,7 +62,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -1711,32 +1711,33 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                # v2 TODO(jathan): Replace prefetch_related with select_related
-                interface_ips = (
-                    IPAddress.objects.ip_family(family)
-                    .filter(
-                        assigned_object_type=ContentType.objects.get_for_model(Interface),
-                        assigned_object_id__in=interface_ids,
-                    )
-                    .prefetch_related("assigned_object")
-                )
-                if interface_ips:
-                    ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
+                interface_ip_assignments = IPAddressToInterface.objects.filter(
+                    interface__in=interface_ids
+                ).select_related("ip_address")
+                if interface_ip_assignments.exists():
+                    ip_list = [
+                        (
+                            assignment.ip_address.id,
+                            f"{assignment.ip_address.address} ({assignment.interface})",
+                        )
+                        for assignment in interface_ip_assignments
+                        if assignment.ip_address.family == family
+                    ]
                     ip_choices.append(("Interface IPs", ip_list))
-                # Collect NAT IPs
-                # v2 TODO(jathan): Replace prefetch_related with select_related
-                nat_ips = (
-                    IPAddress.objects.select_related("nat_inside")
-                    .ip_family(family)
-                    .filter(
-                        nat_inside__assigned_object_type=ContentType.objects.get_for_model(Interface),
-                        nat_inside__assigned_object_id__in=interface_ids,
-                    )
-                    .prefetch_related("assigned_object")
-                )
-                if nat_ips:
-                    ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]
-                    ip_choices.append(("NAT IPs", ip_list))
+
+                    # Collect NAT IPs
+                    nat_ips = []
+                    for ip_assignment in interface_ip_assignments:
+                        if not ip_assignment.ip_address.nat_outside_list.exists():
+                            continue
+                        nat_ips.extend(
+                            [
+                                (ip.id, f"{ip.address} (NAT)")
+                                for ip in ip_assignment.ip_address.nat_outside_list.all()
+                                if ip.family == family
+                            ]
+                        )
+                    ip_choices.append(("NAT IPs", nat_ips))
                 self.fields[f"primary_ip{family}"].choices = ip_choices
 
             # If editing an existing device, exclude it from the list of occupied rack units. This ensures that a device
@@ -2537,6 +2538,12 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "location": "null",
         },
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP Addresses",
+        brief_mode=False,
+    )
 
     class Meta:
         model = Interface
@@ -2550,6 +2557,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "bridge",
             "lag",
             "mac_address",
+            "ip_addresses",
             "mtu",
             "mgmt_only",
             "description",
