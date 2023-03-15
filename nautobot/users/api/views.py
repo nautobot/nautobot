@@ -42,16 +42,29 @@ class UserViewSet(ModelViewSet):
         serializer = self.serializer_class(instance=request.user, context={"request": request})
         return Response(serializer.data)
 
-    @action(methods=["GET"], detail=False, url_path="session")
+    @action(methods=["GET"], detail=False, url_path="session", permission_classes=[AllowAny])
     def session(self, request):
         from django.conf import settings as django_settings
         from nautobot.core.settings_funcs import sso_auth_enabled
+        from social_django.context_processors import backends
+        from django.urls import reverse
 
         serializer = self.serializer_class(instance=request.user, context={"request": request})
 
+        _backends = []
+        sso_enabled = sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS)
+
+        social_auth_backends = backends(request)["backends"]
+        if sso_enabled:
+            for backend in social_auth_backends["backends"]:
+                _backends.append(reverse("social:begin", kwargs={"backend": backend}))
+
         resp = {
             "user": serializer.data,
-            "sso_enabled": sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS)
+            "logged_in": request.user.is_authenticated,
+            "sso_enabled": sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS),
+            "sso_user": (len(social_auth_backends["associated"]) > 0),
+            "backends": _backends,
         }
 
         return Response(resp)
