@@ -1235,7 +1235,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Role
-        fields = ["name", "slug", "weight", "color", "content_types", "description"]
+        fields = Role.csv_headers
         help_texts = {
             "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }

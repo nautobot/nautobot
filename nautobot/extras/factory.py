@@ -23,7 +23,6 @@ class RoleFactory(OrganizationalModelFactory):
     name = factory.LazyFunction(
         lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))
     )
-    slug = factory.LazyAttribute(lambda role: slugify(role.name))
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
     has_weight = NautobotBoolIterator()
     weight = factory.Maybe("has_weight", factory.Faker("pyint"), None)
@@ -50,7 +49,6 @@ class StatusFactory(OrganizationalModelFactory):
     name = factory.LazyFunction(
         lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))
     )
-    slug = factory.LazyAttribute(lambda status: slugify(status.name))
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
     has_description = NautobotBoolIterator()

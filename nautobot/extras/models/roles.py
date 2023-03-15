@@ -23,6 +23,8 @@ class Role(NameColorContentTypesModel):
     )
     weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
+    csv_headers = ["name", "weight", "color", "content_types", "description"]
+
     class Meta:
         ordering = ("weight", "name")
 
