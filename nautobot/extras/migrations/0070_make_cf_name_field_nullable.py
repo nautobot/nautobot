@@ -4,24 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0069_move_cf_name_value_to_label'),
+        ("extras", "0069_move_cf_name_value_to_label"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='customfield',
-            options={'ordering': ['weight', 'label']},
+            name="customfield",
+            options={"ordering": ["weight", "label"]},
         ),
         migrations.AlterField(
-            model_name='customfield',
-            name='label',
+            model_name="customfield",
+            name="label",
             field=models.CharField(max_length=50),
         ),
         migrations.AlterField(
-            model_name='customfield',
-            name='name',
+            model_name="customfield",
+            name="name",
             field=models.CharField(blank=True, max_length=50, unique=True),
         ),
     ]

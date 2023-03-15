@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0070_make_cf_name_field_nullable'),
+        ("extras", "0070_make_cf_name_field_nullable"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='customfield',
-            name='name',
+            model_name="customfield",
+            name="name",
         ),
     ]
