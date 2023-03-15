@@ -30,6 +30,7 @@ In this directory you'll find the following core files:
 - `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
 - `docker-compose.final.yml` - Docker compose override file used to start/build the `final` (production) Docker images for local testing.
 - `docker-compose.final-dev.yml` - Docker compose override file used to start/build the `final-dev` (app development environment) Docker images for local testing.
+- `docker-compose.keycloak.yml` - Docker compose override file used to setup an SSO auth backend for Nautobot.
 - `docker-compose.mysql.yml` - Docker compose override file used to add a MySQL container as the database backend for Nautobot.
 - `docker-compose.postgres.yml` - Docker compose override file used to add a Postgres container as the database backend for Nautobot.
 - `dev.env` - Environment variables used to setup the container services
@@ -134,6 +135,36 @@ services:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
       - ../:/source
 ```
+
+### SSO Auth Backend with Keycloak
+
+Keycloak and its database are run in the same docker-compose project as Nautobot. A separate database is used to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak, and allows you to use a MySQL database for Nautobot but maintain Keycloaks required Postgres DB. This setup is meant for local development and testing, and should not be used as a reference for deploying Keycloak in production.
+
+The `invoke.yml` file must be updated to add `development/docker-compose.keycloak.yml` to the docker-compose project and to enable OIDC. These setting are solely for local development inside the Nautobot repository and is not applicable to any other deployment. An example `invoke.yml` file:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.postgres.yml"
+    - "docker-compose.dev.yml"
+    - "docker-compose.keycloak.yml"
+```
+
+#### Validating Setup
+
+Once all steps are completed Nautobot should now have the `Continue to SSO` button on the login screen and should immediately redirect the user to sign in with Keycloak.
+
+#### Keycloak Login Credentials
+
+Keycloak admin console is reachable via `http://localhost:8087/admin/` with user `admin` and password `admin`. The below users are pre-configured within Keycloak, at this time their permissions are not directly mapped to any permissions provided by default by Nautobot. This will be a later enhancement to the local development environment.
+
+| Username         | Password  |
++------------------+-----------+
+| nautobot_unpriv  | unpriv123 |
+| nautobot_admin   | admin123  |
+| nautobot_auditor | audit123  |
 
 ## Microsoft Visual Studio Code Integration
 
