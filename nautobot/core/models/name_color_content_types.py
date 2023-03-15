@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField, ColorField
+from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
@@ -61,8 +61,6 @@ class NameColorContentTypesModel(
         help_text="The content type(s) to which this model applies.",
     )
     name = models.CharField(max_length=100, unique=True)
-    # TODO (timizuo): Remove slug
-    slug = AutoSlugField(populate_from="name", max_length=100)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
@@ -71,7 +69,7 @@ class NameColorContentTypesModel(
 
     objects = ContentTypeRelatedQuerySet.as_manager()
 
-    csv_headers = ["name", "slug", "color", "content_types", "description"]
+    csv_headers = ["name", "color", "content_types", "description"]
     clone_fields = ["color", "content_types"]
 
     class Meta:
@@ -86,8 +84,7 @@ class NameColorContentTypesModel(
 
     def get_absolute_url(self):
         ct = f"{self._meta.app_label}:{self._meta.model_name}"
-        # TODO(timizuo): Replace self.slug with natural key or pk
-        return reverse(ct, args=[self.slug])
+        return reverse(ct, args=[self.pk])
 
     def get_content_types(self):
         return ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
@@ -95,7 +92,6 @@ class NameColorContentTypesModel(
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.color,
             self.get_content_types(),
             self.description,

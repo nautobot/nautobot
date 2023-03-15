@@ -544,17 +544,16 @@ class FileProxy(BaseModel):
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
     class Meta:
-        ordering = ("slug",)
+        ordering = ("name",)
         verbose_name = "GraphQL query"
         verbose_name_plural = "GraphQL queries"
 
     def get_absolute_url(self):
-        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
+        return reverse("extras:graphqlquery", kwargs={"pk": self.pk})
 
     def save(self, *args, **kwargs):
         variables = {}

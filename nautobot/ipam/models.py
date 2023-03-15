@@ -175,7 +175,6 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -183,7 +182,7 @@ class RIR(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "is_private", "description"]
+    csv_headers = ["name", "is_private", "description"]
 
     objects = RIRQuerySet.as_manager()
 
@@ -199,12 +198,11 @@ class RIR(OrganizationalModel):
         return (self.name,)
 
     def get_absolute_url(self):
-        return reverse("ipam:rir", args=[self.slug])
+        return reverse("ipam:rir", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             str(self.is_private),
             self.description,
         )

@@ -57,10 +57,9 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -69,10 +68,10 @@ class Manufacturer(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("dcim:manufacturer", args=[self.slug])
+        return reverse("dcim:manufacturer", args=[self.pk])
 
     def to_csv(self):
-        return (self.name, self.slug, self.description)
+        return (self.name, self.description)
 
 
 @extras_features(
@@ -333,7 +332,6 @@ class Platform(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -359,7 +357,6 @@ class Platform(OrganizationalModel):
 
     csv_headers = [
         "name",
-        "slug",
         "manufacturer",
         "napalm_driver",
         "napalm_args",
@@ -373,12 +370,11 @@ class Platform(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("dcim:platform", args=[self.slug])
+        return reverse("dcim:platform", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.manufacturer.name if self.manufacturer else None,
             self.napalm_driver,
             self.napalm_args,
@@ -981,7 +977,6 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
     failover_strategy = models.CharField(
@@ -1021,7 +1016,7 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("dcim:deviceredundancygroup", args=[self.slug])
+        return reverse("dcim:deviceredundancygroup", args=[self.pk])
 
     def to_csv(self):
         return (
