@@ -1,5 +1,4 @@
 import uuid
-from urllib.parse import quote_plus
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -7,6 +6,7 @@ from natural_keys import NaturalKeyModel, NaturalKeyModelManager
 from natural_keys.models import extract_nested_key
 
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.utils import construct_natural_key_slug
 
 
 class BaseManager(NaturalKeyModelManager):
@@ -121,14 +121,14 @@ class BaseModel(NaturalKeyModel):
             cleaned_vals = [val] + cleaned_vals
         return cleaned_vals
 
-    natural_key_separator = "/"
-
     @property
     def natural_key_slug(self):
-        """Less naive implementation than django-natural-keys provides by default, based around URL percent-encoding."""
-        return self.natural_key_separator.join(
-            quote_plus(str(value) if value is not None else "\0") for value in self.natural_key()
-        )
+        """
+        Automatic "slug" string derived from this model's natural key, suitable for use in URLs etc.
+
+        A less naïve implementation than django-natural-keys provides by default, based around URL percent-encoding.
+        """
+        return construct_natural_key_slug(self.natural_key())
 
     @classmethod
     def get_natural_key_def(cls):

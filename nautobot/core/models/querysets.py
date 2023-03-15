@@ -1,9 +1,8 @@
-from urllib.parse import unquote_plus
-
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from natural_keys.models import NaturalKeyQuerySet
 
+from nautobot.core.models.utils import deconstruct_natural_key_slug
 from nautobot.core.utils import permissions
 
 
@@ -107,20 +106,15 @@ class RestrictedQuerySet(NaturalKeyQuerySet):
         Extend base queryset with support for filtering by `natural_key_slug=...`.
 
         This is an enhanced version of natural-key slug support from django-natural-keys.
-        Counterpart to BaseModel.natural_key_slug property. Specifically, this handles:
-
-        - Un-escaping of individual fields in the natural key slug (unquote_plus())
-        - Translation of null character as a slug field value back to a python None.
+        Counterpart to BaseModel.natural_key_slug property.
         """
         natural_key_slug = kwargs.pop("natural_key_slug", None)
         if natural_key_slug and isinstance(natural_key_slug, str):
-            keys = [unquote_plus(key) for key in natural_key_slug.split(self.model.natural_key_separator)]
-            # Map null strings back to None
-            keys = [key if key != "\0" else None for key in keys]
+            values = deconstruct_natural_key_slug(natural_key_slug)
             fields = self.model.get_natural_key_fields()
-            if len(keys) > len(fields):
+            if len(values) > len(fields):
                 return self.none()
-            kwargs.update(self.natural_key_kwargs(*keys))
+            kwargs.update(self.natural_key_kwargs(*values))
 
         return super().filter(*args, **kwargs)
 
