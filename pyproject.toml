@@ -111,8 +111,6 @@ MarkupSafe = "~2.1.1"
 mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
 napalm = {version = "~3.4.1", optional = true}
-# Enhanced support for natural keys in Django and Django REST Framework.
-natural-keys = "~2.0.0"
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters

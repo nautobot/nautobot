@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django.utils.functional import classproperty
 
 from timezone_field import TimeZoneField
 
@@ -114,28 +115,14 @@ class LocationType(TreeModel, OrganizationalModel):
 
 
 class LocationQuerySet(TreeQuerySet):
-    @classmethod
-    def as_manager(cls, with_tree_fields=False):
-        """Get an appropriate TreeManager subclass for working with Locations."""
-        LocationManager = TreeManager.from_queryset(cls)
-        LocationManager._built_with_as_manager = True
-        LocationManager._with_tree_fields = with_tree_fields
-        return LocationManager()
-
     def get_for_model(self, model):
         """Filter locations to only those that can accept the given model class."""
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(location_type__content_types=content_type)
 
-    def natural_key_kwargs(self, *args):
-        """
-        Handle variadic args so that the user doesn't have to specify an arbitrary number of `None` for ancestors.
 
-        In other words, treat `(me, parent, grandparent)` as synonymous with `(me, parent, grandparent, None, None)`.
-        """
-        natural_key = self.model.get_natural_key_fields()
-        natural_key = natural_key[: len(args)]
-        return dict(zip(natural_key, args))
+class LocationManager(TreeManager.from_queryset(LocationQuerySet)):
+    pass
 
 
 @extras_features(
@@ -221,7 +208,7 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = LocationQuerySet.as_manager(with_tree_fields=True)
+    objects = LocationManager()
 
     csv_headers = [
         "name",
@@ -269,31 +256,33 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     def __str__(self):
         return self.name
 
-    @classmethod
-    def get_natural_key_fields(cls):
-        natural_key = []
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        Due to the recursive nature of Location's natural key, we need a custom implementation of this property.
+
+        This returns a set of natural key lookups based on the current maximum depth of the Location tree.
+        For example if the tree is 2 layers deep, it will return ["name", "parent__name", "parent__parent__name"].
+
+        Without this custom implementation, the generic `natural_key_field_lookups` would recurse infinitely.
+        """
+        lookups = []
         name = "name"
         for _ in range(cls.objects.max_tree_depth() + 1):
-            natural_key.append(name)
+            lookups.append(name)
             name = f"parent__{name}"
-        return natural_key
+        return lookups
 
-    def natural_key(self):
-        """
-        Custom natural key implementation for Location.
-
-        Needed because with the uniqueness constraint of (name, parent) we end up with a theoretically infinite
-        recursive natural key.
-        """
-        try:
-            return [ancestor.name for ancestor in reversed(self.ancestors(include_self=True))]
-        except Location.DoesNotExist:
-            instance = self
-            keys = []
-            while instance is not None:
-                keys.append(instance.name)
-                instance = instance.parent
-            return keys
+    @classmethod
+    def natural_key_args_to_kwargs(cls, args):
+        """Handle the possibility that more recursive "parent" lookups were specified than we initially expected."""
+        args = list(args)
+        natural_key_field_lookups = list(cls.natural_key_field_lookups)
+        while len(args) < len(natural_key_field_lookups):
+            args.append(None)
+        while len(args) > len(natural_key_field_lookups):
+            natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
+        return dict(zip(natural_key_field_lookups, args))
 
     def get_absolute_url(self):
         return reverse("dcim:location", args=[self.slug])

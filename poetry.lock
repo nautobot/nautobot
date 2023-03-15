@@ -1547,18 +1547,6 @@ files = [
 typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
 
 [[package]]
-name = "html-json-forms"
-version = "1.1.1"
-description = "Implementation of the HTML JSON Forms spec for use with the Django REST Framework."
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "html-json-forms-1.1.1.tar.gz", hash = "sha256:16dc413dc858fcc53602ad509c1aef735534838e1bae888bf429e210a9c48f6b"},
-    {file = "html_json_forms-1.1.1-py3-none-any.whl", hash = "sha256:51e7e9088bc88e324027144ca25d8bcdd37da28f311a8436bfd88944138ed409"},
-]
-
-[[package]]
 name = "idna"
 version = "3.4"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -2239,21 +2227,6 @@ requests = ">=2.7.0"
 scp = "*"
 setuptools = ">=38.4.0"
 textfsm = "*"
-
-[[package]]
-name = "natural-keys"
-version = "2.0.0"
-description = "Enhanced support for natural keys in Django and Django REST Framework"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "natural-keys-2.0.0.tar.gz", hash = "sha256:e50b6d7d15fd79860e626163184b2f2df9de4fb6f7851d4b9e4ceb311e989f8d"},
-    {file = "natural_keys-2.0.0-py3-none-any.whl", hash = "sha256:cc21d4c19475a37fdef44a8d68f6b9f11c4bdb15af1ab331eb60badfe571eca2"},
-]
-
-[package.dependencies]
-html-json-forms = ">=1.0.0"
 
 [[package]]
 name = "ncclient"
@@ -3990,4 +3963,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "948dfc61f01697cb682f17ce8fc5ed81e6a42df069fc8bd796e68ccee6154116"
+content-hash = "4a095e602d21197bb6e00803e66af1fcdce75bca3d31bfa1ec84c81444e16179"

@@ -593,8 +593,6 @@ class JobResult(BaseModel, CustomFieldModel):
 
     objects = JobResultManager()
 
-    _natural_key = ["task_id"]
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.use_job_logs_db = True

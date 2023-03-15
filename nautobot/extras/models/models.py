@@ -519,15 +519,18 @@ class FileProxy(BaseModel):
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    _natural_key = ["name", "uploaded_at"]
-
     def __str__(self):
         return self.name
 
     class Meta:
         get_latest_by = "uploaded_at"
         ordering = ["name"]
+        # TODO: unique_together = [["name", "uploaded_at"]]
         verbose_name_plural = "file proxies"
+
+    # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
+    # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
+    natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
         delete_file_if_needed(self, "file")

@@ -1,58 +1,14 @@
 import uuid
 
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from natural_keys import NaturalKeyModel, NaturalKeyModelManager
-from natural_keys.models import extract_nested_key
+from django.utils.functional import classproperty
 
+from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import construct_natural_key_slug
 
 
-class BaseManager(NaturalKeyModelManager):
-    def get_queryset(self):
-        return self._queryset_class(self.model, using=self._db, hints=self._hints)
-
-    def get_by_natural_key(self, *args):
-        """
-        Return the object corresponding to the provided natural key.
-
-        (Extension of django-natural-keys implementation of this generic Django API.)
-        """
-        kwargs = self.natural_key_kwargs(*args)
-
-        # Since kwargs already has __ lookups in it, we could just do "return self.get(**kwargs)"
-        # But django-natural-keys wants to call each related model's get_by_natural_key in case it's overridden:
-        for name, rel_to in self.model.get_natural_key_info():
-            if not rel_to:
-                # Not a related object, no processing needed
-                continue
-
-            # Extract natural key for related object
-            try:
-                nested_key = extract_nested_key(kwargs, rel_to, name)
-            except AttributeError:
-                # Handle case where rel_to isn't a NaturalKeyModel, e.g. ContentType
-                nested_key = []
-                for key in kwargs.keys():
-                    if key.startswith(f"{name}__"):
-                        nested_key.append(kwargs[key])
-                if all(key is None for key in nested_key):
-                    nested_key = None
-
-            if nested_key:
-                # Update kwargs with related object
-                try:
-                    kwargs[name] = rel_to.objects.get_by_natural_key(*nested_key)
-                except rel_to.DoesNotExist as exc:
-                    raise self.model.DoesNotExist() from exc
-            else:
-                kwargs[name] = None
-
-        return self.get(**kwargs)
-
-
-class BaseModel(NaturalKeyModel):
+class BaseModel(models.Model):
     """
     Base model class that all models should inherit from.
 
@@ -98,7 +54,7 @@ class BaseModel(NaturalKeyModel):
         self.full_clean()
         self.save()
 
-    def natural_key(self):
+    def natural_key(self) -> list:
         """
         Smarter default implementation of natural key construction.
 
@@ -106,10 +62,10 @@ class BaseModel(NaturalKeyModel):
         2. Handles variadic natural-keys (e.g. Location model - [name, parent__name, parent__parent__name, ...].)
         """
         vals = []
-        for name_list in [name.split("__") for name in self.get_natural_key_fields()]:
+        for lookups in [lookup.split("__") for lookup in self.natural_key_field_lookups]:
             val = self
-            for attr_name in name_list:
-                val = getattr(val, attr_name)
+            for lookup in lookups:
+                val = getattr(val, lookup)
                 if val is None:
                     break
             vals.append(val)
@@ -122,7 +78,7 @@ class BaseModel(NaturalKeyModel):
         return cleaned_vals
 
     @property
-    def natural_key_slug(self):
+    def natural_key_slug(self) -> str:
         """
         Automatic "slug" string derived from this model's natural key, suitable for use in URLs etc.
 
@@ -130,59 +86,96 @@ class BaseModel(NaturalKeyModel):
         """
         return construct_natural_key_slug(self.natural_key())
 
-    @classmethod
-    def get_natural_key_def(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
         """
-        Extend django-natural-keys implementation to recognize that UUIDFields are not relevant to the natural key.
+        List of lookups (possibly including nested lookups for related models) that make up this model's natural key.
+
+        BaseModel provides a "smart" implementation that tries to determine this automatically,
+        but you can also explicitly set `natural_key_field_names` on a given model subclass if desired.
+
+        This property is based on a consolidation of `django-natural-keys` `ForeignKeyModel.get_natural_key_info()`,
+        `ForeignKeyModel.get_natural_key_def()`, and `ForeignKeyModel.get_natural_key_fields()`.
+
+        Unlike `get_natural_key_def()`, this doesn't auto-exclude all AutoField and BigAutoField fields,
+        but instead explicitly discounts the `id` field (only) as a candidate.
         """
-        if hasattr(cls, "_natural_key"):
-            return cls._natural_key
-
-        for constraint in cls._meta.constraints:
-            if isinstance(constraint, models.UniqueConstraint):
-                return constraint.fields
-
-        if cls._meta.unique_together:
-            return cls._meta.unique_together[0]
-
-        unique = [
-            f
-            for f in cls._meta.fields
-            if f.unique
-            and f.__class__.__name__
-            not in [
-                "AutoField",
-                "BigAutoField",
-                "UUIDField",
-            ]
-        ]
-        if unique:
-            return (unique[0].name,)
-
-        raise Exception(
-            f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
-            "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
-            "you probably need to explicitly declare a natural-key for this model."
-        )
-
-    @classmethod
-    def get_natural_key_fields(cls):
-        """
-        Determine actual natural key field list, incorporating the natural keys of related objects as needed.
-
-        Extends django-natural-key's implementation to handle related objects without natural keys (e.g. ContentType).
-        """
-        natural_key_fields = []
-        for name, rel_to in cls.get_natural_key_info():
-            if not rel_to:
-                natural_key_fields.append(name)
+        # First, figure out which local fields comprise the natural key:
+        natural_key_field_names = []
+        if hasattr(cls, "natural_key_field_names"):
+            natural_key_field_names = cls.natural_key_field_names
+        else:
+            # Does this model have any new-style UniqueConstraints? If so, pick the first one
+            for constraint in cls._meta.constraints:
+                if isinstance(constraint, models.UniqueConstraint):
+                    natural_key_field_names = constraint.fields
+                    break
             else:
-                try:
-                    nested_key = rel_to.get_natural_key_fields()
-                except AttributeError:
-                    if rel_to == ContentType:
-                        nested_key = ["app_label", "model"]
-                    else:
-                        raise
-                natural_key_fields.extend([name + "__" + nname for nname in nested_key])
-        return natural_key_fields
+                # Else, does this model have any old-style unique_together? If so, pick the first one.
+                if cls._meta.unique_together:
+                    natural_key_field_names = cls._meta.unique_together[0]
+                else:
+                    # Else, do we have any individual unique=True fields? If so, pick the first one.
+                    unique_fields = [field for field in cls._meta.fields if field.unique and field.name != "id"]
+                    if unique_fields:
+                        natural_key_field_names = (unique_fields[0].name,)
+
+        if not natural_key_field_names:
+            raise AttributeError(
+                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
+                "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
+                "you probably need to explicitly declare the natural_key_field_lookups for this model."
+            )
+
+        # Next, for any natural key fields that have related models, get the natural key for the related model if known
+        natural_key_field_lookups = []
+        for field_name in natural_key_field_names:
+            field = cls._meta.get_field(field_name)
+            if getattr(field, "remote_field", None) is None:
+                # Not a related field, so the field name is the field lookup
+                natural_key_field_lookups.append(field_name)
+                continue
+
+            related_model = field.remote_field.model
+            related_natural_key_field_lookups = None
+            if hasattr(related_model, "natural_key_field_lookups"):
+                # TODO: generic handling for self-referential case, as seen in Location
+                related_natural_key_field_lookups = related_model.natural_key_field_lookups
+            else:
+                # Related model isn't a Nautobot model and so doesn't have a `natural_key_field_lookups`.
+                # The common case we've encountered so far is the contenttypes.ContentType model:
+                if related_model._meta.app_label == "contenttypes" and related_model._meta.model_name == "contenttype":
+                    related_natural_key_field_lookups = ["app_label", "model"]
+                # Additional special cases can be added here
+
+            if not related_natural_key_field_lookups:
+                raise AttributeError(
+                    f"Unable to determine the related natural-key fields for {related_model.__name__} "
+                    f"(as referenced from {cls.__name__}.{field_name}). If the related model is a non-Nautobot "
+                    "model (such as ContentType) then it may be appropriate to add special-case handling for this "
+                    "model in BaseModel.natural_key_field_lookups; alternately you may be able to solve this for "
+                    f"a single special case by explicitly defining {cls.__name__}.natural_key_field_lookups."
+                )
+
+            for field_lookup in related_natural_key_field_lookups:
+                natural_key_field_lookups.append(f"{field_name}__{field_lookup}")
+
+        return natural_key_field_lookups
+
+    @classmethod
+    def natural_key_args_to_kwargs(cls, args):
+        """
+        Helper function to map a list of natural key field values to actual kwargs suitable for lookup and filtering.
+
+        Based on `django-natural-keys` `NaturalKeyQuerySet.natural_key_kwargs()` method.
+        """
+        args = list(args)
+        natural_key_field_lookups = cls.natural_key_field_lookups
+        while len(args) < len(natural_key_field_lookups):
+            args.append(None)
+        if len(args) > len(natural_key_field_lookups):
+            raise ValueError(
+                f"Wrong number of natural-key args for {cls.__name__}.natural_key_args_to_kwargs() -- "
+                f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
+            )
+        return dict(zip(natural_key_field_lookups, args))

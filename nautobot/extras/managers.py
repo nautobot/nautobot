@@ -7,9 +7,6 @@ from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 
-# TODO(jathan): This subclass is a hack. We'll fix it in post. Realistically the work for
-# `django-natural-keys` and establishing managers vs. querysets.as_manager() patterns across the
-# board will be the right palce to do this, as we can then just subclass the manager class.
 class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResultManager):
     @transaction_retry(max_retries=2)
     def store_result(

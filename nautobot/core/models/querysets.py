@@ -1,6 +1,5 @@
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
-from natural_keys.models import NaturalKeyQuerySet
 
 from nautobot.core.models.utils import deconstruct_natural_key_slug
 from nautobot.core.utils import permissions
@@ -17,7 +16,7 @@ def count_related(model, field):
     return Coalesce(subquery, 0)
 
 
-class RestrictedQuerySet(NaturalKeyQuerySet):
+class RestrictedQuerySet(QuerySet):
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
@@ -111,26 +110,6 @@ class RestrictedQuerySet(NaturalKeyQuerySet):
         natural_key_slug = kwargs.pop("natural_key_slug", None)
         if natural_key_slug and isinstance(natural_key_slug, str):
             values = deconstruct_natural_key_slug(natural_key_slug)
-            fields = self.model.get_natural_key_fields()
-            if len(values) > len(fields):
-                return self.none()
-            kwargs.update(self.natural_key_kwargs(*values))
+            kwargs.update(self.model.natural_key_args_to_kwargs(values))
 
         return super().filter(*args, **kwargs)
-
-    def natural_key_kwargs(self, *args):
-        """
-        Enhanced version of an API for django-natural-keys.
-
-        Specifically, this handles variadic natural key fields by inserting additional `None` args as needed.
-        """
-        natural_key_fields = self.model.get_natural_key_fields()
-        args = list(args)
-        while len(args) < len(natural_key_fields):
-            args.append(None)
-        if len(args) != len(natural_key_fields):
-            raise TypeError(
-                f"Wrong number of natural-key args for {self.model.__name__} -- "
-                f"expected {len(natural_key_fields)} but got {len(args)}"
-            )
-        return dict(zip(natural_key_fields, args))
