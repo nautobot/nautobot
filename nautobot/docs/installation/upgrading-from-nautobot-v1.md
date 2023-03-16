@@ -726,3 +726,27 @@ Below is a table documenting changes in logger names that could potentially affe
 | `nautobot.views.BulkDeleteView`          | `nautobot.core.views.generic.BulkDeleteView`          |
 | `nautobot.views.ComponentCreateView`     | `nautobot.core.views.generic.ComponentCreateView`     |
 | `nautobot.views.BulkComponentCreateView` | `nautobot.core.views.generic.BulkComponentCreateView` |
+
+## Job Database Model Changes
+
+The Job `name` field has been changed to a unique field and the `name` + `grouping` uniqueness constraint has been removed. The processes that refresh jobs (`nautobot-server post-upgrade` and `nautobot-server migrate`) have been updated to gracefully handle duplicate job names. 
+
+!!! example
+    ```py
+    class NautobotJob1(Job):
+        class Meta:
+            name = "Sample job"
+
+    class NautobotJob2(Job):
+        class Meta:
+            name = "Sample job"
+    ```
+
+    These jobs would be named `Sample job` and `Sample job (2)`
+
+
+
+The Job `slug` has been updated to be derived from the `name` field instead of a combination of `job_source`, `git_repository`, and `job_class`.
+
+!!! example
+    The Nautobot Golden Config backup job's slug will change from `plugins-nautobot_golden_config-jobs-backupjob` to `backup-configurations`.
