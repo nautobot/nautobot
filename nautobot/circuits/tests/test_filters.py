@@ -66,7 +66,6 @@ class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
     generic_filter_tests = (
         ["description"],
         ["name"],
-        ["slug"],
     )
 
 
@@ -82,12 +81,12 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["install_date"],
         ["commit_rate"],
         ["provider", "provider__id"],
-        ["provider", "provider__slug"],
+        ["provider", "provider__name"],
         ["provider_network", "circuit_terminations__provider_network__id"],
         ["provider_network", "circuit_terminations__provider_network__slug"],
         ["circuit_type", "circuit_type__id"],
-        ["circuit_type", "circuit_type__slug"],
-        ["status", "status__slug"],
+        ["circuit_type", "circuit_type__name"],
+        ["status", "status__name"],
         ["circuit_termination_a"],
         ["circuit_termination_z"],
         ["circuit_terminations"],
@@ -157,7 +156,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         circuit_terminations = CircuitTermination.objects.all()
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(slug="connected")
+        status_connected = cable_statuses.get(name="Connected")
 
         Cable.objects.create(
             termination_a=circuit_terminations[0],
@@ -199,6 +198,5 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["description"],
         ["name"],
         ["provider", "provider__id"],
-        ["provider", "provider__slug"],
-        ["slug"],
+        ["provider", "provider__name"],
     )

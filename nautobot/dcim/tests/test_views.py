@@ -2199,8 +2199,8 @@ class CableTestCase(
             Interface.objects.create(device=device, name="eth1"),
         ]
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        provider = Provider.objects.create(name="Provider 1")
+        circuittype = CircuitType.objects.create(name="Circuit Type A")
         circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
 
         circuit_terminations = [
@@ -2413,8 +2413,8 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
         rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        provider = Provider.objects.create(name="Provider 1")
+        circuittype = CircuitType.objects.create(name="Circuit Type A")
         circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
         circuittermination = CircuitTermination.objects.create(
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location

@@ -925,9 +925,9 @@ class CableTestCase(TestCase):
             rear_port=self.rear_port4,
             rear_port_position=1,
         )
-        self.provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        self.provider = Provider.objects.create(name="Provider 1")
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
-        self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        self.circuittype = CircuitType.objects.create(name="Circuit Type 1")
         self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
         self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
         self.circuittermination1 = CircuitTermination.objects.create(

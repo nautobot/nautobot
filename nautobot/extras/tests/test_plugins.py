@@ -692,8 +692,8 @@ class TestPluginCoreViewOverrides(TestCase):
     def setUp(self):
         super().setUp()
         self.device = create_test_device("Device")
-        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        provider = Provider.objects.create(name="Provider", asn=65001)
+        circuit_type = CircuitType.objects.create(name="Circuit Type")
         self.circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,

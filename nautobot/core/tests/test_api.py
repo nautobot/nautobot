@@ -83,7 +83,7 @@ class APIPaginationTestCase(testing.APITestCase):
     @classmethod
     def setUpTestData(cls):
         for i in range(10):
-            Provider.objects.create(name=f"Provider {i}", slug=f"provider-{i}")
+            Provider.objects.create(name=f"Provider {i}")
 
         cls.url = reverse("circuits-api:provider-list")
 

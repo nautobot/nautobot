@@ -41,9 +41,9 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Provider.objects.create(name="Provider 1", slug="provider-1")
-        Provider.objects.create(name="Provider 2", slug="provider-2")
-        Provider.objects.create(name="Provider 3", slug="provider-3")
+        Provider.objects.create(name="Provider 1")
+        Provider.objects.create(name="Provider 2")
+        Provider.objects.create(name="Provider 3")
 
 
 class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
@@ -53,8 +53,8 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         providers = (
-            Provider(name="Provider 1", slug="provider-1"),
-            Provider(name="Provider 2", slug="provider-2"),
+            Provider(name="Provider 1"),
+            Provider(name="Provider 2"),
         )
         Provider.objects.bulk_create(providers)
 
@@ -95,15 +95,12 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     create_data = (
         {
             "name": "Circuit Type 4",
-            "slug": "circuit-type-4",
         },
         {
             "name": "Circuit Type 5",
-            "slug": "circuit-type-5",
         },
         {
             "name": "Circuit Type 6",
-            "slug": "circuit-type-6",
         },
         {"name": "Circuit Type 7"},
     )
@@ -115,9 +112,9 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
-        CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
+        CircuitType.objects.create(name="Circuit Type 1")
+        CircuitType.objects.create(name="Circuit Type 2")
+        CircuitType.objects.create(name="Circuit Type 3")
 
 
 class CircuitTest(APIViewTestCases.APIViewTestCase):
@@ -128,13 +125,13 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1"),
-            Provider.objects.create(name="Provider 2", slug="provider-2"),
+            Provider.objects.create(name="Provider 1"),
+            Provider.objects.create(name="Provider 2"),
         )
 
         circuit_types = (
-            CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),
-            CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2"),
+            CircuitType.objects.create(name="Circuit Type 1"),
+            CircuitType.objects.create(name="Circuit Type 2"),
         )
 
         statuses = Status.objects.get_for_model(Circuit)
@@ -199,8 +196,8 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Location.objects.last(),
         )
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        provider = Provider.objects.create(name="Provider 1")
+        circuit_type = CircuitType.objects.create(name="Circuit Type 1")
 
         circuits = (
             Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),

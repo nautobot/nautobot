@@ -123,8 +123,8 @@ def common_test_data(cls):
     cls.loc1 = loc1
     cls.nested_loc = nested_loc
 
-    provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
-    circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
+    provider = Provider.objects.create(name="Provider 1", asn=65001, account="1234")
+    circuit_type = CircuitType.objects.create(name="Test Circuit Type 1")
     circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Test Circuit 1")
     CircuitTermination.objects.create(circuit=circuit, location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, location=loc1, term_side="Z")

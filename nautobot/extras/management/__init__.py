@@ -175,7 +175,6 @@ def create_custom_statuses(
             name = defaults.pop("name")
             try:
                 # may fail if a status with a different slug has a name matching this one
-                print("======> ", [defaults])
                 obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
             except IntegrityError:
                 # Integrity error would occur when running extras.0004_populate_default_status_records migration

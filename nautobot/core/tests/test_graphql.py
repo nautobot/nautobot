@@ -857,8 +857,8 @@ class GraphQLQueryTest(TestCase):
 
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
 
-        Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
-        Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+        Provider.objects.create(name="provider 1", asn=1)
+        Provider.objects.create(name="provider 2", asn=4294967295)
 
         webhook1 = Webhook.objects.create(name="webhook 1", type_delete=True, enabled=False)
         webhook1.content_types.add(ContentType.objects.get_for_model(Device))

@@ -56,8 +56,8 @@ class CablePathTestCase(TestCase):
 
         cls.powerpanel = PowerPanel.objects.create(location=cls.location, name="Power Panel")
 
-        provider = Provider.objects.create(name="Provider", slug="provider")
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        provider = Provider.objects.create(name="Provider")
+        circuit_type = CircuitType.objects.create(name="Circuit Type")
         cls.circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Circuit 1")
 
         cls.statuses = Status.objects.get_for_model(Cable)

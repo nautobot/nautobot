@@ -19,9 +19,9 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001)
-        Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002)
-        Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
+        Provider.objects.create(name="Provider 1", asn=65001)
+        Provider.objects.create(name="Provider 2", asn=65002)
+        Provider.objects.create(name="Provider 3", asn=65003)
         Provider.objects.create(name="Provider 8", asn=65003)
 
         cls.form_data = {
@@ -63,9 +63,9 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
-        CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
+        CircuitType.objects.create(name="Circuit Type 1")
+        CircuitType.objects.create(name="Circuit Type 2")
+        CircuitType.objects.create(name="Circuit Type 3")
         CircuitType.objects.create(name="Circuit Type 8")
 
         cls.form_data = {
@@ -93,13 +93,13 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001),
-            Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002),
+            Provider.objects.create(name="Provider 1", asn=65001),
+            Provider.objects.create(name="Provider 2", asn=65002),
         )
 
         circuittypes = (
-            CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),
-            CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2"),
+            CircuitType.objects.create(name="Circuit Type 1"),
+            CircuitType.objects.create(name="Circuit Type 2"),
         )
 
         statuses = Status.objects.get_for_model(Circuit)
@@ -215,13 +215,13 @@ class CircuitTerminationTestCase(NautobotTestCase):
         """
 
         # Set up the required objects:
-        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider = Provider.objects.create(name="Test Provider", asn=12345)
         provider_network = ProviderNetwork.objects.create(
             name="Test Provider Network",
             slug="test-provider-network",
             provider=provider,
         )
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type")
         active_status = Status.objects.get_for_model(Circuit).get(name="Active")
         circuit = Circuit.objects.create(
             cid="Test Circuit",
@@ -252,7 +252,7 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
 
     def test_swap_circuit_termination(self):
         # Set up the required objects:
-        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider = Provider.objects.create(name="Test Provider", asn=12345)
         provider_networks = (
             ProviderNetwork.objects.create(
                 name="Test Provider Network 1",
@@ -265,7 +265,7 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
                 provider=provider,
             ),
         )
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type")
         active_status = Status.objects.get_for_model(Circuit).get(name="Active")
         circuit = Circuit.objects.create(
             cid="Test Circuit",

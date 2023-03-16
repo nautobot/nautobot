@@ -321,7 +321,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs["to_field_name"] = "slug"
+        kwargs["to_field_name"] = "name"
         super().__init__(*args, **kwargs)
 
     def get_queryset(self, request):
