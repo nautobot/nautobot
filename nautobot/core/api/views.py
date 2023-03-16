@@ -190,10 +190,12 @@ class ModelViewSetMixin:
     # select_related
     brief_prefetch_fields = []
 
-    # Since the default get_object lookup_field is "pk", DRF and DRF-Spectacular are smart enough to see that it is
-    # a UUIDField and therefore automaticaly set a lookup_value_regex that only permits valid UUIDs.
-    # Since we want to also permit natural-key-slug lookups, we need to explicitly declare a lookup_value_regex.
-    lookup_value_regex = r"[^/]+"
+    # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
+    #       UUID PKs and also do NOT support natural-key-slugs.
+    #       The impact of NOT setting this is that per the OpenAPI schema, only UUIDs are permitted for most ViewSets;
+    #       however, "secretly" due to our custom get_object() implementation below, you can actually also specify a
+    #       natural_key_slug value instead of a UUID. We're not currently documenting/using this feature, so OK for now
+    # lookup_value_regex = r"[^/]+"
 
     def get_object(self):
         """Extend rest_framework.generics.GenericAPIView.get_object to allow "pk" lookups to use a natural-key-slug."""
@@ -205,7 +207,7 @@ class ModelViewSetMixin:
             f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
         )
 
-        if lookup_url_kwarg == "pk":
+        if lookup_url_kwarg == "pk" and hasattr(queryset.model, "natural_key_slug"):
             # Support lookup by either PK (UUID) or natural_key_slug
             lookup_value = self.kwargs["pk"]
             if is_uuid(lookup_value):
