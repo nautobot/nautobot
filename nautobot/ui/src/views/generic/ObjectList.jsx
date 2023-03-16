@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom"
+import { Text } from "@nautobot/nautobot-ui"
 
 import ListViewTemplate from "@views/BSListViewTemplate"
 
@@ -12,12 +13,11 @@ export default function BSListView({ list_url }) {
   //   pagetitle = pagetitle[0].toUpperCase() + pagetitle.slice(1)
   // }
   if (!app_name || !model_name) {
-    return <></>
+    return <Text>Loading...</Text>
   }
   if (!list_url) {
     list_url = `/api/${app_name}/${model_name}/`
   }
-  console.log(list_url)
   return (
     <ListViewTemplate list_url={list_url} />
   )

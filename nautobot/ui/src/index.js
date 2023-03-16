@@ -1,44 +1,22 @@
 import React from "react"
-import ReactDOM from "react-dom/client"
-import { BrowserRouter } from "react-router-dom"
-import { NautobotUIProvider } from "@nautobot/nautobot-ui"
-
-import "src/styles/globals.css"
-
-import Layout from '@components/layouts/BSLayout';
+import { createRoot } from "react-dom/client"
+import { Provider } from 'react-redux';
+import { store } from '@utils/store';
+import App from './App';
 import reportWebVitals from "src/reportWebVitals"
-import NautobotRouter from "src/router"
-import getApiClient from "@utils/api"
+import "src/styles/globals.css"
 
 
 const dev = process.env.NODE_ENV !== "production"
 
-/**
- * Adds capitalize method to string
- *
- * TODO: Useful utility but extending String.prototype isn't recommended
- */
-// Object.defineProperty(String.prototype, 'capitalize', {
-//   value: function () {
-//       let values = this.split("-").map(text => text.charAt(0).toUpperCase() + text.slice(1))
-//       return values.join(" ");
-//   },
-//   enumerable: false
-// });
+const container = document.getElementById('root')
+const root = createRoot(container);
 
-
-const apiClient = getApiClient()
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <NautobotUIProvider>
-      <BrowserRouter>
-        <Layout>
-          <NautobotRouter />
-        </Layout>
-      </BrowserRouter>
-    </NautobotUIProvider>
+    <Provider store={store}>
+      <App />
+    </Provider>
   </React.StrictMode>
 );
 

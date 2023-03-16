@@ -2,6 +2,8 @@ import { useParams } from "react-router-dom"
 
 import CreateViewTemplate from "@views/BSCreateViewTemplate"
 
+import RouterLink from "@components/common/RouterLink"
+
 
 export default function BSCreateView({ list_url }) {
   const { app_name, model_name } = useParams()

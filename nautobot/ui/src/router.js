@@ -41,11 +41,6 @@ export default function NautobotRouter() {
             children: [],
         },
         {
-            path: "/:app_name/:model_name/:object_id",
-            element: <DetailView />,
-            children: [],
-        },
-        {
             path: "/plugins/",
             children: [
                 {

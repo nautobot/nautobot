@@ -2,10 +2,14 @@ import { Alert, Container } from "@chakra-ui/react"
 import { useLocation } from "react-router-dom"
 
 import Menu from "@components/common/BSNavBar"
+import { fetchSessionAsync } from "@utils/session";
+
 
 
 export default function Layout({ children }) {
   let location = useLocation();
+
+  fetchSessionAsync()
   return (
     <>
       <Menu />

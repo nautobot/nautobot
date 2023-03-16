@@ -3,32 +3,18 @@ import { Spacer, Image, Menu, MenuButton, MenuDivider, MenuList, MenuGroup, Menu
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSignIn, faSignOut } from "@fortawesome/free-solid-svg-icons";
 import { Fragment } from "react"
-import { NavLink, redirect, useNavigate} from "react-router-dom"
-import {useState, useEffect} from "react"
-import useSWR from "swr"
-import axios from "axios";
+import RouterLink from "@components/common/RouterLink"
 
+import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/apiSlice";
 
-const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
-  const navigate = useNavigate();
+  const { data: sessionInfo, isLoading, isSuccess, isError } = useGetSessionQuery();
+  const { data: menuInfo, isLoading: isMenuLoading, isSuccess: isMenuSuccess, isError: isMenuError } = useGetUIMenuQuery();
 
-  const { data, error } = useSWR("/api/ui/get-menu/", fetcher)
-  const [ isLoggedIn, setIsLoggedIn] = useState(false)
-  useEffect(() => {
-    // Check if `nautobot-user` exist in localStorage; if found set setIsLoggedIn to true else false
-    setIsLoggedIn(localStorage.getItem("nautobot-user") != null)
-  }, [])
-
-  const logout = () => {
-    axios.get("/api/users/tokens/logout/")
-    setIsLoggedIn(false)
-    localStorage.removeItem("nautobot-user")
-    navigate("/login")
-  }
-  if (error) return <div>Failed to load menu</div>
-  if (!data) return <></>
+  const logout = () => {}
+  if (isMenuError) return <div>Failed to load menu</div>
+  if (!isMenuSuccess) return <></>
 
 
   return (
@@ -37,7 +23,7 @@ export default function BSNavBar() {
         <Image src="/static/img/nautobot_logo.svg" alt="nautobot-logo" height={30} htmlHeight={30}/>
       </Link>
       {
-        data.map((item, idx) => (
+        menuInfo.map((item, idx) => (
           <Menu key={idx}>
             <MenuButton>
               {item.name}
@@ -63,16 +49,25 @@ export default function BSNavBar() {
       }
       <Spacer/>
         {
-            isLoggedIn ?
+            isLoading ?
+                <span>Loading user session...</span>
+            : isSuccess ?
+                <span>{sessionInfo.user.display}</span>
+            : 
+              <span>Error</span>
+        }
+      <Spacer/>
+        {
+            isSuccess && sessionInfo.logged_in ?
                 <span role="button" className="border-0 btn-success cusor-pointer" onClick={() => logout()}>
                   <FontAwesomeIcon icon={faSignOut} />
                   {" Logout"}
                 </span>
             :
-                <Link href="/login/">
+                <RouterLink to="/log_in/">
                   <FontAwesomeIcon icon={faSignIn} />
                   {" Login"}
-                </Link>
+                </RouterLink>
         }
     </Flex>
   )

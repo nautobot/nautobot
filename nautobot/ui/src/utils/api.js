@@ -14,8 +14,5 @@ export default function getApiClient() {
     
     axios.get(API_USER_SESSION_INFO).then((resp) => { session_info = resp.data })
 
-    return {
-        client: client,
-        session_info: session_info
-    }
+    return client
 }

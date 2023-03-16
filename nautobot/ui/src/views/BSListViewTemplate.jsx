@@ -38,9 +38,9 @@ export default function BSListViewTemplate({ list_url }) {
   if (error) return <div>Failed to load {list_url}</div>
   if (!data) return <></>
 
-  const tableData = data[0].formData.results
-  const tableHeader = data[1].formData.data
-  const dataCount = data[0].formData.count
+  const tableData = data[0].results
+  const tableHeader = data[1].data
+  const dataCount = data[0].count
   return (
     <Frame>
       <ButtonGroup>
