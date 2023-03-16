@@ -654,7 +654,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         cls.__status_slaac = getattr(cls, "__status_slaac", None)
         if cls.__status_slaac is None:
             try:
-                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug="slaac")
+                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(name="SLAAC")
             except Status.DoesNotExist:
                 logger.error("SLAAC Status not found")
         return cls.__status_slaac

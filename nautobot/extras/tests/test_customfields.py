@@ -23,7 +23,7 @@ from nautobot.virtualization.models import VirtualMachine
 class CustomFieldTest(TestCase):
     def setUp(self):
         super().setUp()
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        active_status = Status.objects.get_for_model(Location).get(name="Active")
         lt = LocationType.objects.get(name="Campus")
         Location.objects.create(name="Location A", slug="location-a", status=active_status, location_type=lt)
         Location.objects.create(name="Location B", slug="location-b", status=active_status, location_type=lt)
@@ -1125,7 +1125,7 @@ class CustomFieldModelTest(TestCase):
         cls.lt = LocationType.objects.get(name="Campus")
 
     def setUp(self):
-        self.active_status = Status.objects.get_for_model(Location).get(slug="active")
+        self.active_status = Status.objects.get_for_model(Location).get(name="Active")
         self.location1 = Location.objects.create(name="NYC", location_type=self.lt)
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
@@ -1726,7 +1726,7 @@ class CustomFieldChoiceTest(TestCase):
         self.choice = CustomFieldChoice(custom_field=self.cf, value="Foo")
         self.choice.save()
 
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        active_status = Status.objects.get_for_model(Location).get(name="Active")
         self.location_type = LocationType.objects.get(name="Campus")
         self.location = Location(
             name="Location 1",

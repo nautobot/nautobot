@@ -1952,7 +1952,7 @@ class ConnectedDeviceTest(APITestCase):
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = Role.objects.get_for_model(Device).first()
 
-        cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
 
         self.device1 = Device.objects.create(
             device_type=device_type,

@@ -70,7 +70,7 @@ class CableLengthTestCase(TestCase):
             name="TestDevice2",
             location=self.location,
         )
-        self.status = Status.objects.get_for_model(Cable).get(slug="connected")
+        self.status = Status.objects.get_for_model(Cable).get(name="Connected")
 
     def test_cable_validated_save(self):
         interface1 = Interface.objects.create(device=self.device1, name="eth0")
@@ -525,7 +525,7 @@ class LocationTestCase(TestCase):
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        active_status = Status.objects.get_for_model(Location).get(name="Active")
         location = Location(
             location_type=self.root_type,
             name="Location A",
@@ -622,7 +622,7 @@ class DeviceTestCase(TestCase):
             slug="test-device-type-1",
         )
         self.device_role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).get(name="Active")
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")
@@ -878,7 +878,7 @@ class CableTestCase(TestCase):
         self.interface1 = Interface.objects.create(device=self.device1, name="eth0")
         self.interface2 = Interface.objects.create(device=self.device2, name="eth0")
         self.interface3 = Interface.objects.create(device=self.device2, name="eth1")
-        self.status = Status.objects.get_for_model(Cable).get(slug="connected")
+        self.status = Status.objects.get_for_model(Cable).get(name="Connected")
         self.cable = Cable(
             termination_a=self.interface1,
             termination_b=self.interface2,

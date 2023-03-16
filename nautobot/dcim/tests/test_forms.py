@@ -23,7 +23,7 @@ def get_id(model, slug):
 
 class DeviceTestCase(TestCase):
     def setUp(self):
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).get(name="Active")
 
     @classmethod
     def setUpTestData(cls):
@@ -168,7 +168,7 @@ class LabelTestCase(TestCase):
 
     def test_interface_label_count_valid(self):
         """Test that a `label` can be generated for each generated `name` from `name_pattern` on InterfaceCreateForm"""
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        status_active = Status.objects.get_for_model(Interface).get(name="Active")
         interface_data = {
             "device": self.device.pk,
             "name_pattern": "eth[0-9]",

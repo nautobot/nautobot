@@ -24,8 +24,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         circuit_termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         provider_ct = ContentType.objects.get_for_model(Provider)
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)
-        active_circuit_status = Status.objects.get_for_model(Circuit).get(slug="active")
-        active_location_status = Status.objects.get_for_model(Location).get(slug="active")
+        active_circuit_status = Status.objects.get_for_model(Circuit).get(name="Active")
+        active_location_status = Status.objects.get_for_model(Location).get(name="Active")
         provider1 = Provider.objects.create(
             name="Test Provider 1",
             slug="test-provider-1",

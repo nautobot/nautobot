@@ -64,7 +64,7 @@ class GitTest(TransactionTestCase):
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
         self.role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).get(name="Active")
         self.device = Device.objects.create(
             name="test-device",
             role=self.role,

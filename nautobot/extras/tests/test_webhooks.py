@@ -44,8 +44,8 @@ class WebhookTest(APITestCase):
         for webhook in webhooks:
             webhook.content_types.set([location_ct])
 
-        cls.active_status = Status.objects.get_for_model(Location).get(slug="active")
-        cls.planned_status = Status.objects.get_for_model(Location).get(slug="planned")
+        cls.active_status = Status.objects.get_for_model(Location).get(name="Active")
+        cls.planned_status = Status.objects.get_for_model(Location).get(name="Planned")
 
     def test_webhooks_process_webhook_on_update(self):
         """

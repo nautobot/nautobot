@@ -2,6 +2,7 @@ import sys
 
 from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
+from django.utils.text import slugify
 
 from nautobot.circuits import choices as circuit_choices
 from nautobot.core.choices import ColorChoices
@@ -32,49 +33,49 @@ CHOICESET_MAP = {
 # Map of slug -> default hex_color used when importing color choices in `export_statuses_from_choiceset()`.
 # Only a small subset of colors are used by default as these originally were derived from Bootstrap CSS classes.
 COLOR_MAP = {
-    "active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
-    "available": ColorChoices.COLOR_GREEN,
-    "connected": ColorChoices.COLOR_GREEN,
-    "dhcp": ColorChoices.COLOR_GREEN,
-    "decommissioned": ColorChoices.COLOR_GREY,
-    "decommissioning": ColorChoices.COLOR_AMBER,
-    "deprecated": ColorChoices.COLOR_RED,
-    "deprovisioning": ColorChoices.COLOR_AMBER,
-    "failed": ColorChoices.COLOR_RED,
-    "inventory": ColorChoices.COLOR_GREY,
-    "maintenance": ColorChoices.COLOR_GREY,
-    "offline": ColorChoices.COLOR_AMBER,
-    "planned": ColorChoices.COLOR_CYAN,
-    "provisioning": ColorChoices.COLOR_BLUE,
-    "reserved": ColorChoices.COLOR_CYAN,
-    "retired": ColorChoices.COLOR_RED,
-    "slaac": ColorChoices.COLOR_GREEN,
-    "staged": ColorChoices.COLOR_BLUE,
-    "staging": ColorChoices.COLOR_BLUE,
+    "Active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
+    "Available": ColorChoices.COLOR_GREEN,
+    "Connected": ColorChoices.COLOR_GREEN,
+    "DHCP": ColorChoices.COLOR_GREEN,
+    "Decommissioned": ColorChoices.COLOR_GREY,
+    "Decommissioning": ColorChoices.COLOR_AMBER,
+    "Deprecated": ColorChoices.COLOR_RED,
+    "Deprovisioning": ColorChoices.COLOR_AMBER,
+    "Failed": ColorChoices.COLOR_RED,
+    "Inventory": ColorChoices.COLOR_GREY,
+    "Maintenance": ColorChoices.COLOR_GREY,
+    "Offline": ColorChoices.COLOR_AMBER,
+    "Planned": ColorChoices.COLOR_CYAN,
+    "Provisioning": ColorChoices.COLOR_BLUE,
+    "Reserved": ColorChoices.COLOR_CYAN,
+    "Retired": ColorChoices.COLOR_RED,
+    "SLAAC": ColorChoices.COLOR_GREEN,
+    "Staged": ColorChoices.COLOR_BLUE,
+    "Staging": ColorChoices.COLOR_BLUE,
 }
 
 
 # Map of slug -> description used when importing status choices in `export_statuses_from_choiceset()`.
 DESCRIPTION_MAP = {
-    "active": "Unit is active",
-    "available": "Unit is available",
-    "connected": "Cable is connected",
-    "dhcp": "Dynamically assigned IPv4/IPv6 address",
-    "decommissioned": "Circuit has been decommissioned",
-    "decommissioning": "Unit is being decommissioned",
-    "deprecated": "Unit has been deprecated",
-    "deprovisioning": "Circuit is being deprovisioned",
-    "failed": "Unit has failed",
-    "inventory": "Device is in inventory",
-    "maintenance": "Unit is under maintenance",
-    "offline": "Unit is offline",
-    "planned": "Unit has been planned",
-    "provisioning": "Circuit is being provisioned",
-    "reserved": "Unit is reserved",
-    "retired": "Location has been retired",
-    "slaac": "Dynamically assigned IPv6 address",
-    "staged": "Unit has been staged",
-    "staging": "Location is in the process of being staged",
+    "Active": "Unit is active",
+    "Available": "Unit is available",
+    "Connected": "Cable is connected",
+    "DHCP": "Dynamically assigned IPv4/IPv6 address",
+    "Decommissioned": "Circuit has been decommissioned",
+    "Decommissioning": "Unit is being decommissioned",
+    "Deprecated": "Unit has been deprecated",
+    "Deprovisioning": "Circuit is being deprovisioned",
+    "Failed": "Unit has failed",
+    "Inventory": "Device is in inventory",
+    "Maintenance": "Unit is under maintenance",
+    "Offline": "Unit is offline",
+    "Planned": "Unit has been planned",
+    "Provisioning": "Circuit is being provisioned",
+    "Reserved": "Unit is reserved",
+    "Retired": "Location has been retired",
+    "SLAAC": "Dynamically assigned IPv6 address",
+    "Staged": "Unit has been staged",
+    "Staging": "Location is in the process of being staged",
 }
 
 
@@ -109,12 +110,11 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
 
     choices = []
 
-    for slug, value in choiceset.CHOICES:
+    for _, value in choiceset.CHOICES:
         choice_kwargs = dict(
             name=value,
-            slug=slug,
-            description=description_map[slug],
-            color=color_map[slug],
+            description=description_map[value],
+            color=color_map[value],
         )
         choices.append(choice_kwargs)
 
@@ -172,15 +172,16 @@ def create_custom_statuses(
             # has had its name, slug, color and/or description changed from the defaults.
             # First, try to find by slug
             defaults = choice_kwargs.copy()
-            slug = defaults.pop("slug")
+            name = defaults.pop("name")
             try:
                 # may fail if a status with a different slug has a name matching this one
-                obj, created = Status.objects.get_or_create(slug=slug, defaults=defaults)
+                print("======> ", [defaults])
+                obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
             except IntegrityError:
-                # OK, what if we look up by name instead?
-                defaults = choice_kwargs.copy()
-                name = defaults.pop("name")
+                # Integrity error would occur when running extras.0004_populate_default_status_records migration
+                # since slug is still present at that point
                 try:
+                    defaults["slug"] = slugify(name)
                     obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
                 except IntegrityError as err:
                     raise SystemExit(

@@ -61,9 +61,9 @@ class DynamicGroupTestBase(TestCase):
             slug="device-type-1",
         )
         cls.device_role = Role.objects.get_for_model(Device).first()
-        cls.status_active = Status.objects.get_for_model(Device).get(slug="active")
-        cls.status_planned = Status.objects.get_for_model(Device).get(slug="planned")
-        cls.status_staged = Status.objects.get_for_model(Device).get(slug="staged")
+        cls.status_active = Status.objects.get_for_model(Device).get(name="Active")
+        cls.status_planned = Status.objects.get_for_model(Device).get(name="Planned")
+        cls.status_staged = Status.objects.get_for_model(Device).get(name="Staged")
 
         cls.devices = [
             Device.objects.create(

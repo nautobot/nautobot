@@ -574,7 +574,7 @@ class VLANTestCase(TestCase):
         location_type.validated_save()
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
-        vlan.status = Status.objects.get_for_model(VLAN).get(slug="active")
+        vlan.status = Status.objects.get_for_model(VLAN).get(name="Active")
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))

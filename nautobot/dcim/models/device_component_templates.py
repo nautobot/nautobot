@@ -250,7 +250,7 @@ class InterfaceTemplate(ComponentTemplateModel):
 
     def instantiate(self, device):
         try:
-            status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            status = Status.objects.get_for_model(Interface).get(name="Active")
         except Status.DoesNotExist:
             status = Status.objects.get_for_model(Interface).first()
         return self.instantiate_model(

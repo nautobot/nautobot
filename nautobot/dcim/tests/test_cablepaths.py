@@ -45,7 +45,7 @@ class CablePathTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
         device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        device_status = Status.objects.get_for_model(Device).get(name="Active")
         cls.device = Device.objects.create(
             location=cls.location,
             device_type=device_type,
