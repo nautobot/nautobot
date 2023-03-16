@@ -105,6 +105,15 @@ def load_plugin(plugin_name, settings):
     # Update caching configg
     settings.CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
 
+    # Update Constance Config and Constance Fieldset
+    if plugin_config.constance_config:
+        app_config = {
+            f"{plugin_name}:{key}": value
+            for key, value in plugin_config.constance_config.items()
+        }
+        settings.CONSTANCE_CONFIG.update(app_config)
+        settings.CONSTANCE_CONFIG_FIELDSETS.update({f"{plugin_config.verbose_name}": app_config.keys()})
+
 
 def get_sso_backend_name(social_auth_module):
     """

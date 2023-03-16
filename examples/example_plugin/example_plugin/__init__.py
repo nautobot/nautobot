@@ -26,7 +26,13 @@ class ExamplePluginConfig(NautobotAppConfig):
     middleware = ["example_plugin.middleware.ExampleMiddleware"]
     installed_apps = ["nautobot.extras.tests.example_plugin_dependency"]
     default_settings = {
-        "example_default_key": "example_default_value",
+        "ANOTHER_SAMPLE_VARIABLE": "example_default_value",
+    }
+    constance_config = {
+        "SAMPLE_VARIABLE": [
+            "example_default_value",
+            "Example of supplying a setting through Django Constance."
+        ]
     }
     searchable_models = ["examplemodel"]
 

@@ -229,6 +229,14 @@ Get a value from Django settings (if specified) or Constance configuration (othe
 {{ "RELEASE_CHECK_URL" | settings_or_config }}
 ```
 
++++ 2.0.0
+    This filter now accepts an optional `app_name` parameter, which allows you to use this filter for Third-Party Nautobot Apps.
+
+    ```django
+    # Django Template
+    {{ "SAMPLE_VARIABLE" | settings_or_config:"example_plugin" }}
+    ```
+
 ### split
 
 Split a string by the given value (default: comma)
