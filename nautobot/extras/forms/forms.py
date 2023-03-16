@@ -363,6 +363,7 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
     key = SlugField(
+        label="Key",
         max_length=50,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",

@@ -223,11 +223,11 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
         # Check the custom field does NOT appear in the primary information tab
         self.assertFalse(self.browser.is_text_present("Device Custom Field"))
-        self.assertFalse(self.browser.is_text_present("this-is-some-testing-text"))
+        self.assertFalse(self.browser.is_text_present("This is some testing text"))
         # Check the custom field appears in the advanced tab
         self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
-        self.assertTrue(self.browser.is_text_present("this-is-some-testing-text"))
+        self.assertTrue(self.browser.is_text_present("This is some testing text"))
 
     def test_json_type_with_valid_json(self):
         """
