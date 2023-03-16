@@ -91,7 +91,6 @@ function initializeSlugField(context){
     // check if it is rename to key field like what we did for CustomField
     if (slug_field.length == 0) {
         slug_field = this_context.find('#id_key');
-        console.log(slug_field.length)
     }
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
