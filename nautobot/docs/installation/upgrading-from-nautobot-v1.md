@@ -729,7 +729,7 @@ Below is a table documenting changes in logger names that could potentially affe
 
 ## Job Database Model Changes
 
-The Job `name` field has been changed to a unique field and the `name` + `grouping` uniqueness constraint has been removed. The processes that refresh jobs (`nautobot-server post-upgrade` and `nautobot-server migrate`) have been updated to gracefully handle duplicate job names. 
+The Job `name` field has been changed to a unique field and the `name` + `grouping` uniqueness constraint has been removed. The processes that refresh jobs (`nautobot-server post_upgrade` and `nautobot-server migrate`) have been updated to gracefully handle duplicate job names. 
 
 !!! example
     ```py
