@@ -32,11 +32,11 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 >>> DeviceType.objects.first().natural_key_slug
 'Arista&Arista+DeviceType+15'
 
->>> DeviceType.objects.get(natural_key_slug='Arista&Arista+DeviceType+15')
+>>> DeviceType.objects.get(natural_key_slug="Arista&Arista+DeviceType+15")
 <DeviceType: Arista DeviceType 15>
 ```
 
-Developers can refer to the [documentation](../development/natural-keys.md) for details on how to support and use this feature.
+Developers can refer to the [documentation on natural keys](../development/natural-keys.md) for details on how to support and use this feature.
 
 ### Changed
 

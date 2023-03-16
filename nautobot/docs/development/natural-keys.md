@@ -27,7 +27,7 @@ Similarly, the `natural_key_slug` and `get(natural_key_slug=...`) APIs are also 
 >>> DeviceType.objects.first().natural_key_slug
 'Arista&Arista+DeviceType+15'
 
->>> DeviceType.objects.get(natural_key_slug='Arista&Arista+DeviceType+15')
+>>> DeviceType.objects.get(natural_key_slug="Arista&Arista+DeviceType+15")
 <DeviceType: Arista DeviceType 15>
 ```
 
@@ -36,19 +36,19 @@ Similarly, the `natural_key_slug` and `get(natural_key_slug=...`) APIs are also 
 
 ## Implementing the Natural Key APIs
 
-In many model cases, Nautobot's default implementation of these APIs will suffice - as long as your model has any of the following, a default natural key will be automatically made available:
+In many model cases, Nautobot's default implementation of these APIs will suffice. As long as your model has any of the following, a default natural key will be automatically made available:
 
 - One or more `UniqueConstraint` declarations
 - Any `unique_together` declaration
 - Any field (other than `id`) that is set as `unique=True`.
 
-There are a few special cases that will need special handling.
+There are a few special cases that will need special handling as described below.
 
 ### Self-Referential Natural Keys
 
 An example of this can be seen with the `Location` model, where a given instance is only uniquely identified by its name **in combination with its parent**, which is another `Location`. Nautobot's default implementation would fall into an infinite recursion when trying to identify the Location's natural key fields, since they would be identified as  `("name", "parent__name", "parent__parent__name", "parent__parent__parent__name", ...)`.
 
-In a case like this, Nautobot is able to support _variadic_ natural keys, where the number and listing of natural keys may vary depending on the data of a given instance. To make this work, you will need to override two natural key related APIs on your model, `natural_key_field_lookups` and `natural_key_args_to_kwargs`, as follows:
+In a case like this, Nautobot is able to support _variadic_ natural keys, where the number and listing of natural keys may vary depending on the data of a given instance. To make this work, you will need to override two APIs related to natural keys on your model (`natural_key_field_lookups` and `natural_key_args_to_kwargs`) as follows:
 
 ```python
 class Location(TreeModel):
@@ -87,7 +87,9 @@ class Location(TreeModel):
 
 ### Natural Keys Referencing a Different Self-Referential Model
 
-Relatedly, if you have a model whose natural keys include a ForeignKey to a model like `Location` with self-referential and variadic natural keys, for the related model to be handled properly, you must always ensure that the related field is the **last** such field in your model's uniqueness constraint or `natural_key_field_names` declaration. Instead of:
+Similarly, if you have a model whose natural keys include a `ForeignKey` to a model like `Location` with self-referential and variadic natural keys, for the related model to be handled properly, you must always ensure that the related field is the **last** such field in your model's uniqueness constraint or `natural_key_field_names` declaration.
+
+Instead of this:
 
 ```python
 class VLANGroup(BaseModel):
@@ -95,12 +97,12 @@ class VLANGroup(BaseModel):
         unique_together = [["location", "name"]]   # wrong, nested location natural key cannot be variadic
 ```
 
-do:
+Do this:
 
 ```python
 class VLANGroup(BaseModel):
     class Meta:
-        unique_together = [["name", "location"]]   # right, nested location natural key can be variadic
+        unique_together = [["name", "location"]]   # correct, nested location natural key can be variadic
 ```
 
 ### No Uniqueness Constraints
