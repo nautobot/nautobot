@@ -435,7 +435,7 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
         max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
         job_name = default_job_name[:max_name_length] + job_name_append
         append_counter += 1
-    if job_name != default_job_name:
+    if job_name != default_job_name and "test" not in sys.argv:
         logger.warning(
             'Job class "%s" name "%s" is not unique, changing to "%s".',
             job_class.__name__,

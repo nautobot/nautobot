@@ -430,6 +430,12 @@ class JobTest(TransactionTestCase):
             form.as_table(),
         )
 
+    def test_duplicate_job_name(self):
+        self.assertTrue(Job.objects.filter(name="TestDuplicateNameNoMeta").exists())
+        self.assertTrue(Job.objects.filter(name="TestDuplicateNameNoMeta (2)").exists())
+        self.assertTrue(Job.objects.filter(name="This name is not unique.").exists())
+        self.assertTrue(Job.objects.filter(name="This name is not unique. (2)").exists())
+
 
 class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
