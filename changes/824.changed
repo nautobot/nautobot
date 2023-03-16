@@ -1,0 +1,1 @@
+Renamed `slug` field to `key` field on CustomField Model Class.

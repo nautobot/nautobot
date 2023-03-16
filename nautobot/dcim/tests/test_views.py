@@ -315,7 +315,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.cable_connected = cable_statuses.get(slug="connected")
 
         cls.custom_fields = (
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="rack-colors", default=[]),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="Rack Colors", default=[]),
         )
 
         CustomFieldChoice.objects.create(custom_field=cls.custom_fields[0], value="red")
@@ -1196,7 +1196,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status_active = statuses.get(slug="active")
 
         cls.custom_fields = (
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="crash-counter", default=0),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Crash Counter", default=0),
         )
         cls.custom_fields[0].content_types.set([ContentType.objects.get_for_model(Device)])
 

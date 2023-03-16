@@ -96,7 +96,7 @@ def generate_custom_field_resolver(key, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 
     Args:
-        slug (str): name of the custom field to resolve
+        key (str): name of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
     """
 

@@ -886,7 +886,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device = self.devices[0]
 
         cf = CustomField.objects.create(
-            label="favorite_food",
+            label="Favorite Food",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
         )

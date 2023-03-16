@@ -1,1 +1,1 @@
-Removed `name` from CustomField model class.
+Removed `name` field from CustomField model class.

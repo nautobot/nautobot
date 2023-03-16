@@ -207,7 +207,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
     label = tables.Column(linkify=True)
-    slug = tables.TemplateColumn(
+    key = tables.TemplateColumn(
         template_code="""
 {{ value }}
 """

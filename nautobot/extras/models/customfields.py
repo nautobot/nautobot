@@ -222,7 +222,7 @@ class CustomFieldModel(models.Model):
         for field_key, value in self._custom_field_data.items():
             if field_key not in custom_fields:
                 # log a warning instead of raising a ValidationError so as not to break the UI
-                logger.warning(f"Unknown field slug '{field_key}' in custom field data for {self} ({self.pk}).")
+                logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
                 custom_fields[field_key].validate(value)
