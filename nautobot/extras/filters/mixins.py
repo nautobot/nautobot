@@ -68,10 +68,10 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
-            # Determine filter class for this CustomField type, default to CustomFieldBaseFilter
-            new_filter_name = f"cf_{cf.slug}"
+            # Determine filter class for this CustomField type, default to CustomFieldCharFilter
+            new_filter_name = f"cf_{cf.key}"
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
-            new_filter_field = filter_class(field_name=cf.slug, custom_field=cf)
+            new_filter_field = filter_class(field_name=cf.key, custom_field=cf)
             new_filter_field.label = f"{cf.label}"
 
             # Create base filter (cf_customfieldname)
@@ -122,7 +122,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = f"{filter_name}__{lookup_name}"
             new_filter = filter_type(
-                field_name=custom_field.label,
+                field_name=custom_field.key,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
                 label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",

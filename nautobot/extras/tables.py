@@ -210,9 +210,6 @@ class CustomFieldTable(BaseTable):
     slug = tables.TemplateColumn(
         template_code="""
 {{ value }}
-{% if value != record.name %}
-<span class="text-warning mdi mdi-alert" title="Label '{{ record.label }}' does not match slug"></span>
-{% endif %}
 """
     )
     content_types = ContentTypesColumn(truncate_words=15)
@@ -223,7 +220,7 @@ class CustomFieldTable(BaseTable):
         fields = (
             "pk",
             "label",
-            "slug",
+            "key",
             "content_types",
             "type",
             "description",
@@ -234,7 +231,7 @@ class CustomFieldTable(BaseTable):
         default_columns = (
             "pk",
             "label",
-            "slug",
+            "key",
             "content_types",
             "type",
             "required",

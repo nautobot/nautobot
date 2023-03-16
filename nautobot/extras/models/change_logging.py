@@ -52,7 +52,7 @@ class ChangeLoggedModel(models.Model):
         route = get_route_for_model(self, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
+        fields = ["pk", "slug", "key"]
         for field in fields:
             if not hasattr(self, field):
                 continue
@@ -142,7 +142,6 @@ class ObjectChange(BaseModel):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
     def save(self, *args, **kwargs):
-
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
             if self.user:

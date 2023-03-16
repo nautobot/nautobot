@@ -17,15 +17,15 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Processing ContentType {content_type}"))
             model = content_type.model_class()
             custom_fields_for_content_type = content_type.custom_fields.all()
-            custom_field_names_for_content_type = [cf.slug for cf in custom_fields_for_content_type]
+            custom_field_names_for_content_type = [cf.key for cf in custom_fields_for_content_type]
             with transaction.atomic():
                 for obj in model.objects.all():
                     obj_changed = False
                     # Provision CustomFields that are not associated with the object
                     for custom_field in custom_fields_for_content_type:
-                        if custom_field.slug not in obj._custom_field_data:
-                            self.stdout.write(f"Adding missing CustomField {custom_field.slug} to {obj}")
-                            obj._custom_field_data[custom_field.slug] = custom_field.default
+                        if custom_field.key not in obj._custom_field_data:
+                            self.stdout.write(f"Adding missing CustomField {custom_field.key} to {obj}")
+                            obj._custom_field_data[custom_field.key] = custom_field.default
                             obj_changed = True
                     # Remove any custom fields that are not associated with the content type
                     for field_name in set(obj._custom_field_data) - set(custom_field_names_for_content_type):

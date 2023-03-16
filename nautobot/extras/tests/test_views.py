@@ -375,7 +375,7 @@ class CustomFieldTestCase(
         custom_fields = [
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-                label="Custom Field Boolean",
+                label="Custom Field Boolean Type",
                 default="",
             ),
             CustomField(
@@ -405,7 +405,7 @@ class CustomFieldTestCase(
         cls.form_data = {
             "content_types": [obj_type.pk],
             "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
-            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
+            "key": "custom_field_boolean_type",  # key is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -420,19 +420,19 @@ class CustomFieldTestCase(
     def test_create_object_without_permission(self):
         # Can't have two CustomFields with the same "slug"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
         # Can't have two CustomFields with the same "slug"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
 
     def test_create_object_with_constrained_permission(self):
         # Can't have two CustomFields with the same "slug"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 

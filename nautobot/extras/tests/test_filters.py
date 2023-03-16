@@ -364,7 +364,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["value"],
-        ["custom_field", "custom_field__label"],
+        ["custom_field", "custom_field__key"],
         ["weight"],
     )
 
@@ -456,7 +456,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def test_field(self):
         fields = list(self.fields[:2])
         filter_params = [
-            {"custom_field": [fields[0].label, fields[1].pk]},
+            {"custom_field": [fields[0].key, fields[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(

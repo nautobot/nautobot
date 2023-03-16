@@ -163,7 +163,6 @@ __all__ = (
 
 
 class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
-
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=True,
@@ -363,7 +362,7 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
-    slug = SlugField(
+    key = SlugField(
         max_length=50,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
@@ -383,7 +382,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         fields = (
             "label",
             "grouping",
-            "slug",
+            "key",
             "type",
             "weight",
             "description",
@@ -402,10 +401,9 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
     """Base class for CSV export of models that support custom fields."""
 
     def _append_customfield_fields(self):
-
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = f"cf_{cf.slug}"
+            field_name = f"cf_{cf.key}"
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -582,7 +580,6 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
 
 
 class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
-
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
     remote_url = forms.URLField(
@@ -1105,7 +1102,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
-
     slug = SlugField(help_text="Internal name of this relationship. Please use underscores rather than dashes.")
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
@@ -1146,7 +1142,6 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
         ]
 
     def save(self, commit=True):
-
         # TODO add support for owner when a CR is created in the UI
         obj = super().save(commit)
 

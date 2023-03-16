@@ -76,7 +76,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
         )
         self.custom_fields = []
         for cf in custom_fields:
-            field_name = f"cf_{cf.slug}"
+            field_name = f"cf_{cf.key}"
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
                     set_initial=False, enforce_required=False, simple_json_filter=True
@@ -101,10 +101,10 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         """
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = f"cf_{cf.slug}"
+            field_name = f"cf_{cf.key}"
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
-                self.fields[field_name].initial = self.instance.cf.get(cf.slug)
+                self.fields[field_name].initial = self.instance.cf.get(cf.key)
             else:
                 self.fields[field_name] = cf.to_form_field()
 
@@ -130,7 +130,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
         for cf in custom_fields:
-            field_name = f"cf_{cf.slug}"
+            field_name = f"cf_{cf.key}"
             # Annotate non-required custom fields as nullable
             if not cf.required:
                 self.nullable_fields.append(field_name)

@@ -113,6 +113,12 @@ class ModelViewTestCase(ModelTestCase):
                 return reverse(url_format.format(action), kwargs={"slug": instance.slug})
             except NoReverseMatch:
                 pass
+        # Attempt to resolve using key as the unique identifier if one exists
+        if hasattr(self.model, "key"):
+            try:
+                return reverse(url_format.format(action), kwargs={"key": instance.key})
+            except NoReverseMatch:
+                pass
 
         # Default to using the numeric PK to retrieve the URL for an object
         return reverse(url_format.format(action), kwargs={"pk": instance.pk})
@@ -197,10 +203,10 @@ class ViewTestCases:
                 for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(str(custom_field), response_body, msg=response_body)
                     if custom_field.type == extras_choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-                        for value in instance.cf.get(custom_field.slug):
+                        for value in instance.cf.get(custom_field.key):
                             self.assertIn(str(value), response_body, msg=response_body)
                     else:
-                        self.assertIn(str(instance.cf.get(custom_field.slug) or ""), response_body, msg=response_body)
+                        self.assertIn(str(instance.cf.get(custom_field.key) or ""), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
@@ -277,7 +283,6 @@ class ViewTestCases:
         slug_test_object = ""
 
         def test_create_object_without_permission(self):
-
             # Try GET without permission
             with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("add")), 403)
@@ -383,7 +388,10 @@ class ViewTestCases:
             if self.slug_source is not None:
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
-                self.assertEqual(obj.slug, expected_slug)
+                if hasattr(obj, "slug"):
+                    self.assertEqual(obj.slug, expected_slug)
+                else:
+                    self.assertEqual(obj.key, expected_slug)
 
         def test_slug_not_modified(self):
             """Ensure save method does not modify slug that is passed in."""
@@ -401,7 +409,10 @@ class ViewTestCases:
 
                 obj.refresh_from_db()
                 self.assertEqual(getattr(obj, self.slug_source), new_slug_source_value)
-                self.assertEqual(obj.slug, expected_slug)
+                if hasattr(obj, "slug"):
+                    self.assertEqual(obj.slug, expected_slug)
+                else:
+                    self.assertEqual(obj.key, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """
@@ -708,7 +719,6 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
-
             # Try GET without permission
             with testing.disable_warnings("django.request"):
                 response = self.client.get(self._get_url("list"))
@@ -718,7 +728,6 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_permission(self):
-
             # Add model-level permission
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
             obj_perm.save()
@@ -816,7 +825,7 @@ class ViewTestCases:
             instance1_csv_data += instance1_cf_values
             # Since values in `data` are all in str; cast all values in instance1_csv_data to str
             instance1_csv_data = [str(val) for val in instance1_csv_data]
-            instance1_cf_headers = ["cf_" + str(cf.slug) for cf in instance1.get_custom_fields().keys()]
+            instance1_cf_headers = ["cf_" + str(cf.key) for cf in instance1.get_custom_fields().keys()]
             instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
             self.assertEqual(instance1_csv_headers, list(data.keys()))
             self.assertEqual(instance1_csv_data, list(data.values()))

@@ -69,7 +69,7 @@ class NestedCustomFieldSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.CustomField
-        fields = ["id", "url", "slug"]
+        fields = ["id", "url", "key"]
 
 
 class NestedCustomFieldChoiceSerializer(WritableNestedSerializer):

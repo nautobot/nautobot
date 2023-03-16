@@ -102,7 +102,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         route = get_route_for_model(instance, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
+        fields = ["pk", "slug", "key"]
         for field in fields:
             if not hasattr(instance, field):
                 continue
@@ -186,7 +186,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
         """
         csv_data = []
-        custom_field_slugs = []
+        custom_field_keys = []
 
         # Start with the column headers
         headers = self.queryset.model.csv_headers.copy()
@@ -194,8 +194,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append("cf_" + custom_field.slug)
-                custom_field_slugs.append(custom_field.slug)
+                headers.append("cf_" + custom_field.key)
+                custom_field_keys.append(custom_field.key)
 
         csv_data.append(",".join(headers))
 
@@ -203,8 +203,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         for obj in self.queryset:
             data = obj.to_csv()
 
-            for custom_field_slug in custom_field_slugs:
-                data += (obj.cf.get(custom_field_slug, ""),)
+            for custom_field_key in custom_field_keys:
+                data += (obj.cf.get(custom_field_key, ""),)
 
             csv_data.append(csv_format(data))
 
@@ -376,7 +376,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
         # Look up an existing object by slug, PK, or name, if provided.
-        for field in ("slug", "pk", "name"):
+        for field in ("slug", "pk", "name", "key"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()
@@ -506,7 +506,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
         # Look up an existing object by slug or PK, or name if provided.
-        for field in ("slug", "pk", "name"):
+        for field in ("slug", "pk", "name", "key"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()

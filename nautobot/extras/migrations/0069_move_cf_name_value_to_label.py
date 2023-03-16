@@ -3,9 +3,10 @@
 from django.db import migrations
 
 
-def move_cf_name_value_to_lable(apps, schema_editor):
-    CustomField = apps.get("extras", "customfield")
-    custom_fields = CustomField.objects.filter(label__isnull=True)
+def move_cf_name_value_to_label(apps, schema_editor):
+    CustomField = apps.get_model("extras", "customfield")
+    # Filtering on null or empty labels
+    custom_fields = CustomField.objects.filter(label__isnull=True).union(CustomField.objects.filter(label__exact=""))
 
     for cf in custom_fields:
         cf.label = cf.name
@@ -14,7 +15,14 @@ def move_cf_name_value_to_lable(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
         ("extras", "0068_rename_model_fields"),
+        ("ipam", "0022_aggregate_to_prefix_data_migration"),
     ]
 
-    operations = []
+    operations = [
+        migrations.RunPython(
+            code=move_cf_name_value_to_label,
+            reverse_code=migrations.operations.special.RunPython.noop,
+        )
+    ]

@@ -351,8 +351,8 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
     custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
-        to_field_name="label",
-        label="Field (ID or label)",
+        to_field_name="key",
+        label="Field (ID or Key)",
     )
 
     class Meta:

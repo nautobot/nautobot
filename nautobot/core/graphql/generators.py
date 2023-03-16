@@ -92,7 +92,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     return resolve_filter
 
 
-def generate_custom_field_resolver(slug, resolver_name):
+def generate_custom_field_resolver(key, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 
     Args:
@@ -101,7 +101,7 @@ def generate_custom_field_resolver(slug, resolver_name):
     """
 
     def resolve_custom_field(self, info, **kwargs):
-        return self.cf.get(slug, None)
+        return self.cf.get(key, None)
 
     resolve_custom_field.__name__ = resolver_name
     return resolve_custom_field

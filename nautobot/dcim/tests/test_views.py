@@ -329,19 +329,19 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 name="Rack 1",
                 location=cls.locations[0],
                 status=cls.status_active,
-                _custom_field_data={"rack-colors": ["red"]},
+                _custom_field_data={"rack_colors": ["red"]},
             ),
             Rack.objects.create(
                 name="Rack 2",
                 location=cls.locations[0],
                 status=cls.status_active,
-                _custom_field_data={"rack-colors": ["green"]},
+                _custom_field_data={"rack_colors": ["green"]},
             ),
             Rack.objects.create(
                 name="Rack 3",
                 location=cls.locations[0],
                 status=cls.status_active,
-                _custom_field_data={"rack-colors": ["blue"]},
+                _custom_field_data={"rack_colors": ["blue"]},
             ),
         )
 

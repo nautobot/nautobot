@@ -419,7 +419,6 @@ class CustomFieldEditView(generic.ObjectEditView):
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
-
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
@@ -481,7 +480,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
         tasks = [
-            delete_custom_field_data.si(obj.slug, set(obj.content_types.values_list("pk", flat=True)))
+            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)))
             for obj in queryset
         ]
         return tasks
@@ -657,7 +656,6 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
-
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
@@ -722,7 +720,6 @@ class ObjectDynamicGroupsView(View):
     base_template = None
 
     def get(self, request, model, **kwargs):
-
         # Handle QuerySet restriction of parent object if needed
         if hasattr(model.objects, "restrict"):
             obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
@@ -1590,7 +1587,6 @@ class ObjectChangeListView(generic.ObjectListView):
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, **kwargs):
-
         # Remappings below allow previous queries of time_before and time_after to use
         # newer methods specifying the lookup method.
 
@@ -1636,7 +1632,6 @@ class ObjectChangeLogView(View):
     base_template = None
 
     def get(self, request, model, **kwargs):
-
         # Handle QuerySet restriction of parent object if needed
         if hasattr(model.objects, "restrict"):
             obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
@@ -1709,7 +1704,6 @@ class ObjectNotesView(View):
     base_template = None
 
     def get(self, request, model, **kwargs):
-
         # Handle QuerySet restriction of parent object if needed
         if hasattr(model.objects, "restrict"):
             obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
@@ -2025,7 +2019,6 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
-
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"

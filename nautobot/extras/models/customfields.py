@@ -162,7 +162,7 @@ class CustomFieldModel(models.Model):
         fields = CustomField.objects.get_for_model(self)
         if advanced_ui is not None:
             fields = fields.filter(advanced_ui=advanced_ui)
-        return OrderedDict([(field, self.cf.get(field.slug)) for field in fields])
+        return OrderedDict([(field, self.cf.get(field.key)) for field in fields])
 
     def get_custom_field_groupings_basic(self):
         """
@@ -208,7 +208,7 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
 
         for field in fields:
-            data = (field, self.cf.get(field.slug))
+            data = (field, self.cf.get(field.key))
             record.setdefault(field.grouping, []).append(data)
         record = dict(sorted(record.items()))
         return record
@@ -216,23 +216,23 @@ class CustomFieldModel(models.Model):
     def clean(self):
         super().clean()
 
-        custom_fields = {cf.slug: cf for cf in CustomField.objects.get_for_model(self)}
+        custom_fields = {cf.key: cf for cf in CustomField.objects.get_for_model(self)}
 
         # Validate all field values
-        for field_slug, value in self._custom_field_data.items():
-            if field_slug not in custom_fields:
+        for field_key, value in self._custom_field_data.items():
+            if field_key not in custom_fields:
                 # log a warning instead of raising a ValidationError so as not to break the UI
-                logger.warning(f"Unknown field name '{field_slug}' in custom field data for {self} ({self.pk}).")
+                logger.warning(f"Unknown field slug '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                custom_fields[field_slug].validate(value)
+                custom_fields[field_key].validate(value)
             except ValidationError as e:
-                raise ValidationError(f"Invalid value for custom field '{field_slug}': {e.message}")
+                raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
         # Check for missing required values
         for cf in custom_fields.values():
-            if cf.required and cf.slug not in self._custom_field_data:
-                raise ValidationError(f"Missing required custom field '{cf.slug}'.")
+            if cf.required and cf.key not in self._custom_field_data:
+                raise ValidationError(f"Missing required custom field '{cf.key}'.")
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
@@ -316,11 +316,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         max_length=50,
         help_text="Name of the field as displayed to users.",
     )
-    slug = AutoSlugField(
+    key = AutoSlugField(
         blank=False,
         max_length=50,
         populate_from="label",
-        help_text="Internal field name. Please use underscores rather than dashes in this slug.",
+        help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
     description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
@@ -402,9 +402,9 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         if self.present_in_database:
             return
 
-        # This is to fix up existing ORM usage when caller doesn't specify a slug since it wasn't a field before.
-        if not self.slug:
-            self.slug = slugify_dashes_to_underscores(self.label)
+        # This is to fix up existing ORM usage when caller doesn't specify a key since it wasn't a field before.
+        if not self.key:
+            self.key = slugify_dashes_to_underscores(self.label)
 
     def clean_fields(self, exclude=None):
         # Ensure now-mandatory fields are correctly populated, as otherwise cleaning will fail.
@@ -418,8 +418,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
 
-            if self.slug != database_object.slug:
-                raise ValidationError({"slug": "Slug cannot be changed once created"})
+            if self.key != database_object.key:
+                raise ValidationError({"key": "Key cannot be changed once created"})
 
             if self.type != database_object.type:
                 raise ValidationError({"type": "Type cannot be changed once created"})
@@ -461,7 +461,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             )
 
     def save(self, *args, **kwargs):
-        # Prior to Nautobot 1.4, `slug` was a non-existent field, but now it's mandatory.
+        # Prior to Nautobot 1.4, `key` was a non-existent field, but now it's mandatory.
         # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
         # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
         self._fixup_empty_fields()
@@ -634,10 +634,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         super().delete(*args, **kwargs)
 
-        delete_custom_field_data.delay(self.slug, content_types)
+        delete_custom_field_data.delay(self.key, content_types)
 
     def get_absolute_url(self):
-        return reverse("extras:customfield", args=[self.slug])
+        return reverse("extras:customfield", args=[self.key])
 
 
 @extras_features(
@@ -711,7 +711,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # Check if this value is in active use in a select field
             for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
-                if model.objects.filter(**{f"_custom_field_data__{self.custom_field.slug}": self.value}).exists():
+                if model.objects.filter(**{f"_custom_field_data__{self.custom_field.key}": self.value}).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
@@ -722,7 +722,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
                 if model.objects.filter(
-                    **{f"_custom_field_data__{self.custom_field.slug}__contains": self.value}
+                    **{f"_custom_field_data__{self.custom_field.key}__contains": self.value}
                 ).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",

@@ -28,7 +28,7 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
     from nautobot.extras.choices import CustomFieldTypeChoices
 
     field, _ = CustomField.objects.update_or_create(
-        slug="example_plugin_auto_custom_field",  # Note underscores rather than dashes!
+        key="example_plugin_auto_custom_field",  # Note underscores rather than dashes!
         defaults={
             "type": CustomFieldTypeChoices.TYPE_TEXT,
             "label": "Example Plugin Automatically Added Custom Field",

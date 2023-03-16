@@ -228,17 +228,17 @@ def extend_schema_type_custom_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
     for field in cfs:
-        field_slug = f"{prefix}{str_to_var_name(field.slug)}"
-        if str_to_var_name(field.slug) != field.slug:
-            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_slug
+        field_key = f"{prefix}{str_to_var_name(field.key)}"
+        if str_to_var_name(field.key) != field.key:
+            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_key
             # In 2.0 we should simply omit fields whose names/slugs are invalid in GraphQL, instead of mapping them.
             warnings.warn(
                 f'Custom field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe name '
-                f'("{field.slug}"); for now it will be mapped to the GraphQL name "{field_slug}", '
+                f'("{field.key}"); for now it will be mapped to the GraphQL name "{field_key}", '
                 "but in a future release this field may fail to appear in GraphQL.",
                 FutureWarning,
             )
-        resolver_name = f"resolve_{field_slug}"
+        resolver_name = f"resolve_{field_key}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
@@ -246,20 +246,20 @@ def extend_schema_type_custom_field(schema_type, model):
                 'because there is already an attribute mapped to the same name ("%s")',
                 field,
                 schema_type._meta.name,
-                field_slug,
+                field_key,
             )
             continue
 
         setattr(
             schema_type,
             resolver_name,
-            generate_custom_field_resolver(field.slug, resolver_name),
+            generate_custom_field_resolver(field.key, resolver_name),
         )
 
         if field.type in CUSTOM_FIELD_MAPPING:
-            schema_type._meta.fields[field_slug] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
         else:
-            schema_type._meta.fields[field_slug] = graphene.Field.mounted(graphene.String())
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(graphene.String())
 
     return schema_type
 

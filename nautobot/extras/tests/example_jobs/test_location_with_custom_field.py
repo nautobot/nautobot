@@ -23,7 +23,7 @@ class TestCreateLocationWithCustomField(Job):
         location_1 = Location.objects.create(
             name="Test Location", slug="test-location-one", location_type=location_type
         )
-        location_1.cf[cf.slug] = "some-value"
+        location_1.cf[cf.key] = "some-value"
         location_1.save()
         self.log_success(obj=location_1, message="Created a new location")
 
