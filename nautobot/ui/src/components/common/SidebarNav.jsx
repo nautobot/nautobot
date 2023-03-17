@@ -1,15 +1,15 @@
 import { Accordion, AccordionButton, AccordionItem, AccordionPanel, Heading, SidebarButton } from "@nautobot/nautobot-ui"
 import RouterLink from "@components/common/RouterLink"
 
-import { useGetUIMenuQuery } from "@utils/apiSlice";
+import { useGetUIMenuQuery } from "@utils/api";
 
-
+// The sidebar accordion
 export default function SidebarNav() {
+  // Grab the UI menu from the RTK Query API
   const { data: menuInfo, isSuccess: isMenuSuccess, isError: isMenuError } = useGetUIMenuQuery();
 
   if (isMenuError) return <div>Failed to load menu</div>
   if (!isMenuSuccess) return <span>Loading...</span>
-
 
   return (
     <Accordion allowMultiple variant="sidebarLevel0">

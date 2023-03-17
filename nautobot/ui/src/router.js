@@ -1,55 +1,54 @@
-import { useRoutes } from "react-router-dom"
+import { useRoutes } from "react-router-dom";
 // import { lazy } from 'react'
 
-import Home from "@views/Home"
-import CreateView from "@views/generic/ObjectCreate"
-import DetailView from "@views/generic/ObjectRetrieve"
-import InstalledApps from "@views/InstalledApps"
-import ListView from "@views/generic/ObjectList"
-import Login from "@views/Login"
+import Home from "@views/Home";
+import CreateView from "@views/generic/ObjectCreate";
+import DetailView from "@views/generic/ObjectRetrieve";
+import ListView from "@views/generic/ObjectList";
+import InstalledApps from "@views/InstalledApps";
+import Login from "@views/Login";
+import Logout from "@views/Logout";
 
-
-
-// Placeholder for nautobot to inject code
-// The idea would be to dynamically generate this lines of codes relating to
-//  nautobot_plugin_one_ui
-
-// nautobot__inject_import__start
-
-// nautobot__inject_import__ends
-
-
+// TODO: Dynamic route injection
 export default function NautobotRouter() {
-    let element = useRoutes([
+  let element = useRoutes([
+    {
+      path: "/",
+      element: <Home />,
+      children: []
+    },
+    {
+      path: "/login/",
+      element: <Login />
+    },
+    {
+      path: "/logout/",
+      element: <Logout />
+    },
+    {
+      path: "/:app_name/:model_name",
+      element: <ListView />,
+      children: []
+    },
+    {
+      path: "/:app_name/:model_name/:pk",
+      element: <DetailView />,
+      children: []
+    },
+    {
+      path: "/:app_name/:model_name/add",
+      element: <CreateView />,
+      children: []
+    },
+    {
+      path: "/plugins/",
+      children: [
         {
-            path: "/",
-            element: <Home />,
-            children: [],
-        },
-        {
-            path: "/login/",
-            element: <Login />,
-        },
-        {
-            path: "/:app_name/:model_name",
-            element: <ListView />,
-            children: [],
-        },
-        {
-          path: "/:app_name/:model_name/add",
-            element: <CreateView />,
-            children: [],
-        },
-        {
-            path: "/plugins/",
-            children: [
-                {
-                    path: "installed-plugins",
-                    element: <InstalledApps />
-                }
-            ],
-        },
-    ]);
-    return element;
+          path: "installed-plugins",
+          element: <InstalledApps />
+        }
+      ]
+    }
+  ]);
+  return element;
 }
-//////

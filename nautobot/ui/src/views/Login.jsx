@@ -1,7 +1,7 @@
-import { Button, FormControl, FormLabel, Input, Link, Box } from "@nautobot/nautobot-ui"
+import { Button, FormControl, FormLabel, Input, Box } from "@nautobot/nautobot-ui"
 import axios from "axios"
 
-import { useGetSessionQuery } from "@utils/apiSlice";
+import { useGetSessionQuery } from "@utils/api";
 import { useNavigate } from "react-router-dom";
 
 axios.defaults.withCredentials = true
@@ -12,6 +12,8 @@ export default function Login() {
   const { refetch: refetchSession } = useGetSessionQuery();
   const navigate = useNavigate();
 
+  // TODO: Places like this might be best to stick with Axios calls but we should have a generic Axios object
+  //   for global cookie management, etc.
   const handleSubmit = (e) => {
     e.preventDefault();
     axios.post(
@@ -44,6 +46,8 @@ export default function Login() {
   )
 }
 
+// TODO: This should be all that's needed to support SSO backends but doesn't work well with NodeJS dev mode for the time being
+//   Has worked with built version served by Django
 // { isSuccess && sessionInfo.backends.length > 0 ?
 //   sessionInfo.backends.map((backend, idx) => { return (<Link key={idx} href={backend}>Login with {backend}</Link>) })
 // : <></> }

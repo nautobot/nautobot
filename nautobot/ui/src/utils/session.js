@@ -1,3 +1,4 @@
+// TODO: This file may go away entirely with the RTK Query pattern
 import axios from "axios";
 import { API_USER_SESSION_INFO } from "@constants/apiPath";
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';

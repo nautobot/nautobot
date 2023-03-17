@@ -8,6 +8,7 @@ import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/core";
 import useSWR from "swr"
 
+// TODO: Move this to the generic/ObjectList pattern
 
 const csrf_token = Cookies.get('csrftoken');
 

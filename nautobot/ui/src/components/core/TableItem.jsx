@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "react-router-dom";
 
 
-export default function BSTableItem({ name, obj, url, link = false }) {
+export default function TableItem({ name, obj, url, link = false }) {
   let display = ""
   if (obj == null) {
     display = <FontAwesomeIcon icon={faMinus} />
