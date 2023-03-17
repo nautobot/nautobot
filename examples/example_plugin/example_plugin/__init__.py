@@ -8,6 +8,7 @@ __version__ = metadata.version(__name__)
 
 
 from nautobot.core.signals import nautobot_database_ready
+from nautobot.core.settings_funcs import ConstanceConfigItem
 from nautobot.apps import NautobotAppConfig
 
 from example_plugin.signals import nautobot_database_ready_callback
@@ -29,7 +30,9 @@ class ExamplePluginConfig(NautobotAppConfig):
         "ANOTHER_SAMPLE_VARIABLE": "example_default_value",
     }
     constance_config = {
-        "SAMPLE_VARIABLE": ["example_default_value", "Example of supplying a setting through Django Constance."]
+        "SAMPLE_VARIABLE": ConstanceConfigItem(
+            default="example_default_value", help_text="Example of supplying a setting through Django Constance."
+        )
     }
     searchable_models = ["examplemodel"]
 

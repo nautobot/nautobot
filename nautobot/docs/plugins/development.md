@@ -448,11 +448,13 @@ Similarly, if your app provides an "app home" or "dashboard" view, you can provi
 +++ 2.0.0
 
 Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A
-Constance Fieldset will automatically be created for your plugin.
+Constance Fieldset will automatically be created for your plugin. We have added the `ConstanceConfigItem`
+namedtuple to assist in the configurations.
 
 ```python
 # __init__.py
 from nautobot.apps import NautobotAppConfig
+from nautobot.core.settings_funcs import ConstanceConfigItem
 
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...

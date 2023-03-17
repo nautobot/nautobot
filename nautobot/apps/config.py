@@ -1,10 +1,7 @@
 """Helper code for loading values that may be defined in settings.py/nautobot_config.py *or* in django-constance."""
 
 from constance import config
-from django import template
 from django.conf import settings
-
-register = template.Library()
 
 
 def get_app_settings_or_config(app_name, variable_name):
