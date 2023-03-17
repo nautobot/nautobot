@@ -21,7 +21,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
 
-class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase
+class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we have some baseline custom-field records
     def setUp(self):
         super().setUp()
         active_status = Status.objects.get_for_model(Location).get(slug="active")

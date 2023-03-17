@@ -1,13 +1,15 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import Location, LocationType
 
 
-class CircuitTerminationModelTestCase(TestCase):  # TODO: change to BaseModelTestCase
+class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
+    model = CircuitTermination
+
     @classmethod
     def setUpTestData(cls):
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")

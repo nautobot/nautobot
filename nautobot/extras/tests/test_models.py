@@ -105,12 +105,14 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
-class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
+class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     """
     These test cases deal with the weighting, ordering, and deep merge logic of config context data.
 
     It also ensures the various config context querysets are consistent.
     """
+
+    model = ConfigContext
 
     def setUp(self):
 
@@ -148,17 +150,15 @@ class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
             location=self.location,
         )
 
-    def test_higher_weight_wins(self):
+        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
 
-        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
+    def test_higher_weight_wins(self):
+        ConfigContext.objects.create(name="context 2", weight=99, data={"a": 123, "b": 456, "c": 789})
 
         expected_data = {"a": 123, "b": 456, "c": 777}
         self.assertEqual(self.device.get_config_context(), expected_data)
 
     def test_name_ordering_after_weight(self):
-
-        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
         expected_data = {"a": 123, "b": 456, "c": 789}
@@ -168,7 +168,6 @@ class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
         """
         Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
         """
-        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         with self.assertRaises(ValidationError):
             duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
             duplicate_context.validated_save()
@@ -190,10 +189,9 @@ class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
         This test incorporates features from all of the above tests cases to ensure
         the annotate_config_context_data() and get_for_object() queryset methods are the same.
         """
-        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
-        ConfigContext.objects.create(name="context 3", weight=99, data={"d": 1})
-        ConfigContext.objects.create(name="context 4", weight=99, data={"d": 2})
+        ConfigContext.objects.create(name="context 2", weight=99, data={"a": 123, "b": 456, "c": 789})
+        ConfigContext.objects.create(name="context 3", weight=98, data={"d": 1})
+        ConfigContext.objects.create(name="context 4", weight=98, data={"d": 2})
 
         annotated_queryset = Device.objects.filter(name=self.device.name).annotate_config_context_data()
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
@@ -312,7 +310,7 @@ class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
         device.tags.add(self.tag2)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 1)
+        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)  # including one from setUp()
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_multiple_tags_return_distinct_objects_with_seperate_config_contexts(self):
@@ -343,7 +341,7 @@ class ConfigContextTest(TestCase):  # TODO: change to BaseModelTestCase
         device.tags.add(self.tag2)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
+        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 3)  # including one from setUp()
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
@@ -624,10 +622,18 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
             invalid_schema.full_clean()
 
 
-class ExportTemplateTest(TestCase):  # TODO: change to BaseModelTestCase
+class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the ExportTemplate model class.
     """
+
+    model = ExportTemplate
+
+    def setUp(self):
+        self.device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(
+            content_type=self.device_ct, name="Export Template 1", template_code="hello world"
+        )
 
     def test_name_contenttype_uniqueness(self):
         """
@@ -635,11 +641,10 @@ class ExportTemplateTest(TestCase):  # TODO: change to BaseModelTestCase
 
         See GitHub issue #431.
         """
-        device_ct = ContentType.objects.get_for_model(Device)
-        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
-
         with self.assertRaises(ValidationError):
-            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template = ExportTemplate(
+                content_type=self.device_ct, name="Export Template 1", template_code="foo"
+            )
             duplicate_template.validated_save()
 
         # A differently owned ExportTemplate may have the same name
@@ -651,7 +656,7 @@ class ExportTemplateTest(TestCase):  # TODO: change to BaseModelTestCase
         )
         repo.save(trigger_resync=False)
         nonduplicate_template = ExportTemplate(
-            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+            content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
         )
         nonduplicate_template.validated_save()
 
@@ -1415,7 +1420,9 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.assertEqual(str(self.status), test)
 
 
-class TagTest(TestCase):  # TODO: change to BaseModelTestCase
+class TagTest(ModelTestCases.BaseModelTestCase):
+    model = Tag
+
     def test_create_tag_unicode(self):
         tag = Tag(name="Testing Unicode: 台灣")
         tag.save()

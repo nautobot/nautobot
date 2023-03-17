@@ -1149,7 +1149,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
 
 
-class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase
+class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
         active = Status.objects.get(name="Active")
         location_type_1 = LocationType.objects.create(name="Location Type 1")
@@ -1173,7 +1173,7 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase
         )
 
 
-class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
+class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
     def setUp(self):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")

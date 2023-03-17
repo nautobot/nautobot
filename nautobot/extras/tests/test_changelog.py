@@ -513,7 +513,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertSequenceEqual(list(vm_interface.tagged_vlans.all()), [tagged_vlan])
 
 
-class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase
+class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once we have an ObjectChangeFactory
     @classmethod
     def setUpTestData(cls):
         cls.location_status = Status.objects.get_for_model(Location).first()
