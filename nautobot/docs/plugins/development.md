@@ -171,7 +171,7 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
     All `required_settings` must be configured in `PLUGINS_CONFIG` in `nautobot_config.py` before the app can be used.
 
 !!! warning
-    If a configuration parameter is listed in either `required_settings` or `constance_config` and `default_settings`, the default setting will be ignored.
+    If a configuration parameter is listed in either of `required_settings` or `constance_config`, and also in `default_settings`, the default setting will be ignored.
 
 #### NautobotAppConfig Code Location Attributes
 
