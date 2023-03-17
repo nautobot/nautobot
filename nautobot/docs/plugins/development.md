@@ -162,7 +162,7 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
 | `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
-| `constance_config` | `{}` | A [Django Constance](#adding-database-backed-config) configuration parameter for settings.
+| `constance_config` | `{}` | [Django Constance](#adding-database-backed-config) configuration parameters for settings. |
 
 +++ 2.0.0
     Support for the `searchable_models` and `constance_config` attributes were added.
