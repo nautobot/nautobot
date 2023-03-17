@@ -1025,6 +1025,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             # Update custom fields
                             for field_name in form_custom_fields:
                                 if field_name in form.nullable_fields and field_name in nullified_fields:
+                                    # [3:] is truncating the "cf_" from the field_name
                                     obj.cf[field_name[3:]] = None
                                 elif form.cleaned_data.get(field_name) not in (None, "", []):
                                     obj.cf[field_name[3:]] = form.cleaned_data[field_name]

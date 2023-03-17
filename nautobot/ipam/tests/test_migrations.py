@@ -422,7 +422,7 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
     )
     def test_aggregate_to_prefix_migration_custom_fields(self):
         # This change is necessary because name attribute is not specified now in example_plugin's signal.py
-        self.assertEqual(self.custom_field.objects.exclude(name__exact="").count(), 3)
+        self.assertEqual(self.custom_field.objects.exclude(name="").count(), 3)
         self.assertEqual(self.custom_field.objects.filter(content_types=self.prefix_ct).count(), 3)
         self.assertEqual(self.custom_field.objects.filter(content_types=self.aggregate_ct).count(), 2)
 

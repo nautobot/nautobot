@@ -982,7 +982,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
-        form_cf_to_key = {f"cf_{cf.key}": cf.name for cf in CustomField.objects.get_for_model(model)}
         with transaction.atomic():
             updated_objects = []
             for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
@@ -1010,9 +1009,10 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 # Update custom fields
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
-                        obj.cf[form_cf_to_key[field_name]] = None
+                        # [3:] is truncating the "cf_" from the field_name
+                        obj.cf[field_name[3:]] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
-                        obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
+                        obj.cf[field_name[3:]] = form.cleaned_data[field_name]
 
                 obj.validated_save()
                 updated_objects.append(obj)

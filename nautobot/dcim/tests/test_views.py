@@ -1209,7 +1209,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
-                _custom_field_data={"crash-counter": 5},
+                _custom_field_data={"crash_counter": 5},
             ),
             Device.objects.create(
                 name="Device 2",
@@ -1219,7 +1219,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
-                _custom_field_data={"crash-counter": 10},
+                _custom_field_data={"crash_counter": 10},
             ),
             Device.objects.create(
                 name="Device 3",
@@ -1230,7 +1230,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 platform=platforms[0],
                 status=status_active,
                 secrets_group=secrets_groups[0],
-                _custom_field_data={"crash-counter": 15},
+                _custom_field_data={"crash_counter": 15},
             ),
         )
 
@@ -1282,7 +1282,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "A new device",
             "tags": [t.pk for t in Tag.objects.get_for_model(Device)],
             "local_config_context_data": None,
-            "cf_crash-counter": -1,
+            "cf_crash_counter": -1,
             "cr_router-id": None,
         }
 

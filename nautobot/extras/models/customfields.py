@@ -397,20 +397,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label
 
-    def _fixup_empty_fields(self):
-        """Handle the case when a new instance is created and some fields are left blank."""
-        if self.present_in_database:
-            return
-
-        # This is to fix up existing ORM usage when caller doesn't specify a key since it wasn't a field before.
-        if not self.key:
-            self.key = slugify_dashes_to_underscores(self.label)
-
-    def clean_fields(self, exclude=None):
-        # Ensure now-mandatory fields are correctly populated, as otherwise cleaning will fail.
-        self._fixup_empty_fields()
-        super().clean_fields(exclude=exclude)
-
     def clean(self):
         super().clean()
 
@@ -459,13 +445,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             raise ValidationError(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
-
-    def save(self, *args, **kwargs):
-        # Prior to Nautobot 1.4, `key` was a non-existent field, but now it's mandatory.
-        # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
-        # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
-        self._fixup_empty_fields()
-        super().save(*args, **kwargs)
 
     def to_form_field(
         self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
