@@ -685,7 +685,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("slug", "Slug"),
                 ],
             )
             self.assertEqual(
@@ -733,7 +732,7 @@ class DynamicFilterFormTest(TestCase):
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
-                    ("tenant", "Tenant (slug or ID)"),
+                    ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (slug or ID)"),
                     ("time_zone", "Time zone"),
                     ("vlan_groups", "Vlan groups (slug or ID)"),
@@ -772,7 +771,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("slug", "Slug"),
                 ],
             )
             self.assertEqual(
@@ -845,7 +843,7 @@ class DynamicFilterFormTest(TestCase):
                     "data-multiple": 1,
                     "data-query-param-content_types": '["dcim.location"]',
                     "display-field": "display",
-                    "value-field": "slug",
+                    "value-field": "name",
                 },
             )
 

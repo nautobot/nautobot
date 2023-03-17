@@ -26,7 +26,7 @@ class VirtualMachineTestCase(TestCase):
     def setUp(self):
         statuses = Status.objects.get_for_model(VirtualMachine)
 
-        cluster_type = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type 1")
         self.cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=cluster_type)
         self.status = statuses.get(slug="active")
 
@@ -49,7 +49,7 @@ class VirtualMachineTestCase(TestCase):
         with self.assertRaises(ValidationError):
             vm2.full_clean()
 
-        tenant = Tenant.objects.create(name="Test Tenant 1", slug="test-tenant-1")
+        tenant = Tenant.objects.create(name="Test Tenant 1")
         vm1.tenant = tenant
         vm1.save()
         vm2.tenant = tenant

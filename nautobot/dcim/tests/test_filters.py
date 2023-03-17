@@ -272,7 +272,7 @@ def common_test_data(cls):
 
     cls.device_roles = Role.objects.get_for_model(Device)
 
-    cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+    cluster_type = ClusterType.objects.create(name="Cluster Type 1")
     clusters = (
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=loc0),
         Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, location=loc1),

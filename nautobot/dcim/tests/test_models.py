@@ -776,7 +776,7 @@ class DeviceTestCase(TestCase):
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
-        tenant = Tenant.objects.create(name="Test Tenant 1", slug="test-tenant-1")
+        tenant = Tenant.objects.create(name="Test Tenant 1")
         device1.tenant = tenant
         device1.save()
         device2.tenant = tenant

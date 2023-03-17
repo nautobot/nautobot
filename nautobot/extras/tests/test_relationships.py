@@ -1145,7 +1145,7 @@ class RequiredRelationshipTestMixin(TestCase):
                 },
                 "relationship": relationship_o2o,
                 "required_objects_generator": [
-                    lambda: Platform.objects.create(name="New Platform 2", slug="new-platform-2", napalm_args="null")
+                    lambda: Platform.objects.create(name="New Platform 2", napalm_args="null")
                 ],
                 "expected_errors": {
                     "api": {

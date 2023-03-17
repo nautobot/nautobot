@@ -97,7 +97,7 @@ def create_test_device(name):
     location, _ = Location.objects.get_or_create(
         name="Test Location 1", slug="test-location-1", location_type=location_type
     )
-    manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
+    manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")
     device_ct = ContentType.objects.get_for_model(Device)
@@ -436,7 +436,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         device_roles = Role.objects.get_for_model(Device)[:1]
 
-        platforms = (Platform.objects.create(name="Platform 1", slug="platform-1"),)
+        platforms = (Platform.objects.create(name="Platform 1"),)
 
         devices = (
             Device.objects.create(
@@ -1190,17 +1190,17 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         deviceroles = Role.objects.get_for_model(Device)[:2]
 
         platforms = (
-            Platform.objects.create(name="Platform 1", slug="platform-1"),
-            Platform.objects.create(name="Platform 2", slug="platform-2"),
+            Platform.objects.create(name="Platform 1"),
+            Platform.objects.create(name="Platform 2"),
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         statuses = Status.objects.get_for_model(Device)
-        status_active = statuses.get(slug="active")
+        status_active = statuses.get(name="Active")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, name="crash-counter", default=0),
@@ -1974,7 +1974,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         device = create_test_device("Device 1")
-        manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
 
         inventory_items = (
             InventoryItem.objects.create(device=device, name="Inventory Item 1"),

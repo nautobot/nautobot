@@ -466,7 +466,8 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     platforms = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        label="Platforms (slug or ID)",
+        to_field_name="name",
+        label="Platforms (name or ID)",
     )
     has_platforms = RelatedMembershipBooleanFilter(
         field_name="platforms",
@@ -783,13 +784,18 @@ class DeviceFilterSet(
         },
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device_type__manufacturer", queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
+        field_name="device_type__manufacturer",
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
     )
-    platform = NaturalKeyOrPKMultipleChoiceFilter(queryset=Platform.objects.all(), label="Platform (slug or ID)")
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Platform.objects.all(), to_field_name="name", label="Platform (name or ID)"
+    )
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
@@ -822,6 +828,7 @@ class DeviceFilterSet(
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
+        to_field_name="name",
         label="Secrets group (slug or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
@@ -1322,7 +1329,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         method="filter_device", field_name="device__location__slug", label="Location (name)"
     )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
-    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
+    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
     termination_a_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,

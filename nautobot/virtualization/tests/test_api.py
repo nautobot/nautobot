@@ -52,9 +52,9 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
-        ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
+        ClusterType.objects.create(name="Cluster Type 1")
+        ClusterType.objects.create(name="Cluster Type 2")
+        ClusterType.objects.create(name="Cluster Type 3")
 
 
 class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
@@ -101,8 +101,8 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
 
         cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
-            ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
+            ClusterType.objects.create(name="Cluster Type 1"),
+            ClusterType.objects.create(name="Cluster Type 2"),
         )
 
         cluster_groups = (
@@ -289,7 +289,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
+        clustertype = ClusterType.objects.create(name="Test Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
         status_active = Status.objects.get(slug="active")

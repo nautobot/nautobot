@@ -229,8 +229,8 @@ class RelationshipModelFormTestCase(TestCase):
         cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
         cls.device_role = Role.objects.get_for_model(Device).first()
-        cls.platform = dcim_models.Platform.objects.create(name="Platform 1", slug="platform-1")
-        cls.status_active = Status.objects.get(slug="active")
+        cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
+        cls.status_active = Status.objects.get(name="Active")
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             location=cls.location,

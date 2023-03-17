@@ -217,7 +217,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     platform = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="platforms",
         queryset=Platform.objects.all(),
-        label="Platform (ID or slug)",
+        to_field_name="name",
+        label="Platform (ID or name)",
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_groups",

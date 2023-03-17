@@ -50,9 +50,9 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
-        ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
+        ClusterType.objects.create(name="Cluster Type 1")
+        ClusterType.objects.create(name="Cluster Type 2")
+        ClusterType.objects.create(name="Cluster Type 3")
         ClusterType.objects.create(name="Cluster Type 8")
 
         cls.form_data = {
@@ -85,13 +85,13 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         clustergroups = (
-            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
-            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
+            ClusterGroup.objects.create(name="Cluster Group 1"),
+            ClusterGroup.objects.create(name="Cluster Group 2"),
         )
 
         clustertypes = (
-            ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
-            ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
+            ClusterType.objects.create(name="Cluster Type 1"),
+            ClusterType.objects.create(name="Cluster Type 2"),
         )
 
         Cluster.objects.create(
@@ -153,8 +153,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         platforms = (
-            Platform.objects.create(name="Platform 1", slug="platform-1"),
-            Platform.objects.create(name="Platform 2", slug="platform-2"),
+            Platform.objects.create(name="Platform 1"),
+            Platform.objects.create(name="Platform 2"),
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
@@ -283,7 +283,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
         devicerole = Role.objects.get_for_model(Device).first()
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),

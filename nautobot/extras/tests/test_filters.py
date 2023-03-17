@@ -186,21 +186,21 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         cls.device_types = device_types
 
         platforms = (
-            Platform.objects.create(name="Platform 1", slug="platform-1"),
-            Platform.objects.create(name="Platform 2", slug="platform-2"),
-            Platform.objects.create(name="Platform 3", slug="platform-3"),
+            Platform.objects.create(name="Platform 1"),
+            Platform.objects.create(name="Platform 2"),
+            Platform.objects.create(name="Platform 3"),
         )
         cls.platforms = platforms
 
         cls.locations = Location.objects.all()[:3]
 
         cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
-            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
-            ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
+            ClusterGroup.objects.create(name="Cluster Group 1"),
+            ClusterGroup.objects.create(name="Cluster Group 2"),
+            ClusterGroup.objects.create(name="Cluster Group 3"),
         )
 
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),

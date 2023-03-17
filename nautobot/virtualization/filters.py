@@ -165,7 +165,8 @@ class VirtualMachineFilterSet(
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        label="Platform (ID or slug)",
+        to_field_name="name",
+        label="Platform (ID or name)",
     )
     mac_address = MultiValueMACAddressFilter(
         field_name="interfaces__mac_address",

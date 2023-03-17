@@ -784,9 +784,9 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def setUpTestData(cls):
 
         manufacturers = (
-            dcim_models.Manufacturer(name="Manufacturer 1", slug="manufacturer-1"),
-            dcim_models.Manufacturer(name="Manufacturer 2", slug="manufacturer-2"),
-            dcim_models.Manufacturer(name="Manufacturer 3", slug="manufacturer-3"),
+            dcim_models.Manufacturer(name="Manufacturer 1"),
+            dcim_models.Manufacturer(name="Manufacturer 2"),
+            dcim_models.Manufacturer(name="Manufacturer 3"),
         )
         dcim_models.Manufacturer.objects.bulk_create(manufacturers)
 
@@ -815,12 +815,12 @@ class DynamicFilterLookupExpressionTest(TestCase):
         device_roles = extras_models.Role.objects.get_for_model(Device)
 
         device_statuses = extras_models.Status.objects.get_for_model(dcim_models.Device)
-        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
+        device_status_map = {ds.name: ds for ds in device_statuses.all()}
 
         platforms = (
-            dcim_models.Platform(name="Platform 1", slug="platform-1"),
-            dcim_models.Platform(name="Platform 2", slug="platform-2"),
-            dcim_models.Platform(name="Platform 3", slug="platform-3"),
+            dcim_models.Platform(name="Platform 1"),
+            dcim_models.Platform(name="Platform 2"),
+            dcim_models.Platform(name="Platform 3"),
         )
         dcim_models.Platform.objects.bulk_create(platforms)
         cls.location_type = dcim_models.LocationType.objects.filter(parent__isnull=False).first()
@@ -851,7 +851,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[0],
                 position=1,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
-                status=device_status_map["active"],
+                status=device_status_map["Active"],
                 local_config_context_data={"foo": 123},
                 comments="Device 1 comments",
             ),
@@ -866,7 +866,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[1],
                 position=2,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
-                status=device_status_map["staged"],
+                status=device_status_map["Staged"],
                 comments="Device 2 comments",
             ),
             dcim_models.Device(
@@ -880,7 +880,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[2],
                 position=3,
                 face=dcim_choices.DeviceFaceChoices.FACE_REAR,
-                status=device_status_map["failed"],
+                status=device_status_map["Failed"],
                 comments="Device 3 comments",
             ),
         )
@@ -1187,7 +1187,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
-        cls.status_active = statuses.get(slug="active")
+        cls.status_active = statuses.get(name="Active")
 
     def test_empty_queryset(self):
         with self.assertRaisesMessage(ValueError, self.exception_message):

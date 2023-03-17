@@ -295,7 +295,8 @@ class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         kwargs.setdefault("field_name", "role")
         kwargs.setdefault("queryset", Role.objects.all())
-        kwargs.setdefault("label", "Role (slug or ID)")
+        kwargs.setdefault("to_field_name", "name")
+        kwargs.setdefault("label", "Role (name or ID)")
 
         super().__init__(*args, **kwargs)
 

@@ -437,7 +437,7 @@ class ConfigContextSchemaTestCase(TestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
+        cluster_type = ClusterType.objects.create(name="cluster_type")
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
             name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data

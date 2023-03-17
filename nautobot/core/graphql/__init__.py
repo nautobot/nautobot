@@ -46,7 +46,7 @@ def execute_saved_query(saved_query_slug, **kwargs):
     Returns:
         GraphQL Object: Result for query
     """
-    query = GraphQLQuery.objects.get(slug=saved_query_slug)
+    query = GraphQLQuery.objects.get(name=saved_query_slug)
     return execute_query(query=query.query, **kwargs)
 
 
