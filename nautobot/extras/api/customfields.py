@@ -52,7 +52,7 @@ class CustomFieldsDataField(Field):
         return self._custom_fields
 
     def to_representation(self, obj):
-        return {cf.key: obj.get(cf.label) for cf in self._get_custom_fields()}
+        return {cf.key: obj.get(cf.key) for cf in self._get_custom_fields()}
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
