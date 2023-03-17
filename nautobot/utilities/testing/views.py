@@ -20,7 +20,7 @@ from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, csv_format
 from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
@@ -815,12 +815,14 @@ class ViewTestCases:
             # {'name': 'AFRINIC', 'slug': 'afrinic', 'is_private': '', 'description': ...'}
             data = [dict(row) for row in reader][0]
 
-            instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
-            # append instance
-            instance1_cf_values = ["" if value is None else value for value in instance1.get_custom_fields().values()]
-            instance1_csv_data += instance1_cf_values
-            # Since values in `data` are all in str; cast all values in instance1_csv_data to str
-            instance1_csv_data = [str(val) for val in instance1_csv_data]
+            # Get expected data
+            instance1_unformatted_data = [
+                *instance1.to_csv(),
+                *instance1.get_custom_fields().values(),
+            ]
+            # Format expected data using `csv_format`, parse back with `csv` and get first row
+            instance1_csv_data = next(iter(csv.reader([csv_format(instance1_unformatted_data)])))
+
             instance1_cf_headers = ["cf_" + str(cf.slug) for cf in instance1.get_custom_fields().keys()]
             instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
             self.assertEqual(instance1_csv_headers, list(data.keys()))
