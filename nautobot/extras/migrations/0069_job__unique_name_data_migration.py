@@ -24,7 +24,7 @@ def generate_unique_job_names_and_update_slug(apps, schema_editor):
             append_counter += 1
         if job_name != original_job_name:
             print(
-                f'Job class "{job_model.job_class_name}" name "{original_job_name}" is not unique, changing to "{job_name}".'
+                f'  Job class "{job_model.job_class_name}" name "{original_job_name}" is not unique, changing to "{job_name}".'
             )
             job_model.name = job_name
             job_model.name_override = True
