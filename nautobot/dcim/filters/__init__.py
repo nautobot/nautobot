@@ -489,7 +489,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         },
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
+        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
     console_ports = django_filters.BooleanFilter(
         method="_console_ports",
@@ -733,7 +733,7 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
+        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -844,7 +844,8 @@ class DeviceFilterSet(
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_redundancy_group",
         queryset=DeviceRedundancyGroup.objects.all(),
-        label="Device Redundancy Groups (slug or ID)",
+        to_field_name="name",
+        label="Device Redundancy Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
@@ -1257,7 +1258,8 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
-        label="Manufacturer (slug or ID)",
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     children = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1481,8 +1483,8 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        to_field_name="slug",
-        label="Secrets group",
+        to_field_name="name",
+        label="Secrets group (name or ID)",
     )
 
     class Meta:

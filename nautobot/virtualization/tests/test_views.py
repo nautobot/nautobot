@@ -313,7 +313,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cf.content_types.set([obj_type])
 
         statuses = Status.objects.get_for_model(VMInterface)
-        status_active = statuses.get(slug="active")
+        status_active = statuses.get(name="Active")
 
         cls.form_data = {
             "virtual_machine": virtualmachines[1].pk,

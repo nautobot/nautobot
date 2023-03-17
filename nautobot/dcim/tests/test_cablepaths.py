@@ -61,8 +61,8 @@ class CablePathTestCase(TestCase):
         cls.circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Circuit 1")
 
         cls.statuses = Status.objects.get_for_model(Cable)
-        cls.status = cls.statuses.get(slug="connected")
-        cls.status_planned = cls.statuses.get(slug="planned")
+        cls.status = cls.statuses.get(name="Connected")
+        cls.status_planned = cls.statuses.get(name="Planned")
 
         # create a Cable that is not contained in any CablePath
         cls.dneCable = Cable(status=cls.status)

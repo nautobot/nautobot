@@ -28,7 +28,7 @@ class VirtualMachineTestCase(TestCase):
 
         cluster_type = ClusterType.objects.create(name="Test Cluster Type 1")
         self.cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=cluster_type)
-        self.status = statuses.get(slug="active")
+        self.status = statuses.get(name="Active")
 
     def test_vm_duplicate_name_per_cluster(self):
 

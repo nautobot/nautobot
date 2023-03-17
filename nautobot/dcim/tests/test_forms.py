@@ -46,7 +46,7 @@ class DeviceTestCase(TestCase):
 
         Device.objects.create(
             name="Device 1",
-            status=Status.objects.get_for_model(Device).get(slug="active"),
+            status=Status.objects.get_for_model(Device).get(name="Active"),
             device_type=cls.device_type,
             role=cls.device_role,
             location=cls.location,

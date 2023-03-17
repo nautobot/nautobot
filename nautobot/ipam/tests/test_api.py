@@ -122,7 +122,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         rir = RIR.objects.filter(is_private=False).first()
         cls.statuses = Status.objects.get_for_model(Prefix)
-        cls.status_active = cls.statuses.get(slug="active")
+        cls.status_active = cls.statuses.get(name="Active")
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",

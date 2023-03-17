@@ -82,9 +82,9 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 ```no-highlight
 (
   (
-    site__slug='ams01' OR site__slug='bkk01'
+    site__slug='ams01' OR site__name='BBK1'
   ) AND (
-    status__slug='active' OR status__slug='offline'
+    status__slug='active' OR status__name='Offline'
   )
 )
 ```
@@ -101,10 +101,10 @@ Now, let's say that you add a third site to your network. This site is currently
     (
       site__slug='ams01' OR site__slug='bkk01'
     ) AND (
-      status__slug='active' OR status__slug='offline'
+      status__name='Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__slug='active'
+    site__slug='can01' AND status__name='Active'
   )
 )
 ```
@@ -139,10 +139,10 @@ The "Devices of Interest" Dynamic Group now contains the filtered Devices from b
     (
       site__slug='ams01' OR site__slug='bkk01'
     ) AND (
-      status__slug='active' OR status__slug='offline'
+      status__name'Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__slug='active'
+    site__slug='can01' AND status__name='Active'
   )
 )
 ```
@@ -187,13 +187,13 @@ You can see the filter logic that this combination of groups results in:
     (
       site__slug='ams01' OR site__slug='bkk01'
     ) AND (
-      status__slug='active' OR status__slug='offline'
+      status__name='Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__slug='active'
+    site__slug='can01' AND status__name'Active'
   ) OR (
     site__slug='del01' AND (
-      NOT (site__slug='del01' AND status__slug='decommissioning')
+      NOT (site__slug='del01' AND status__name='Decommissioning')
     )
   )
 )

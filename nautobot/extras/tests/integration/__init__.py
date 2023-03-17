@@ -22,7 +22,7 @@ def create_test_device():
     location_type.content_types.add(ContentType.objects.get_for_model(Device))
     location = Location.objects.create(
         name=f"Test Location {test_uuid}",
-        status=Status.objects.get_for_model(Location).get(slug="active"),
+        status=Status.objects.get_for_model(Location).get(name="Active"),
         location_type=location_type,
     )
     device = Device.objects.create(
@@ -30,6 +30,6 @@ def create_test_device():
         role=device_role,
         device_type=device_type,
         location=location,
-        status=Status.objects.get_for_model(Device).get(slug="active"),
+        status=Status.objects.get_for_model(Device).get(name="Active"),
     )
     return device

@@ -312,10 +312,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         rackroles = Role.objects.get_for_model(Rack)[:2]
 
         statuses = Status.objects.get_for_model(Rack)
-        cls.status_active = statuses.get(slug="active")
+        cls.status_active = statuses.get(name="Active")
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        cls.cable_connected = cable_statuses.get(slug="connected")
+        cls.cable_connected = cable_statuses.get(name="Connected")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
@@ -376,7 +376,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "location": cls.locations[1].pk,
             "rack_group": rackgroups[1].pk,
             "tenant": None,
-            "status": statuses.get(slug="planned").pk,
+            "status": statuses.get(name="Planned").pk,
             "role": rackroles[1].pk,
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "asset_tag": "ABCDEF",
@@ -1278,7 +1278,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "rack": racks[1].pk,
             "position": 1,
             "face": DeviceFaceChoices.FACE_FRONT,
-            "status": statuses.get(slug="planned").pk,
+            "status": statuses.get(name="Planned").pk,
             "primary_ip4": None,
             "primary_ip6": None,
             "cluster": None,
@@ -1722,7 +1722,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         device = create_test_device("Device 1")
 
         statuses = Status.objects.get_for_model(Interface)
-        status_active = statuses.get(slug="active")
+        status_active = statuses.get(name="Active")
 
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1"),
@@ -2162,7 +2162,7 @@ class CableTestCase(
             # 'termination_b_type': interface_ct.pk,
             # 'termination_b_id': interfaces[3].pk,
             "type": CableTypeChoices.TYPE_CAT6,
-            "status": statuses.get(slug="planned").pk,
+            "status": statuses.get(name="Planned").pk,
             "label": "Label",
             "color": "c0c0c0",
             "length": 100,
@@ -2179,7 +2179,7 @@ class CableTestCase(
 
         cls.bulk_edit_data = {
             "type": CableTypeChoices.TYPE_CAT5E,
-            "status": statuses.get(slug="connected").pk,
+            "status": statuses.get(name="Connected").pk,
             "label": "New label",
             "color": "00ff00",
             "length": 50,
@@ -2287,13 +2287,13 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         Cable.objects.create(
-            termination_a=consoleports[0], termination_b=serverports[0], status=Status.objects.get(slug="connected")
+            termination_a=consoleports[0], termination_b=serverports[0], status=Status.objects.get(name="Connected")
         )
         Cable.objects.create(
-            termination_a=consoleports[1], termination_b=serverports[1], status=Status.objects.get(slug="connected")
+            termination_a=consoleports[1], termination_b=serverports[1], status=Status.objects.get(name="Connected")
         )
         Cable.objects.create(
-            termination_a=consoleports[2], termination_b=rearport, status=Status.objects.get(slug="connected")
+            termination_a=consoleports[2], termination_b=rearport, status=Status.objects.get(name="Connected")
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2351,14 +2351,14 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1")
 
         Cable.objects.create(
-            termination_a=powerports[2], termination_b=powerfeed, status=Status.objects.get(slug="connected")
+            termination_a=powerports[2], termination_b=powerfeed, status=Status.objects.get(name="Connected")
         )
         # Creating a PowerOutlet with a PowerPort via the ORM does *not* automatically cable the two together. Bug?
         Cable.objects.create(
-            termination_a=powerports[0], termination_b=poweroutlets[0], status=Status.objects.get(slug="connected")
+            termination_a=powerports[0], termination_b=poweroutlets[0], status=Status.objects.get(name="Connected")
         )
         Cable.objects.create(
-            termination_a=powerports[1], termination_b=poweroutlets[1], status=Status.objects.get(slug="connected")
+            termination_a=powerports[1], termination_b=poweroutlets[1], status=Status.objects.get(name="Connected")
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2631,7 +2631,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         statuses = Status.objects.get_for_model(PowerFeed)
         cls.statuses = statuses
-        status_planned = statuses.get(slug="planned")
+        status_planned = statuses.get(name="Planned")
 
         cls.form_data = {
             "name": "Power Feed X",
@@ -2686,7 +2686,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         powerfeed = self.powerfeeds[0]
 
         Cable.objects.create(
-            termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected")
+            termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(name="Connected")
         )
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))

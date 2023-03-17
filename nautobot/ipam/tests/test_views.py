@@ -265,7 +265,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         roles = Role.objects.get_for_model(VLAN)[:2]
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_active = statuses.get(slug="active")
+        status_active = statuses.get(name="Active")
         status_reserved = statuses.get(slug="reserved")
 
         VLAN.objects.create(

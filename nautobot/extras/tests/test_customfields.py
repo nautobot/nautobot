@@ -475,10 +475,10 @@ class CustomFieldDataAPITest(APITestCase):
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
             Location.objects.create(
-                name="Location 1", slug="location-1", status=cls.statuses.get(slug="active"), location_type=cls.lt
+                name="Location 1", slug="location-1", status=cls.statuses.get(name="Active"), location_type=cls.lt
             ),
             Location.objects.create(
-                name="Location 2", slug="location-2", status=cls.statuses.get(slug="active"), location_type=cls.lt
+                name="Location 2", slug="location-2", status=cls.statuses.get(name="Active"), location_type=cls.lt
             ),
         )
 
@@ -551,7 +551,7 @@ class CustomFieldDataAPITest(APITestCase):
             "name": "Location 3",
             "slug": "location-3",
             "location_type": self.lt.pk,
-            "status": self.statuses.get(slug="active").pk,
+            "status": self.statuses.get(name="Active").pk,
         }
         url = reverse("dcim-api:location-list")
         self.add_permissions("dcim.add_location")
@@ -590,7 +590,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Location 3",
             "slug": "location-3",
-            "status": self.statuses.get(slug="active").pk,
+            "status": self.statuses.get(name="Active").pk,
             "location_type": self.lt.pk,
             "custom_fields": {
                 "text_cf": "bar",
@@ -649,19 +649,19 @@ class CustomFieldDataAPITest(APITestCase):
                 "name": "Location 3",
                 "slug": "location-3",
                 "location_type": self.lt.pk,
-                "status": self.statuses.get(slug="active").pk,
+                "status": self.statuses.get(name="Active").pk,
             },
             {
                 "name": "Location 4",
                 "slug": "location-4",
                 "location_type": self.lt.pk,
-                "status": self.statuses.get(slug="active").pk,
+                "status": self.statuses.get(name="Active").pk,
             },
             {
                 "name": "Location 5",
                 "slug": "location-5",
                 "location_type": self.lt.pk,
-                "status": self.statuses.get(slug="active").pk,
+                "status": self.statuses.get(name="Active").pk,
             },
         )
         url = reverse("dcim-api:location-list")
@@ -919,7 +919,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Location 4",
             "slug": "location-4",
-            "status": self.statuses.get(slug="active").pk,
+            "status": self.statuses.get(name="Active").pk,
             "location_type": self.lt.pk,
             "custom_fields": {
                 "text_cf": ["I", "am", "a", "disallowed", "type"],
@@ -1942,7 +1942,7 @@ class CustomFieldTableTest(TestCase):
         # Create a location
         location_type = LocationType.objects.create(name="Root Type 4")
         self.location = Location.objects.create(
-            name="Location Custom", slug="location-1", status=statuses.get(slug="active"), location_type=location_type
+            name="Location Custom", slug="location-1", status=statuses.get(name="Active"), location_type=location_type
         )
 
         # Assign custom field values for location 2

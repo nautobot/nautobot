@@ -2411,7 +2411,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
         cls.location = Location.objects.create(
-            name="Location 1", status=Status.objects.get(slug="active"), location_type=cls.lt
+            name="Location 1", status=Status.objects.get(name="Active"), location_type=cls.lt
         )
 
     def test_get_all_relationships_on_location(self):
@@ -2482,10 +2482,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         """Verify that relationship associations can be populated at instance creation time."""
         location_type = LocationType.objects.get(name="Campus")
         existing_location_1 = Location.objects.create(
-            name="Existing Location 1", status=Status.objects.get(slug="active"), location_type=location_type
+            name="Existing Location 1", status=Status.objects.get(name="Active"), location_type=location_type
         )
         existing_location_2 = Location.objects.create(
-            name="Existing Location 2", status=Status.objects.get(slug="active"), location_type=location_type
+            name="Existing Location 2", status=Status.objects.get(name="Active"), location_type=location_type
         )
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         device_type = DeviceType.objects.create(
@@ -2496,14 +2496,14 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         device_role = Role.objects.get_for_model(Device).first()
         existing_device_1 = Device.objects.create(
             name="existing-device-location-1",
-            status=Status.objects.get(slug="active"),
+            status=Status.objects.get(name="Active"),
             role=device_role,
             device_type=device_type,
             location=existing_location_1,
         )
         existing_device_2 = Device.objects.create(
             name="existing-device-location-2",
-            status=Status.objects.get(slug="active"),
+            status=Status.objects.get(name="Active"),
             role=device_role,
             device_type=device_type,
             location=existing_location_2,

@@ -710,7 +710,7 @@ class TestPluginCoreViewOverrides(TestCase):
             cid="Test Circuit",
             provider=provider,
             circuit_type=circuit_type,
-            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+            status=Status.objects.get_for_model(Circuit).get(name="Active"),
         )
         self.user.is_superuser = True
         self.user.save()

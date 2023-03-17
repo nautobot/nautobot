@@ -169,7 +169,7 @@ class TestPrefix(TestCase):
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
-        prefix.status = self.statuses.get(slug="active")
+        prefix.status = self.statuses.get(name="Active")
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
