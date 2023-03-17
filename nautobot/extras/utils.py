@@ -421,16 +421,17 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     default_job_name = job_class.name[:JOB_MAX_NAME_LENGTH]
     job_name = default_job_name
     append_counter = 2
-    while (
-        job_model_class.objects.filter(name=job_name)
+    existing_job_names = (
+        job_model_class.objects.filter(name__startswith=job_name)
         .exclude(
             source=job_source[:JOB_MAX_SOURCE_LENGTH],
             git_repository=git_repository,
             module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
             job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         )
-        .exists()
-    ):
+        .values_list("name", flat=True)
+    )
+    while job_name in existing_job_names:
         job_name_append = f" ({append_counter})"
         max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
         job_name = default_job_name[:max_name_length] + job_name_append
