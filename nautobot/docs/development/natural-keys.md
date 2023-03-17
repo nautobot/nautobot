@@ -32,7 +32,7 @@ Similarly, the `natural_key_slug` and `get(natural_key_slug=...`) APIs are also 
 ```
 
 !!! note
-    The `natural_key_slug` is designed to be suitable for use in URL patterns, such as an object detail endpoint `/app/model/<natural_key_slug>/`, though some caution must be taken when defining URL patterns containing such a slug, as it **can** contain the character `/` as a component.
+    The `natural_key_slug` is designed to be suitable for future use in URL patterns, such as an object detail endpoint potentially supporting `/app/model/<natural_key_slug>/` as an alternative to the common `/app/model/<primary-key>/` pattern.
 
 ## Implementing the Natural Key APIs
 

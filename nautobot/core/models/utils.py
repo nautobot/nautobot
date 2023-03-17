@@ -185,7 +185,10 @@ def construct_natural_key_slug(values):
     Reversible by `deconstruct_natural_key_slug()`.
     """
     values = [str(value) if value is not None else "\0" for value in values]
-    values = NATURAL_KEY_SLUG_SEPARATOR.join(quote_plus(value, safe="/.:") for value in values)
+    # . and : are generally "safe enough" to use in URL parameters, and are common in some natural key fields,
+    # so we don't quote them by default (although `deconstruct_natural_key_slug` will work just fine if you do!)
+    # / is a bit trickier to handle in URL paths, so for now we *do* quote it, even though it appears in IPAddress, etc.
+    values = NATURAL_KEY_SLUG_SEPARATOR.join(quote_plus(value, safe=".:") for value in values)
     return values
 
 
