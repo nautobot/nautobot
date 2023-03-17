@@ -44,7 +44,7 @@ from nautobot.core.views.utils import csv_format, handle_protectederror, prepare
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
-
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -1010,9 +1010,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
                         # [3:] is truncating the "cf_" from the field_name
-                        obj.cf[field_name[3:]] = None
+                        obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
-                        obj.cf[field_name[3:]] = form.cleaned_data[field_name]
+                        obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
 
                 obj.validated_save()
                 updated_objects.append(obj)

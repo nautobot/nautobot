@@ -228,16 +228,10 @@ def extend_schema_type_custom_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
     for field in cfs:
-        field_key = f"{prefix}{str_to_var_name(field.key)}"
-        if str_to_var_name(field.key) != field.key:
-            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_key
-            # In 2.0 we should simply omit fields whose names/slugs are invalid in GraphQL, instead of mapping them.
-            warnings.warn(
-                f'Custom field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe name '
-                f'("{field.key}"); for now it will be mapped to the GraphQL name "{field_key}", '
-                "but in a future release this field may fail to appear in GraphQL.",
-                FutureWarning,
-            )
+        # Since we guaranteed cf.key's uniqueness in CustomField data migration
+        # We can safely field_key this in our GraphQL without duplication
+        # For new CustomField instances, we also make sure that duplicate key does not exist.
+        field_key = f"{prefix}{field.key}"
         resolver_name = f"resolve_{field_key}"
 
         if hasattr(schema_type, resolver_name):

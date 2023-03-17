@@ -364,7 +364,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["value"],
-        ["custom_field", "custom_field__key"],
+        ["custom_field", "custom_field__key", "custom_field__label"],
         ["weight"],
     )
 
@@ -372,7 +372,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Device)
         cfs = [
-            CustomField.objects.create(label=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
+            CustomField.objects.create(label=f"Custom Field {num}", type=CustomFieldTypeChoices.TYPE_TEXT)
             for num in range(3)
         ]
         for cf in cfs:

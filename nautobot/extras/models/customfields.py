@@ -315,6 +315,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     label = models.CharField(
         max_length=50,
         help_text="Name of the field as displayed to users.",
+        blank=False,
     )
     key = AutoSlugField(
         blank=False,
@@ -637,7 +638,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         delete_custom_field_data.delay(self.key, content_types)
 
     def get_absolute_url(self):
-        return reverse("extras:customfield", args=[self.key])
+        return reverse("extras:customfield", args=[self.pk])
+
+    def add_prefix_to_cf_key(self):
+        return "cf_" + str(self.key)
 
 
 @extras_features(

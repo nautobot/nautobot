@@ -17,7 +17,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Processing ContentType {content_type}"))
             model = content_type.model_class()
             custom_fields_for_content_type = content_type.custom_fields.all()
-            custom_field_names_for_content_type = [cf.key for cf in custom_fields_for_content_type]
+            custom_field_keys_for_content_type = [cf.key for cf in custom_fields_for_content_type]
             with transaction.atomic():
                 for obj in model.objects.all():
                     obj_changed = False
@@ -28,7 +28,7 @@ class Command(BaseCommand):
                             obj._custom_field_data[custom_field.key] = custom_field.default
                             obj_changed = True
                     # Remove any custom fields that are not associated with the content type
-                    for field_name in set(obj._custom_field_data) - set(custom_field_names_for_content_type):
+                    for field_name in set(obj._custom_field_data) - set(custom_field_keys_for_content_type):
                         self.stdout.write(f"Removing invalid CustomField {field_name} from {obj}")
                         del obj._custom_field_data[field_name]
                         obj_changed = True

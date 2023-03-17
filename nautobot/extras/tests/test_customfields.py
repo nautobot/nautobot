@@ -239,7 +239,7 @@ class CustomFieldTest(TestCase):
         }
         # set my_field to [] to emulate form submission when the user does not make any changes to the multiselect cf.
         bulk_edit_data = {
-            f"cf_{cf.key}": [],
+            cf.add_prefix_to_cf_key(): [],
         }
         # Append the form data to the request
         data.update(post_data(bulk_edit_data))
@@ -477,7 +477,7 @@ class CustomFieldDataAPITest(APITestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(response.data["name"], self.locations[0].name)
         # A model directly instantiated via the ORM does NOT automatically receive custom field default values.
-        # This is arguably a bug.
+        # This is arguably a bug. See https://github.com/nautobot/nautobot/issues/3312 for details.
         expected_data = {
             "text_cf": None,
             "number_cf": None,

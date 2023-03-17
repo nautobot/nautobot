@@ -388,10 +388,7 @@ class ViewTestCases:
             if self.slug_source is not None:
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
-                if hasattr(obj, "slug"):
-                    self.assertEqual(obj.slug, expected_slug)
-                else:
-                    self.assertEqual(obj.key, expected_slug)
+                self.assertEqual(obj.slug, expected_slug)
 
         def test_slug_not_modified(self):
             """Ensure save method does not modify slug that is passed in."""
@@ -409,10 +406,7 @@ class ViewTestCases:
 
                 obj.refresh_from_db()
                 self.assertEqual(getattr(obj, self.slug_source), new_slug_source_value)
-                if hasattr(obj, "slug"):
-                    self.assertEqual(obj.slug, expected_slug)
-                else:
-                    self.assertEqual(obj.key, expected_slug)
+                self.assertEqual(obj.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """
@@ -825,7 +819,7 @@ class ViewTestCases:
             instance1_csv_data += instance1_cf_values
             # Since values in `data` are all in str; cast all values in instance1_csv_data to str
             instance1_csv_data = [str(val) for val in instance1_csv_data]
-            instance1_cf_headers = ["cf_" + str(cf.key) for cf in instance1.get_custom_fields().keys()]
+            instance1_cf_headers = [cf.add_prefix_to_cf_key() for cf in instance1.get_custom_fields().keys()]
             instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
             self.assertEqual(instance1_csv_headers, list(data.keys()))
             self.assertEqual(instance1_csv_data, list(data.values()))

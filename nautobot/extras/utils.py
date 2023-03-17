@@ -466,6 +466,15 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     return (job_model, created)
 
 
+def remove_prefix_from_cf_key(field_name):
+    """
+    field_name (str): f"cf_{cf.key}"
+
+    Helper method to remove the "cf_" prefix
+    """
+    return field_name[3:]
+
+
 def migrate_role_data(
     model,
     role_model=None,

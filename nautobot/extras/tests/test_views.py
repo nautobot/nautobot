@@ -365,7 +365,6 @@ class CustomFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod

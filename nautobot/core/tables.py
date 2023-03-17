@@ -33,7 +33,7 @@ class BaseTable(django_tables2.Table):
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         for cf in models.CustomField.objects.filter(content_types=obj_type):
-            name = f"cf_{cf.key}"
+            name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in models.ComputedField.objects.filter(content_type=obj_type):

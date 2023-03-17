@@ -69,7 +69,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
             # Determine filter class for this CustomField type, default to CustomFieldCharFilter
-            new_filter_name = f"cf_{cf.key}"
+            new_filter_name = cf.add_prefix_to_cf_key()
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
             new_filter_field = filter_class(field_name=cf.key, custom_field=cf)
             new_filter_field.label = f"{cf.label}"
