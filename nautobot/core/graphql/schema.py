@@ -280,6 +280,8 @@ def extend_schema_type_computed_field(schema_type, model):
         if str_to_var_name(field.slug) != field.slug:
             # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
             # In 2.0 we should simply omit fields whose slugs are invalid in GraphQL, instead of mapping them.
+            # We need to make sure that slug/key is unique in a data migration before we remove the warning
+            # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
             warnings.warn(
                 f'Computed field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
                 f'("{field.slug}"); for now it will be mapped to the GraphQL name "{field_name}", '
@@ -384,6 +386,8 @@ def extend_schema_type_relationships(schema_type, model):
             if str_to_var_name(relationship.slug) != relationship.slug:
                 # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
                 # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
+                # We need to make sure that slug/key is unique in a data migration before we remove the warning
+                # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
                 warnings.warn(
                     f'Relationship "{relationship}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
                     f'("{relationship.slug}"); for now it will be mapped to the GraphQL name "{rel_name}", '
