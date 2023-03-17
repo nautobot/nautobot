@@ -615,7 +615,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
-    token = serializers.CharField(source="_token", write_only=True, required=False)
 
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
 
@@ -633,8 +632,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
             "slug",
             "remote_url",
             "branch",
-            "token",
-            "username",
             "secrets_group",
             "current_head",
             "provided_contents",
