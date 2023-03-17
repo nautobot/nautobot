@@ -70,12 +70,9 @@ class BaseModel(models.Model):
                     break
             vals.append(val)
         # Strip trailing Nones from vals
-        cleaned_vals = []
-        for val in reversed(vals):
-            if val is None and not cleaned_vals:
-                continue
-            cleaned_vals = [val] + cleaned_vals
-        return cleaned_vals
+        while vals and vals[-1] is None:
+            vals.pop()
+        return vals
 
     @property
     def natural_key_slug(self) -> str:
