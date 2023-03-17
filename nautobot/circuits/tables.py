@@ -75,7 +75,7 @@ class CircuitTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     circuit_count = tables.Column(verbose_name="Circuits")
-    actions = ButtonsColumn(CircuitType, pk_field="slug")
+    actions = ButtonsColumn(CircuitType, pk_field="pk")
 
     class Meta(BaseTable.Meta):
         model = CircuitType
@@ -85,7 +85,6 @@ class CircuitTypeTable(BaseTable):
             "name",
             "circuit_count",
             "description",
-            "slug",
             "actions",
         )
 
@@ -98,7 +97,7 @@ class CircuitTypeTable(BaseTable):
 class CircuitTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     cid = tables.LinkColumn(verbose_name="ID")
-    provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__slug")])
+    provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__name")])
     tenant = TenantColumn()
     tags = TagColumn(url_name="circuits:circuit_list")
 

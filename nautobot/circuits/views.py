@@ -34,6 +34,7 @@ class CircuitTypeUIViewSet(
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
+    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         # Circuits
@@ -89,6 +90,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
     queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
     serializer_class = serializers.ProviderSerializer
     table_class = tables.ProviderTable
+    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

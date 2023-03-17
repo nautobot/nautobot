@@ -1565,7 +1565,6 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
 
 class PlatformForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
-    slug = SlugField(max_length=64)
 
     class Meta:
         model = Platform

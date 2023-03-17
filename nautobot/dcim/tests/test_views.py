@@ -1147,7 +1147,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Platform X",
-            "slug": "platform-x",
             "manufacturer": manufacturer.pk,
             "napalm_driver": "junos",
             "napalm_args": None,
@@ -1155,11 +1154,11 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Platform 4,platform-4,Fourth platform",
-            "Platform 5,platform-5,Fifth platform",
-            "Platform 6,platform-6,Sixth platform",
-            "Platform 7,,Seventh platform",
+            "name,description",
+            "Platform 4,Fourth platform",
+            "Platform 5,Fifth platform",
+            "Platform 6,Sixth platform",
+            "Platform 7,Seventh platform",
         )
 
         cls.slug_test_object = platform.name

@@ -1028,19 +1028,16 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtual_machine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "url", "virtual_machine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
-            "slug": "test-platform-4",
         },
         {
             "name": "Test Platform 5",
-            "slug": "test-platform-5",
         },
         {
             "name": "Test Platform 6",
-            "slug": "test-platform-6",
         },
         {
             "name": "Test Platform 7",

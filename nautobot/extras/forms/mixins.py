@@ -778,7 +778,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
     status = CSVModelChoiceField(
         queryset=Status.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         help_text="Operational status",
     )
 

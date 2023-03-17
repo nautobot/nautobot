@@ -21,15 +21,12 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Provider 4",
-            "slug": "provider-4",
         },
         {
             "name": "Provider 5",
-            "slug": "provider-5",
         },
         {
             "name": "Provider 6",
-            "slug": "provider-6",
         },
         {"name": "Provider 7"},
     ]

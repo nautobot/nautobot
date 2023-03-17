@@ -43,7 +43,6 @@ class ProviderSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = [
             "url",
             "name",
-            "slug",
             "asn",
             "account",
             "portal_url",

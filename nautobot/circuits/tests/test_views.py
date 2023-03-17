@@ -37,11 +37,11 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug",
-            "Provider 4,provider-4",
-            "Provider 5,provider-5",
-            "Provider 6,provider-6",
-            "Provider 7,",
+            "name",
+            "Provider 4",
+            "Provider 5",
+            "Provider 6",
+            "Provider 7",
         )
 
         cls.bulk_edit_data = {
@@ -70,16 +70,15 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Circuit Type X",
-            "slug": "circuit-type-x",
             "description": "A new circuit type",
         }
 
         cls.csv_data = (
-            "name,slug",
-            "Circuit Type 4,circuit-type-4",
-            "Circuit Type 5,circuit-type-5",
-            "Circuit Type 6,circuit-type-6",
-            "Circuit Type 7,",
+            "name",
+            "Circuit Type 4",
+            "Circuit Type 5",
+            "Circuit Type 6",
+            "Circuit Type 7",
         )
 
         cls.slug_source = "name"
@@ -127,7 +126,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cid": "Circuit X",
             "provider": providers[1].pk,
             "circuit_type": circuittypes[1].pk,
-            "status": statuses.get(slug="decommissioned").pk,
+            "status": statuses.last().pk,
             "tenant": None,
             "install_date": datetime.date(2020, 1, 1),
             "commit_rate": 1000,
@@ -138,15 +137,15 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "cid,provider,circuit_type,status",
-            "Circuit 4,Provider 1,Circuit Type 1,active",
-            "Circuit 5,Provider 1,Circuit Type 1,planned",
-            "Circuit 6,Provider 1,Circuit Type 1,decommissioned",
+            "Circuit 4,Provider 1,Circuit Type 1,Active",
+            "Circuit 5,Provider 1,Circuit Type 1,Planned",
+            "Circuit 6,Provider 1,Circuit Type 1,Decommissioned",
         )
 
         cls.bulk_edit_data = {
             "provider": providers[1].pk,
             "circuit_type": circuittypes[1].pk,
-            "status": statuses.get(slug="decommissioned").pk,
+            "status": statuses.last().pk,
             "tenant": None,
             "commit_rate": 2000,
             "description": "New description",
@@ -161,8 +160,8 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         providers = (
-            Provider(name="Provider 1", slug="provider-1"),
-            Provider(name="Provider 2", slug="provider-2"),
+            Provider(name="Provider 1"),
+            Provider(name="Provider 2"),
         )
         Provider.objects.bulk_create(providers)
 

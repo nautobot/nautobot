@@ -1231,7 +1231,7 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
         ("description",),
         ("devices", "devices__id"),
         ("manufacturer", "manufacturer__id"),
-        ("manufacturer", "manufacturer__slug"),
+        ("manufacturer", "manufacturer__name"),
         ("napalm_driver",),
         ("virtual_machines", "virtual_machines__id"),
     ]

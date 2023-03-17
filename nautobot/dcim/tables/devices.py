@@ -100,7 +100,6 @@ class PlatformTable(BaseTable):
             "manufacturer",
             "device_count",
             "virtual_machine_count",
-            "slug",
             "napalm_driver",
             "napalm_args",
             "description",
