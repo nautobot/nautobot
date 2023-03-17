@@ -24,16 +24,16 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 
 ```python
 >>> DeviceType.objects.first().natural_key()
-['Arista', 'Arista DeviceType 15']
+['MegaCorp', 'Model 9000']
 
->>> DeviceType.objects.get_by_natural_key("Arista", "Arista DeviceType 15")
-<DeviceType: Arista DeviceType 15>
+>>> DeviceType.objects.get_by_natural_key("MegaCorp", "Model 9000")
+<DeviceType: Model 9000>
 
 >>> DeviceType.objects.first().natural_key_slug
-'Arista&Arista+DeviceType+15'
+'MegaCorp&Model+9000'
 
->>> DeviceType.objects.get(natural_key_slug="Arista&Arista+DeviceType+15")
-<DeviceType: Arista DeviceType 15>
+>>> DeviceType.objects.get(natural_key_slug="MegaCorp&Model+9000")
+<DeviceType: Model 9000>
 ```
 
 Developers can refer to the [documentation on natural keys](../development/natural-keys.md) for details on how to support and use this feature.

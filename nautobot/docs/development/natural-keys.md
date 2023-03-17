@@ -14,10 +14,10 @@ The `natural_key()` and `get_by_natural_key()` APIs are symmetric with one anoth
 
 ```python
 >>> DeviceType.objects.first().natural_key()
-['Arista', 'Arista DeviceType 15']
+['MegaCorp', 'Model 9000']
 
->>> DeviceType.objects.get_by_natural_key("Arista", "Arista DeviceType 15")
-<DeviceType: Arista DeviceType 15>
+>>> DeviceType.objects.get_by_natural_key("MegaCorp", "Model 9000")
+<DeviceType: Model 9000>
 ```
 
 Similarly, the `natural_key_slug` and `get(natural_key_slug=...`) APIs are also symmetric:
@@ -25,10 +25,10 @@ Similarly, the `natural_key_slug` and `get(natural_key_slug=...`) APIs are also 
 ```python
 # Note that natural_key_slug is a property, not a method!
 >>> DeviceType.objects.first().natural_key_slug
-'Arista&Arista+DeviceType+15'
+'MegaCorp&Model+9000'
 
->>> DeviceType.objects.get(natural_key_slug="Arista&Arista+DeviceType+15")
-<DeviceType: Arista DeviceType 15>
+>>> DeviceType.objects.get(natural_key_slug="MegaCorp&Model+9000")
+<DeviceType: Model 9000>
 ```
 
 !!! note
