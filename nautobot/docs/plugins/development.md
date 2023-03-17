@@ -457,9 +457,9 @@ from nautobot.apps import NautobotAppConfig
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
     constance_config = {
-        'DOG': ('woof', 'Dog sound'),
-        'CAT': ('meow', 'Cat sound'),
-        'FOX': ('', 'Fox sound'),
+        'DOG': ConstanceConfigItem(default='woof', help_text='Dog sound'),
+        'CAT': ConstanceConfigItem(default='meow', help_text='Cat sound'),
+        'FOX': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
     }
 ```
 
