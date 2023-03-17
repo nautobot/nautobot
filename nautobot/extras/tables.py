@@ -207,7 +207,6 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
     label = tables.Column(linkify=True)
-    key = tables.Column()
     content_types = ContentTypesColumn(truncate_words=15)
     required = BooleanColumn()
 
