@@ -364,7 +364,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["value"],
-        ["custom_field", "custom_field__key", "custom_field__label"],
+        ["custom_field", "custom_field__key"],
         ["weight"],
     )
 
