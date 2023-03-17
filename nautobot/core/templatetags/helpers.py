@@ -484,7 +484,7 @@ def get_item(d, key):
         [any]: Value of the item in the dictionary provided
 
     Example:
-        >>> get_items(data, key)
+        >>> get_item(data, key)
         "value"
     """
     return d.get(key)

@@ -119,6 +119,7 @@ class NautobotAppConfig(NautobotConfig):
                 (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
                 key=lambda urlp: (urlp.name, str(urlp.pattern)),
             ),
+            "constance_config": self.constance_config,
         }
 
         # Register banner function (if defined)

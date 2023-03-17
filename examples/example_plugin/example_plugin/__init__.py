@@ -32,7 +32,7 @@ class ExamplePluginConfig(NautobotAppConfig):
     constance_config = {
         "SAMPLE_VARIABLE": ConstanceConfigItem(
             default="example_default_value", help_text="Example of supplying a setting through Django Constance."
-        )
+        ),
     }
     searchable_models = ["examplemodel"]
 
