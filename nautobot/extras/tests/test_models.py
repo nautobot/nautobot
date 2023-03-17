@@ -111,7 +111,7 @@ class ConfigContextTest(TestCase):
 
     def setUp(self):
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
@@ -422,9 +422,9 @@ class ConfigContextSchemaTestCase(TestCase):
         self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
 
         # Device
-        status = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        manufacturer = Manufacturer.objects.create(name="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(

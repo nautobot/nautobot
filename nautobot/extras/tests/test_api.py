@@ -212,7 +212,9 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         """
         Test rendering config context data for a device.
         """
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(
+            name="Manufacturer 1",
+        )
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -630,32 +632,33 @@ class DynamicGroupTestMixin:
             Location.objects.create(name="Location 3", slug="location-3", location_type=location_type),
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(
+            name="Manufacturer 1",
+        )
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
             slug="device-type-1",
         )
         device_role = Role.objects.get_for_model(Device).first()
-        status_active = Status.objects.get(slug="active")
-        status_planned = Status.objects.get(slug="planned")
+        statuses = Status.objects.get_for_model(Device)
         Device.objects.create(
             name="device-location-1",
-            status=status_active,
+            status=statuses[0],
             role=device_role,
             device_type=device_type,
             location=locations[0],
         )
         Device.objects.create(
             name="device-location-2",
-            status=status_active,
+            status=statuses[0],
             role=device_role,
             device_type=device_type,
             location=locations[1],
         )
         Device.objects.create(
             name="device-location-3",
-            status=status_planned,
+            status=statuses[1],
             role=device_role,
             device_type=device_type,
             location=locations[2],
@@ -668,13 +671,13 @@ class DynamicGroupTestMixin:
                 name="API DynamicGroup 1",
                 slug="api-dynamicgroup-1",
                 content_type=cls.content_type,
-                filter={"status": ["active"]},
+                filter={"status": [statuses[0].name]},
             ),
             DynamicGroup.objects.create(
                 name="API DynamicGroup 2",
                 slug="api-dynamicgroup-2",
                 content_type=cls.content_type,
-                filter={"status": ["planned"]},
+                filter={"status": [statuses[1].name]},
             ),
             DynamicGroup.objects.create(
                 name="API DynamicGroup 3",
@@ -843,8 +846,8 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         cls.repos = (
@@ -2484,7 +2487,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         existing_location_2 = Location.objects.create(
             name="Existing Location 2", status=Status.objects.get(slug="active"), location_type=location_type
         )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
@@ -2511,7 +2514,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:location-list"),
             data={
                 "name": "New location",
-                "status": Status.objects.get(slug="active").pk,
+                "status": Status.objects.get(name="Active").pk,
                 "location_type": location_type.pk,
                 "relationships": {
                     self.relationships[0].slug: {
@@ -2601,15 +2604,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 **self.header,
             )
 
-        status_active = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Device).first()
 
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
             data=[
-                {"vid": "1", "name": "1", "status": status_active.pk},
-                {"vid": "2", "name": "2", "status": status_active.pk},
+                {"vid": "1", "name": "1", "status": status.pk},
+                {"vid": "2", "name": "2", "status": status.pk},
             ],
         )
         self.assertHttpStatus(response, 400)
@@ -2643,21 +2646,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 vlan1_json_data = {
                     "vid": "1",
                     "name": "1",
-                    "status": status_active.pk,
+                    "status": status.pk,
                 }
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": status_active.pk,
+                    "status": status.pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": status_active.pk, "id": str(vlan1.id)}
+                vlan1_json_data = {"status": status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
 
-                vlan2_json_data = {"status": status_active.pk, "id": str(vlan2.id)}
+                vlan2_json_data = {"status": status.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
@@ -2699,7 +2702,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.location_type = ContentType.objects.get_for_model(Location)
         cls.device_type = ContentType.objects.get_for_model(Device)
-        cls.status_active = Status.objects.get(slug="active")
+        cls.status_active = Status.objects.get(name="Active")
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
@@ -2724,7 +2727,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 location_type=cls.lt,
             ),
         )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         cls.devices = [
@@ -3120,9 +3123,9 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group A", slug="group-a"),
-            SecretsGroup.objects.create(name="Group B", slug="group-b"),
-            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+            SecretsGroup.objects.create(name="Group A"),
+            SecretsGroup.objects.create(name="Group B"),
+            SecretsGroup.objects.create(name="Group C", description="Some group"),
         )
 
         SecretsGroupAssociation.objects.create(
@@ -3176,9 +3179,9 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group A", slug="group-a"),
-            SecretsGroup.objects.create(name="Group B", slug="group-b"),
-            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+            SecretsGroup.objects.create(name="Group A"),
+            SecretsGroup.objects.create(name="Group B"),
+            SecretsGroup.objects.create(name="Group C", description="Some group"),
         )
 
         SecretsGroupAssociation.objects.create(

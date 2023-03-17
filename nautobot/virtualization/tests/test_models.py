@@ -69,7 +69,7 @@ class VMInterfaceTestCase(TestCase):
     def setUp(self):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)
-        clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
+        clustertype = ClusterType.objects.create(name="Test Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         self.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
 

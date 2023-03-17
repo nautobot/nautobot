@@ -98,7 +98,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             "location_type": self.location_type.pk,
             "name": "Test Location X",
             "slug": "test-location-x",
-            "status": Status.objects.get(slug="planned").pk,
+            "status": Status.objects.get_for_model(Location).first().pk,
             "cf_my_field": "DEF",
             "cf_my_field_select": "Foo",
             "tags": [self.tags[2].pk],
@@ -162,7 +162,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         form_data = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": Status.objects.get(slug="active").pk,
+            "status": Status.objects.get(name="Active").pk,
             "location_type": self.location_type.pk,
         }
 

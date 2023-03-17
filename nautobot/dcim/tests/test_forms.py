@@ -53,10 +53,10 @@ class DeviceTestCase(TestCase):
             rack=cls.rack,
             position=1,
         )
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1")
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
-        SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1")
+        SecretsGroup.objects.create(name="Secrets Group 1")
 
     def test_racked_device(self):
         form = DeviceForm(

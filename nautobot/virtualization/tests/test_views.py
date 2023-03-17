@@ -22,9 +22,9 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
-        ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2")
-        ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3")
+        ClusterGroup.objects.create(name="Cluster Group 1")
+        ClusterGroup.objects.create(name="Cluster Group 2")
+        ClusterGroup.objects.create(name="Cluster Group 3")
         ClusterGroup.objects.create(name="Cluster Group 8")
 
         cls.form_data = {
@@ -157,7 +157,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Platform.objects.create(name="Platform 2"),
         )
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=locations[0]),

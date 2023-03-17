@@ -325,7 +325,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL)
-        status_active = Status.objects.get(slug="active")
+        status_active = Status.objects.get(name="Active")
 
         # 5 Prefixes
         requests = [
@@ -341,7 +341,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_ips_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL)
-        status_active = Status.objects.get(slug="active")
+        status_active = Status.objects.get(name="Active")
 
         # 8 IPs
         requests = [{"description": f"Test IP {i}", "status": status_active.pk} for i in range(1, 9)]
@@ -543,7 +543,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
 

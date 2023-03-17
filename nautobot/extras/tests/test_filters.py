@@ -176,7 +176,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         device_roles = Role.objects.get_for_model(Device)
         cls.device_roles = device_roles
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
 
         device_types = (
             DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
@@ -511,8 +511,8 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         # Create Three GitRepository records
         secrets_groups = [
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         ]
         cls.secrets_groups = secrets_groups
         repos = (
@@ -1140,7 +1140,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1258,7 +1258,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1474,9 +1474,9 @@ class SecretsGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        SecretsGroup.objects.create(name="Group 1", slug="group-1")
-        SecretsGroup.objects.create(name="Group 2", slug="group-2")
-        SecretsGroup.objects.create(name="Group 3", slug="group-3")
+        SecretsGroup.objects.create(name="Group 1")
+        SecretsGroup.objects.create(name="Group 2")
+        SecretsGroup.objects.create(name="Group 3")
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -1517,9 +1517,9 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
             secret.validated_save()
 
         cls.groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="group-1"),
-            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
-            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+            SecretsGroup.objects.create(name="Group 1"),
+            SecretsGroup.objects.create(name="Group 2"),
+            SecretsGroup.objects.create(name="Group 3"),
         )
 
         SecretsGroupAssociation.objects.create(

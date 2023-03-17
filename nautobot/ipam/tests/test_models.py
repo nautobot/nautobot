@@ -535,8 +535,9 @@ class TestIPAddress(TestCase):
         self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
 
     def test_create_ip_address_without_slaac_status(self):
-        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
-        Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
+        slaac_status_name = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
+        IPAddress.objects.filter(status__name=slaac_status_name).delete()
+        Status.objects.get(name=slaac_status_name).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 

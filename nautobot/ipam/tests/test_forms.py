@@ -53,7 +53,7 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
     def setUp(self):
         super().setUp()
         self.extra_data = {
-            "status": Status.objects.get(slug="active"),
+            "status": Status.objects.get(name="Active"),
             "type": "network",
             "rir": models.RIR.objects.first(),
         }
@@ -66,19 +66,19 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(slug="active")}
+        self.extra_data = {"status": Status.objects.get(name="Active")}
 
     def test_slaac_valid_ipv6(self):
         form = self.form_class(
             data={
                 self.field_name: "2001:0db8:0000:0000:0000:ff00:0042:8329/128",
-                "status": Status.objects.get(slug="slaac"),
+                "status": Status.objects.get(name="SLAAC"),
             }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
 
     def test_slaac_status_invalid_ipv4(self):
-        form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(slug="slaac")})
+        form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.name(slug="SLAAC")})
         self.assertFalse(form.is_valid())
         self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])

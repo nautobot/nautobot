@@ -85,9 +85,9 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-type-1")
-        ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-type-2")
-        ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-type-3")
+        ClusterGroup.objects.create(name="Cluster Group 1")
+        ClusterGroup.objects.create(name="Cluster Group 2")
+        ClusterGroup.objects.create(name="Cluster Group 3")
 
 
 class ClusterTest(APIViewTestCases.APIViewTestCase):
@@ -106,8 +106,12 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
         )
 
         cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
-            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
+            ClusterGroup.objects.create(
+                name="Cluster Group 1",
+            ),
+            ClusterGroup.objects.create(
+                name="Cluster Group 2",
+            ),
         )
 
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])
@@ -140,8 +144,12 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        clustergroup = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        clustertype = ClusterType.objects.create(
+            name="Cluster Type 1",
+        )
+        clustergroup = ClusterGroup.objects.create(
+            name="Cluster Group 1",
+        )
         location_type = LocationType.objects.get(name="Campus")
         locations = Location.objects.filter(location_type=location_type)[:2]
 
@@ -292,7 +300,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
-        status_active = Status.objects.get(slug="active")
+        status_active = Status.objects.get(name="Active")
 
         interfaces = (
             VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1"),
@@ -366,7 +374,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             payload = {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Tagged Interface",
-                "status": Status.objects.get(slug="active").pk,
+                "status": Status.objects.get(name="Active").pk,
                 "tagged_vlans": [vlan.pk],
             }
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)

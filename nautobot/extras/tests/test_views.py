@@ -487,9 +487,9 @@ class DynamicGroupTestCase(
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
 
         cls.form_data = {
             "name": "new_dynamic_group",
@@ -586,8 +586,8 @@ class GitRepositoryTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         # Create four GitRepository records
@@ -758,15 +758,15 @@ class SecretsGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
-            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
-            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+            SecretsGroup.objects.create(name="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 2"),
+            SecretsGroup.objects.create(name="Group 3"),
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", slug="secret-1", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 2", slug="secret-2", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 3", slug="secret-3", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),
         )
 
         SecretsGroupAssociation.objects.create(
@@ -2098,7 +2098,7 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
         )
         relationship.validated_save()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.first()

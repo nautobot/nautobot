@@ -348,7 +348,7 @@ class ServiceTestCase(
     def setUpTestData(cls):
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)

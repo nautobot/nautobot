@@ -524,9 +524,15 @@ class FilterExtensionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
+            TenantGroup.objects.create(
+                name="Tenant Group 1",
+            ),
+            TenantGroup.objects.create(
+                name="Tenant Group 2",
+            ),
+            TenantGroup.objects.create(
+                name="Tenant Group 3",
+            ),
         )
 
         Tenant.objects.create(
@@ -558,9 +564,15 @@ class FilterExtensionTest(TestCase):
             location_type=location_type,
         )
 
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
+        Manufacturer.objects.create(
+            name="Manufacturer 1",
+        )
+        Manufacturer.objects.create(
+            name="Manufacturer 2",
+        )
+        Manufacturer.objects.create(
+            name="Manufacturer 3",
+        )
 
         roles = Role.objects.get_for_model(Device)
 

@@ -51,7 +51,7 @@ from nautobot.tenancy.models import Tenant
 class CableLengthTestCase(TestCase):
     def setUp(self):
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=self.manufacturer,
             model="Test Device Type 1",
@@ -107,7 +107,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         """
         statuses = Status.objects.get_for_model(Device)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        manufacturer = Manufacturer.objects.create(name="Acme")
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
@@ -156,7 +156,7 @@ class InterfaceTemplateTestCase(TestCase):
         """
         statuses = Status.objects.get_for_model(Device)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        manufacturer = Manufacturer.objects.create(name="Acme")
         device_role = Role.objects.get_for_model(Device).first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         InterfaceTemplate.objects.create(
@@ -173,12 +173,12 @@ class InterfaceTemplateTestCase(TestCase):
             location=location,
         )
 
-        active_status = Status.objects.get(slug="active")
-        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, active_status)
+        status = Status.objects.get_for_model(Interface).first()
+        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, status)
 
         # Assert that a different status is picked if active status is not found for interface
         interface_ct = ContentType.objects.get_for_model(Interface)
-        active_status.content_types.remove(interface_ct)
+        status.content_types.remove(interface_ct)
 
         device_2 = Device.objects.create(
             device_type=device_type,
@@ -297,7 +297,7 @@ class RackTestCase(TestCase):
             status=self.status,
             u_height=42,
         )
-        self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        self.manufacturer = Manufacturer.objects.create(name="Acme")
 
         self.device_type = {
             "ff2048": DeviceType.objects.create(
@@ -521,7 +521,7 @@ class LocationTestCase(TestCase):
             name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
         )
 
-        self.status = Status.objects.get(slug="active")
+        self.status = Status.objects.get(name="Active")
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
@@ -615,7 +615,7 @@ class LocationTestCase(TestCase):
 class DeviceTestCase(TestCase):
     def setUp(self):
 
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
@@ -856,7 +856,7 @@ class CableTestCase(TestCase):
     def setUp(self):
 
         location = Location.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
@@ -1091,7 +1091,8 @@ class CableTestCase(TestCase):
         """Test for https://github.com/nautobot/nautobot/issues/2081"""
         # Delete all cables because some cables has connected status.
         Cable.objects.all().delete()
-        Status.objects.get(slug=CableStatusChoices.STATUS_CONNECTED).delete()
+        connected_status_name = CableStatusChoices.as_dict()[CableStatusChoices.STATUS_CONNECTED]
+        Status.objects.get(name=connected_status_name).delete()
         device = Device.objects.first()
 
         interfaces = (
@@ -1142,7 +1143,7 @@ class PowerPanelTestCase(TestCase):
 
 class InterfaceTestCase(TestCase):
     def setUp(self):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

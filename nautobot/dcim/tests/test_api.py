@@ -191,7 +191,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        cls.status_active = Status.objects.get(slug="active")
+        cls.status_active = Status.objects.get(name="Active")
         tenant = Tenant.objects.create(name="Test Tenant")
 
         cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status_active)
@@ -230,16 +230,16 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-        status_planned = Status.objects.get(slug="planned")
+        location_status = Status.objects.get_for_model(Location)[1]
 
         # Changing location_type of an existing instance is not permitted
         cls.update_data = {
             "name": "A revised location",
             "slug": "a-different-slug",
-            "status": status_planned.pk,
+            "status": location_status.pk,
         }
         cls.bulk_update_data = {
-            "status": status_planned.pk,
+            "status": location_status.pk,
         }
 
     def test_time_zone_field_post_null(self):
@@ -354,7 +354,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.active = Status.objects.get(slug="active")
+        cls.active = Status.objects.get(name="Active")
         location_type = LocationType.objects.create(name="Location Type 1")
         cls.locations = (
             Location.objects.create(name="Location 1", location_type=location_type, status=cls.active),
@@ -659,15 +659,12 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Test Manufacturer 4",
-            "slug": "test-manufacturer-4",
         },
         {
             "name": "Test Manufacturer 5",
-            "slug": "test-manufacturer-5",
         },
         {
             "name": "Test Manufacturer 6",
-            "slug": "test-manufacturer-6",
         },
         {
             "name": "Test Manufacturer 7",
@@ -1074,8 +1071,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         device_type = DeviceType.objects.first()
@@ -1414,7 +1411,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        status_active = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Interface).first()
 
         cls.devices = (
             Device.objects.create(
@@ -1459,7 +1456,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 8",
                 "type": "1000base-t",
-                "status": status_active.pk,
+                "status": status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
@@ -1468,7 +1465,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 9",
                 "type": "1000base-t",
-                "status": status_active.pk,
+                "status": status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1478,7 +1475,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 10",
                 "type": "virtual",
-                "status": status_active.pk,
+                "status": status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1490,7 +1487,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             "device": cls.devices[0].pk,
             "name": "expected-to-fail",
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-            "status": status_active.pk,
+            "status": status.pk,
             "untagged_vlan": cls.vlans[0].pk,
         }
 
@@ -1499,7 +1496,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                "status": status_active.pk,
+                "status": status.pk,
                 "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
@@ -1507,7 +1504,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                "status": status_active.pk,
+                "status": status.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
         ]
@@ -1519,7 +1516,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                    "status": status_active.pk,
+                    "status": status.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
@@ -1529,7 +1526,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                    "status": status_active.pk,
+                    "status": status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
@@ -1539,7 +1536,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                    "status": status_active.pk,
+                    "status": status.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],

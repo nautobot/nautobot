@@ -156,7 +156,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             ),
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(
+            name="Manufacturer 1",
+        )
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = Role.objects.get_for_model(Device).first()
 

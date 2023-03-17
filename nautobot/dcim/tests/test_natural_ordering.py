@@ -15,7 +15,7 @@ class NaturalOrderingTestCase(TestCase):
     def setUp(self):
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",

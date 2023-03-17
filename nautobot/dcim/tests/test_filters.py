@@ -518,9 +518,9 @@ def common_test_data(cls):
     )
 
     secrets_groups = (
-        SecretsGroup.objects.create(name="Secrets group 1", slug="secrets-group-1"),
-        SecretsGroup.objects.create(name="Secrets group 2", slug="secrets-group-2"),
-        SecretsGroup.objects.create(name="Secrets group 3", slug="secrets-group-3"),
+        SecretsGroup.objects.create(name="Secrets group 1"),
+        SecretsGroup.objects.create(name="Secrets group 2"),
+        SecretsGroup.objects.create(name="Secrets group 3"),
     )
 
     device_statuses = Status.objects.get_for_model(Device)
@@ -2395,7 +2395,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = Role.objects.get_for_model(Device).first()
 

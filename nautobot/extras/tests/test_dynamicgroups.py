@@ -54,7 +54,7 @@ class DynamicGroupTestBase(TestCase):
             Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt),
         ]
 
-        cls.manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        cls.manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         cls.device_type = DeviceType.objects.create(
             manufacturer=cls.manufacturer,
             model="device Type 1",
@@ -276,7 +276,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Grab some values we'll used to setup the test case.
         device1 = self.devices[0]
         device2 = self.devices[1]
-        status = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Location).first()
 
         # Create two LocationTypes (My Region > My Site)
         loc_type_region = LocationType.objects.create(name="My Region", slug="my-region")

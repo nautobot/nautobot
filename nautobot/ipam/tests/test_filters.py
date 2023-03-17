@@ -332,7 +332,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -808,7 +808,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
     def test_available_on_device(self):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         location = self.locations[0]
         devicerole = Role.objects.get_for_model(Device).first()
@@ -828,7 +828,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -853,7 +853,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (

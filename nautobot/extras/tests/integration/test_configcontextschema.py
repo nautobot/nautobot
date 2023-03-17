@@ -114,7 +114,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             status=Status.objects.get_for_model(Location).first(),
             location_type=location_type,
         )
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        manufacturer = Manufacturer.objects.create(name="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role, _ = Role.objects.get_or_create(name="Device Role")
         device_role.content_types.add(device_ct)

@@ -42,7 +42,7 @@ class CablePathTestCase(TestCase):
         # Create a single device that will hold all components
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
+        manufacturer = Manufacturer.objects.create(name="Generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(name="Active")
