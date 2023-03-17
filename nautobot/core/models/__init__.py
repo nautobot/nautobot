@@ -121,7 +121,8 @@ class BaseModel(models.Model):
             raise AttributeError(
                 f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
                 "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
-                "you probably need to explicitly declare the natural_key_field_lookups for this model."
+                "you probably need to explicitly declare the 'natural_key_field_names' for this model, "
+                "or potentially override the default 'natural_key_field_lookups' implementation for this model."
             )
 
         # Next, for any natural key fields that have related models, get the natural key for the related model if known
@@ -168,8 +169,11 @@ class BaseModel(models.Model):
         """
         args = list(args)
         natural_key_field_lookups = cls.natural_key_field_lookups
+        # Because `natural_key` strips trailing `None` from the natural key to handle the variadic-natural-key case,
+        # we may need to add trailing `None` back on to make the number of args match back up.
         while len(args) < len(natural_key_field_lookups):
             args.append(None)
+        # However, if we have *too many* args, that's just incorrect usage:
         if len(args) > len(natural_key_field_lookups):
             raise ValueError(
                 f"Wrong number of natural-key args for {cls.__name__}.natural_key_args_to_kwargs() -- "

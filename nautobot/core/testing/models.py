@@ -23,5 +23,7 @@ class ModelTestCases:
             self.assertIsNotNone(instance)
             if not hasattr(instance, "natural_key"):
                 self.skipTest("No natural_key on this model.")
+            if not hasattr(instance, "natural_key_slug"):
+                self.skipTest("No natural_key_slug on this model.")
             self.assertIsNotNone(instance.natural_key_slug)
             self.assertEqual(self.model.objects.get(natural_key_slug=instance.natural_key_slug), instance)

@@ -530,6 +530,45 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
 
         self.status = Status.objects.get(slug="active")
 
+    def test_custom_natural_key_field_lookups(self):
+        """Test that the custom implementation of Location.natural_key_field_lookups works as intended."""
+        # We know that with current test data, the maximum tree depth is 5:
+        # Campus-00 -> Campus-07 -> Building-29 -> Floor-32 -> Room-39
+        # but let's try to make this a *bit* more robust!
+        expected = [
+            "name",
+            "parent__name",
+            "parent__parent__name",
+            "parent__parent__parent__name",
+            "parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__parent__parent__name",
+        ][: Location.objects.max_tree_depth() + 1]
+        self.assertEqual(
+            len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
+        )
+        self.assertEqual(expected, Location.natural_key_field_lookups)
+
+    def test_custom_natural_key_args_to_kwargs(self):
+        """Test that the custom implementation of Location.natural_key_args_to_kwargs works as intended."""
+        natural_key_field_lookups = Location.natural_key_field_lookups
+        for args in [
+            # fewer args than natural_key_field_lookups
+            ("me",),
+            ("me", "my_parent", "my_grandparent"),
+            # more args than natural_key_field_lookups
+            ("me", "my_parent", "my_grandparent", "my_g_gp", "my_g2_gp", "my_g3_gp", "my_g4_gp", "my_g5_gp"),
+        ]:
+            kwargs = Location.natural_key_args_to_kwargs(args)
+            self.assertEqual(len(kwargs), max(len(args), len(natural_key_field_lookups)))
+            for i, value in enumerate(kwargs.values()):
+                if i < len(args):
+                    self.assertEqual(args[i], value)
+                else:
+                    # not-specified args get set as None
+                    self.assertIsNone(value)
+
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
         active_status = Status.objects.get_for_model(Location).get(slug="active")
