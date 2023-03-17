@@ -43,8 +43,8 @@
                             <div class="panel-body">
                                 {% for item in fieldset.config_values %}
                                 {# Handle App Configuration #}
-                                {% if ":" in item.name %}
-                                    {% with app_name=item.name|split:":"|first name=item.name|split:":"|last %}
+                                {% if "__" in item.name %}
+                                    {% with app_name=item.name|split:"__"|first name=item.name|split:"__"|last %}
                                         {% get_attr settings "PLUGINS_CONFIG" as app_config %}
                                         <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
                                             {% if app_config|get_item:app_name|get_item:name is not None %}

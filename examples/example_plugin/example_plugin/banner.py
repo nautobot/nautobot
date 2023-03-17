@@ -48,7 +48,9 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
         )
         return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
 
-    content += format_html("<div>SAMPLE_VARIABLE is {}</div>", get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"))
+    content += format_html(
+        "<div>SAMPLE_VARIABLE is {}</div>", get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE")
+    )
 
     # Default banner rendering
     return Banner(content=content, banner_class=BannerClassChoices.CLASS_INFO)
