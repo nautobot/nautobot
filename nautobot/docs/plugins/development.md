@@ -467,6 +467,9 @@ class AnimalSoundsConfig(NautobotAppConfig):
 
 ![Nautobot app in the admin config](../media/plugins/plugin_admin_config.png)
 
+!!! warning
+    Do not store secrets in the constance_config, instead use Nautobot [Secrets](../models/extras/secret.md).
+
 ## Extending Existing Functionality
 
 ### Adding Jinja2 Filters
