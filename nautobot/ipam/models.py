@@ -409,6 +409,20 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         choices=choices.PrefixTypeChoices,
         default=choices.PrefixTypeChoices.TYPE_NETWORK,
     )
+    parent = models.ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        related_name="child_prefixes",  # Maybe child_prefixes? Align with "child_ips"?
+        on_delete=models.PROTECT,
+        help_text="The parent Prefix of this Prefix.",
+    )
+    ip_version = models.IntegerField(
+        choices=choices.IPAddressFamilyChoices,
+        null=True,
+        editable=False,
+        db_index=True,
+    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -505,6 +519,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         )  # (vrf, prefix) may be non-unique
         unique_together = ("namespace", "network", "prefix_length")
         verbose_name_plural = "prefixes"
+        index_together = ["network", "broadcast", "prefix_length"]
 
     def validate_unique(self, exclude=None):
         if self.namespace is None:
@@ -524,10 +539,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def __str__(self):
         return str(self.prefix)
 
-    def _deconstruct_prefix(self, pre):
-        if pre:
-            if isinstance(pre, str):
-                pre = netaddr.IPNetwork(pre)
+    def _deconstruct_prefix(self, prefix):
+        if prefix:
+            if isinstance(prefix, str):
+                prefix = netaddr.IPNetwork(prefix)
             # Note that our "broadcast" field is actually the last IP address in this prefix.
             # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
             # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
@@ -536,35 +551,17 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             #    We store this address as both the network and the "broadcast".
             # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
             # of addresses and prefixes, not for packet forwarding. :-)
-            broadcast = pre.broadcast if pre.broadcast else pre[-1]
-            self.network = str(pre.network)
+            broadcast = prefix.broadcast if prefix.broadcast else prefix[-1]
+            self.network = str(prefix.network)
             self.broadcast = str(broadcast)
-            self.prefix_length = pre.prefixlen
+            self.prefix_length = prefix.prefixlen
+            self.ip_version = prefix.version
 
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
     def clean(self):
         super().clean()
-
-        if self.prefix:
-
-            # Why not??
-            """
-            # /0 masks are not acceptable
-            if self.prefix.prefixlen == 0:
-                raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
-            """
-
-            # Nope
-            """
-            # Enforce unique IP space (if applicable)
-            if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
-                duplicate_prefixes = self.get_duplicates()
-                if duplicate_prefixes:
-                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
-                    raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
-            """
 
         # Validate location
         if self.location is not None:
@@ -574,6 +571,21 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+    def delete(self, **kwargs):
+        force_delete = kwargs.pop("force_delete", False)
+
+        try:
+            super().delete(**kwargs)
+        except models.ProtectedError as err:
+            # Update protected objects to use the new parent and delete the old parent (self).
+            if force_delete:
+                protected_pks = (po.pk for po in err.protected_objects)
+                protected_objects = Prefix.objects.filter(pk__in=protected_pks)
+                protected_objects.update(parent=self.parent)
+                super().delete(**kwargs)
+            else:
+                raise
+
     def save(self, *args, **kwargs):
 
         if isinstance(self.prefix, netaddr.IPNetwork):
@@ -581,7 +593,17 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
+        supernets = self.supernets(discover_mode=True)
+        if supernets:
+            import operator
+
+            parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            self.parent = parent
+
         super().save(*args, **kwargs)
+
+        # Determine our subnets and reparent them.
+        self.reparent_subnets()
 
     def to_csv(self):
         return (
@@ -621,22 +643,120 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             return self.prefix.version
         return None
 
-    def get_duplicates(self):
-        # return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
-        return Prefix.objects.none()
+    def reparent_subnets(self):
+        """
+        Determine list of child nodes and set the parent to self.
+        """
+        query = Prefix.objects.select_for_update().filter(
+            ~models.Q(id=self.id),  # Don't include yourself...
+            parent_id=self.parent_id,
+            prefix_length__gt=self.prefix_length,
+            ip_version=self.ip_version,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            # namespace=self.namespace,
+        )
+
+        query.update(parent=self)
+
+    def supernets(self, direct=False, discover_mode=False, for_update=False):
+        """Return supernets of this Prefix."""
+        query = Prefix.objects.all()
+
+        if self.parent is None and not discover_mode:
+            return query.none()
+
+        if discover_mode and direct:
+            raise ValidationError("Direct is incompatible with discover_mode.")
+
+        if for_update:
+            query = query.select_for_update()
+
+        if direct:
+            return query.filter(id=self.parent.id)
+
+        return query.filter(
+            ip_version=self.ip_version,
+            prefix_length__lt=self.prefix_length,
+            network__lte=self.network,
+            broadcast__gte=self.broadcast,
+            # namespace=self.namespace,
+        )
+
+    def subnets(self, direct=False, for_update=False):
+        """Return subnets of this Prefix."""
+        query = Prefix.objects.all()
+
+        if for_update:
+            query = query.select_for_update()
+
+        if direct:
+            return query.filter(parent_id=self.id)
+
+        return query.filter(
+            ip_version=self.ip_version,
+            prefix_length__gt=self.prefix_length,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            # namespace=self.namespace,
+        )
+
+    def is_child_node(self):
+        """
+        Returns whether I am a child node.
+        """
+        return self.parent is not None
+
+    def is_leaf_node(self):
+        """
+        Returns whether I am leaf node (no children).
+        """
+        return not self.child_prefixes.exists()
+
+    def is_root_node(self):
+        """
+        Returns whether I am a root node (no parent).
+        """
+        return self.parent is None
+
+    def get_ancestors(self, ascending=False):
+        """Return my ancestors."""
+        query = self.supernets()
+        if ascending:
+            query = query.reverse()
+        return query
+
+    def get_children(self):
+        """Return my immediate children."""
+        return self.subnets(direct=True)
+
+    def get_descendants(self):
+        """Return all of my children!"""
+        return self.subnets()
+
+    def get_root(self):
+        """
+        Returns the root node (the parent of all of my ancestors).
+        """
+        ancestors = self.get_ancestors()
+        return ancestors.first()
+
+    def get_siblings(self, include_self=False):
+        """
+        Return my siblings. Root nodes are siblings to other root nodes.
+        """
+        query = Prefix.objects.filter(parent=self.parent)
+        if not include_self:
+            query = query.exclude(id=self.id)
+
+        return query
 
     def get_child_prefixes(self):
         """
         Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
         Prefixes belonging to any VRF.
         """
-        return Prefix.objects.net_contained(self.prefix).filter(namespace=self.namespace)
-        """
-        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            return Prefix.objects.net_contained(self.prefix)
-        else:
-            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
-        """
+        return self.get_descendants()
 
     def get_child_ips(self):
         """

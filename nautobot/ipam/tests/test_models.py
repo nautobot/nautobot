@@ -1,4 +1,4 @@
-from unittest import skipIf
+rom unittest import skipIf
 
 import netaddr
 from django.contrib.contenttypes.models import ContentType
@@ -174,16 +174,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
-
-    def test_get_duplicates(self):
-        prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-        )
-        duplicate_prefix_pks = [p.pk for p in prefixes[0].get_duplicates()]
-
-        self.assertSetEqual(set(duplicate_prefix_pks), {prefixes[1].pk, prefixes[2].pk})
 
     def test_get_child_prefixes(self):
         vrfs = VRF.objects.all()[:3]
