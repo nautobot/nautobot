@@ -20,7 +20,7 @@ from prometheus_client import Histogram
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField, slugify_dots_to_dashes
+from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
@@ -30,7 +30,6 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -110,9 +109,8 @@ class Job(PrimaryModel):
     )
 
     slug = AutoSlugField(
-        max_length=JOB_MAX_SLUG_LENGTH,
-        populate_from=["class_path"],
-        slugify_function=slugify_dots_to_dashes,
+        max_length=JOB_MAX_NAME_LENGTH,
+        populate_from="name",
     )
 
     # Human-readable information, potentially inherited from the source code
@@ -125,7 +123,7 @@ class Job(PrimaryModel):
     name = models.CharField(
         max_length=JOB_MAX_NAME_LENGTH,
         help_text="Human-readable name of this job",
-        db_index=True,
+        unique=True,
     )
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
@@ -234,10 +232,7 @@ class Job(PrimaryModel):
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
-        unique_together = [
-            ("source", "git_repository", "module_name", "job_class_name"),
-            ("grouping", "name"),
-        ]
+        unique_together = ["source", "git_repository", "module_name", "job_class_name"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -359,11 +354,11 @@ class Job(PrimaryModel):
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
-            raise ValidationError("Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+            raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.slug) > JOB_MAX_SLUG_LENGTH:
-            raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
+        if len(self.slug) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Slug may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(

@@ -189,6 +189,7 @@ class ModelViewSetMixin:
     # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
     # select_related
     brief_prefetch_fields = []
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
     #       UUID PKs and also do NOT support natural-key-slugs.
@@ -231,17 +232,16 @@ class ModelViewSetMixin:
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
         # If using 'brief' mode, find and return the nested serializer for this model, if one exists
         if self.brief:
-            logger.debug("Request is for 'brief' format; initializing nested serializer")
+            self.logger.debug("Request is for 'brief' format; initializing nested serializer")
             try:
                 serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                logger.debug(f"Using serializer {serializer}")
+                self.logger.debug(f"Using serializer {serializer}")
                 return serializer
             except SerializerNotFound:
-                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+                self.logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
         # Fall back to the hard-coded serializer class
         return self.serializer_class
@@ -292,15 +292,13 @@ class ModelViewSetMixin:
         self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-
         try:
             return super().dispatch(request, *args, **kwargs)
         except ProtectedError as e:
             protected_objects = list(e.protected_objects)
             msg = f"Unable to delete object. {len(protected_objects)} dependent objects were found: "
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
-            logger.warning(msg)
+            self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
 
@@ -314,6 +312,8 @@ class ModelViewSet(
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
+
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     def _validate_objects(self, instance):
         """
@@ -331,8 +331,7 @@ class ModelViewSet(
 
     def perform_create(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Creating new {model._meta.verbose_name}")
+        self.logger.info(f"Creating new {model._meta.verbose_name}")
 
         # Enforce object-level permissions on save()
         try:
@@ -344,8 +343,7 @@ class ModelViewSet(
 
     def perform_update(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
+        self.logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
 
         # Enforce object-level permissions on save()
         try:
@@ -357,8 +355,7 @@ class ModelViewSet(
 
     def perform_destroy(self, instance):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
+        self.logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)
 

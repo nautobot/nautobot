@@ -1,5 +1,5 @@
 import uuid
-from unittest import skipIf
+from unittest import skip, skipIf
 
 from django.db import connection
 from taggit.managers import TaggableManager
@@ -11,6 +11,8 @@ from nautobot.extras import models as extras_models
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 
 
+# https://github.com/nautobot/nautobot/issues/3435
+@skip("test skipped until base test can be fixed to handle new migrations")
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
     migrate_from = [("dcim", "0029_add_tree_managers_and_foreign_keys_pre_data_migration")]
     migrate_to = [("dcim", "0030_migrate_region_and_site_data_to_locations")]

@@ -19,7 +19,7 @@ from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 
 
-logger = logging.getLogger("nautobot.core.apps")
+logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
 registry["homepage_layout"] = {"panels": {}}
 

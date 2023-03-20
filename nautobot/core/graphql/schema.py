@@ -46,7 +46,7 @@ from nautobot.extras.graphql.types import TagType, DynamicGroupType
 from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
-logger = logging.getLogger("nautobot.graphql.schema")
+logger = logging.getLogger(__name__)
 
 registry["graphql_types"] = OrderedDict()
 registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
