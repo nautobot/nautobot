@@ -52,8 +52,6 @@ django-celery-results = "~2.4.0"
 django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~3.13.0"
-# Support for encrypted database fields
-django-cryptography = "~1.0"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus

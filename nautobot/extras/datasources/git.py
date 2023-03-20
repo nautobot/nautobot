@@ -249,11 +249,6 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
             # No defined secret, fall through to legacy behavior
             pass
 
-    if not token and repository_record._token:
-        token = repository_record._token
-    if not user and repository_record.username:
-        user = repository_record.username
-
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
         if user:

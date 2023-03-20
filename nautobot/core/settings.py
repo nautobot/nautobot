@@ -146,16 +146,6 @@ TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
 )
 
 #
-# Django cryptography
-#
-
-# CRYPTOGRAPHY_BACKEND = cryptography.hazmat.backends.default_backend()
-# CRYPTOGRAPHY_DIGEST = cryptography.hazmat.primitives.hashes.SHA256
-CRYPTOGRAPHY_KEY = None  # Defaults to SECRET_KEY if unset
-CRYPTOGRAPHY_SALT = "nautobot-cryptography"
-
-
-#
 # Django Prometheus
 #
 

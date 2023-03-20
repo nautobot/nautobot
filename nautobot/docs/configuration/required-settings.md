@@ -254,22 +254,6 @@ Environment Variable: `NAUTOBOT_SECRET_KEY`
 
 This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
 
-!!! bug
-    Due to an [unresolved bug in the `django-cryptography` library](https://github.com/georgemarshall/django-cryptography/issues/56), if you have any [Git repositories](../models/extras/gitrepository.md) configured in your database, changing the `SECRET_KEY` will cause errors like:
-
-    ```
-    <class 'django.core.signing.BadSignature'>
-
-    Signature "b'mG5+660ye92rJBEtyZxuorLD6A6tcRmeS7mrGCP9ayg=\n'" does not match
-    ```
-
-    If you encounter this error, it can be resolved in one of two ways:
-
-    1. Change the `SECRET_KEY` back to its previous value, and delete all Git repository records via the UI or API.
-    2. Connect to the database and use SQL commands to delete all Git repository records without needing to revert the `SECRET_KEY`.
-
-Please note that this key is **not** used directly for hashing user passwords or (with the exception of the aforementioned `django-cryptography` bug) for the encrypted storage of secret data in Nautobot.
-
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 
 !!! note

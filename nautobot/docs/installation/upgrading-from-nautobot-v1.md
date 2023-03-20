@@ -140,6 +140,8 @@
 |                    | `regions`     |
 | CustomField        | `name`        |
 | Device             | `site`        |
+| GitRepository      | `_token`      |
+|                    | `username`    |
 | InventoryItem      | `lft`         |
 |                    | `rght`        |
 |                    | `tree_id`     |
