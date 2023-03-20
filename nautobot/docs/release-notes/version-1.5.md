@@ -148,6 +148,22 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.14 (2023-03-20)
+
+### Added
+
+- [#2618](https://github.com/nautobot/nautobot/issues/2618) - Added the ability to stand up a local dev env for SSO using Keycloak.
+- [#3033](https://github.com/nautobot/nautobot/issues/3033) - Added `JobButton` model to create single click execution buttons in the web UI to run jobs based on a single object.
+- [#3377](https://github.com/nautobot/nautobot/issues/3377) - Added additional choices for many data types in `nautobot.dcim`.
+
+### Changed
+
+- [#3434](https://github.com/nautobot/nautobot/issues/3434) - Changed the recommended exception to raise to end jobs early.
+
+### Fixed
+
+- [#3419](https://github.com/nautobot/nautobot/issues/3419) - Fixed `test_queryset_to_csv` to format data fetched from the model.
+
 ## v1.5.13 (2023-03-14)
 
 ### Added

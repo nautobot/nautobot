@@ -1,1 +1,0 @@
-Changed recommendation of `AbortTransaction` in the docs to end jobs early to recommend any exception instead.
