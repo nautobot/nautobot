@@ -838,7 +838,7 @@ def performance_test(
         "label": "Specify a directory to test instead of running all Nautobot UI tests.",
     },
 )
-def ui_unittest(
+def unittest_ui(
     context,
     label=None,
 ):
