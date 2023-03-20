@@ -938,12 +938,14 @@ class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
                 text="JobButton1",
                 job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
                 confirmation=True,
+                weight=30,
             ),
             JobButton.objects.create(
                 name="JobButton2",
                 text="JobButton2",
                 job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
                 confirmation=False,
+                weight=40,
             ),
             JobButton.objects.create(
                 name="JobButton3",
@@ -965,15 +967,21 @@ class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_job(self):
-        params = {"job": [Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk]}
+        job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        params = {"job": [job.pk]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=["JobButton3"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(job__pk=job.pk)
+        )
+
+        params = {"job": [job.slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(job__slug=job.slug)
         )
 
     def test_weight(self):
-        params = {"weight": [50]}
+        params = {"weight": [30, 50]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=["JobButton3"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(weight__in=[30, 50])
         )
 
     def test_search(self):
