@@ -7,22 +7,28 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ipam', '0026_ipaddress_remove_assigned_object'),
+        ("ipam", "0026_ipaddress_remove_assigned_object"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='prefix',
-            name='ip_version',
+            model_name="prefix",
+            name="ip_version",
             field=models.IntegerField(db_index=True, editable=False, null=True),
         ),
         migrations.AddField(
-            model_name='prefix',
-            name='parent',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='child_prefixes', to='ipam.prefix'),
+            model_name="prefix",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="child_prefixes",
+                to="ipam.prefix",
+            ),
         ),
         migrations.AlterIndexTogether(
-            name='prefix',
-            index_together={('network', 'broadcast', 'prefix_length')},
+            name="prefix",
+            index_together={("network", "broadcast", "prefix_length")},
         ),
     ]

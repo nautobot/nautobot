@@ -1,4 +1,5 @@
 import logging
+import operator
 
 import netaddr
 from django.conf import settings
@@ -560,8 +561,23 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
+    def get_duplicates(self):
+        return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
+
     def clean(self):
         super().clean()
+
+        # TODO(jathan): Restored this check for the purpose of unit testing, but this will go away
+        # once we merge Namespaces.
+        if self.prefix:
+
+            # Enforce unique IP space (if applicable)
+            # if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
+            if self.vrf is None or (self.vrf and self.vrf.enforce_unique):
+                duplicate_prefixes = self.get_duplicates()
+                if duplicate_prefixes:
+                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
+                    raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
 
         # Validate location
         if self.location is not None:
@@ -575,14 +591,14 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         force_delete = kwargs.pop("force_delete", False)
 
         try:
-            super().delete(**kwargs)
+            return super().delete(**kwargs)
         except models.ProtectedError as err:
             # Update protected objects to use the new parent and delete the old parent (self).
             if force_delete:
                 protected_pks = (po.pk for po in err.protected_objects)
                 protected_objects = Prefix.objects.filter(pk__in=protected_pks)
                 protected_objects.update(parent=self.parent)
-                super().delete(**kwargs)
+                return super().delete(**kwargs)
             else:
                 raise
 
@@ -593,10 +609,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
-        supernets = self.supernets(discover_mode=True)
-        if supernets:
-            import operator
+        for_update = kwargs.pop("for_update", False)
 
+        # Determine if a parent exists.
+        supernets = self.supernets(for_update=for_update)
+        if supernets:
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
             self.parent = parent
 
@@ -644,47 +661,52 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         return None
 
     def reparent_subnets(self):
-        """
-        Determine list of child nodes and set the parent to self.
-        """
-        query = Prefix.objects.select_for_update().filter(
-            ~models.Q(id=self.id),  # Don't include yourself...
-            parent_id=self.parent_id,
-            prefix_length__gt=self.prefix_length,
-            ip_version=self.ip_version,
-            network__gte=self.network,
-            broadcast__lte=self.broadcast,
-            # namespace=self.namespace,
-        )
+        """Determine the list of child nodes and set the parent to self."""
+        return self.subnets(direct=True, for_update=True).update(parent=self)
 
-        query.update(parent=self)
+    def supernets(self, direct=False, include_self=False, for_update=False):
+        """
+        Return supernets of this Prefix.
 
-    def supernets(self, direct=False, discover_mode=False, for_update=False):
-        """Return supernets of this Prefix."""
+        Args:
+            direct (bool): Whether to only return the direct ancestor.
+            include_self (bool): Whether to include this Prefix in the list of supernets.
+            for_update (bool): Lock rows until the end of any subsequent transactions.
+
+        Returns:
+            QuerySet
+        """
         query = Prefix.objects.all()
-
-        if self.parent is None and not discover_mode:
-            return query.none()
-
-        if discover_mode and direct:
-            raise ValidationError("Direct is incompatible with discover_mode.")
 
         if for_update:
             query = query.select_for_update()
 
         if direct:
-            return query.filter(id=self.parent.id)
+            return query.filter(id=self.parent_id)
+
+        if not include_self:
+            query = query.exclude(id=self.id)
 
         return query.filter(
             ip_version=self.ip_version,
-            prefix_length__lt=self.prefix_length,
+            prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
             # namespace=self.namespace,
         )
 
-    def subnets(self, direct=False, for_update=False):
-        """Return subnets of this Prefix."""
+    def subnets(self, direct=False, include_self=False, for_update=False):
+        """
+        Return subnets of this Prefix.
+
+        Args:
+            direct (bool): Whether to only return direct descendants.
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+            for_update (bool): Lock rows until the end of any subsequent transactions.
+
+        Returns:
+            QuerySet
+        """
         query = Prefix.objects.all()
 
         if for_update:
@@ -693,9 +715,12 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         if direct:
             return query.filter(parent_id=self.id)
 
+        if not include_self:
+            query = query.exclude(id=self.id)
+
         return query.filter(
             ip_version=self.ip_version,
-            prefix_length__gt=self.prefix_length,
+            prefix_length__gte=self.prefix_length,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
             # namespace=self.namespace,
@@ -719,9 +744,15 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         """
         return self.parent is None
 
-    def get_ancestors(self, ascending=False):
-        """Return my ancestors."""
-        query = self.supernets()
+    def ancestors(self, ascending=False, include_self=False):
+        """
+        Return my ancestors descending from larger to smaller prefix lengths.
+
+        Args:
+            ascending (bool): If set, reverses the return order.
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+        """
+        query = self.supernets(include_self=include_self)
         if ascending:
             query = query.reverse()
         return query
@@ -730,20 +761,27 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         """Return my immediate children."""
         return self.subnets(direct=True)
 
-    def get_descendants(self):
-        """Return all of my children!"""
-        return self.subnets()
+    def descendants(self, include_self=False):
+        """
+        Return all of my children!
+
+        Args:
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+        """
+        return self.subnets(include_self=include_self)
 
     def get_root(self):
         """
         Returns the root node (the parent of all of my ancestors).
         """
-        ancestors = self.get_ancestors()
-        return ancestors.first()
+        return self.ancestors().first()
 
     def get_siblings(self, include_self=False):
         """
         Return my siblings. Root nodes are siblings to other root nodes.
+
+        Args:
+            include_self (bool): Whether to include this Prefix in the list of subnets.
         """
         query = Prefix.objects.filter(parent=self.parent)
         if not include_self:
@@ -756,7 +794,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
         Prefixes belonging to any VRF.
         """
-        return self.get_descendants()
+        return self.descendants()
 
     def get_child_ips(self):
         """

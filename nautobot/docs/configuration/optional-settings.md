@@ -351,16 +351,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 
 ---
 
-## ENFORCE_GLOBAL_UNIQUE
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_ENFORCE_GLOBAL_UNIQUE`
-
-By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting `ENFORCE_GLOBAL_UNIQUE` to `True`.
-
----
-
 ## EXEMPT_VIEW_PERMISSIONS
 
 Default: `[]` (Empty list)
