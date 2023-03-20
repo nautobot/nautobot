@@ -1,0 +1,1 @@
+Fixed inheritance and `RoleField` definition on `Role` model mixins.

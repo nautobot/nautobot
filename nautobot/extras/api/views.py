@@ -6,7 +6,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -19,12 +19,7 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.utils import (
-    get_serializer_for_model,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
-)
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
@@ -178,8 +173,7 @@ class ConfigContextQuerySetMixin:
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContext.objects.prefetch_related(
-        "regions",
-        "sites",
+        "locations",
         "roles",
         "device_types",
         "platforms",
@@ -221,54 +215,10 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
 #
 
 
-@extend_schema_view(
-    bulk_partial_update=extend_schema(
-        filters=False,
-        request=serializers.CustomFieldSerializerVersion12(many=True),
-        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
-        versions=["1.2", "1.3"],
-    ),
-    bulk_update=extend_schema(
-        filters=False,
-        request=serializers.CustomFieldSerializerVersion12(many=True),
-        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
-        versions=["1.2", "1.3"],
-    ),
-    create=extend_schema(
-        request=serializers.CustomFieldSerializerVersion12,
-        responses={"201": serializers.CustomFieldSerializerVersion12},
-        versions=["1.2", "1.3"],
-    ),
-    list=extend_schema(
-        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    partial_update=extend_schema(
-        request=serializers.CustomFieldSerializerVersion12,
-        responses={"200": serializers.CustomFieldSerializerVersion12},
-        versions=["1.2", "1.3"],
-    ),
-    retrieve=extend_schema(responses={"200": serializers.CustomFieldSerializerVersion12}, versions=["1.2", "1.3"]),
-    update=extend_schema(
-        request=serializers.CustomFieldSerializerVersion12,
-        responses={"200": serializers.CustomFieldSerializerVersion12},
-        versions=["1.2", "1.3"],
-    ),
-)
 class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.CustomFieldSerializerVersion12),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
 
 
 class CustomFieldChoiceViewSet(ModelViewSet):
@@ -365,7 +315,6 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 
 
 class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
@@ -436,7 +385,6 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
 
 
 class ImageAttachmentViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
@@ -513,7 +461,11 @@ def _run_job(request, job_model, legacy_response=False):
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
     if job_model.has_sensitive_variables:
-        if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+        if (
+            "schedule" in request.data
+            and "interval" in request.data["schedule"]
+            and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+        ):
             raise ValidationError(
                 {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
@@ -660,9 +612,9 @@ def _run_job(request, job_model, legacy_response=False):
         return Response(serializer.data)
     else:
         # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"schedule": None, "job_result": None}
+        data = {"scheduled_job": None, "job_result": None}
         if schedule:
-            data["schedule"] = nested_serializers.NestedScheduledJobSerializer(
+            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
                 schedule, context={"request": request}
             ).data
         if job_result:
@@ -687,46 +639,6 @@ class JobViewSet(
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
-
-    # Custom schema for the deprecated 1.2 API version of this endpoint.
-    # For 1.3 and later, the standard autogenerated API schema is correct and does not need to be customized here.
-    @extend_schema(
-        filters=False,
-        responses={"200": serializers.JobClassSerializer(many=True)},
-        versions=["1.2"],
-    )
-    def list(self, request, *args, **kwargs):
-        """List all known Jobs."""
-        if request.major_version > 1 or request.minor_version >= 3:
-            # API version 1.3 or later - standard model-based response
-            return super().list(request, *args, **kwargs)
-
-        # API version 1.2 or earlier - serialize JobClass records
-        if not request.user.has_perm("extras.view_job"):
-            raise PermissionDenied("This user does not have permission to view jobs.")
-        job_content_type = get_job_content_type()
-        results = {
-            r.name: r
-            for r in JobResult.objects.filter(
-                obj_type=job_content_type,
-                status__in=JobResultStatusChoices.READY_STATES,
-            )
-            .defer("data")
-            .order_by("date_created")
-        }
-
-        job_models = Job.objects.restrict(request.user, "view")
-        jobs_list = [
-            job_model.job_class()  # TODO: why do we need to instantiate the job_class?
-            for job_model in job_models
-            if job_model.installed and job_model.job_class is not None
-        ]
-        for job_instance in jobs_list:
-            job_instance.result = results.get(job_instance.class_path, None)
-
-        serializer = serializers.JobClassSerializer(jobs_list, many=True, context={"request": request})
-
-        return Response(serializer.data)
 
     @extend_schema(
         deprecated=True,
@@ -912,7 +824,7 @@ class JobResultViewSet(
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
-        logs = job_result.logs.all()
+        logs = job_result.job_log_entries.all()
         serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
@@ -1065,7 +977,6 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 
 class NoteViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -1085,7 +996,6 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     Retrieve a list of recent changes.
     """
 
-    metadata_class = ContentTypeMetadata
     queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
@@ -1097,14 +1007,12 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 
 
 class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
-    metadata_class = ContentTypeMetadata
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
     filterset_class = filters.RelationshipFilterSet
 
 
 class RelationshipAssociationViewSet(ModelViewSet):
-    metadata_class = ContentTypeMetadata
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
@@ -1171,56 +1079,15 @@ class StatusViewSet(NautobotModelViewSet):
     filterset_class = filters.StatusFilterSet
 
 
-class StatusViewSetMixin(ModelViewSet):
-    """
-    Mixin to set `metadata_class` to implement `status` field in model viewset metadata.
-    """
-
-    metadata_class = StatusFieldMetadata
-
-
 #
 # Tags
 #
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(
-        filters=False,
-        request=serializers.TagSerializer(many=True),
-        responses={"200": serializers.TagSerializer(many=True)},
-        versions=["1.2"],
-    ),
-    bulk_partial_update=extend_schema(
-        filters=False,
-        request=serializers.TagSerializer(many=True),
-        responses={"200": serializers.TagSerializer(many=True)},
-        versions=["1.2"],
-    ),
-    create=extend_schema(
-        request=serializers.TagSerializer, responses={"201": serializers.TagSerializer}, versions=["1.2"]
-    ),
-    partial_update=extend_schema(
-        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
-    ),
-    update=extend_schema(
-        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
-    ),
-    list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
-)
 class TagViewSet(NautobotModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
-    serializer_class = serializers.TagSerializerVersion13
+    serializer_class = serializers.TagSerializer
     filterset_class = filters.TagFilterSet
-
-    def get_serializer_class(self):
-        serializer_choices = (SerializerForAPIVersions(versions=["1.2"], serializer=serializers.TagSerializer),)
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
 
 
 #

@@ -10,19 +10,17 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.core.models.fields import slugify_dots_to_dashes
-
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.core.models.utils import is_taggable  # noqa: F401
+from nautobot.core.models.utils import find_models_with_matching_fields, is_taggable  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -129,6 +127,18 @@ class FeatureQuery:
         """
         Given an extras feature, return a Q object for content type lookup
         """
+
+        # The `populate_model_features_registry` function is called in the `FeatureQuery().get_query` method instead of
+        # `ExtrasConfig.ready` because `FeatureQuery().get_query` is called before `ExtrasConfig.ready`.
+        # This is because `FeatureQuery` is a helper class used in `Forms` and `Serializers` that are called during the
+        # initialization of the application, before `ExtrasConfig.ready` is called.
+        # Calling `populate_model_features_registry` in `ExtrasConfig.ready` would lead to an outdated `model_features`
+        # `registry` record being used by `FeatureQuery`.
+        # As the `populate_model_features_registry` can be resource-intensive. The check the conditional check is used to
+        # avoid calling the function multiple times and optimize the performance of the application.
+        # TODO(timizuo): Provide a better solution for this; check https://github.com/nautobot/nautobot/pull/3360/files#r1131373797 comment.
+        if not registry["model_features"].get("relationships"):
+            populate_model_features_registry()
         query = Q()
         for app_label, models in registry["model_features"][self.feature].items():
             query |= Q(app_label=app_label, model__in=models)
@@ -144,6 +154,10 @@ class FeatureQuery:
             [('dcim.device', 13), ('dcim.rack', 34)]
         """
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+
+    def list_subclasses(self):
+        """Return a list of model classes that declare this feature."""
+        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
 
 
 @deconstructible
@@ -205,6 +219,51 @@ def extras_features(*features):
         return model_class
 
     return wrapper
+
+
+def populate_model_features_registry():
+    """
+    Populate the registry model features with new apps.
+
+    This function updates the registry model features.
+
+    Behavior:
+    - Defines a list of dictionaries called lookup_confs. Each dictionary contains:
+        - 'feature_name': The name of the feature to be updated in the registry.
+        - 'field_names': A list of names of fields that must be present in order for the model to be considered
+                        a valid model_feature.
+        - 'field_attributes': Optional dictionary of attributes to filter the fields by. Only model which fields match
+                            all the attributes specified in the dictionary will be considered. This parameter can be
+                            useful to narrow down the search for fields that match certain criteria. For example, if
+                            `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
+                            a related model of RelationshipAssociation will be considered.
+    - Looks up all the models in the installed apps.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - Groups the results by app and updates the registry model features for each app.
+    """
+    RelationshipAssociation = apps.get_model(app_label="extras", model_name="relationshipassociation")
+
+    lookup_confs = [
+        {
+            "feature_name": "custom_fields",
+            "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "relationships",
+            "field_names": ["source_for_associations", "destination_for_associations"],
+            "field_attributes": {"related_model": RelationshipAssociation},
+        },
+    ]
+
+    app_models = apps.get_models()
+    for lookup_conf in lookup_confs:
+        registry_items = find_models_with_matching_fields(
+            app_models=app_models,
+            field_names=lookup_conf["field_names"],
+            field_attributes=lookup_conf.get("field_attributes"),
+        )
+        feature_name = lookup_conf["feature_name"]
+        registry["model_features"][feature_name] = registry_items
 
 
 def generate_signature(request_body, secret):
@@ -319,13 +378,6 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     """
     from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
 
-    if git_repository is not None:
-        default_slug = slugify_dots_to_dashes(
-            f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
-        )
-    else:
-        default_slug = slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}")
-
     # Unrecoverable errors
     if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
         logger.error(
@@ -365,20 +417,50 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
 
+    # handle duplicate names by appending an incrementing counter to the end
+    default_job_name = job_class.name[:JOB_MAX_NAME_LENGTH]
+    job_name = default_job_name
+    append_counter = 2
+    existing_job_names = (
+        job_model_class.objects.filter(name__startswith=job_name)
+        .exclude(
+            source=job_source[:JOB_MAX_SOURCE_LENGTH],
+            git_repository=git_repository,
+            module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+            job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+        )
+        .values_list("name", flat=True)
+    )
+    while job_name in existing_job_names:
+        job_name_append = f" ({append_counter})"
+        max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
+        job_name = default_job_name[:max_name_length] + job_name_append
+        append_counter += 1
+    if job_name != default_job_name and "test" not in sys.argv:
+        logger.warning(
+            'Job class "%s" name "%s" is not unique, changing to "%s".',
+            job_class.__name__,
+            default_job_name,
+            job_name,
+        )
+
     job_model, created = job_model_class.objects.get_or_create(
         source=job_source[:JOB_MAX_SOURCE_LENGTH],
         git_repository=git_repository,
         module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
         job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
+            "slug": slugify(job_name)[:JOB_MAX_NAME_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
-            "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+            "name": job_name,
             "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
             "installed": True,
             "enabled": False,
         },
     )
+
+    if job_name != default_job_name:
+        job_model.name_override = True
 
     for field_name in JOB_OVERRIDABLE_FIELDS:
         # Was this field directly inherited from the job before, or was it overridden in the database?

@@ -11,13 +11,13 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     Device,
     FrontPort,
+    Location,
     Interface,
     PowerFeed,
     PowerOutlet,
     PowerPort,
     Rack,
     RearPort,
-    Site,
 )
 from nautobot.dcim.filters import (
     CableFilterSet,
@@ -31,18 +31,18 @@ from nautobot.dcim.filters import (
     PowerPortFilterSet,
     RackFilterSet,
     RearPortFilterSet,
-    SiteFilterSet,
+    LocationFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 
-class SiteType(gql_optimizer.OptimizedDjangoObjectType):
-    """Graphql Type Object for Site model."""
+class LocationType(gql_optimizer.OptimizedDjangoObjectType):
+    """Graphql Type Object for Location model."""
 
     class Meta:
-        model = Site
-        filterset_class = SiteFilterSet
+        model = Location
+        filterset_class = LocationFilterSet
         exclude = ["images", "_name"]
 
 

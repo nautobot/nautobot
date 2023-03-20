@@ -1,7 +1,6 @@
-from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
@@ -40,10 +39,8 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ClusterType(OrganizationalModel):
     """
@@ -79,10 +76,8 @@ class ClusterType(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ClusterGroup(OrganizationalModel):
     """
@@ -118,14 +113,12 @@ class ClusterGroup(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class Cluster(PrimaryModel):
@@ -149,13 +142,6 @@ class Cluster(PrimaryModel):
         blank=True,
         null=True,
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="clusters",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -165,12 +151,11 @@ class Cluster(PrimaryModel):
     )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "cluster_type", "cluster_group", "site", "location", "tenant", "comments"]
+    csv_headers = ["name", "cluster_type", "cluster_group", "location", "tenant", "comments"]
     clone_fields = [
         "cluster_type",
         "cluster_group",
         "tenant",
-        "site",
         "location",
     ]
 
@@ -188,27 +173,15 @@ class Cluster(PrimaryModel):
 
         # Validate location
         if self.location is not None:
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
 
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
                 )
 
-        # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
-        if self.present_in_database and self.site:
-            nonsite_devices = Device.objects.filter(cluster=self).exclude(site=self.site).count()
-            if nonsite_devices:
-                raise ValidationError(
-                    {
-                        "site": f"{nonsite_devices} devices are assigned as hosts for this cluster but are not in site {self.site}"
-                    }
-                )
-
         # Likewise, verify that host Devices match Location of this Cluster if any
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to create a Cluster with
+        # the parent Location or the child location of host Device?
         if self.present_in_database and self.location is not None:
             nonlocation_devices = (
                 Device.objects.filter(cluster=self)
@@ -229,7 +202,6 @@ class Cluster(PrimaryModel):
             self.name,
             self.cluster_type.name,
             self.cluster_group.name if self.cluster_group else None,
-            self.site.name if self.site else None,
             self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,
             self.comments,
@@ -242,13 +214,11 @@ class Cluster(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -399,14 +369,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
             return None
 
     @property
-    def site(self):
-        return self.cluster.site
-
-    @property
-    def site_id(self):
-        return self.cluster.site_id
-
-    @property
     def location(self):
         return self.cluster.location
 
@@ -421,12 +383,10 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -455,11 +415,12 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="vminterface",
+        through="ipam.IPAddressToInterface",
+        related_name="vm_interfaces",
+        blank=True,
+        verbose_name="IP Addresses",
     )
     tags = TaggableManager(through=TaggedItem, related_name="vminterface")
 
@@ -513,10 +474,73 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
             related_object=self.virtual_machine,
         )
 
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
+
+        Returns:
+            Number of instances added.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        with transaction.atomic():
+            for ip in ip_addresses:
+                instance = self.ip_addresses.through(
+                    ip_address=ip,
+                    vm_interface=self,
+                    is_source=is_source,
+                    is_destination=is_destination,
+                    is_default=is_default,
+                    is_preferred=is_preferred,
+                    is_primary=is_primary,
+                    is_secondary=is_secondary,
+                    is_standby=is_standby,
+                )
+                instance.validated_save()
+        return len(ip_addresses)
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        count = 0
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        with transaction.atomic():
+            for ip in ip_addresses:
+                qs = self.ip_addresses.through.objects.filter(ip_address=ip, vm_interface=self)
+                deleted_count, _ = qs.delete()
+                count += deleted_count
+        return count
+
     @property
     def parent(self):
         return self.virtual_machine
 
     @property
-    def count_ipaddresses(self):
+    def ip_address_count(self):
         return self.ip_addresses.count()

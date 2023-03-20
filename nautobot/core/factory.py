@@ -1,13 +1,32 @@
+from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
+
 from django.db.models import Model
 import factory
 from factory.django import DjangoModelFactory
+from faker.providers import BaseProvider
 import factory.random
+import itertools
 
+from nautobot.core import constants
 from nautobot.extras.models import Tag
+
+
+class UniqueFaker(factory.Faker):
+    """https://github.com/FactoryBoy/factory_boy/pull/820#issuecomment-1004802669"""
+
+    @classmethod
+    def _get_faker(cls, locale=None):
+        return super()._get_faker(locale=locale).unique
+
+    def clear(self, locale=None):
+        subfaker = self._get_faker(locale)
+        subfaker.clear()
 
 
 class BaseModelFactory(DjangoModelFactory):
     """Base class for all Nautobot model factories."""
+
+    id = UniqueFaker("uuid4")
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
@@ -90,7 +109,7 @@ def random_instance(model_or_queryset_or_lambda, allow_null=True):
             user = random_instance(User, allow_null=False)
 
             # Optional foreign key
-            has_group = factory.Faker("pybool")
+            has_group = NautobotBoolIterator()
             group = factory.Maybe("has_group", random_instance(Group), None)
 
             # Foreign key selected from a filtered queryset
@@ -147,9 +166,57 @@ def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
     )
 
 
-class UniqueFaker(factory.Faker):
-    """https://github.com/FactoryBoy/factory_boy/pull/820#issuecomment-1004802669"""
+class NautobotBoolIterator(factory.Iterator):
+    """Factory iterator that returns a semi-random sampling of boolean values
 
-    @classmethod
-    def _get_faker(cls, locale=None):
-        return super()._get_faker(locale=locale).unique
+    Iterator that returns a random sampling of True and False values while limiting
+    the number of repeated values in a given number of iterations. Used in factories
+    when a data set must contain both True and False values.
+
+    Args:
+        cycle (boolean): If True, iterator will restart at the beginning when all values are
+            exhausted. Otherwise raise a `StopIterator` exception when values are exhausted.
+            Defaults to True.
+        chance_of_getting_true (int): Percentage (0-100) of the values in the returned iterable
+        set to True. Defaults to 50.
+        length (int): Length of the returned iterable. Defaults to 8.
+    """
+
+    def _nautobot_boolean_iterator_sample(self, chance_of_getting_true, length):
+        iterator = list(itertools.repeat(True, int(length * chance_of_getting_true / 100)))
+        iterator += list(itertools.repeat(False, length - len(iterator)))
+        factory.random.randgen.shuffle(iterator)
+        return iterator
+
+    def __init__(
+        self,
+        *args,
+        cycle=True,
+        getter=None,
+        chance_of_getting_true=constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY,
+        length=constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_LENGTH,
+    ):
+        super().__init__(None, cycle=cycle, getter=getter)
+
+        if cycle:
+            self.iterator_builder = lambda: factory.utils.ResetableIterator(
+                itertools.cycle(self._nautobot_boolean_iterator_sample(chance_of_getting_true, length))
+            )
+        else:
+            self.iterator_builder = lambda: factory.utils.ResetableIterator(
+                self._nautobot_boolean_iterator_sample(chance_of_getting_true, length)
+            )
+
+
+class NautobotFakerProvider(BaseProvider):
+    """Faker provider to generate fake data specific to Nautobot or network automation use cases."""
+
+    def ipv6_network(self) -> str:
+        """Produce a random IPv6 network with a valid CIDR greater than 0"""
+        address = str(IPv6Address(self.generator.random.randint(0, (2**IPV6LENGTH) - 1)))
+        address += "/" + str(self.generator.random.randint(1, IPV6LENGTH))
+        address = str(IPv6Network(address, strict=False))
+        return address
+
+
+factory.Faker.add_provider(NautobotFakerProvider)

@@ -5,6 +5,7 @@ from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
+from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -263,6 +264,14 @@ class NautobotFilterExtension(DjangoFilterExtension):
     target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
 
 
+class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExtension):
+    """
+    Extend the PolymorphicProxySerializerExtension to cover Nautobot's PolymorphicProxySerializer class.
+    """
+
+    target_class = "nautobot.core.api.serializers.PolymorphicProxySerializer"
+
+
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):
     """
     Schema field fix for ChoiceField fields.
@@ -330,53 +339,3 @@ class SerializedPKRelatedFieldFix(OpenApiSerializerFieldExtension):
         On requests, require PK only; on responses, represent the entire nested serializer.
         """
         return auto_schema._map_serializer(self.target.serializer, direction)
-
-
-class StatusFieldFix(OpenApiSerializerFieldExtension):
-    """
-    Schema field fix for StatusSerializerField fields.
-
-    This is very similar to the fix for ChoiceFields (above), but the lists of choices are dynamic instead of static,
-    and the values are always strings (slugs).
-
-    Note that if we have two models/serializers with the same exact set of valid status choices, drf-spectacular will
-    likely complain about this with a warning like:
-
-        enum naming encountered a non-optimally resolvable collision for fields named "status"
-
-    In that case, the workaround will be to explicitly declare names for each colliding serializer field under
-    `settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`, for example:
-
-        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
-
-    Since, unlike ChoiceField, the status choices are not predefined as a ChoiceSet class, we have provided a
-    `@classproperty status_choices` on the StatusModelSerializerMixin that allows for the choices to "look like" a
-    static list to make drf-spectacular happy.
-    """
-
-    target_class = "nautobot.extras.api.fields.StatusSerializerField"
-
-    def map_serializer_field(self, auto_schema, direction):
-        """
-        Define OpenAPI schema for a given StatusSerializerField (self.target) for the given request/response direction.
-        """
-        choices = self.target.get_choices()
-        if direction == "request":
-            return {
-                "type": "string",
-                "enum": list(choices.keys()),
-            }
-        else:
-            return {
-                "type": "object",
-                "properties": {
-                    "value": {
-                        "type": "string",
-                        "enum": list(choices.keys()),
-                    },
-                    "label": {
-                        "type": "string",
-                        "enum": list(choices.values()),
-                    },
-                },
-            }

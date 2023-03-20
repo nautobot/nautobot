@@ -1,4 +1,5 @@
 import django_filters
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
@@ -12,7 +13,7 @@ from nautobot.core.filters import (
     TagFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     RelationshipTypeChoices,
@@ -81,6 +82,7 @@ __all__ = (
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
     "ContentTypeFilterSet",
+    "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedFilterSet",
     "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldBooleanFilter",
@@ -182,102 +184,75 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
     schema = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="schema",
+        field_name="config_context_schema",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug or PK)",
     )
-    region_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="regions",
-        queryset=Region.objects.all(),
-        label="Region",
-    )
-    region = django_filters.ModelMultipleChoiceFilter(
-        field_name="regions__slug",
-        queryset=Region.objects.all(),
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="sites",
-        queryset=Site.objects.all(),
-        label="Site",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="sites__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
     location_id = django_filters.ModelMultipleChoiceFilter(
         field_name="locations",
         queryset=Location.objects.all(),
-        label="Location (ID)",
+        label="Location (ID) - Deprecated (use location filter)",
     )
-    location = django_filters.ModelMultipleChoiceFilter(
-        field_name="locations__slug",
+    location = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="locations",
         queryset=Location.objects.all(),
-        label="Location (slug)",
+        label="Location (ID or slug)",
     )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",
         queryset=DeviceType.objects.all(),
-        label="Device Type",
+        label="Device Type (ID) - Deprecated (use device_type filter)",
     )
-    device_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_types__slug",
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_types",
         queryset=DeviceType.objects.all(),
-        to_field_name="slug",
-        label="Device Type (slug)",
+        label="Device Type (ID or slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         field_name="platforms",
         queryset=Platform.objects.all(),
-        label="Platform",
+        label="Platform (ID) - Deprecated (use platform filter)",
     )
-    platform = django_filters.ModelMultipleChoiceFilter(
-        field_name="platforms__slug",
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="platforms",
         queryset=Platform.objects.all(),
-        to_field_name="slug",
-        label="Platform (slug)",
+        label="Platform (ID or slug)",
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
-        label="Cluster group",
+        label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
-    cluster_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster_groups__slug",
+    cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
-        label="Cluster group (slug)",
+        label="Cluster group (ID or slug)",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="clusters",
         queryset=Cluster.objects.all(),
-        label="Cluster",
+        label="Cluster (ID)",
     )
     tenant_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
-        label="Tenant group",
+        label="Tenant group (ID) - Deprecated (use tenant_group filter)",
     )
-    tenant_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="tenant_groups__slug",
+    tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
-        label="Tenant group (slug)",
+        label="Tenant group (ID or slug)",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         field_name="tenants",
         queryset=Tenant.objects.all(),
-        label="Tenant",
+        label="Tenant (ID) - Deprecated (use tenant filter)",
     )
-    tenant = django_filters.ModelMultipleChoiceFilter(
-        field_name="tenants__slug",
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="tenants",
         queryset=Tenant.objects.all(),
-        to_field_name="slug",
-        label="Tenant (slug)",
+        label="Tenant (ID or slug)",
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_redundancy_groups",
@@ -292,6 +267,16 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Tag (slug)",
     )
     role = ConfigContextRoleFilter()
+
+    # Conditional enablement of dynamic groups filtering
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                queryset=DynamicGroup.objects.all(),
+                label="Dynamic Groups (slug or ID)",
+            )
 
     class Meta:
         model = ConfigContext
@@ -365,16 +350,10 @@ class CustomFieldFilterSet(BaseFilterSet):
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
-    field_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="field",
-        queryset=CustomField.objects.all(),
-        label="Field",
-    )
-    field = django_filters.ModelMultipleChoiceFilter(
-        field_name="field__name",
+    custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
         to_field_name="name",
-        label="Field (name)",
+        label="Field (ID or name)",
     )
 
     class Meta:
@@ -516,13 +495,11 @@ class GitRepositoryFilterSet(NautobotFilterSet):
     secrets_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
-        label="Secrets group (ID)",
+        label="Secrets group (ID) - Deprecated (use secrets_group filter)",
     )
-    secrets_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="secrets_group__slug",
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        to_field_name="slug",
-        label="Secrets group (slug)",
+        label="Secrets group (ID or slug)",
     )
     tag = TagFilter()
 
@@ -644,15 +621,13 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "user__username": "icontains",
         },
     )
-    job_model = django_filters.ModelMultipleChoiceFilter(
-        field_name="job_model__slug",
+    job_model = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Job.objects.all(),
-        to_field_name="slug",
-        label="Job (slug)",
+        label="Job (ID or slug)",
     )
     job_model_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
-        label="Job (ID)",
+        label="Job (ID) - Deprecated (use job_model filter)",
     )
     obj_type = ContentTypeFilter()
     date_created = django_filters.DateTimeFilter()
@@ -686,15 +661,14 @@ class ScheduledJobFilterSet(BaseFilterSet):
             "description": "icontains",
         },
     )
-    job_model = django_filters.ModelMultipleChoiceFilter(
+    job_model = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="job_model__slug",
         queryset=Job.objects.all(),
-        to_field_name="slug",
-        label="Job (slug)",
+        label="Job (ID or slug)",
     )
     job_model_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
-        label="Job (ID)",
+        label="Job (ID) - Deprecated (use job_model filter)",
     )
 
     first_run = django_filters.DateTimeFilter()
@@ -753,13 +727,12 @@ class ObjectChangeFilterSet(BaseFilterSet):
     changed_object_type = ContentTypeFilter()
     user_id = django_filters.ModelMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
-        label="User (ID)",
+        label="User (ID) - Deprecated (use user filter)",
     )
-    user = django_filters.ModelMultipleChoiceFilter(
-        field_name="user__username",
+    user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User name",
+        label="User name (ID or username)",
     )
 
     class Meta:
@@ -880,25 +853,17 @@ class SecretsGroupFilterSet(
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
 
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Group (ID)",
-    )
-    group = django_filters.ModelMultipleChoiceFilter(
-        queryset=SecretsGroup.objects.all(),
-        field_name="group__slug",
-        to_field_name="slug",
-        label="Group (slug)",
+        label="Secrets Group (ID or slug)",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),
-        label="Secret (ID)",
+        label="Secret (ID) - Deprecated (use secret filter)",
     )
-    secret = django_filters.ModelMultipleChoiceFilter(
+    secret = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Secret.objects.all(),
-        field_name="secret__slug",
-        to_field_name="slug",
-        label="Secret (slug)",
+        label="Secret (ID or slug)",
     )
     access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
     secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)

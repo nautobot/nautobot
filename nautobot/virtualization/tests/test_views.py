@@ -4,7 +4,7 @@ from netaddr import EUI
 
 from nautobot.core.testing import ViewTestCases, post_data
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Device, Platform, Site
+from nautobot.dcim.models import Device, Location, LocationType, Platform
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
 from nautobot.virtualization.models import (
@@ -78,9 +78,10 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
+        location_type = LocationType.objects.get(name="Campus")
+        locations = (
+            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
         )
 
         clustergroups = (
@@ -97,19 +98,19 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="Cluster 1",
             cluster_group=clustergroups[0],
             cluster_type=clustertypes[0],
-            site=sites[0],
+            location=locations[0],
         )
         Cluster.objects.create(
             name="Cluster 2",
             cluster_group=clustergroups[0],
             cluster_type=clustertypes[0],
-            site=sites[0],
+            location=locations[0],
         )
         Cluster.objects.create(
             name="Cluster 3",
             cluster_group=clustergroups[0],
             cluster_type=clustertypes[0],
-            site=sites[0],
+            location=locations[0],
         )
 
         cls.form_data = {
@@ -117,7 +118,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_group": clustergroups[1].pk,
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
@@ -133,7 +134,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_group": clustergroups[1].pk,
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "comments": "New comments",
         }
 
@@ -145,6 +146,11 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
+        location_type = LocationType.objects.get(name="Campus")
+        locations = (
+            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
+        )
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
@@ -154,8 +160,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype),
-            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype),
+            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=locations[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, location=locations[0]),
         )
 
         statuses = Status.objects.get_for_model(VirtualMachine)
@@ -274,10 +280,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
         devicerole = Role.objects.get_for_model(Device).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, site=site)
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole),
@@ -289,12 +296,15 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3"),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE"),
         )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = interfaces[:3]
+        cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN1", site=site),
-            VLAN.objects.create(vid=101, name="VLAN101", site=site),
-            VLAN.objects.create(vid=102, name="VLAN102", site=site),
-            VLAN.objects.create(vid=103, name="VLAN103", site=site),
+            VLAN.objects.create(vid=1, name="VLAN1", location=location),
+            VLAN.objects.create(vid=101, name="VLAN101", location=location),
+            VLAN.objects.create(vid=102, name="VLAN102", location=location),
+            VLAN.objects.create(vid=103, name="VLAN103", location=location),
         )
 
         obj_type = ContentType.objects.get_for_model(VMInterface)

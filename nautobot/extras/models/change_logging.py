@@ -26,7 +26,7 @@ class ChangeLoggedModel(models.Model):
     null to facilitate adding these fields to existing instances via a database migration.
     """
 
-    created = models.DateField(auto_now_add=True, blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
@@ -77,7 +77,7 @@ class ObjectChange(BaseModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="changes",
+        related_name="object_changes",
         blank=True,
         null=True,
     )

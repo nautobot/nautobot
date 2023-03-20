@@ -26,12 +26,10 @@ class StatusQuerySet(RestrictedQuerySet):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Status(NameColorContentTypesModel):
@@ -61,12 +59,13 @@ class StatusField(ForeignKeyLimitedByContentTypes):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Status)
-        super().__init__(**kwargs)
+        kwargs.setdefault("on_delete", models.PROTECT)
+        super().__init__(*args, **kwargs)
 
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
 
-    def contribute_to_class(self, cls, name, *args, private_only=False, **kwargs):
+    def contribute_to_class(self, cls, *args, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
         attached to any model that is using a `StatusField`.
@@ -78,7 +77,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         `.get_status_display()` and a `.get_status_color()` method without
         having to define it on the model yourself.
         """
-        super().contribute_to_class(cls, name, *args, private_only=private_only, **kwargs)
+        super().contribute_to_class(cls, *args, **kwargs)
 
         def _get_FIELD_display(self, field):
             """
@@ -123,10 +122,7 @@ class StatusModel(models.Model):
     Abstract base class for any model which may have statuses.
     """
 
-    status = StatusField(
-        on_delete=models.PROTECT,
-        related_name="%(app_label)s_%(class)s_related",  # e.g. dcim_device_related
-    )
+    status = StatusField()
 
     class Meta:
         abstract = True

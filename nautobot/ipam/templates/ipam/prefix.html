@@ -18,7 +18,7 @@
 
 {% block extra_buttons %}
         {% if perms.ipam.add_prefix and active_tab == 'prefixes' and first_available_prefix %}
-        <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&vrf={{ object.vrf.pk }}&site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
+        <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&vrf={{ object.vrf.pk }}&location={{ object.location.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
                 <i class="mdi mdi-plus-thick" aria-hidden="true"></i> Add Child Prefix
             </a>
         {% endif %}
@@ -38,7 +38,7 @@
         <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
             <a href="{% url 'ipam:prefix_prefixes' pk=object.pk %}">Child Prefixes <span class="badge">{{ object.get_child_prefixes.count }}</span></a>
         </li>
-        {% if perms.ipam.view_ipaddress and object.status.slug != 'container' %}
+        {% if perms.ipam.view_ipaddress and object.type != 'container' %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
                 <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
             </li>
@@ -54,6 +54,12 @@
                     <tr>
                         <td>Family</td>
                         <td>IPv{{ object.family }}</td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td>
+                            {{ object.get_type_display }}
+                        </td>
                     </tr>
                     <tr>
                         <td>VRF</td>
@@ -72,25 +78,6 @@
                                 {{ object.tenant.tenant_group|hyperlinked_object }} /
                             {% endif %}
                             {{ object.tenant|hyperlinked_object }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Aggregate</td>
-                        <td>
-                            {% if aggregate %}
-                                {{ aggregate|hyperlinked_object }} ({{ aggregate.rir }})
-                            {% else %}
-                                <span class="text-warning">None</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Site</td>
-                        <td>
-                            {% if object.site and object.site.region %}
-                                {{ object.site.region|hyperlinked_object }} /
-                            {% endif %}
-                            {{ object.site|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
@@ -117,12 +104,16 @@
                         <td>{{ object.role | hyperlinked_object_with_color }}</td>
                     </tr>
                     <tr>
-                        <td>Description</td>
-                        <td>{{ object.description|placeholder }}</td>
+                        <td>RIR</td>
+                        <td>{{ object.rir|hyperlinked_object }}</td>
                     </tr>
                     <tr>
-                        <td>Is a pool</td>
-                        <td>{{ object.is_pool | render_boolean }}</td>
+                        <td>Date Allocated</td>
+                        <td>{{ object.date_allocated|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
                     </tr>
                     <tr>
                         <td>Utilization</td>

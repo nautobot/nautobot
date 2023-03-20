@@ -5,10 +5,6 @@ from . import views
 router = OrderedDefaultRouter()
 router.APIRootView = views.DCIMRootView
 
-# Sites
-router.register("regions", views.RegionViewSet)
-router.register("sites", views.SiteViewSet)
-
 # Locations
 router.register("location-types", views.LocationTypeViewSet)
 router.register("locations", views.LocationViewSet)

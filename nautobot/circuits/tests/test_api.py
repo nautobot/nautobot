@@ -3,7 +3,7 @@ from django.urls import reverse
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Status
 
 
@@ -123,10 +123,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 class CircuitTest(APIViewTestCases.APIViewTestCase):
     model = Circuit
     brief_fields = ["cid", "display", "id", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -162,34 +158,30 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "cid": "Circuit 4",
                 "provider": providers[1].pk,
                 "circuit_type": circuit_types[1].pk,
-                "status": "offline",
+                "status": statuses[1].pk,
             },
             {
                 "cid": "Circuit 5",
                 "provider": providers[1].pk,
                 "circuit_type": circuit_types[1].pk,
-                "status": "offline",
+                "status": statuses[1].pk,
             },
             {
                 "cid": "Circuit 6",
                 "provider": providers[1].pk,
                 "circuit_type": circuit_types[1].pk,
-                "status": "offline",
+                "status": statuses[1].pk,
             },
         ]
+
+        cls.bulk_update_data = {
+            "status": statuses[2].pk,
+        }
 
 
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
@@ -202,9 +194,9 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         SIDE_A = CircuitTerminationSideChoices.SIDE_A
         SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
 
-        sites = (
-            Site.objects.first(),
-            Site.objects.last(),
+        locations = (
+            Location.objects.first(),
+            Location.objects.last(),
         )
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
@@ -216,25 +208,32 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Circuit.objects.create(cid="Circuit 3", provider=provider, circuit_type=circuit_type),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side=SIDE_A)
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[1], term_side=SIDE_Z)
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side=SIDE_A)
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side=SIDE_Z)
+        CircuitTermination.objects.create(circuit=circuits[0], location=locations[0], term_side=SIDE_A)
+        CircuitTermination.objects.create(circuit=circuits[0], location=locations[1], term_side=SIDE_Z)
+        CircuitTermination.objects.create(circuit=circuits[1], location=locations[0], term_side=SIDE_A)
+        CircuitTermination.objects.create(circuit=circuits[1], location=locations[1], term_side=SIDE_Z)
 
         cls.create_data = [
             {
                 "circuit": circuits[2].pk,
                 "term_side": SIDE_A,
-                "site": sites[1].pk,
+                "location": locations[0].pk,
                 "port_speed": 200000,
             },
             {
                 "circuit": circuits[2].pk,
                 "term_side": SIDE_Z,
-                "site": sites[1].pk,
+                "location": locations[1].pk,
                 "port_speed": 200000,
             },
         ]
+        # Cannot use cls.create_data for test_update_object() here.
+        # Because the first instance of CircuitTermination might have a provider_network
+        # Setting a location on that instance will raise an validation error.
+        cls.update_data = {
+            "circuit": circuits[2].pk,
+            "term_side": SIDE_A,
+            "port_speed": 200000,
+        }
 
         cls.bulk_update_data = {"port_speed": 123456}
-        cls.update_data = {"port_speed": 123456}

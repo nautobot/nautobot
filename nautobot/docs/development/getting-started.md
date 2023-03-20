@@ -42,10 +42,14 @@ ls nautobot/
 Example output:
 
 ```no-highlight
-CHANGELOG.md     README.md    docs        nautobot.code-workspace  site
-CONTRIBUTING.md  contrib      manage.py   poetry.lock              tasks.py
-LICENSE.txt      development  mkdocs.yml  pyproject.toml           upgrade.sh
-NOTICE           dist         nautobot    scripts
+CHANGELOG.md            development             nautobot.code-workspace
+CODE_OF_CONDUCT.md      docker                  poetry.lock
+CONTRIBUTING.md         docs                    pyproject.toml
+LICENSE.txt             examples                renovate.json
+NOTICE                  install.sh              scripts
+README.md               invoke.yml.example      tasks.py
+SECURITY.md             mkdocs.yml
+changes                 nautobot
 ```
 
 ### About Remote Repos
@@ -120,10 +124,20 @@ git pull upstream develop
 !!! warning
     If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
 
-Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username or your initials, and suffix it with the issue number if appropriate, separated by hyphens. For example:
+Now that you've got the latest upstream changes, create your branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number and `yourusername` is your GitHub username. For example:
 
 ```no-highlight
-git checkout -b yourusername-myfeature-1234
+git checkout -b u/yourusername-1234-next-amazing-feature
+```
+
+If you do not have a relevant GitHub issue, please consider opening one to document the context behind your changes.
+
+#### Prototypes
+
+Sometimes code is written as a proof of concept or early implementation candidate but is not quite ready to be merged, or may be picked up by another author sometime in the future. In that case, the convention is to use the `prototype/` prefix to the branch name and not requiring the original authors username. In that scenario, using the example above, you would instead:
+
+```no-highlight
+git checkout -b prototype/1234-next-amazing-feature
 ```
 
 ## Enabling Pre-Commit Hooks

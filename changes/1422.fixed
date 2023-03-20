@@ -1,0 +1,1 @@
+Improved OpenAPI schema representation of polymorphic fields such as `cable_peer`, `assigned_object`, etc.

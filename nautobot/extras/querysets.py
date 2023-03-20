@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
@@ -28,13 +29,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # Get the group of the assigned tenant, if any
         tenant_group = obj.tenant.tenant_group if obj.tenant else None
 
-        # Match against the directly assigned region as well as any parent regions.
-        region = getattr(obj.site, "region", None)
-        if region:
-            regions = region.ancestors(include_self=True)
-        else:
-            regions = []
-
         # Match against the directly assigned location as well as any parent locations
         location = getattr(obj, "location", None)
         if location:
@@ -42,20 +36,24 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         else:
             locations = []
 
+        query = [
+            Q(locations__in=locations) | Q(locations=None),
+            Q(roles=role) | Q(roles=None),
+            Q(device_types=device_type) | Q(device_types=None),
+            Q(platforms=obj.platform) | Q(platforms=None),
+            Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
+            Q(clusters=cluster) | Q(clusters=None),
+            Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
+            Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
+            Q(tenants=obj.tenant) | Q(tenants=None),
+            Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
+        ]
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
+
         queryset = (
             self.filter(
-                Q(regions__in=regions) | Q(regions=None),
-                Q(sites=obj.site) | Q(sites=None),
-                Q(locations__in=locations) | Q(locations=None),
-                Q(roles=role) | Q(roles=None),
-                Q(device_types=device_type) | Q(device_types=None),
-                Q(platforms=obj.platform) | Q(platforms=None),
-                Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
-                Q(clusters=cluster) | Q(clusters=None),
-                Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
-                Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
-                Q(tenants=obj.tenant) | Q(tenants=None),
-                Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
+                *query,
                 is_active=True,
             )
             .order_by("weight", "name")
@@ -127,22 +125,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
-            region_field = "site__region"
+            base_query.add((Q(locations=OuterRef("location")) | Q(locations=None)), Q.AND)
 
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
-            region_field = "cluster__site__region"
-
-        # Avoid circular import error
-        from nautobot.dcim.models import Region
-
-        # Query for regions=(None OR site__region OR site__region__parent OR site__region__parent__parent OR ...)
-        region_query = Q(regions=None) | Q(regions=OuterRef(region_field))
-        for _i in range(Region.objects.all().max_tree_depth()):
-            region_field = f"{region_field}__parent"
-            region_query |= Q(regions=OuterRef(region_field))
-        base_query.add(region_query, Q.AND)
+            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(locations=None)), Q.AND)
 
         return base_query
 
@@ -169,7 +155,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         my_groups = []
         # TODO(jathan): 3 queries per DynamicGroup instance
         for dynamic_group in eligible_groups.iterator():
-            if obj.pk in dynamic_group.members.values_list("pk", flat=True):
+            if dynamic_group.members.filter(pk=obj.pk).values_list("pk", flat=True).exists():
                 my_groups.append(dynamic_group.pk)
 
         # TODO(jathan): 1 query

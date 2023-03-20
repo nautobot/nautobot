@@ -97,6 +97,6 @@ class NameColorContentTypesModel(
             self.name,
             self.slug,
             self.color,
-            f'"{self.get_content_types()}"',  # Wrap labels in double quotes for CSV
+            self.get_content_types(),
             self.description,
         )

@@ -29,7 +29,7 @@ class StatusManagementTestCase(TestCase):
         status.color = "12ab34"
         status.validated_save()
 
-        status = Status.objects.get(slug="container")
+        status = Status.objects.get(slug="deprecated")
         status.description = "I'm a little teapot"
         status.validated_save()
 

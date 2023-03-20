@@ -12,7 +12,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 
-logger = logging.getLogger("nautobot.graphql.generators")
+logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 

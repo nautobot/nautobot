@@ -12,7 +12,9 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.serializers import PolymorphicProxySerializer
+from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
@@ -21,7 +23,6 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -40,6 +41,7 @@ from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEG
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableTermination,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -53,10 +55,11 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
+    PathEndpoint,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -69,8 +72,6 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.api.serializers import (
@@ -81,13 +82,12 @@ from nautobot.extras.api.serializers import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
-from nautobot.extras.models import Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.api.nested_serializers import (
     NestedIPAddressSerializer,
     NestedVLANSerializer,
 )
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
@@ -125,8 +125,6 @@ from .nested_serializers import (  # noqa: F401
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
-    NestedRegionSerializer,
-    NestedSiteSerializer,
     NestedVirtualChassisSerializer,
 )
 
@@ -141,7 +139,14 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
             return f"{obj._cable_peer._meta.app_label}.{obj._cable_peer._meta.model_name}"
         return None
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="CableTermination",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_cable_peer(self, obj):
         """
         Return the appropriate serializer for the cable termination model.
@@ -170,7 +175,14 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
             return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
         return None
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="PathEndpoint",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_connected_endpoint(self, obj):
         """
         Return the appropriate serializer for the type of connected object.
@@ -192,71 +204,6 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 @class_deprecated_in_favor_of(PathEndpointModelSerializerMixin)
 class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
     pass
-
-
-#
-# Regions/sites
-#
-
-
-class RegionSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:region-detail")
-    parent = NestedRegionSerializer(required=False, allow_null=True)
-    site_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Region
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "parent",
-            "description",
-            "site_count",
-            "tree_depth",
-        ]
-
-
-class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
-    region = NestedRegionSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    time_zone = TimeZoneSerializerField(required=False, allow_null=True)
-    circuit_count = serializers.IntegerField(read_only=True)
-    device_count = serializers.IntegerField(read_only=True)
-    prefix_count = serializers.IntegerField(read_only=True)
-    rack_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Site
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "status",
-            "region",
-            "tenant",
-            "facility",
-            "asn",
-            "time_zone",
-            "description",
-            "physical_address",
-            "shipping_address",
-            "latitude",
-            "longitude",
-            "contact_name",
-            "contact_phone",
-            "contact_email",
-            "comments",
-            "circuit_count",
-            "device_count",
-            "prefix_count",
-            "rack_count",
-            "virtualmachine_count",
-            "vlan_count",
-        ]
 
 
 #
@@ -294,13 +241,12 @@ class LocationSerializer(
     location_type = NestedLocationTypeSerializer()
     parent = NestedLocationSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    site = NestedSiteSerializer(required=False, allow_null=True)
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     prefix_count = serializers.IntegerField(read_only=True)
     rack_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
+    virtual_machine_count = serializers.IntegerField(read_only=True)
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -312,7 +258,6 @@ class LocationSerializer(
             "status",
             "location_type",
             "parent",
-            "site",
             "tenant",
             "description",
             "tree_depth",
@@ -332,7 +277,7 @@ class LocationSerializer(
             "device_count",
             "prefix_count",
             "rack_count",
-            "virtualmachine_count",
+            "virtual_machine_count",
             "vlan_count",
         ]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
@@ -356,8 +301,7 @@ class LocationSerializer(
 
 class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
 
@@ -367,23 +311,22 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
             "url",
             "name",
             "slug",
-            "site",
             "location",
             "parent",
             "description",
             "rack_count",
             "tree_depth",
         ]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "name"))]
+        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("location", "name"))]
 
     def validate(self, data):
-        # Validate uniqueness of (site, slug) since we omitted the automatically-created validator from Meta.
+        # Validate uniqueness of (location, slug) since we omitted the automatically-created validator from Meta.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("slug", None):
-            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "slug"))
+            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("location", "slug"))
             validator(data, self)
 
         # Enforce model validation
@@ -396,15 +339,14 @@ class RackSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
-    group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
+    location = NestedLocationSerializer()
+    rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
-    powerfeed_count = serializers.IntegerField(read_only=True)
+    power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Rack
@@ -412,9 +354,8 @@ class RackSerializer(
             "url",
             "name",
             "facility_id",
-            "site",
             "location",
-            "group",
+            "rack_group",
             "tenant",
             "status",
             "role",
@@ -429,16 +370,16 @@ class RackSerializer(
             "outer_unit",
             "comments",
             "device_count",
-            "powerfeed_count",
+            "power_feed_count",
         ]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (group, facility_id). This
-        # prevents facility_id from being interpreted as a required field.
-        validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("group", "name"))]
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
+        # This prevents facility_id from being interpreted as a required field.
+        validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
 
     def validate(self, data):
-        # Validate uniqueness of (group, facility_id) since we omitted the automatically-created validator from Meta.
+        # Validate uniqueness of (rack_group, facility_id) since we omitted the automatically-created validator above.
         if data.get("facility_id", None):
-            validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("group", "facility_id"))
+            validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "facility_id"))
             validator(data, self)
 
         # Enforce model validation
@@ -505,8 +446,8 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 
 class ManufacturerSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:manufacturer-detail")
-    devicetype_count = serializers.IntegerField(read_only=True)
-    inventoryitem_count = serializers.IntegerField(read_only=True)
+    device_type_count = serializers.IntegerField(read_only=True)
+    inventory_item_count = serializers.IntegerField(read_only=True)
     platform_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -516,8 +457,8 @@ class ManufacturerSerializer(NautobotModelSerializer):
             "name",
             "slug",
             "description",
-            "devicetype_count",
-            "inventoryitem_count",
+            "device_type_count",
+            "inventory_item_count",
             "platform_count",
         ]
 
@@ -619,7 +560,7 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlettemplate-detail")
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
-    power_port = NestedPowerPortTemplateSerializer(required=False)
+    power_port_template = NestedPowerPortTemplateSerializer(required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -630,7 +571,7 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
             "name",
             "label",
             "type",
-            "power_port",
+            "power_port_template",
             "feed_leg",
             "description",
         ]
@@ -676,7 +617,7 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontporttemplate-detail")
     device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PortTypeChoices)
-    rear_port = NestedRearPortTemplateSerializer()
+    rear_port_template = NestedRearPortTemplateSerializer()
 
     class Meta:
         model = FrontPortTemplate
@@ -686,7 +627,7 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
             "name",
             "label",
             "type",
-            "rear_port",
+            "rear_port_template",
             "rear_port_position",
             "description",
         ]
@@ -716,7 +657,7 @@ class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
+    virtual_machine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Platform
@@ -729,7 +670,7 @@ class PlatformSerializer(NautobotModelSerializer):
             "napalm_args",
             "description",
             "device_count",
-            "virtualmachine_count",
+            "virtual_machine_count",
         ]
 
 
@@ -743,8 +684,7 @@ class DeviceSerializer(
     device_type = NestedDeviceTypeSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     rack = NestedRackSerializer(required=False, allow_null=True)
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     primary_ip = NestedIPAddressSerializer(read_only=True)
@@ -768,7 +708,6 @@ class DeviceSerializer(
             "platform",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "position",
@@ -976,11 +915,11 @@ class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         return super().validate(data)
 
 
-# 2.0 TODO: This becomes non-default in 2.0, removed in 2.2.
-class InterfaceSerializerVersion12(
+class InterfaceSerializer(
     InterfaceCommonSerializer,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     device = NestedDeviceSerializer()
@@ -994,7 +933,13 @@ class InterfaceSerializerVersion12(
         many=True,
     )
     cable = NestedCableSerializer(read_only=True)
-    count_ipaddresses = serializers.IntegerField(read_only=True)
+    ip_address_count = serializers.IntegerField(read_only=True)
+    ip_addresses = SerializedPKRelatedField(
+        queryset=IPAddress.objects.all(),
+        serializer=NestedIPAddressSerializer,
+        required=False,
+        many=True,
+    )
     parent_interface = NestedInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedInterfaceSerializer(required=False, allow_null=True)
     lag = NestedInterfaceSerializer(required=False, allow_null=True)
@@ -1005,6 +950,7 @@ class InterfaceSerializerVersion12(
             "url",
             "device",
             "name",
+            "status",
             "label",
             "type",
             "enabled",
@@ -1013,6 +959,7 @@ class InterfaceSerializerVersion12(
             "lag",
             "mtu",
             "mac_address",
+            "ip_addresses",
             "mgmt_only",
             "description",
             "mode",
@@ -1024,45 +971,24 @@ class InterfaceSerializerVersion12(
             "connected_endpoint",
             "connected_endpoint_type",
             "connected_endpoint_reachable",
-            "count_ipaddresses",
+            "ip_address_count",
         ]
 
     def validate(self, data):
-
-        # set interface status to active if status not provided
-        if not data.get("status"):
-            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
-            # which raises an error when validating except status is explicitly set here
-            query = Status.objects.get_for_model(Interface)
-            try:
-                data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-            except Status.DoesNotExist:
-                raise serializers.ValidationError(
-                    {
-                        "status": "Interface default status 'active' does not exist, "
-                        "create 'active' status for Interface or use the latest api_version"
-                    }
-                )
-
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
+        # the parent Location or the child location of `device.location`?
         for vlan in data.get("tagged_vlans", []):
-            if vlan.site not in [device.site, None]:
+            if vlan.location not in [device.location, None]:
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must belong to the same site as the interface's parent device, or "
+                        "tagged_vlans": f"VLAN {vlan} must belong to the same location as the interface's parent device, or "
                         f"it must be global."
                     }
                 )
 
         return super().validate(data)
-
-
-class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMixin):
-    class Meta:
-        model = Interface
-        fields = InterfaceSerializerVersion12.Meta.fields.copy()
-        fields.insert(4, "status")
 
 
 class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
@@ -1165,8 +1091,7 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerial
 class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
     device = NestedDeviceSerializer()
-    # Provide a default value to satisfy UniqueTogetherValidator
-    parent = serializers.PrimaryKeyRelatedField(queryset=InventoryItem.objects.all(), allow_null=True, default=None)
+    parent = NestedInventoryItemSerializer(required=False, allow_null=True, default=None)
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True, default=None)
 
     class Meta:
@@ -1185,6 +1110,21 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
             "description",
             "tree_depth",
         ]
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (device, parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("device") and data.get("parent") and data.get("name"):
+            validator = UniqueTogetherValidator(
+                queryset=InventoryItem.objects.all(),
+                fields=("device", "parent", "name"),
+            )
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
 
 
 #
@@ -1225,19 +1165,29 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         if side.lower() not in ["a", "b"]:
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
-        if termination is None:
-            return None
         serializer = get_serializer_for_model(termination, prefix="Nested")
         context = {"request": self.context["request"]}
         data = serializer(termination, context=context).data
 
         return data
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="CableTermination",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+        )
+    )
     def get_termination_a(self, obj):
         return self._get_termination(obj, "a")
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="CableTermination",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+        )
+    )
     def get_termination_b(self, obj):
         return self._get_termination(obj, "b")
 
@@ -1283,7 +1233,13 @@ class CablePathSerializer(serializers.ModelSerializer):
             "is_split",
         ]
 
-    @extend_schema_field(serializers.DictField)
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="PathEndpoint",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
+        )
+    )
     def get_origin(self, obj):
         """
         Return the appropriate serializer for the origin.
@@ -1292,7 +1248,14 @@ class CablePathSerializer(serializers.ModelSerializer):
         context = {"request": self.context["request"]}
         return serializer(obj.origin, context=context).data
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="PathEndpoint",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
+            allow_null=True,
+        )
+    )
     def get_destination(self, obj):
         """
         Return the appropriate serializer for the destination, if any.
@@ -1303,7 +1266,14 @@ class CablePathSerializer(serializers.ModelSerializer):
             return serializer(obj.destination, context=context).data
         return None
 
-    @extend_schema_field(serializers.ListField)
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="CableTermination",
+            resource_type_field_name="object_type",
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            many=True,
+        )
+    )
     def get_path(self, obj):
         ret = []
         for node in obj.get_path():
@@ -1367,20 +1337,18 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 
 class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
-    site = NestedSiteSerializer()
-    location = NestedLocationSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer()
     rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
-    powerfeed_count = serializers.IntegerField(read_only=True)
+    power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = PowerPanel
         fields = [
             "url",
-            "site",
             "location",
             "rack_group",
             "name",
-            "powerfeed_count",
+            "power_feed_count",
         ]
 
 

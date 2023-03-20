@@ -426,7 +426,7 @@ Response:
     "content_type": "dcim.device",
     "filter": {},
     "children": [],
-    "created": "2022-07-06",
+    "created": "2022-07-06T20:17:04.305663Z",
     "last_updated": "2022-07-06T20:17:04.305663Z",
     "custom_fields": {},
     "computed_fields": {},
@@ -563,7 +563,7 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
             "weight": 10
         }
     ],
-    "created": "2022-07-15",
+    "created": "2022-07-15T00:00:00Z",
     "last_updated": "2022-07-15T16:50:45.453965Z",
     "notes_url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/notes/",
     "custom_fields": {}

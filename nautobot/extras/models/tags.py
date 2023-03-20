@@ -33,9 +33,7 @@ class TagQuerySet(RestrictedQuerySet):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
-    "relationships",
 )
 class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
     content_types = models.ManyToManyField(

@@ -34,7 +34,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -211,8 +211,6 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 
 
 class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
-    regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
-    sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(
         queryset=Role.objects.get_for_models([Device, VirtualMachine]),
@@ -229,6 +227,15 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
         queryset=DeviceRedundancyGroup.objects.all(), required=False
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+    dynamic_groups = DynamicModelMultipleChoiceField(
+        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+    )
+
+    # Conditional enablement of dynamic groups filtering
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.fields.pop("dynamic_groups")
 
     data = JSONField(label="")
 
@@ -238,10 +245,8 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "name",
             "weight",
             "description",
-            "schema",
+            "config_context_schema",
             "is_active",
-            "regions",
-            "sites",
             "locations",
             "roles",
             "device_types",
@@ -252,13 +257,14 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "tenants",
             "device_redundancy_groups",
             "tags",
+            "dynamic_groups",
             "data",
         )
 
 
 class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     description = forms.CharField(required=False, max_length=100)
@@ -266,15 +272,13 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
     class Meta:
         nullable_fields = [
             "description",
-            "schema",
+            "config_context_schema",
         ]
 
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="slug", required=False
@@ -293,6 +297,15 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
     )
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
+    dynamic_groups = DynamicModelMultipleChoiceField(
+        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            self.fields.pop("dynamic_groups")
 
 
 #
@@ -892,7 +905,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
         queryset=Job.objects.all(),
         required=False,
         to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -967,7 +980,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         queryset=Job.objects.all(),
         required=False,
         to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     # 2.0 TODO(glenn) filtering by obj_type should be solved by dynamic filter form generation
     name = forms.CharField(required=False)

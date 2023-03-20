@@ -85,7 +85,7 @@ class PlatformTable(BaseTable):
         url_params={"platform": "slug"},
         verbose_name="Devices",
     )
-    vm_count = LinkedCountColumn(
+    virtual_machine_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
         url_params={"platform": "slug"},
         verbose_name="VMs",
@@ -99,7 +99,7 @@ class PlatformTable(BaseTable):
             "name",
             "manufacturer",
             "device_count",
-            "vm_count",
+            "virtual_machine_count",
             "slug",
             "napalm_driver",
             "napalm_args",
@@ -111,7 +111,7 @@ class PlatformTable(BaseTable):
             "name",
             "manufacturer",
             "device_count",
-            "vm_count",
+            "virtual_machine_count",
             "napalm_driver",
             "description",
             "actions",
@@ -127,7 +127,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_type = tables.LinkColumn(
@@ -162,7 +161,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "platform",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "position",
@@ -184,7 +182,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
             "location",
             "rack",
             "role",
@@ -197,7 +194,7 @@ class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
     status = ColoredLabelColumn()
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
@@ -208,7 +205,7 @@ class DeviceImportTable(BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
+            "location",
             "rack",
             "position",
             "role",
@@ -917,14 +914,14 @@ class VirtualChassisTable(BaseTable):
 class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    member_count = tables.TemplateColumn(
+    device_count = tables.TemplateColumn(
         template_code="""<a href="{{ record.get_absolute_url }}">{{ value }}</a>""",
-        verbose_name="Members",
+        verbose_name="Devices",
     )
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "slug", "status", "failover_strategy", "member_count", "secrets_group", "tags")
-        default_columns = ("pk", "name", "status", "failover_strategy", "member_count")
+        fields = ("pk", "name", "slug", "status", "failover_strategy", "device_count", "secrets_group", "tags")
+        default_columns = ("pk", "name", "status", "failover_strategy", "device_count")

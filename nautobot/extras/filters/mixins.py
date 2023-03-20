@@ -136,9 +136,9 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
 
 class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
-    created = django_filters.DateFilter()
-    created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
-    created__lte = django_filters.DateFilter(field_name="created", lookup_expr="lte")
+    created = django_filters.DateTimeFilter()
+    created__gte = django_filters.DateTimeFilter(field_name="created", lookup_expr="gte")
+    created__lte = django_filters.DateTimeFilter(field_name="created", lookup_expr="lte")
     last_updated = django_filters.DateTimeFilter()
     last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
@@ -151,13 +151,11 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
     )
     local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        label="Schema (ID)",
+        label="Schema (ID) - Deprecated (use local_context_schema filter)",
     )
-    local_config_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_config_context_schema__slug",
+    local_config_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        to_field_name="slug",
-        label="Schema (slug)",
+        label="Schema (ID or slug)",
     )
 
     def _local_config_context_data(self, queryset, name, value):
@@ -235,11 +233,16 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
-        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE, model)
+        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
+            destination_type=self.obj_type, destination_hidden=False
+        )
+        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
 
-        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
-        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION, model)
+        for rel in relationships.iterator():
+            if rel.source_type == self.obj_type and not rel.source_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
+            if rel.destination_type == self.obj_type and not rel.destination_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
         """

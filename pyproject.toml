@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.16"
+Django = "~3.2.18"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -86,11 +86,9 @@ django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.14.0"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.25.0", extras = ["sidecar"]}
-# 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
-drf-yasg = {version = "^1.20.0", extras = ["validation"]}
+drf-spectacular = {version = "~0.26.0", extras = ["sidecar"]}
 # Git integrations for Python
-GitPython = "~3.1.30"
+GitPython = "~3.1.31"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -116,7 +114,9 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.4.0"
+# Note: netutils is limited in scope, dependencies, and observes semver, as such
+#       we permit a looser (^) version constraint here.
+netutils = "^1.4.1"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter
@@ -154,6 +154,8 @@ coverage = "~6.5.0"
 django-debug-toolbar = "~3.8.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
+# Type hints for Django
+django-stubs = {extras = ["compatible-mypy"], version = "^1.14.0"}
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
@@ -180,10 +182,14 @@ mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "0.19.1"
 mkdocstrings-python = "0.8.2"
+# Typing analysis
+mypy = "^1.1.1"
 # Code static analysis
 pylint = {version = "~2.15.0", python = "^3.7.2"}
 # Pylint extensions for Django
 pylint-django = {version = "~2.5.3", python = "^3.7.2"}
+# Loading of .env files, needed for mypy plugin
+python-dotenv = "^0.21.1"
 # Integration Tests
 requests = "~2.28.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -196,10 +202,6 @@ splinter = "~0.18.0"
 towncrier = "~22.8.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~2.2.0"
-# Type checking
-mypy = "^0.991"
-django-stubs = {extras = ["compatible-mypy"], version = "^1.14.0"}
-python-dotenv = "^0.21.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -335,6 +337,7 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [tool.towncrier.fragment.added]
 [tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.dependencies]
 [tool.towncrier.fragment.deprecated]
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]

@@ -27,12 +27,10 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class DynamicGroup(OrganizationalModel):
@@ -46,6 +44,7 @@ class DynamicGroup(OrganizationalModel):
         on_delete=models.CASCADE,
         verbose_name="Object Type",
         help_text="The type of object for this Dynamic Group.",
+        related_name="dynamic_groups",
     )
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
@@ -65,17 +64,18 @@ class DynamicGroup(OrganizationalModel):
 
     clone_fields = ["content_type", "filter"]
 
-    # This is used as a `startswith` check on field names, so these can be
-    # explicit fields or just substrings.
+    # This is used as a `startswith` check on field names, so these can be explicit fields or just
+    # substrings.
     #
-    # Currently this means skipping "search", custom fields, and custom relationships.
+    # Currently this means skipping "computed fields" and "comments".
     #
-    # FIXME(jathan): As one example, `DeviceFilterSet.q` filter searches in `comments`. The issue
-    # really being that this field renders as a textarea and it's not cute in the UI. Might be able
-    # to dynamically change the widget if we decide we do want to support this field.
+    # - Computed fields are skipped because they are generated at call time and
+    #   therefore cannot be queried
+    # - Comments are skipped because they are TextFields that require an exact
+    #   match and are better covered by the search (`q`) field.
     #
     # Type: tuple
-    exclude_filter_fields = ("q", "cf_", "cr_", "cpf_", "comments")  # Must be a tuple
+    exclude_filter_fields = ("cpf_", "comments")  # Must be a tuple
 
     class Meta:
         ordering = ["content_type", "name"]
@@ -497,8 +497,8 @@ class DynamicGroup(OrganizationalModel):
         elif hasattr(filter_field, "generate_query"):
             # Is this a list of strings? Well let's resolve it to related model objects so we can
             # pass it to `generate_query` to get a correct Q object back out. When values are being
-            # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
-            # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
+            # reconstructed from saved filters, lists of slugs are common e.g. (`{"location": ["ams01",
+            # "ams02"]}`, the value being a list of location slugs (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model

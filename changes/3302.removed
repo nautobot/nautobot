@@ -1,0 +1,1 @@
+Removed `Aggregate` and migrated all existing instances to `Prefix`.

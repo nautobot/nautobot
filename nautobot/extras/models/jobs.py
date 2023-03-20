@@ -17,10 +17,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
+from prometheus_client import Histogram
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField, slugify_dots_to_dashes
+from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
@@ -30,7 +31,6 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -58,13 +58,19 @@ logger = logging.getLogger(__name__)
 # objects being created within transaction.atomic().
 JOB_LOGS = "job_logs"
 
+# The JOB_RESULT_METRIC variable is a counter metric that counts executions of jobs,
+# including information beyond what a tool like flower could get by introspecting
+# the celery task queue. This is accomplished by looking one abstraction deeper into
+# the job model of Nautobot.
+JOB_RESULT_METRIC = Histogram(
+    "nautobot_job_duration_seconds", "Results of Nautobot jobs.", ["grouping", "name", "status"]
+)
+
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "graphql",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class Job(PrimaryModel):
@@ -104,9 +110,8 @@ class Job(PrimaryModel):
     )
 
     slug = AutoSlugField(
-        max_length=JOB_MAX_SLUG_LENGTH,
-        populate_from=["class_path"],
-        slugify_function=slugify_dots_to_dashes,
+        max_length=JOB_MAX_NAME_LENGTH,
+        populate_from="name",
     )
 
     # Human-readable information, potentially inherited from the source code
@@ -119,7 +124,7 @@ class Job(PrimaryModel):
     name = models.CharField(
         max_length=JOB_MAX_NAME_LENGTH,
         help_text="Human-readable name of this job",
-        db_index=True,
+        unique=True,
     )
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
@@ -228,10 +233,7 @@ class Job(PrimaryModel):
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
-        unique_together = [
-            ("source", "git_repository", "module_name", "job_class_name"),
-            ("grouping", "name"),
-        ]
+        unique_together = ["source", "git_repository", "module_name", "job_class_name"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -319,7 +321,7 @@ class Job(PrimaryModel):
     @property
     def latest_result(self):
         if self._latest_result is None:
-            self._latest_result = self.results.first()
+            self._latest_result = self.job_results.first()
         return self._latest_result
 
     @property
@@ -353,11 +355,11 @@ class Job(PrimaryModel):
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
-            raise ValidationError("Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+            raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.slug) > JOB_MAX_SLUG_LENGTH:
-            raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
+        if len(self.slug) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Slug may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(
@@ -386,7 +388,7 @@ class JobHook(OrganizationalModel):
     enabled = models.BooleanField(default=True)
     job = models.ForeignKey(
         to=Job,
-        related_name="job_hook",
+        related_name="job_hooks",
         verbose_name="Job",
         help_text="The job that this job hook will initiate",
         on_delete=models.CASCADE,
@@ -470,7 +472,7 @@ class JobHook(OrganizationalModel):
 class JobLogEntry(BaseModel):
     """Stores each log entry for the JobResult."""
 
-    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="logs")
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_log_entries")
     log_level = models.CharField(
         max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT, db_index=True
     )
@@ -505,7 +507,6 @@ class JobLogEntry(BaseModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "graphql",
 )
@@ -518,7 +519,7 @@ class JobResult(BaseModel, CustomFieldModel):
     # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
     job_model = models.ForeignKey(
-        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
     name = models.CharField(max_length=255, db_index=True)
     task_name = models.CharField(
@@ -582,7 +583,7 @@ class JobResult(BaseModel, CustomFieldModel):
     )
     traceback = models.TextField(blank=True, null=True)
     meta = models.JSONField(null=True, default=None, editable=False)
-    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
+    scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
     task_id = models.UUIDField(unique=True)
 
@@ -718,6 +719,13 @@ class JobResult(BaseModel, CustomFieldModel):
         self.status = status
         if status in JobResultStatusChoices.READY_STATES:
             self.date_done = timezone.now()
+            # Only add metrics if we have a related job model. If we are moving to a terminal state we should always
+            # have a related job model, so this shouldn't be too tight of a restriction.
+            if self.job_model:
+                duration = self.date_done - self.created
+                JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
+                    duration.total_seconds()
+                )
 
     @classmethod
     def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
@@ -742,7 +750,7 @@ class JobResult(BaseModel, CustomFieldModel):
             obj_type=obj_type,
             user=user,
             task_id=uuid.uuid4(),
-            schedule=schedule,
+            scheduled_job=schedule,
         )
 
         kwargs["job_result_pk"] = job_result.pk
@@ -853,14 +861,18 @@ class ScheduledJobs(models.Model):
     objects = ExtendedManager()
 
     @classmethod
-    def changed(cls, instance, **kwargs):
+    def changed(cls, instance, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered before a change"""
+        if raw:
+            return
         if not instance.no_changes:
             cls.update_changed()
 
     @classmethod
-    def update_changed(cls, **kwargs):
+    def update_changed(cls, raw=False, **kwargs):
         """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
+        if raw:
+            return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
 
     @classmethod

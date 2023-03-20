@@ -4,13 +4,15 @@ import warnings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
-from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm, SiteForm
+from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Device, LocationType
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
+    ConfigContextForm,
+    ConfigContextFilterForm,
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
@@ -42,7 +44,7 @@ class JobHookFormTestCase(TestCase):
             type_delete=False,
         )
         devicetype_ct = ContentType.objects.get_for_model(dcim_models.DeviceType)
-        site_ct = ContentType.objects.get_for_model(dcim_models.Site)
+        location_ct = ContentType.objects.get_for_model(dcim_models.Location)
         job_hook.content_types.set([devicetype_ct])
 
         cls.job_hooks_data = (
@@ -64,7 +66,7 @@ class JobHookFormTestCase(TestCase):
             },
             {
                 "name": "JobHook4",
-                "content_types": [site_ct.pk],
+                "content_types": [location_ct.pk],
                 "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
                 "type_create": True,
                 "type_update": True,
@@ -116,7 +118,7 @@ class JobHookFormTestCase(TestCase):
 
         Example:
             Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | site, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | location, create, update, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[2])
 
@@ -159,16 +161,18 @@ class NoteModelFormTestCase(TestCase):
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
         cls.user = User.objects.create(username="formuser1")
+        cls.location_type = LocationType.objects.get(name="Campus")
 
-        cls.site_form_base_data = {
-            "name": "Site 1",
-            "slug": "site-1",
+        cls.location_form_base_data = {
+            "name": "Location 1",
+            "slug": "location-1",
+            "location_type": cls.location_type.pk,
             "status": active.pk,
         }
 
     def test_note_object_edit_form(self):
 
-        form = SiteForm(data=dict(**self.site_form_base_data, **{"object_note": "This is a test."}))
+        form = LocationForm(data=dict(**self.location_form_base_data, **{"object_note": "This is a test."}))
         self.assertTrue(form.is_valid())
         obj = form.save()
         form.save_note(
@@ -189,20 +193,21 @@ class NoteModelBulkEditFormMixinTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.sites = dcim_models.Site.objects.all()[:2]
+        cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         cls.user = User.objects.create(username="formuser1")
 
     def test_note_bulk_edit(self):
-        form = SiteBulkEditForm(
-            model=dcim_models.Site, data={"pks": [site.pk for site in self.sites], "object_note": "Test"}
+        form = LocationBulkEditForm(
+            model=dcim_models.Location,
+            data={"pks": [location.pk for location in self.locations], "object_note": "Test"},
         )
         form.is_valid()
         form.save_note(
-            instance=self.sites[0],
+            instance=self.locations[0],
             user=self.user,
         )
         form.save_note(
-            instance=self.sites[1],
+            instance=self.locations[1],
             user=self.user,
         )
         notes = Note.objects.all()
@@ -218,7 +223,9 @@ class RelationshipModelFormTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.site = dcim_models.Site.objects.first()
+        cls.location = dcim_models.Location.objects.filter(
+            location_type=LocationType.objects.get(name="Campus")
+        ).first()
         cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
         cls.device_role = Role.objects.get_for_model(Device).first()
@@ -226,7 +233,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.status_active = Status.objects.get(slug="active")
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
-            site=cls.site,
+            location=cls.location,
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
@@ -234,7 +241,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
         cls.device_2 = dcim_models.Device.objects.create(
             name="Device 2",
-            site=cls.site,
+            location=cls.location,
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
@@ -242,7 +249,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
         cls.device_3 = dcim_models.Device.objects.create(
             name="Device 3",
-            site=cls.site,
+            location=cls.location,
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
@@ -252,8 +259,12 @@ class RelationshipModelFormTestCase(TestCase):
         cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.status_active)
         cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.status_active)
 
-        cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.site)
-        cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.site)
+        cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
+            name="VLAN Group 1", slug="vlan-group-1", location=cls.location
+        )
+        cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(
+            name="VLAN Group 2", slug="vlan-group-2", location=cls.location
+        )
 
         cls.relationship_1 = Relationship(
             name="BGP Router-ID",
@@ -286,7 +297,7 @@ class RelationshipModelFormTestCase(TestCase):
             "tenant": None,
             "manufacturer": cls.manufacturer.pk,
             "device_type": cls.device_type.pk,
-            "site": cls.site.pk,
+            "location": cls.location.pk,
             "rack": None,
             "face": None,
             "position": None,
@@ -298,7 +309,7 @@ class RelationshipModelFormTestCase(TestCase):
             "status": cls.status_active.pk,
         }
         cls.vlangroup_form_base_data = {
-            "site": cls.site.pk,
+            "location": cls.location.pk,
             "name": "New VLAN Group",
             "slug": "new-vlan-group",
         }
@@ -504,7 +515,7 @@ class RelationshipModelFormTestCase(TestCase):
         form = DeviceForm(
             instance=self.device_1,
             data={
-                "site": self.site,
+                "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
                 "status": self.status_active,
@@ -588,7 +599,7 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "name": self.vlangroup_1.name,
                 "slug": self.vlangroup_1.slug,
-                "site": self.site,
+                "location": self.location,
                 f"cr_{self.relationship_2.slug}__source": self.device_2.pk,
             },
         )
@@ -621,7 +632,7 @@ class RelationshipModelFormTestCase(TestCase):
         form = DeviceForm(
             instance=self.device_1,
             data={
-                "site": self.site,
+                "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
                 "status": self.status_active,
@@ -647,7 +658,7 @@ class RelationshipModelFormTestCase(TestCase):
         form = DeviceForm(
             instance=self.device_1,
             data={
-                "site": self.site,
+                "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
                 "status": self.status_active,
@@ -669,7 +680,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
-        cls.sites = dcim_models.Site.objects.all()[:2]
+        cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         cls.ipaddresses = [
             ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
             ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),
@@ -678,16 +689,16 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         cls.rel_1to1 = Relationship(
             name="Primary IP Address",
             slug="primary-ip-address",
-            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
         cls.rel_1to1.validated_save()
 
         cls.rel_1tom = Relationship(
-            name="Addresses per site",
-            slug="addresses-per-site",
-            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            name="Addresses per location",
+            slug="addresses-per-location",
+            source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
@@ -696,37 +707,37 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         cls.rel_mtom = Relationship(
             name="Multiplexing",
             slug="multiplexing",
-            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
         cls.rel_mtom.validated_save()
 
         cls.rel_mtom_s = Relationship(
-            name="Peer Sites",
-            slug="peer-sites",
-            source_type=ContentType.objects.get_for_model(dcim_models.Site),
-            destination_type=ContentType.objects.get_for_model(dcim_models.Site),
+            name="Peer Locations",
+            slug="peer-locations",
+            source_type=ContentType.objects.get_for_model(dcim_models.Location),
+            destination_type=ContentType.objects.get_for_model(dcim_models.Location),
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
         cls.rel_mtom_s.validated_save()
 
-    def test_site_form_rendering(self):
-        form = SiteBulkEditForm(dcim_models.Site)
+    def test_location_form_rendering(self):
+        form = LocationBulkEditForm(dcim_models.Location)
         self.assertEqual(
             set(form.relationships),
             {
-                "cr_addresses-per-site__destination",
+                "cr_addresses-per-location__destination",
                 "cr_multiplexing__destination",
-                "cr_peer-sites__peer",
+                "cr_peer-locations__peer",
                 "cr_primary-ip-address__destination",
             },
         )
 
         # One-to-many relationship is nullable but not editable
-        self.assertIn("cr_addresses-per-site__destination", form.fields)
-        self.assertTrue(form.fields["cr_addresses-per-site__destination"].disabled)
-        self.assertIn("cr_addresses-per-site__destination", form.nullable_fields)
+        self.assertIn("cr_addresses-per-location__destination", form.fields)
+        self.assertTrue(form.fields["cr_addresses-per-location__destination"].disabled)
+        self.assertIn("cr_addresses-per-location__destination", form.nullable_fields)
 
         # Many-to-many relationship has add/remove fields but is not directly editable or nullable
         self.assertNotIn("cr_multiplexing__destination", form.fields)
@@ -735,10 +746,10 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         self.assertNotIn("cr_multiplexing__destination", form.nullable_fields)
 
         # Symmetric many-to-many relationship has add/remove fields but is not directly editable or nullable
-        self.assertNotIn("cr_peer-sites__peer", form.fields)
-        self.assertIn("add_cr_peer-sites__peer", form.fields)
-        self.assertIn("remove_cr_peer-sites__peer", form.fields)
-        self.assertNotIn("cr_peer-sites__peer", form.nullable_fields)
+        self.assertNotIn("cr_peer-locations__peer", form.fields)
+        self.assertIn("add_cr_peer-locations__peer", form.fields)
+        self.assertIn("remove_cr_peer-locations__peer", form.fields)
+        self.assertNotIn("cr_peer-locations__peer", form.nullable_fields)
 
         # One-to-one relationship is nullable but not editable
         self.assertIn("cr_primary-ip-address__destination", form.fields)
@@ -750,15 +761,15 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         self.assertEqual(
             set(form.relationships),
             {
-                "cr_addresses-per-site__source",
+                "cr_addresses-per-location__source",
                 "cr_multiplexing__source",
                 "cr_primary-ip-address__source",
             },
         )
 
         # Many-to-one relationship is editable and nullable
-        self.assertIn("cr_addresses-per-site__source", form.fields)
-        self.assertIn("cr_addresses-per-site__source", form.nullable_fields)
+        self.assertIn("cr_addresses-per-location__source", form.fields)
+        self.assertIn("cr_addresses-per-location__source", form.nullable_fields)
 
         # Many-to-many relationship has add/remove fields but is not directly editable or nullable
         self.assertNotIn("cr_multiplexing__source", form.fields)
@@ -771,98 +782,100 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         self.assertTrue(form.fields["cr_primary-ip-address__source"].disabled)
         self.assertIn("cr_primary-ip-address__source", form.nullable_fields)
 
-    def test_site_form_nullification(self):
+    def test_location_form_nullification(self):
         """Test nullification of existing relationship-associations."""
         RelationshipAssociation.objects.create(
             relationship=self.rel_1to1,
-            source=self.sites[0],
+            source=self.locations[0],
             destination=self.ipaddresses[0],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_1to1,
-            source=self.sites[1],
+            source=self.locations[1],
             destination=self.ipaddresses[1],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_1tom,
-            source=self.sites[0],
+            source=self.locations[0],
             destination=self.ipaddresses[0],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_1tom,
-            source=self.sites[0],
+            source=self.locations[0],
             destination=self.ipaddresses[1],
         )
 
-        form = SiteBulkEditForm(model=dcim_models.Site, data={"pks": [site.pk for site in self.sites]})
+        form = LocationBulkEditForm(
+            model=dcim_models.Location, data={"pks": [location.pk for location in self.locations]}
+        )
         form.is_valid()
         form.save_relationships(
-            instance=self.sites[0],
-            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-site__destination"],
+            instance=self.locations[0],
+            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-location__destination"],
         )
         form.save_relationships(
-            instance=self.sites[1],
-            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-site__destination"],
+            instance=self.locations[1],
+            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-location__destination"],
         )
 
         self.assertEqual(0, RelationshipAssociation.objects.count())
 
-    def test_site_form_add_mtom(self):
+    def test_location_form_add_mtom(self):
         """Test addition of relationship-associations for many-to-many relationships."""
-        form = SiteBulkEditForm(
-            model=dcim_models.Site,
+        form = LocationBulkEditForm(
+            model=dcim_models.Location,
             data={
-                "pks": [self.sites[0].pk],
+                "pks": [self.locations[0].pk],
                 "add_cr_multiplexing__destination": [ipaddress.pk for ipaddress in self.ipaddresses],
-                "add_cr_peer-sites__peer": [self.sites[1].pk],
+                "add_cr_peer-locations__peer": [self.locations[1].pk],
             },
         )
         form.is_valid()
-        form.save_relationships(instance=self.sites[0], nullified_fields=[])
+        form.save_relationships(instance=self.locations[0], nullified_fields=[])
 
-        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom, source_id=self.sites[0].pk)
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom, source_id=self.locations[0].pk)
         self.assertEqual(2, ras.count())
         ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
         self.assertEqual(1, ras.count())
 
-    def test_site_form_remove_mtom(self):
+    def test_location_form_remove_mtom(self):
         """Test removal of relationship-associations for many-to-many relationships."""
         RelationshipAssociation.objects.create(
             relationship=self.rel_mtom,
-            source=self.sites[0],
+            source=self.locations[0],
             destination=self.ipaddresses[0],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_mtom,
-            source=self.sites[0],
+            source=self.locations[0],
             destination=self.ipaddresses[1],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_mtom,
-            source=self.sites[1],
+            source=self.locations[1],
             destination=self.ipaddresses[0],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_mtom,
-            source=self.sites[1],
+            source=self.locations[1],
             destination=self.ipaddresses[1],
         )
         RelationshipAssociation.objects.create(
             relationship=self.rel_mtom_s,
-            source=self.sites[0],
-            destination=self.sites[1],
+            source=self.locations[0],
+            destination=self.locations[1],
         )
-        form = SiteBulkEditForm(
-            model=dcim_models.Site,
+        form = LocationBulkEditForm(
+            model=dcim_models.Location,
             data={
-                "pks": [self.sites[0].pk, self.sites[1].pk],
+                "pks": [self.locations[0].pk, self.locations[1].pk],
                 "remove_cr_multiplexing__destination": [self.ipaddresses[0].pk],
-                "remove_cr_peer-sites__peer": [self.sites[0].pk, self.sites[1].pk],
+                "remove_cr_peer-locations__peer": [self.locations[0].pk, self.locations[1].pk],
             },
         )
         form.is_valid()
-        form.save_relationships(instance=self.sites[0], nullified_fields=[])
-        form.save_relationships(instance=self.sites[1], nullified_fields=[])
+        form.save_relationships(instance=self.locations[0], nullified_fields=[])
+        form.save_relationships(instance=self.locations[1], nullified_fields=[])
 
         ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom)
         self.assertEqual(2, ras.count())
@@ -878,7 +891,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
             model=ipam_models.IPAddress,
             data={
                 "pks": [self.ipaddresses[0].pk],
-                "cr_addresses-per-site__source": self.sites[0].pk,
+                "cr_addresses-per-location__source": self.locations[0].pk,
             },
         )
         form.is_valid()
@@ -892,7 +905,7 @@ class WebhookFormTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         console_port_content_type = ContentType.objects.get_for_model(dcim_models.ConsolePort)
-        site_content_type = ContentType.objects.get_for_model(dcim_models.Site)
+        location_content_type = ContentType.objects.get_for_model(dcim_models.Location)
         url = "http://example.com/test"
 
         webhook = Webhook.objects.create(
@@ -910,7 +923,7 @@ class WebhookFormTestCase(TestCase):
         cls.webhooks_data = [
             {
                 "name": "webhook-2",
-                "content_types": [site_content_type.pk],
+                "content_types": [location_content_type.pk],
                 "enabled": True,
                 "type_create": True,
                 "type_update": False,
@@ -949,7 +962,7 @@ class WebhookFormTestCase(TestCase):
 
         Example:
             Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | site, create, http://localhost
+            Webhook 2: dcim | location, create, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[0])
 
@@ -1087,3 +1100,31 @@ class JobEditFormTestCase(TestCase):
             error_msg["approval_required"][0]["message"],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class ConfigContextFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
+        form = ConfigContextForm()
+        self.assertIn("dynamic_groups", form.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is NOT present when feature flag is disabled."""
+        form = ConfigContextForm()
+        self.assertNotIn("dynamic_groups", form.fields)
+
+
+class ConfigContextFilterFormTestCase(TestCase):
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_with_dynamic_groups(self):
+        """Asserts that `ConfigContextForm.dynamic_group` is present when feature flag is enabled."""
+        context_filter_form = ConfigContextFilterForm()
+        self.assertIn("dynamic_groups", context_filter_form.fields)
+
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=False)
+    def test_without_dynamic_groups(self):
+        """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
+        context_filter_form = ConfigContextFilterForm()
+        self.assertNotIn("dynamic_groups", context_filter_form.fields)

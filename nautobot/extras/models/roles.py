@@ -7,12 +7,10 @@ from nautobot.extras.utils import RoleModelsQuery, extras_features
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Role(NameColorContentTypesModel):
@@ -38,7 +36,6 @@ class RoleField(ForeignKeyLimitedByContentTypes):
         kwargs.setdefault("to", Role)
         kwargs.setdefault("on_delete", models.PROTECT)
         kwargs.setdefault("blank", True)
-        kwargs.setdefault("related_name", "%(app_label)s_%(class)s_related")
         super().__init__(*args, **kwargs)
 
 
@@ -47,13 +44,13 @@ class RoleModelMixin(models.Model):
     Abstract base class for any model which may have roles.
     """
 
-    role = RoleField()
+    role = RoleField(null=True, blank=True)
 
     class Meta:
         abstract = True
 
 
-class RoleRequiredRoleModelMixin(RoleModelMixin):
+class RoleRequiredRoleModelMixin(models.Model):
     """
     Abstract base class for any model which may have roles with role field required.
     """

@@ -672,7 +672,9 @@ For a simple (insecure!) example, we could define a "constant-value" provider th
 
 ```python
 # secrets.py
+from django import forms
 from nautobot.apps.secrets import SecretsProvider
+from nautobot.utilities.forms import BootstrapMixin
 
 
 class ConstantValueSecretsProvider(SecretsProvider):
@@ -783,9 +785,6 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
 | [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
-
-!!! note
-    When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

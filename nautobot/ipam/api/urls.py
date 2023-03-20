@@ -14,9 +14,6 @@ router.register("route-targets", views.RouteTargetViewSet)
 # RIRs
 router.register("rirs", views.RIRViewSet)
 
-# Aggregates
-router.register("aggregates", views.AggregateViewSet)
-
 # Prefixes
 router.register("prefixes", views.PrefixViewSet)
 

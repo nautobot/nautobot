@@ -152,14 +152,14 @@ class ConfigContextTable(BaseTable):
             "weight",
             "is_active",
             "description",
-            "regions",
-            "sites",
+            "locations",
             "roles",
             "platforms",
             "cluster_groups",
             "clusters",
             "tenant_groups",
             "tenants",
+            "dynamic_groups",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -713,7 +713,7 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
-        log_objects = record.logs.all()
+        log_objects = record.job_log_entries.all()
         success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()

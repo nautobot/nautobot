@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
 from nautobot.core.forms import (
@@ -30,7 +29,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, Location, Platform, Rack
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -49,7 +48,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -118,8 +117,6 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "region",
-            "site",
             "location",
             "comments",
             "tags",
@@ -165,7 +162,6 @@ class ClusterBulkEditForm(
         model = Cluster
         nullable_fields = [
             "cluster_group",
-            "site",
             "location",
             "comments",
             "tenant",
@@ -174,7 +170,7 @@ class ClusterBulkEditForm(
 
 class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm):
     model = Cluster
-    field_order = ["q", "cluster_type", "region", "site", "cluster_group", "tenant_group", "tenant"]
+    field_order = ["q", "cluster_type", "location", "cluster_group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     cluster_type = DynamicModelMultipleChoiceField(
         queryset=ClusterType.objects.all(), to_field_name="slug", required=False
@@ -189,30 +185,22 @@ class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, Tenan
 
 
 class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, null_option="None")
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region": "$region"},
-    )
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
+        query_params={"content_type": "virtualization.cluster"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
         query_params={
-            "site": "$site",
             "location": "$location",
         },
     )
     devices = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         query_params={
-            "site": "$site",
             "location": "$location",
             "rack": "$rack",
             "cluster": "null",
@@ -221,8 +209,6 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
 
     class Meta:
         fields = [
-            "region",
-            "site",
             "location",
             "rack",
             "devices",
@@ -238,16 +224,6 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
 
     def clean(self):
         super().clean()
-
-        # If the Cluster is assigned to a Site, all Devices must be assigned to that Site.
-        if self.cluster.site is not None:
-            for device in self.cleaned_data.get("devices", []):
-                if device.site != self.cluster.site:
-                    raise ValidationError(
-                        {
-                            "devices": f"{device} belongs to a different site ({device.site}) than the cluster ({self.cluster.site})"
-                        }
-                    )
 
         # If the Cluster is assigned to a Location, all Devices must exist within that Location
         if self.cluster.location is not None:
@@ -325,25 +301,33 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                 interface_ids = self.instance.interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
-                interface_ips = IPAddress.objects.ip_family(family).filter(
-                    assigned_object_type=ContentType.objects.get_for_model(VMInterface),
-                    assigned_object_id__in=interface_ids,
-                )
-                if interface_ips:
-                    ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
+                interface_ip_assignments = IPAddressToInterface.objects.filter(
+                    vm_interface__in=interface_ids
+                ).prefetch_related("ip_address")
+                if interface_ip_assignments.exists():
+                    ip_list = [
+                        (
+                            assignment.ip_address.id,
+                            f"{assignment.ip_address.address} ({assignment.vm_interface})",
+                        )
+                        for assignment in interface_ip_assignments
+                        if assignment.ip_address.family == family
+                    ]
                     ip_choices.append(("Interface IPs", ip_list))
-                # Collect NAT IPs
-                nat_ips = (
-                    IPAddress.objects.select_related("nat_inside")
-                    .ip_family(family)
-                    .filter(
-                        nat_inside__assigned_object_type=ContentType.objects.get_for_model(VMInterface),
-                        nat_inside__assigned_object_id__in=interface_ids,
-                    )
-                )
-                if nat_ips:
-                    ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]
-                    ip_choices.append(("NAT IPs", ip_list))
+
+                    # Collect NAT IPs
+                    nat_ips = []
+                    for ip_assignment in interface_ip_assignments:
+                        if not ip_assignment.ip_address.nat_outside_list.exists():
+                            continue
+                        nat_ips.extend(
+                            [
+                                (ip.id, f"{ip.address} (NAT)")
+                                for ip in ip_assignment.ip_address.nat_outside_list.all()
+                                if ip.family == family
+                            ]
+                        )
+                    ip_choices.append(("NAT IPs", nat_ips))
                 self.fields[f"primary_ip{family}"].choices = ip_choices
 
         else:
@@ -422,8 +406,6 @@ class VirtualMachineFilterForm(
         "cluster_id",
         "status",
         "role",
-        "region",
-        "site",
         "location",
         "tenant_group",
         "tenant",
@@ -483,7 +465,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         label="Untagged VLAN",
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location_id": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -492,8 +474,14 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         label="Tagged VLANs",
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location_id": "null",
         },
+    )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP Addresses",
+        brief_mode=False,
     )
 
     class Meta:
@@ -505,6 +493,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "parent_interface",
             "bridge",
             "mac_address",
+            "ip_addresses",
             "mtu",
             "description",
             "mode",
@@ -533,11 +522,11 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
         )
 
-        # Add current site to VLANs query params
-        site = virtual_machine.site
-        if site:
-            self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
+        # Add current location to VLANs query params
+        location = virtual_machine.location
+        if location:
+            self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
 
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
@@ -578,7 +567,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location_id": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -586,7 +575,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location_id": "null",
         },
     )
     status = DynamicModelChoiceField(
@@ -608,11 +597,11 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
         )
 
-        # Add current site to VLANs query params
-        site = virtual_machine.site
-        if site:
-            self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
+        # Add current location to VLANs query params
+        location = virtual_machine.location
+        if location:
+            self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
 
 
 class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
@@ -674,7 +663,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location_id": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -682,7 +671,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "location_id": "null",
         },
     )
 
@@ -706,11 +695,11 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         if "virtual_machine" in self.initial:
             parent_obj = VirtualMachine.objects.filter(pk=self.initial["virtual_machine"]).first()
 
-            site = getattr(parent_obj.cluster, "site", None)
-            if site is not None:
-                # Add current site to VLANs query params
-                self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
+            location = getattr(parent_obj.cluster, "location", None)
+            if location is not None:
+                # Add current location to VLANs query params
+                self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
 
         self.fields["parent_interface"].choices = ()
         self.fields["parent_interface"].widget.attrs["disabled"] = True

@@ -1,5 +1,6 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
+import copy
 import inspect
 import json
 import logging
@@ -68,7 +69,7 @@ __all__ = [
     "TextVar",
 ]
 
-logger = logging.getLogger("nautobot.jobs")
+logger = logging.getLogger(__name__)
 
 
 class BaseJob:
@@ -102,7 +103,7 @@ class BaseJob:
         """
 
     def __init__(self):
-        self.logger = logging.getLogger(f"nautobot.jobs.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
         self.request = None
         self.active_test = "main"
@@ -1182,6 +1183,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # moved as we get closer to eliminating `run_job()` entirely. Hint: Probably inside of
         # `NautobotTask` class.
         finally:
+            _data = copy.deepcopy(job_result.data)
+            job_result.refresh_from_db()
+            job_result.data = _data
             try:
                 job_result.save()
             except IntegrityError:
@@ -1193,11 +1197,11 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         # TODO(jathan): Pretty sure this can also be handled by the backend, but
         # leaving it for now.
-        # record data about this jobrun in the schedule
-        if job_result.schedule:
-            job_result.schedule.total_run_count += 1
-            job_result.schedule.last_run_at = started
-            job_result.schedule.save()
+        # record data about this jobrun in the scheduled_job
+        if job_result.scheduled_job:
+            job_result.scheduled_job.total_run_count += 1
+            job_result.scheduled_job.last_run_at = started
+            job_result.scheduled_job.save()
 
         # Perform any post-run tasks
         # 2.0 TODO Remove post_run() method entirely

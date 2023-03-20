@@ -15,8 +15,8 @@ CIRCUIT_TERMINATION_PARENT = """
 {% load helpers %}
 {% if value.provider_network %}
 {{ value.provider_network|hyperlinked_object }}
-{% elif value.site %}
-{{ value.site|hyperlinked_object }}
+{% elif value.location %}
+{{ value.location|hyperlinked_object }}
 {% else %}
 {{ None|placeholder }}
 {% endif %}

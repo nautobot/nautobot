@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing.integration import SeleniumTestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
@@ -102,18 +102,25 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # ConfigContext
-        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
+        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, config_context_schema=schema)
 
         # Device
-        site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
+        device_ct = ContentType.objects.get_for_model(Device)
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
+        location_type.content_types.add(device_ct)
+        location = Location.objects.create(
+            name="location",
+            slug="location",
+            status=Status.objects.get_for_model(Location).first(),
+            location_type=location_type,
+        )
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role, _ = Role.objects.get_or_create(name="Device Role")
-        device_ct = ContentType.objects.get_for_model(Device)
         device_role.content_types.add(device_ct)
         Device.objects.create(
             name="device",
-            site=site,
+            location=location,
             device_type=device_type,
             role=device_role,
             status=Status.objects.get_for_model(Device).first(),
