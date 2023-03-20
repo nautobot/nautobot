@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -46,6 +47,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -205,6 +207,7 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """
 
+    permission_classes = [IsAuthenticated]
     queryset = ContentType.objects.order_by("app_label", "model")
     serializer_class = serializers.ContentTypeSerializer
     filterset_class = filters.ContentTypeFilterSet
@@ -827,6 +830,21 @@ class JobResultViewSet(
         logs = job_result.job_log_entries.all()
         serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+
+#
+# Job Button
+#
+
+
+class JobButtonViewSet(ModelViewSet, NotesViewSetMixin):
+    """
+    Manage Job Buttons through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobButton.objects.all()
+    serializer_class = serializers.JobButtonSerializer
+    filterset_class = filters.JobButtonFilterSet
 
 
 #
