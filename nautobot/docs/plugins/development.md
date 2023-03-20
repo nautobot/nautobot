@@ -453,8 +453,7 @@ namedtuple to assist in the configurations.
 
 ```python
 # __init__.py
-from nautobot.apps import NautobotAppConfig
-from nautobot.core.settings_funcs import ConstanceConfigItem
+from nautobot.apps import ConstanceConfigItem, NautobotAppConfig
 
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
