@@ -480,7 +480,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
         tasks = [
-            delete_custom_field_data.signature(obj.key, set(obj.content_types.values_list("pk", flat=True)))
+            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)))
             for obj in queryset
         ]
         return tasks

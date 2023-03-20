@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0072_migrate_custom_field_data"),
+        ("extras", "0073_migrate_custom_field_data"),
     ]
 
     operations = [

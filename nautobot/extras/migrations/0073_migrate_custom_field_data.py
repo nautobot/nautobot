@@ -53,7 +53,7 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0071_rename_slug_to_key_for_custom_field"),
+        ("extras", "0072_rename_slug_to_key_for_custom_field"),
     ]
 
     operations = [
