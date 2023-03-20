@@ -1,4 +1,5 @@
-import { Card, Tab, Table, Tabs } from "react-bootstrap"
+import { Tab, Tabs, TabList, TabPanel, TabPanels, Table } from "@nautobot/nautobot-ui"
+import { Card, CardHeader, CardBody, CardFooter } from "@chakra-ui/react"  // TODO: use nautobot-ui when available
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
 import { useParams } from "react-router-dom"
@@ -85,14 +86,21 @@ export default function ObjectRetrieve({ api_url }) {
       </small>
     </p>
     <div className="pull-right noprint"></div>
-    <Tabs defaultActiveKey="main" mountOnEnter={true}>
-      <Tab key="main" eventKey="main" title="Main">
+    <Tabs>
+      <TabList>
+        <Tab>Main</Tab>
+        <Tab>Advanced</Tab>
+        <Tab>Notes</Tab>
+        <Tab>Change Log</Tab>
+      </TabList>
+      <TabPanels>
+      <TabPanel key="main" eventKey="main" title="Main">
         <br />
         <Card>
-          <Card.Header>
+          <CardHeader>
             <strong>Main</strong>
-          </Card.Header>
-          <Table hover>
+          </CardHeader>
+          <Table>
             <tbody>
               {Object.keys(obj).map((key, idx) => <RenderRow identifier={key} value={obj[key]} advanced={false} key={idx} />)}
             </tbody>
@@ -102,27 +110,28 @@ export default function ObjectRetrieve({ api_url }) {
         <div dangerouslySetInnerHTML={{ __html: appHTML }} />
         <br />
         {AppFullWidthComponentsWithProps(route_name, obj)}
-      </Tab>
-      <Tab key="advanced" eventKey="advanced" title="Advanced">
+      </TabPanel>
+      <TabPanel key="advanced" eventKey="advanced" title="Advanced">
         <br />
         <Card>
-          <Card.Header>
+          <CardHeader>
             <strong>Advanced</strong>
-          </Card.Header>
-          <Table hover>
+          </CardHeader>
+          <Table>
             <tbody>
               {Object.keys(obj).map((key, idx) => <RenderRow identifier={key} value={obj[key]} advanced key={idx} />)}
             </tbody>
           </Table>
         </Card>
-      </Tab>
-      <Tab key="notes" eventKey="notes" title="Notes">
+      </TabPanel>
+      <TabPanel key="notes" eventKey="notes" title="Notes">
         Notes to be rendered here.
-      </Tab>
-      <Tab key="change_log" eventKey="change_log" title="Change Log">
+      </TabPanel>
+      <TabPanel key="change_log" eventKey="change_log" title="Change Log">
         <p>Changelog to be rendered here</p>
-      </Tab>
+      </TabPanel>
       {appConfig}
+      </TabPanels>
     </Tabs>
   </>)
 

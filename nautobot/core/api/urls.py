@@ -8,9 +8,9 @@ from drf_spectacular.views import (
 
 from nautobot.core.api.views import (
     APIRootView,
+    GetMenuAPIView,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
-    GetMenu,
     GraphQLDRFAPIView,
     StatusView,
     NautobotSpectacularSwaggerView,
@@ -18,10 +18,7 @@ from nautobot.core.api.views import (
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
-
-# TODO: these should be moved under `api/ui/` for consistency. See #3240.
 core_api_patterns = [
-    # Lookup Expr
     path(
         "filterset-fields/lookup-choices/",
         GetFilterSetFieldLookupExpressionChoicesAPIView.as_view(),
@@ -32,6 +29,11 @@ core_api_patterns = [
         GetFilterSetFieldDOMElementAPIView.as_view(),
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
+]
+ui_api_patterns = [
+    # Lookup Expr
+    path("core/", include((core_api_patterns, "core-api"))),
+    path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
 ]
 
 urlpatterns = [
@@ -54,9 +56,6 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-    # TODO: get-menu should be moved under `api/ui/`, not root-level as here. See #3240.
-    # Core Apps
-    path("get-menu/", GetMenu.as_view(), name="get-menu"),
-    # Core
-    path("core/", include((core_api_patterns, "core-api"))),
+    # UI
+    path("ui/", include((ui_api_patterns, "ui-api"))),
 ]

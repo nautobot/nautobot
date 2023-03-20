@@ -5,7 +5,7 @@
 Install and compile dependencies (note that you'll only use `--npm-install` on initial setup):
 
 ```no-highlight
-nautobot-server build --npm-install
+nautobot-server build_ui --npm-install
 ```
 
 Set the `NAUTOBOT_API_TOKEN` prior to starting the server:

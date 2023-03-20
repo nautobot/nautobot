@@ -497,7 +497,10 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-You can connect to the development server at `localhost:8080`, but normally you'll want to connect to the NGINX server instead (see below).
+!!! note
+    When first started in Docker Compose, the Nautobot development server container will automatically install dependencies for building the React UI for Nautobot, then build this UI. This may take several minutes before the server becomes ready to accept web connections.
+
+You can connect to the development server at `localhost:8080`, but normally you'll want to connect to the Node.js server instead (see below).
 
 ### Starting the Node.js Server
 
@@ -507,17 +510,10 @@ In development, you should run a Node.js server instance as well. This will hand
 | ----------------------- | ------------------------------- |
 | `invoke start`          | `cd nautobot_ui; npm run start` |
 
-You can connect to the Node.js server at `localhost:3000`, but normally you'll want to connect to the NGINX server instead (see below).
+!!! note
+    In the Docker Compose workflow, the Node.js server will delay starting until the Nautobot development server has finished the initial UI build, which may take several minutes. This is normal.
 
-### Starting the NGINX Server
-
-In development, the NGINX server ties together the Nautobot development server and the Node.js server into a single unified frontend, similar to the unified server environment that you'd normally run in production.
-
-| Docker Compose Workflow | Virtual Environment Workflow |
-| ----------------------- | ---------------------------- |
-| `invoke start`          | `TODO`                       |
-
-You can connect to the NGINX server at `localhost:8888` and log in using the superuser account you created earlier.
+You can connect to the Node.js server at `localhost:3000`.
 
 ### Starting the Worker Server
 

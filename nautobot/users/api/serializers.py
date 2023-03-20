@@ -1,7 +1,8 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from nautobot.core.api import (
     ContentTypeField,
@@ -113,3 +114,18 @@ class ObjectPermissionSerializer(ValidatedModelSerializer):
             "actions",
             "constraints",
         )
+
+
+class UserLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, attrs):
+        user = authenticate(
+            self.context["request"],
+            username=attrs["username"],
+            password=attrs["password"],
+        )
+        if not user:
+            raise ValidationError("invalid login detail.")
+        return {"user": user}
