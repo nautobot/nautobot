@@ -7,9 +7,7 @@ except ImportError:
 __version__ = metadata.version(__name__)
 
 
-from nautobot.core.signals import nautobot_database_ready
-from nautobot.core.settings_funcs import ConstanceConfigItem
-from nautobot.apps import NautobotAppConfig
+from nautobot.apps import ConstanceConfigItem, NautobotAppConfig, nautobot_database_ready
 
 from example_plugin.signals import nautobot_database_ready_callback
 
