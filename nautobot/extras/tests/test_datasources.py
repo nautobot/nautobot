@@ -291,84 +291,6 @@ class GitTest(TransactionTestCase):
                 warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
                 warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
 
-    def test_pull_git_repository_and_refresh_data_with_token(self, MockGitRepo):
-        """
-        The pull_git_repository_and_refresh_data job should correctly make use of a token.
-        """
-        with tempfile.TemporaryDirectory() as tempdir:
-            with self.settings(GIT_ROOT=tempdir):
-
-                def create_empty_repo(path, url):
-                    os.makedirs(path, exist_ok=True)
-                    return mock.DEFAULT
-
-                MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
-
-                # Check that token-based authentication is handled as expected
-                self.repo._token = "1:3@/?=ab@"
-                self.repo.save(trigger_resync=False)
-                # For verisimilitude, don't re-use the old request and job_result
-                self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
-                )
-
-                # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                self.assertEqual(
-                    self.job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
-                )
-                MockGitRepo.assert_called_with(
-                    os.path.join(tempdir, self.repo.slug), "http://1%3A3%40%2F%3F%3Dab%40@localhost/git.git"
-                )
-
-    def test_pull_git_repository_and_refresh_data_with_username_and_token(self, MockGitRepo):
-        """
-        The pull_git_repository_and_refresh_data job should correctly make use of a username + token.
-        """
-        with tempfile.TemporaryDirectory() as tempdir:
-            with self.settings(GIT_ROOT=tempdir):
-
-                def create_empty_repo(path, url):
-                    os.makedirs(path, exist_ok=True)
-                    return mock.DEFAULT
-
-                MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
-
-                # Check that username/password authentication is handled as expected
-                self.repo.username = "núñez"
-                self.repo._token = "1:3@/?=ab@"
-                self.repo.save(trigger_resync=False)
-                # For verisimilitude, don't re-use the old request and job_result
-                self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
-                )
-
-                # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                self.assertEqual(
-                    self.job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
-                )
-                MockGitRepo.assert_called_with(
-                    os.path.join(tempdir, self.repo.slug),
-                    "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
-                )
-
     def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
         """
         The pull_git_repository_and_refresh_data job should correctly make use of secrets.
@@ -384,10 +306,10 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
-                    handle.write("user1234")
+                    handle.write("núñez")
 
                 with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
-                    handle.write("1234abcd5678ef90")
+                    handle.write("1:3@/?=ab@")
 
                 username_secret = Secret.objects.create(
                     name="Git Username",
@@ -436,7 +358,7 @@ class GitTest(TransactionTestCase):
                 )
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
-                    "http://user1234:1234abcd5678ef90@localhost/git.git",
+                    "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
                 )
 
     def test_pull_git_repository_and_refresh_data_with_valid_data(self, MockGitRepo):

@@ -591,19 +591,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
         help_text="Only http:// and https:// URLs are presently supported",
     )
 
-    _token = forms.CharField(
-        required=False,
-        label="Token",
-        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text="Username for token authentication.<br><em>Deprecated</em> - use a secrets group instead",
-    )
-
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
@@ -619,8 +606,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "slug",
             "remote_url",
             "branch",
-            "username",
-            "_token",
             "secrets_group",
             "provided_contents",
             "tags",
@@ -670,18 +655,6 @@ class GitRepositoryBulkEditForm(NautobotBulkEditForm):
     branch = forms.CharField(
         required=False,
     )
-    _token = forms.CharField(
-        required=False,
-        label="Token",
-        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
