@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0030_migrate_region_and_site_data_to_locations"),
-        ("extras", "0068_rename_model_fields"),
+        ("extras", "0070_job__unique_name"),
         ("ipam", "0022_aggregate_to_prefix_data_migration"),
     ]
 

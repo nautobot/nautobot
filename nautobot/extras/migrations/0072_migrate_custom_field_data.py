@@ -51,9 +51,7 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
-        ("extras", "0069_rename_slug_to_key_for_custom_field"),
-        ("ipam", "0022_aggregate_to_prefix_data_migration"),
+        ("extras", "0071_rename_slug_to_key_for_custom_field"),
     ]
 
     operations = [
