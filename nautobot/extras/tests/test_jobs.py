@@ -646,6 +646,62 @@ class JobSiteCustomFieldTest(CeleryTestCase):
         self.assertEqual(site_2[0].cf["cf1"], "-")
 
 
+class JobButtonReceiverTest(TransactionTestCase):
+    """
+    Test job button receiver.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Initialize fake request that will be required to run jobs
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        site = Site.objects.create(name="Job Button Test Site 1")
+        content_type = ContentType.objects.get_for_model(Site)
+        self.data = {
+            "object_pk": site.pk,
+            "object_model_name": f"{content_type.app_label}.{content_type.model}",
+        }
+
+    def test_form_field(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        job_class, _job_model = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit"])
+
+    def test_hidden(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        _job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_model.hidden)
+
+    def test_is_job_button(self):
+
+        with self.subTest(expected=False):
+            module = "test_pass"
+            name = "TestPass"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertFalse(job_model.is_job_button_receiver)
+
+        with self.subTest(expected=True):
+            module = "test_job_button_receiver"
+            name = "TestJobButtonReceiverSimple"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertTrue(job_model.is_job_button_receiver)
+
+    def test_missing_receive_job_button_method(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverFail"
+        logging.disable(logging.ERROR)
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        logging.disable(logging.NOTSET)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+
+
 class JobHookReceiverTest(TransactionTestCase):
     """
     Test job hook receiver.

@@ -2,8 +2,9 @@ import time
 
 from django.conf import settings
 
+from nautobot.dcim.models import Device, Site
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver
+from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver, JobButtonReceiver
 
 
 name = "ExamplePlugin jobs"
@@ -85,4 +86,47 @@ class ExampleJobHookReceiver(JobHookReceiver):
         return False
 
 
-jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleJobHookReceiver)
+class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
+    class Meta:
+        name = "Example Simple Job Button Receiver"
+
+    def receive_job_button(self, obj):
+        self.log_info(obj=obj, message="Running Job Button Receiver.")
+        # Add job logic here
+
+
+class ExampleComplexJobButtonReceiver(JobButtonReceiver):
+    class Meta:
+        name = "Example Complex Job Button Receiver"
+
+    def _run_site_job(self, obj):
+        self.log_info(obj=obj, message="Running Site Job Button Receiver.")
+        # Run Site Job function
+
+    def _run_device_job(self, obj):
+        self.log_info(obj=obj, message="Running Device Job Button Receiver.")
+        # Run Device Job function
+
+    def receive_job_button(self, obj):
+        user = self.request.user
+        if isinstance(obj, Site):
+            if not user.has_perm("dcim.add_site"):
+                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Site.")
+            else:
+                self._run_site_job(obj)
+        if isinstance(obj, Device):
+            if not user.has_perm("dcim.add_device"):
+                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
+            else:
+                self._run_device_job(obj)
+        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+
+
+jobs = (
+    ExampleJob,
+    ExampleHiddenJob,
+    ExampleLoggingJob,
+    ExampleJobHookReceiver,
+    ExampleSimpleJobButtonReceiver,
+    ExampleComplexJobButtonReceiver,
+)

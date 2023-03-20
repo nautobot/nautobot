@@ -51,6 +51,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -113,6 +114,7 @@ from .nested_serializers import (  # noqa: F401
     NestedTagSerializer,
     NestedWebhookSerializer,
     NestedJobHookSerializer,
+    NestedJobButtonSerializer,
 )
 
 #
@@ -783,6 +785,7 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "installed",
             "enabled",
             "is_job_hook_receiver",
+            "is_job_button_receiver",
             "has_sensitive_variables",
             "has_sensitive_variables_override",
             "approval_required",
@@ -1056,6 +1059,30 @@ class JobLogEntrySerializer(BaseModelSerializer):
     @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
         return obj.created.isoformat()
+
+
+#
+# Job Button
+#
+
+
+class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
+    content_types = ContentTypeField(queryset=ContentType.objects.all(), many=True)
+
+    class Meta:
+        model = JobButton
+        fields = (
+            "url",
+            "job",
+            "name",
+            "content_types",
+            "text",
+            "weight",
+            "group_name",
+            "button_class",
+            "confirmation",
+        )
 
 
 #

@@ -59,7 +59,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.models.jobs import JobHook
+from nautobot.extras.models.jobs import JobHook, JobButton
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
@@ -1871,6 +1871,61 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
             status_code=400,
         )
+
+
+class JobButtonTest(APIViewTestCases.APIViewTestCase):
+    model = JobButton
+    brief_fields = ["display", "id", "name", "url"]
+    choices_fields = ["button_class"]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "JobButton4",
+                "text": "JobButton4",
+                "content_types": ["dcim.region"],
+                "job": Job.objects.get(job_class_name="TestJobButtonReceiverSimple").pk,
+            },
+            {
+                "name": "JobButton5",
+                "text": "JobButton5",
+                "content_types": ["circuits.circuit"],
+                "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            },
+        ]
+        site_type = ContentType.objects.get_for_model(Site)
+        device_type = ContentType.objects.get_for_model(Device)
+
+        site_jb = JobButton(
+            name="api-test-site",
+            text="API job button site text",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            weight=100,
+            confirmation=True,
+        )
+        site_jb.save()
+        site_jb.content_types.set([site_type])
+
+        device_jb = JobButton.objects.create(
+            name="api-test-device",
+            text="API job button device text",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            weight=100,
+            confirmation=True,
+        )
+        device_jb.save()
+        device_jb.content_types.set([device_type])
+
+        complex_jb = JobButton.objects.create(
+            name="api-test-complex",
+            text="API job button complex text",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            weight=100,
+            confirmation=True,
+        )
+        complex_jb.save()
+        complex_jb.content_types.set([device_type, site_type])
 
 
 class JobTestVersion13(

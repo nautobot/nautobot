@@ -1,6 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
     ComputedField,
@@ -13,8 +14,8 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    Note,
     JobHook,
+    Note,
     Relationship,
     Secret,
     SecretsGroup,
@@ -23,6 +24,8 @@ from nautobot.extras.models import (
     Webhook,
 )
 
+router = NautobotUIViewSetRouter()
+router.register("job-buttons", views.JobButtonUIViewSet)
 
 app_name = "extras"
 urlpatterns = [
@@ -482,6 +485,8 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
+    # Job Button Run
+    path("job-button/<uuid:pk>/run/", views.JobButtonRunView.as_view(), name="jobbutton_run"),
     # Notes
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
     path("notes/<slug:slug>/", views.NoteView.as_view(), name="note"),
@@ -668,3 +673,4 @@ urlpatterns = [
         kwargs={"model": Webhook},
     ),
 ]
+urlpatterns += router.urls
