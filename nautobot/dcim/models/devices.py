@@ -20,9 +20,7 @@ from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailov
 from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-if typing.TYPE_CHECKING:
-    from nautobot.ipam.models import IPAddress
-    from nautobot.dcim.models import Cable
+
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -34,6 +32,9 @@ from .device_components import (
     RearPort,
 )
 
+if typing.TYPE_CHECKING:
+    from nautobot.ipam.models import IPAddress
+    from nautobot.dcim.models import Cable
 
 __all__ = (
     "Device",
@@ -43,7 +44,6 @@ __all__ = (
     "Platform",
     "VirtualChassis",
 )
-
 
 
 #
