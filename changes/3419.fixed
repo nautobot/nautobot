@@ -1,1 +1,0 @@
-Fixed `test_queryset_to_csv` to format data fetched from the model.
