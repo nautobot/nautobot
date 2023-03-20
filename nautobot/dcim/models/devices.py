@@ -1,6 +1,6 @@
 import typing
 from collections import OrderedDict
-from typing import Tuple, Any, Optional
+from typing import Any, Collection, Dict, Optional, Tuple
 
 import yaml
 from django.contrib.contenttypes.fields import GenericRelation
@@ -303,14 +303,23 @@ class DeviceType(PrimaryModel):
         if self._original_rear_image and self.rear_image != self._original_rear_image:
             self._original_rear_image.delete(save=False)
 
-    def delete(self, *args: Any, **kwargs: Any) -> None:
-        super().delete(*args, **kwargs)
+    def delete(self, *args: Any, **kwargs: Any) -> Tuple[int, Dict[str, int]]:
+        deleted, rows_count = super().delete(*args, **kwargs)
 
         # Delete any uploaded image files
         if self.front_image:
-            self.front_image.delete(save=False)
+            extra_deleted, extra_rows_count = self.front_image.delete(save=False)
+            deleted += extra_deleted
+            for deleted_model, deleted_count in extra_rows_count.items():
+                rows_count.setdefault(deleted_model, 0)
+                rows_count[deleted_model] += deleted_count
         if self.rear_image:
-            self.rear_image.delete(save=False)
+            extra_deleted, extra_rows_count = self.rear_image.delete(save=False)
+            deleted += extra_deleted
+            for deleted_model, deleted_count in extra_rows_count.items():
+                rows_count.setdefault(deleted_model, 0)
+                rows_count[deleted_model] += deleted_count
+        return deleted, rows_count
 
     @property
     def display(self) -> str:
@@ -573,7 +582,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     def get_absolute_url(self) -> str:
         return reverse("dcim:device", args=[self.pk])
 
-    def validate_unique(self, exclude=None) -> None:
+    def validate_unique(self, exclude: Optional[Collection[str]] = None) -> None:
 
         # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
@@ -864,7 +873,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         """
         if self.virtual_chassis:
             return self.virtual_chassis.member_interfaces
-        return self.interfaces
+        return self.interfaces.all()
 
     def get_cables(self, pk_list: bool = False) -> typing.Union[QuerySet["Cable"], typing.List[str]]:
         """
