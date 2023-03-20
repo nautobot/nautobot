@@ -5,7 +5,7 @@
 {% block breadcrumbs %}
   <ol class="breadcrumb">
     <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
-    <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_settings.verbose_name }}</a>
     <li>{{ opts.verbose_name_plural|capfirst }}</li>
   </ol>
 {% endblock %}
@@ -45,11 +45,11 @@
                                 {# Handle App Configuration #}
                                 {% if "__" in item.name %}
                                     {% with app_name=item.name|split:"__"|first name=item.name|split:"__"|last %}
-                                        {% get_attr settings "PLUGINS_CONFIG" as app_config %}
+                                        {% get_attr settings "PLUGINS_CONFIG" as app_settings %}
                                         <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                            {% if app_config|get_item:app_name|get_item:name is not None %}
+                                            {% if app_settings|get_item:app_name|get_item:name is not None %}
                                                 <div class="alert alert-warning" role="alert">
-                                                    <code>{{ name }} = {{ app_config|get_item:app_name|get_item:name | quote_string }}</code>
+                                                    <code>{{ name }} = {{ app_settings|get_item:app_name|get_item:name | quote_string }}</code>
                                                     is defined in <code>{{ settings.SETTINGS_PATH }}</code>
                                                     under PLUGINS_CONFIG[{{app_name}}],
                                                     therefore it is not currently editable here.
