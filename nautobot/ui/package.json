@@ -61,6 +61,17 @@
       "last 1 safari version"
     ]
   },
+  "jest": {
+    "moduleNameMapper": {
+      "@components(.*)$": "<rootDir>/src/components$1",
+      "@utils(.*)$": "<rootDir>/src/utils$1",
+      "@views(.*)$": "<rootDir>/src/views$1",
+      "@layouts(.*)$": "<rootDir>/src/components/layouts$1",
+      "@common(.*)$": "<rootDir>/src/components/common$1",
+      "@core(.*)$": "<rootDir>/src/components/core$1",
+      "axios": "axios/dist/node/axios.cjs"
+    }
+  },
   "devDependencies": {
     "@chakra-ui/cli": "^2.3.0"
   }

@@ -165,7 +165,7 @@ def docker_compose(context, command, **kwargs):
 
 
 def run_command(context, command, service="nautobot", **kwargs):
-    """Wrapper to run a command locally or inside the nautobot container."""
+    """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
@@ -832,6 +832,21 @@ def performance_test(
         performance_snapshot=performance_snapshot,
     )
 
+
+@task(
+    help={
+        "label": "Specify a directory to test instead of running all Nautobot UI tests.",
+    },
+)
+def unittest_ui(
+    context,
+    label=None,
+):
+    """Run Nautobot UI unit tests."""
+    command = "npm run test -- --watchAll=false"
+    if label:
+        command += f" {label}"
+    run_command(context, command, service="nodejs")
 
 @task(
     help={

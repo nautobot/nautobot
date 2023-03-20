@@ -13,7 +13,7 @@ import axios from "axios";
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BSNavBar() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const { data, error } = useSWR("/api/ui/get-menu/", fetcher)
   const [ isLoggedIn, setIsLoggedIn] = useState(false)
@@ -26,7 +26,7 @@ export default function BSNavBar() {
     axios.get("/api/users/tokens/logout/")
     setIsLoggedIn(false)
     localStorage.removeItem("nautobot-user")
-    navigate("/login")
+    // navigate("/login")
   }
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
