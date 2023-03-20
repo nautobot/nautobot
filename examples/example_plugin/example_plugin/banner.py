@@ -2,9 +2,9 @@
 
 from typing import Optional
 
-from nautobot.apps.config import get_app_settings_or_config
 from django.utils.html import format_html
 
+from nautobot.apps.config import get_app_settings_or_config
 from nautobot.apps.ui import Banner, BannerClassChoices
 
 
