@@ -1823,7 +1823,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             ipaddress = instance.ip_addresses.select_related(
                 "vrf",
                 "tenant",
-                "assigned_object_type",
             )
             prefixes = instance.prefixes.select_related(
                 "location",

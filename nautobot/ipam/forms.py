@@ -1,5 +1,4 @@
 from django import forms
-from django.db.models import Q
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -27,7 +26,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Interface, Location, Rack
+from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
@@ -43,7 +42,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
+from nautobot.virtualization.models import Cluster, VirtualMachine
 from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
@@ -55,6 +54,7 @@ from .constants import (
 )
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Prefix,
     RIR,
     RouteTarget,
@@ -454,27 +454,6 @@ class PrefixFilterForm(
 
 
 class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
-    device = DynamicModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        initial_params={"interfaces": "$interface"},
-    )
-    interface = DynamicModelChoiceField(
-        queryset=Interface.objects.all(),
-        required=False,
-        query_params={"device_id": "$device"},
-    )
-    virtual_machine = DynamicModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        initial_params={"interfaces": "$vminterface"},
-    )
-    vminterface = DynamicModelChoiceField(
-        queryset=VMInterface.objects.all(),
-        required=False,
-        label="Interface",
-        query_params={"virtual_machine_id": "$virtual_machine"},
-    )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -525,7 +504,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "vrf_id": "$nat_vrf",
         },
     )
-    primary_for_parent = forms.BooleanField(required=False, label="Make this the primary IP for the device/VM")
 
     class Meta:
         model = IPAddress
@@ -536,7 +514,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "role",
             "dns_name",
             "description",
-            "primary_for_parent",
             "nat_rack",
             "nat_device",
             "nat_cluster",
@@ -555,90 +532,24 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         initial = kwargs.get("initial", {}).copy()
 
         if instance:
-            if isinstance(instance.assigned_object, Interface):
-                initial["interface"] = instance.assigned_object
-            elif isinstance(instance.assigned_object, VMInterface):
-                initial["vminterface"] = instance.assigned_object
             if instance.nat_inside:
-                nat_inside_parent = instance.nat_inside.assigned_object
-                if isinstance(nat_inside_parent, Interface):
-                    initial["nat_location"] = nat_inside_parent.device.location.pk
-                    if nat_inside_parent.device.rack:
-                        initial["nat_rack"] = nat_inside_parent.device.rack.pk
-                    initial["nat_device"] = nat_inside_parent.device.pk
-                elif isinstance(nat_inside_parent, VMInterface):
-                    initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
-                    initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
+                # TODO: Does this make sense with ip address to interface relationship changing to m2m?
+                nat_inside_parent = IPAddressToInterface.objects.filter(ip_address=instance.nat_inside)
+                if nat_inside_parent.count() == 1:
+                    nat_inside_parent = nat_inside_parent.first()
+                    if nat_inside_parent.interface is not None:
+                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
+                        if nat_inside_parent.interface.device.rack:
+                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
+                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                    elif nat_inside_parent.vm_interface is not None:
+                        initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
+                        initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
-
-        # Initialize primary_for_parent if IP address is already assigned
-        if self.instance.present_in_database and self.instance.assigned_object:
-            parent = self.instance.assigned_object.parent
-            if (
-                self.instance.address.version == 4
-                and parent.primary_ip4_id == self.instance.pk
-                or self.instance.address.version == 6
-                and parent.primary_ip6_id == self.instance.pk
-            ):
-                self.initial["primary_for_parent"] = True
-
-    def clean(self):
-        super().clean()
-
-        # Cannot select both a device interface and a VM interface
-        if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
-            raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
-
-        # Stash a copy of `assigned_object` before we replace it, so we can use it in `save()`.
-        self.instance._original_assigned_object = self.instance.assigned_object
-        self.instance.assigned_object = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-
-        # Primary IP assignment is only available if an interface has been assigned.
-        interface = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-        primary_for_parent = self.cleaned_data.get("primary_for_parent")
-        if primary_for_parent and not interface:
-            self.add_error(
-                "primary_for_parent",
-                "Only IP addresses assigned to an interface can be designated as primary IPs.",
-            )
-
-        # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
-        # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
-        # also checks for the `_primary_ip_unset_by_form` value.
-        device_primary_ip = Device.objects.filter(Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)).exists()
-        vm_primary_ip = VirtualMachine.objects.filter(
-            Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)
-        ).exists()
-
-        currently_primary_ip = device_primary_ip or vm_primary_ip
-
-        if not primary_for_parent and self.instance._original_assigned_object is not None and currently_primary_ip:
-            self.instance._primary_ip_unset_by_form = True
-
-    def save(self, *args, **kwargs):
-        ipaddress = super().save(*args, **kwargs)
-
-        interface = ipaddress.assigned_object
-        primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
-        primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
-
-        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
-        if interface and self.cleaned_data["primary_for_parent"]:
-            setattr(interface.parent, primary_ip_attr, ipaddress)
-            interface.parent.save()
-
-        # Or clear it as the primary, saving the `original_assigned_object.parent` if
-        # `_primary_ip_unset_by_form` was set in `clean()`
-        elif primary_ip_unset_by_form:
-            parent = ipaddress._original_assigned_object.parent
-            setattr(parent, primary_ip_attr, None)
-            parent.save()
-
-        return ipaddress
 
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
@@ -684,25 +595,6 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFi
         required=False,
         help_text="Assigned tenant",
     )
-    device = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent device of assigned interface (if any)",
-    )
-    virtual_machine = CSVModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent VM of assigned interface (if any)",
-    )
-    interface = CSVModelChoiceField(
-        queryset=Interface.objects.none(),  # Can also refer to VMInterface
-        required=False,
-        to_field_name="name",
-        help_text="Assigned interface",
-    )
-    is_primary = forms.BooleanField(help_text="Make this the primary IP for the assigned device", required=False)
 
     class Meta:
         model = IPAddress
@@ -712,60 +604,9 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFi
             "tenant",
             "status",
             "role",
-            "device",
-            "virtual_machine",
-            "interface",
-            "is_primary",
             "dns_name",
             "description",
         ]
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-
-            # Limit interface queryset by assigned device
-            if data.get("device"):
-                self.fields["interface"].queryset = Interface.objects.filter(
-                    **{f"device__{self.fields['device'].to_field_name}": data["device"]}
-                )
-
-            # Limit interface queryset by assigned device
-            elif data.get("virtual_machine"):
-                self.fields["interface"].queryset = VMInterface.objects.filter(
-                    **{f"virtual_machine__{self.fields['virtual_machine'].to_field_name}": data["virtual_machine"]}
-                )
-
-    def clean(self):
-        super().clean()
-
-        device = self.cleaned_data.get("device")
-        virtual_machine = self.cleaned_data.get("virtual_machine")
-        is_primary = self.cleaned_data.get("is_primary")
-
-        # Validate is_primary
-        if is_primary and not device and not virtual_machine:
-            raise forms.ValidationError("No device or virtual machine specified; cannot set as primary IP")
-
-    def save(self, *args, **kwargs):
-
-        # Set interface assignment
-        if self.cleaned_data["interface"]:
-            self.instance.assigned_object = self.cleaned_data["interface"]
-
-        ipaddress = super().save(*args, **kwargs)
-
-        # Set as primary for device/VM
-        if self.cleaned_data["is_primary"]:
-            parent = self.cleaned_data["device"] or self.cleaned_data["virtual_machine"]
-            if self.instance.address.version == 4:
-                parent.primary_ip4 = ipaddress
-            elif self.instance.address.version == 6:
-                parent.primary_ip6 = ipaddress
-            parent.save()
-
-        return ipaddress
 
 
 class IPAddressBulkEditForm(
@@ -814,7 +655,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "present_in_vrf_id",
         "status",
         "role",
-        "assigned_to_interface",
         "tenant_group",
         "tenant",
     ]
@@ -847,11 +687,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    assigned_to_interface = forms.NullBooleanField(
-        required=False,
-        label="Assigned to an interface",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
     tag = TagFilterField(model)
 
 
@@ -1041,11 +876,11 @@ class ServiceForm(NautobotModelForm):
         # Limit IP address choices to those assigned to interfaces of the parent device/VM
         if self.instance.device:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                interface__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
+                interfaces__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
             )
         elif self.instance.virtual_machine:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                vminterface__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
+                vm_interfaces__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
             )
         else:
             self.fields["ip_addresses"].choices = []

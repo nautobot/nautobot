@@ -2,7 +2,7 @@
 import logging
 from django.contrib.auth.models import Group
 
-logger = logging.getLogger("auth.Azure")
+logger = logging.getLogger(__name__)
 ROLES_GROUP_NAME = "roles"
 SUPERUSER_GROUPS = ["Admin"]
 STAFF_GROUPS = ["Admin"]

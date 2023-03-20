@@ -270,7 +270,7 @@ class IPAddressViewSet(NautobotModelViewSet):
         "role",
         "tenant",
         "vrf__tenant",
-    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
+    ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 

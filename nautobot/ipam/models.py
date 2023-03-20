@@ -2,7 +2,6 @@ import logging
 
 import netaddr
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -11,6 +10,7 @@ from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
+from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
@@ -21,7 +21,6 @@ from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .constants import (
-    IPADDRESS_ASSIGNMENT_MODELS,
     IPADDRESS_ROLES_NONUNIQUE,
     SERVICE_PORT_MAX,
     SERVICE_PORT_MIN,
@@ -575,16 +574,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         blank=True,
         null=True,
     )
-    assigned_object_type = models.ForeignKey(
-        to=ContentType,
-        limit_choices_to=IPADDRESS_ASSIGNMENT_MODELS,
-        on_delete=models.PROTECT,
-        related_name="+",
-        blank=True,
-        null=True,
-    )
-    assigned_object_id = models.UUIDField(blank=True, null=True, db_index=True)
-    assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
     nat_inside = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
@@ -610,8 +599,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         "tenant",
         "status",
         "role",
-        "assigned_object_type",
-        "assigned_object_id",
         "is_primary",
         "dns_name",
         "description",
@@ -677,13 +664,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     def clean(self):
         super().clean()
 
-        # Validate both assigned_object_type and assigned_object_id are either null or not null
-        fields = [self.assigned_object_type, self.assigned_object_id]
-        if not all(fields) and any(fields):
-            raise ValidationError(
-                {"__all__": "assigned_object_type and assigned_object_id must either both be null or both be non-null"}
-            )
-
         if self.address:
 
             # /0 masks are not acceptable
@@ -699,6 +679,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
                     vrf = f"VRF {self.vrf}" if self.vrf else "global table"
                     raise ValidationError({"address": f"Duplicate IP address found in {vrf}: {duplicate_ips.first()}"})
 
+        # TODO: update to work with interface M2M
         # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
         # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
         primary_ip_unset_by_form = getattr(self, "_primary_ip_unset_by_form", False)
@@ -726,10 +707,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
-    def to_objectchange(self, action, related_object=None, **kwargs):
-        # Annotate the assigned object, if any
-        return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
-
     def to_csv(self):
 
         # Determine if this IP is primary for a Device
@@ -739,18 +716,12 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         elif self.address.version == 6 and getattr(self, "primary_ip6_for", False):
             is_primary = True
 
-        obj_type = None
-        if self.assigned_object_type:
-            obj_type = f"{self.assigned_object_type.app_label}.{self.assigned_object_type.model}"
-
         return (
             self.address,
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
             self.role.name if self.role else None,
-            obj_type,
-            self.assigned_object_id,
             str(is_primary),
             self.dns_name,
             self.description,
@@ -806,6 +777,58 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             self.prefix_length = value
 
     mask_length = property(fset=_set_mask_length)
+
+
+class IPAddressToInterface(BaseModel):
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+    interface = models.ForeignKey(
+        "dcim.Interface", blank=True, null=True, on_delete=models.CASCADE, related_name="ip_address_assignments"
+    )
+    vm_interface = models.ForeignKey(
+        "virtualization.VMInterface",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="ip_address_assignments",
+    )
+    is_source = models.BooleanField(default=False, help_text="Is source address on interface")
+    is_destination = models.BooleanField(default=False, help_text="Is destination address on interface")
+    is_default = models.BooleanField(default=False, help_text="Is default address on interface")
+    is_preferred = models.BooleanField(default=False, help_text="Is preferred address on interface")
+    is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
+    is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
+    is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
+
+    def validate_unique(self, exclude=None):
+        """
+        Check uniqueness on combination of `ip_address`, `interface` and `vm_interface` fields
+        and raise ValidationError if check failed.
+        """
+        if IPAddressToInterface.objects.filter(
+            ip_address=self.ip_address,
+            interface=self.interface,
+            vm_interface=self.vm_interface,
+        ).exists():
+            raise ValidationError(
+                "IPAddressToInterface with this ip_address, interface and vm_interface already exists."
+            )
+
+    def clean(self):
+        super().clean()
+
+        if self.interface is not None and self.vm_interface is not None:
+            raise ValidationError(
+                {"interface": "Cannot use a single instance to associate to both an Interface and a VMInterface."}
+            )
+
+        if self.interface is None and self.vm_interface is None:
+            raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
+
+    def __str__(self):
+        if self.interface:
+            return f"{self.ip_address!s} {self.interface.device.name} {self.interface.name}"
+        else:
+            return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
 
 
 @extras_features(

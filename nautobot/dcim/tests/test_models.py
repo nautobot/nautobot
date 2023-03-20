@@ -44,7 +44,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.models import Tenant
 
 
@@ -1188,3 +1188,56 @@ class InterfaceTestCase(TestCase):
             f"Tagged VLAN with names {[self.other_location_vlan.name]} must all belong to the "
             f"same location as the interface's parent device, or it must be global.",
         )
+
+    def test_add_ip_addresses(self):
+        """Test the `add_ip_addresses` helper method on `Interface`"""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+        )
+        ips = list(IPAddress.objects.all()[:10])
+
+        # baseline (no interface to ip address relationships exists)
+        self.assertFalse(IPAddressToInterface.objects.filter(interface=interface).exists())
+
+        # add single instance
+        count = interface.add_ip_addresses(ips[-1])
+        self.assertEqual(count, 1)
+        self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], interface=interface).count(), 1)
+
+        # add multiple instances
+        count = interface.add_ip_addresses(ips[:5])
+        self.assertEqual(count, 5)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 6)
+        for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
+
+    def test_remove_ip_addresses(self):
+        """Test the `remove_ip_addresses` helper method on `Interface`"""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+        )
+        ips = list(IPAddress.objects.all()[:10])
+
+        # baseline (no interface to ip address relationships exists)
+        self.assertFalse(IPAddressToInterface.objects.filter(interface=interface).exists())
+
+        interface.add_ip_addresses(ips)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 10)
+
+        # remove single instance
+        count = interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(count, 1)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 9)
+
+        # remove multiple instances
+        count = interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(count, 5)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 4)
+
+        count = interface.remove_ip_addresses(ips)
+        self.assertEqual(count, 4)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 0)

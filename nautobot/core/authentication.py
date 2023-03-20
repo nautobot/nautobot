@@ -16,7 +16,7 @@ from nautobot.core.utils.permissions import (
 )
 from nautobot.users.models import ObjectPermission
 
-logger = logging.getLogger("nautobot.authentication")
+logger = logging.getLogger(__name__)
 
 
 class ObjectPermissionBackend(ModelBackend):

@@ -149,7 +149,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"circuits": [circuits[0].pk, circuits[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(circuits__in=circuits),
+            self.queryset.filter(circuits__in=circuits).distinct(),
         )
 
     def test_has_circuits(self):

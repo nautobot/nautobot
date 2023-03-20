@@ -299,7 +299,8 @@ def reassign_model_instances_to_locations(apps, model):
     Location = apps.get_model("dcim", "location")
     LocationType = apps.get_model("dcim", "locationtype")
     location_ct = ContentType.objects.get_for_model(Location)
-    model_class = apps.get_model("dcim", f"{model}")
+    location_type_ct = ContentType.objects.get_for_model(LocationType)
+    model_class = apps.get_model("dcim", model)
     model_ct = ContentType.objects.get_for_model(model_class)
     if model == "region":
         model_lt = LocationType.objects.get(name="Region")
@@ -319,6 +320,7 @@ def reassign_model_instances_to_locations(apps, model):
     Relationship = apps.get_model("extras", "relationship")
     RelationshipAssociation = apps.get_model("extras", "relationshipassociation")
     WebHook = apps.get_model("extras", "webhook")
+    ObjectPermission = apps.get_model("users", "objectpermission")
 
     computed_fields = ComputedField.objects.filter(content_type=model_ct)
     for cpf in computed_fields:
@@ -402,6 +404,11 @@ def reassign_model_instances_to_locations(apps, model):
     web_hooks = WebHook.objects.filter(content_types=model_ct)
     for wh in web_hooks:
         wh.content_types.add(location_ct)
+
+    object_permissions = ObjectPermission.objects.filter(object_types=model_ct)
+    for op in object_permissions:
+        op.object_types.add(location_ct)
+        op.object_types.add(location_type_ct)
 
 
 def migrate_site_and_region_data_to_locations(apps, schema_editor):

@@ -13,7 +13,7 @@ from .exceptions import PluginNotFound, PluginImproperlyConfigured
 
 
 # Logging object
-logger = logging.getLogger("nautobot.plugins")
+logger = logging.getLogger(__name__)
 
 
 def import_object(module_and_object):

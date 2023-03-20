@@ -303,18 +303,25 @@ class LocationFactory(PrimaryModelFactory):
     has_contact_email = NautobotBoolIterator()
     contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
-    @factory.iterator
-    def location_type():  # pylint: disable=no-method-argument
-        lts = LocationType.objects.all()
-        for lt in lts:
-            yield lt
+    has_parent = NautobotBoolIterator()
+
+    @factory.lazy_attribute_sequence
+    def location_type(self, n):
+        if not self.has_parent:
+            lts = ["Root", "Campus"]
+        else:
+            lts = ["Root", "Campus", "Building", "Floor", "Elevator", "Room", "Aisle"]
+        count = len(lts)
+        name = lts[n % count]
+        return LocationType.objects.get(name=name)
 
     @factory.lazy_attribute
     def parent(self):
         """
-        The parent attribute of all the location types other than root and campus are deterministic.
-        There is a 50% chance whether a root or campus type location (both nestable) have a parent.
+        Select a valid parent for this location based on the location type parent and nestable fields.
         """
+        if not self.has_parent:
+            return None
         candidate_parents = Q(pk=None)
         # LocationType that does have a parent
         if self.location_type.parent is not None:
@@ -324,9 +331,6 @@ class LocationFactory(PrimaryModelFactory):
         # LocationType that does not have a parent, but could be nestable
         else:
             if self.location_type.nestable:
-                # 50% chance to have a parent
-                if not Faker().pybool():
-                    return None
                 candidate_parents |= Q(location_type=self.location_type)
         parents = Location.objects.filter(candidate_parents)
         if parents.exists():

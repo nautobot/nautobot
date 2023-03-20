@@ -1,0 +1,32 @@
+{% extends 'ipam/ipaddress.html' %}
+{% load helpers %}
+{% load render_table from django_tables2 %}
+{% load static %}
+
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Interfaces</strong>
+                <div class="pull-right noprint">
+                    {% if request.user.is_authenticated %}
+                        <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#IPAddressInterfaceTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+                    {% endif %}
+                </div>
+                <div class="pull-right col-md-2 noprint">
+                    <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
+                </div>
+            </div>
+            {% render_table interface_table 'inc/table.html' %}
+        </div>
+    </form>
+    {% table_config_form interface_table %}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'js/connection_toggles.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/interface_filtering.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% static 'js/tableconfig.js' %}?v{{ settings.VERSION }}"></script>
+{% endblock javascript %}

@@ -9,7 +9,7 @@ from nautobot.core import celery
 from nautobot.core.utils import config
 
 # Get an instance of a logger
-logger = logging.getLogger("nautobot.releases")
+logger = logging.getLogger(__name__)
 
 
 @celery.nautobot_task

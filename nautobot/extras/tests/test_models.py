@@ -777,8 +777,17 @@ class JobModelTest(TestCase):
             self.assertTrue(job_model.installed)
             self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                else:
+                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
+                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+
+    def test_duplicate_job_name(self):
+        self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
+        self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta (2)").exists())
+        self.assertTrue(JobModel.objects.filter(name="This name is not unique.").exists())
+        self.assertTrue(JobModel.objects.filter(name="This name is not unique. (2)").exists())
 
     def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
