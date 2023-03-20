@@ -1,10 +1,12 @@
 # Job Buttons
 
++++ 1.5.14
+
 Job Buttons are predefined buttons that allow users to run jobs directly from within Nautobot object views. It uses the object where the button was pressed as the only input to the job. These are helpful when you want to start a job that requires minimal or no input without having to use the standard job form. For example, you may have a job that only requires a user to select a device. Instead, they can now go to that device in the web UI and click the associated Job Button instead.
 
 Job Buttons can be created in web UI located in the navbar under Jobs > Job Buttons. Each button can be associated with multiple Nautobot object types (site, device, prefix, etc.) and will be displayed on all of the associated object detail views. The text displayed on the button supports Jinja2 templating which allows for using [context data](#context-data) to dynamically update or [even be hidden under certain conditions](#conditional-rendering).
 
-The buttons appear at the top right corner of an object's individual detail page for each object type they are associated to. They can be either individual buttons or grouped together in a dropdown for better organization. In either case, the order of the buttons are influenced by the `weight` number configured for each button.
+The buttons appear at the top right corner of an object's individual detail page for each object type they are associated to. They can be either individual buttons or grouped together in a dropdown for better organization. Buttons will be sorted from left to right based on their `weight` with the lowest `weight` button on the left. Any groups of buttons will be displayed to the right of all ungrouped buttons. Group dropdown buttons will inherit the button class from the button with the lowest `weight` in the group and will be sorted from top to bottom with the lowest `weight` button on top.
 
 ## Configuration
 
@@ -18,7 +20,7 @@ The buttons appear at the top right corner of an object's individual detail page
 * **Confirmation** - Should the button pop up a confirmation dialog before running.
 
 !!! warning
-    As you can see, there is no `commit` option for a Job Button like there is for a normal Job. All Job Buttons will run `commit=True` **implicitly**.
+    As you can see, there is no `commit` option for a Job Button like there is for a normal Job. All Job Buttons will run with `commit=True` **implicitly**.
 
 ![Job Button Form](../../media/models/jobbutton_form.png "Job Button Form")
 
@@ -39,7 +41,7 @@ The following context data is available within the template when rendering a Job
 | `user`     | The current user (if authenticated) |
 | `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
 
-All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
+All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
 
 ## Conditional Rendering
 
@@ -74,6 +76,9 @@ The button will only appear if they have the permission to run jobs.
 ## Job Button Receivers
 
 Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](../../additional-features/jobs.md#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
+
+!!! note
+    Job Button Receivers still need to be [enabled through the web UI](../../additional-features/jobs.md#enabling-jobs-for-running) before they can be used just like other Jobs.
 
 ### The `receive_job_button()` Method
 
