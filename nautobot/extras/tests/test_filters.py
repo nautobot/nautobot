@@ -551,6 +551,8 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
         )
         for repo in repos:
             repo.save(trigger_resync=False)
+        repos[0].tags.set(Tag.objects.get_for_model(GitRepository))
+        repos[1].tags.set(Tag.objects.get_for_model(GitRepository)[:3])
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -776,6 +778,11 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Job.objects.all()
     filterset = JobFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        Job.objects.first().tags.set(Tag.objects.get_for_model(Job))
+        Job.objects.last().tags.set(Tag.objects.get_for_model(Job)[:3])
 
     def test_grouping(self):
         params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
@@ -1457,6 +1464,8 @@ class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         for secret in secrets:
             secret.validated_save()
+        secrets[0].tags.set(Tag.objects.get_for_model(Secret))
+        secrets[1].tags.set(Tag.objects.get_for_model(Secret)[:3])
 
     def test_provider(self):
         params = {"provider": ["environment-variable"]}
