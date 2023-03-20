@@ -959,20 +959,29 @@ class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
             jb.content_types.set([site_ct])
 
     def test_name(self):
-        params = {"name": ["JobButton1"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"name": ["JobButton1", "JobButton2"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=["JobButton1", "JobButton2"])
+        )
 
     def test_job(self):
-        params = {"job": [Job.objects.get(job_class_name="TestJobButtonReceiverSimple").pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"job": [Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=["JobButton3"])
+        )
 
     def test_weight(self):
         params = {"weight": [50]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=["JobButton3"])
+        )
 
     def test_search(self):
         params = {"q": "JobButton"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(name__in=["JobButton1", "JobButton2", "JobButton3"]),
+        )
 
 
 class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
