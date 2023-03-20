@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
+    JobButton,
     JobResult,
     Note,
     ObjectChange,
@@ -1473,8 +1474,10 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden Jobs, non-installed Jobs or JobHookReceivers as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False, is_job_hook_receiver=False)
+        """Don't include hidden Jobs, non-installed Jobs, JobHookReceivers or JobButtonReceivers as they won't appear in the UI by default."""
+        return self.model.objects.filter(
+            installed=True, hidden=False, is_job_hook_receiver=False, is_job_button_receiver=False
+        )
 
     @classmethod
     def setUpTestData(cls):
@@ -1903,6 +1906,55 @@ class JobTestCase(
 
         self.assertHttpStatus(response, 200)
         self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+
+
+class JobButtonTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = JobButton
+
+    @classmethod
+    def setUpTestData(cls):
+        job_buttons = (
+            JobButton.objects.create(
+                name="JobButton1",
+                text="JobButton1",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=True,
+            ),
+            JobButton.objects.create(
+                name="JobButton2",
+                text="JobButton2",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=False,
+            ),
+            JobButton.objects.create(
+                name="JobButton3",
+                text="JobButton3",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                confirmation=True,
+                weight=50,
+            ),
+        )
+
+        site_ct = ContentType.objects.get_for_model(Site)
+        for jb in job_buttons:
+            jb.content_types.set([site_ct])
+
+        cls.form_data = {
+            "content_types": [site_ct.pk],
+            "name": "jobbutton-4",
+            "text": "jobbutton text 4",
+            "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            "weight": 100,
+            "button_class": "default",
+            "confirmation": False,
+        }
 
 
 # TODO: Convert to StandardTestCases.Views

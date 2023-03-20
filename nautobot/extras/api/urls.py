@@ -43,6 +43,9 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 # Jobs
 router.register("jobs", views.JobViewSet)
 
+# Job Buttons
+router.register("job-buttons", views.JobButtonViewSet)
+
 # Job hooks
 router.register("job-hooks", views.JobHooksViewSet)
 
