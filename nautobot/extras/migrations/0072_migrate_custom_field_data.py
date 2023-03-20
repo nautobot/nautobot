@@ -2,6 +2,9 @@
 
 from django.db import migrations
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.extras.utils import FeatureQuery
+
+CF_KEY_TO_NAME = {}
 
 
 def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema_editor):
@@ -12,7 +15,7 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
     cf_keys = []
     for custom_field in CustomField.objects.all().order_by("created"):
         original_cf_key = custom_field.key
-        cf_key = original_cf_key
+        cf_key = slugify_dashes_to_underscores(original_cf_key)
         append_counter = 2
         while cf_key in cf_keys:
             cf_key_append = f"_{append_counter}"
@@ -20,12 +23,10 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
             cf_key = original_cf_key[:max_key_length] + cf_key_append
             append_counter += 1
         if cf_key != original_cf_key:
-            print(
-                f'  CustomField Class "{CustomField.key}" key "{original_cf_key}" is not unique, changing to "{cf_key}".'
-            )
-            custom_field.key = slugify_dashes_to_underscores(cf_key)
+            print(f'  CustomField Class "{CustomField.label}" key "{original_cf_key}" is being changed to "{cf_key}".')
+            custom_field.key = cf_key
             custom_field.save()
-        cf_keys.append(custom_field.key)
+        CF_KEY_TO_NAME[custom_field.key] = custom_field.name
 
     # Move name to labels
     # Filtering on null or empty labels
@@ -34,19 +35,20 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
     for cf in custom_fields:
         cf.label = cf.name
         cf.save()
-    # Migrate CustomFieldModel's _custom_field_data
-    custom_fields = CustomField.objects.all()
-    for cf in custom_fields:
-        # Migrate CustomFieldModel's _custom_field_data
-        content_type_pk_set = cf.content_types.all().values_list("pk", flat=True)
-        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-            model = apps.get_model(ct.app_label, ct.model)
-            for obj in model.objects.all():
-                # Create a new key value pair
-                obj._custom_field_data.setdefault(cf.key, obj._custom_field_data.get(cf.name, cf.default))
-                # Pop the old `cf.name` key
-                obj._custom_field_data.pop(cf.name, None)
-                obj.save()
+
+    for ct in ContentType.objects.filter(FeatureQuery("custom_fields").get_query()):
+        relevant_custom_fields = CustomField.objects.filter(content_types=ct)
+        if not relevant_custom_fields.exists():
+            continue
+        model = apps.get_model(ct.app_label, ct.model)
+        cf_list = []
+        for instance in model.objects.all():
+            new_custom_field_data = {}
+            for cf in relevant_custom_fields:  # TODO could probably cache the key<->name mapping for efficiency
+                new_custom_field_data[cf.key] = instance._custom_field_data.pop(CF_KEY_TO_NAME.get(cf.key), None)
+            instance._custom_field_data = new_custom_field_data
+            cf_list.append(instance)
+        model.objects.bulk_update(cf_list, ["_custom_field_data"], 1000)
 
 
 class Migration(migrations.Migration):

@@ -653,7 +653,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         # Add custom field headers, if any
         if hasattr(queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(queryset.model):
-                headers.append("cf_" + custom_field.key)
+                headers.append(custom_field.add_prefix_to_cf_key())
                 custom_fields.append(custom_field.key)
 
         csv_data.append(",".join(headers))
@@ -1009,7 +1009,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 # Update custom fields
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
-                        # [3:] is truncating the "cf_" from the field_name
                         obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]

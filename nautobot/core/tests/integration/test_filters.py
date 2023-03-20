@@ -31,7 +31,6 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
 
-        # TODO(timizuo): changing these from name to slug when resolving issue #824
         self.cf_text_field_label = "Text Field"
         self.cf_integer_field_label = "Integer Field"
         self.cf_select_field_label = "Select Field"
@@ -139,9 +138,9 @@ class ListViewFilterTestCase(SeleniumTestCase):
         """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')
 
-        text_field_name = "cf_" + self.custom_fields[0].key
-        integer_field_name = "cf_" + self.custom_fields[1].key
-        select_field_name = "cf_" + self.custom_fields[2].key
+        text_field_name = self.custom_fields[0].add_prefix_to_cf_key()
+        integer_field_name = self.custom_fields[1].add_prefix_to_cf_key()
+        select_field_name = self.custom_fields[2].add_prefix_to_cf_key()
         apply_btn_xpath = "//div[@id='default-filter']//button[@type='submit']"
 
         # Open the filter modal, configure filter and apply filter

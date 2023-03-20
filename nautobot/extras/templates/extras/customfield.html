@@ -8,10 +8,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.extras.change_customfield %}
-            {% edit_button object key="key" %}
+            {% edit_button object key="pk" %}
         {% endif %}
         {% if perms.extras.delete_customfield %}
-            {% delete_button object key="key" %}
+            {% delete_button object key="pk" %}
         {% endif %}
 {% endblock buttons %}
 

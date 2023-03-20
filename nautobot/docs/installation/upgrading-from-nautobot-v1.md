@@ -51,6 +51,7 @@
 |                         | `virtualization_virtualmachine_related` | `virtual_machines`                             |
 | CustomFieldChoice       | `field`                                 | `custom_field`                                 |
 | CustomField             | `choices`                               | `custom_field_choices`                         |
+|                         | `slug`                                  | `key`                                          |
 | Device                  | `consoleports`                          | `console_ports`                                |
 |                         | `consoleserverports`                    | `console_server_ports`                         |
 |                         | `devicebays`                            | `device_bays`                                  |
@@ -137,6 +138,7 @@
 | Cluster            | `site`        |
 | ConfigContext      | `sites`       |
 |                    | `regions`     |
+| CustomField        | `name`        |
 | Device             | `site`        |
 | InventoryItem      | `lft`         |
 |                    | `rght`        |
@@ -239,6 +241,7 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 | ConfigContext           | `schema`               | `config_context_schema`       |
 | Cluster                 | `group`                | `cluster_group`               |
 |                         | `type`                 | `cluster_type`                |
+| CustomField             | `slug`                 | `key`                         |
 | CustomFieldChoice       | `field`                | `custom_field`                |
 | Device                  | `device_role`          | `role`                        |
 |                         | `local_context_data`   | `local_config_context_data`   |
@@ -312,7 +315,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |                         | `type`                    | `circuit_type`                   | `/circuits/circuits/?circuit_type=<uuid/slug>`                            |
 | ConsolePort             | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
 | ConsoleServerPort       | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
-| CustomFieldChoice       | `field`                   | `custom_field`                   | `/extras/custom-field-choices/?custom_field=<uuid/name>`                  |
+| CustomFieldChoice       | `field`                   | `custom_field`                   | `/extras/custom-field-choices/?custom_field=<uuid/key>`                   |
 | Device                  | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
 |                         | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
 |                         | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
@@ -419,16 +422,17 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 Below is a table documenting [corrected filter field changes](../release-notes/version-2.0.md#corrected-filter-fields-2804) in v2.x.
 
-| Model  | Changed Filter Field   | Before                                     | After                                                                                    |
-|--------|------------------------|--------------------------------------------|------------------------------------------------------------------------------------------|
-| Device | `console_ports`        | `/dcim/devices/?console_ports=True`        | `/dcim/devices/?console_ports=<uuid>` or `?has_console_ports=<True/False>`               |
-|        | `console_server_ports` | `/dcim/devices/?console_server_ports=True` | `/dcim/devices/?console_server_ports=<uuid>` or `?has_console_server_ports=<True/False>` |
-|        | `device_bays`          | `/dcim/devices/?device_bays=True`          | `/dcim/devices/?device_bays=<uuid>` or `?has_device_bays=<True/False>`                   |
-|        | `front_ports`          | `/dcim/devices/?front_ports=True`          | `/dcim/devices/?front_ports=<uuid>` or `?has_front_ports=<True/False>`                   |
-|        | `interfaces`           | `/dcim/devices/?interfaces=True`           | `/dcim/devices/?interfaces=<uuid>` or `?has_interfaces=<True/False>`                     |
-|        | `power_ports`          | `/dcim/devices/?power_ports=True`          | `/dcim/devices/?power_ports=<uuid>` or `?has_power_ports=<True/False>`                   |
-|        | `power_outlets`        | `/dcim/devices/?power_outlets=True`        | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`               |
-|        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                     |
+| Model                   | Changed Filter Field   | Before                                                  | After                                                                                   |
+|-------------------------|------------------------|---------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| CustomFieldChoice       | `custom_field`         | `/extras/custom-field-choices/?custom_field=<uuid/name>`| `/extras/custom-field-choices/?custom_field=<uuid/key>`                                 |
+| Device                  | `console_ports`        | `/dcim/devices/?console_ports=True`                     | `/dcim/devices/?console_ports=<uuid>` or `?has_console_ports=<True/False>`              |
+|                         | `console_server_ports` | `/dcim/devices/?console_server_ports=True`              | `/dcim/devices/?console_server_ports=<uuid>` or `?has_console_server_ports=<True/False>`|
+|                         | `device_bays`          | `/dcim/devices/?device_bays=True`                       | `/dcim/devices/?device_bays=<uuid>` or `?has_device_bays=<True/False>`                  |
+|                         | `front_ports`          | `/dcim/devices/?front_ports=True`                       | `/dcim/devices/?front_ports=<uuid>` or `?has_front_ports=<True/False>`                  |
+|                         | `interfaces`           | `/dcim/devices/?interfaces=True`                        | `/dcim/devices/?interfaces=<uuid>` or `?has_interfaces=<True/False>`                    |
+|                         | `power_ports`          | `/dcim/devices/?power_ports=True`                       | `/dcim/devices/?power_ports=<uuid>` or `?has_power_ports=<True/False>`                  |
+|                         | `power_outlets`        | `/dcim/devices/?power_outlets=True`                     | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`              |
+|                         | `rear_ports`           | `/dcim/devices/?rear_ports=True`                        | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 
 ### Removed Filter Fields
 

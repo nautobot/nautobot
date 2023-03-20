@@ -35,7 +35,7 @@ from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTy
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.utils import check_if_key_is_graphql_safe, FeatureQuery, extras_features
 
 logger = logging.getLogger(__name__)
 
@@ -415,6 +415,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def clean(self):
         super().clean()
 
+        check_if_key_is_graphql_safe(self.key)
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)

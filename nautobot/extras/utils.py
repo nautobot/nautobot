@@ -9,6 +9,7 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.db.models import Q
 from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
@@ -494,6 +495,19 @@ def remove_prefix_from_cf_key(field_name):
     Helper method to remove the "cf_" prefix
     """
     return field_name[3:]
+
+
+def check_if_key_is_graphql_safe(key):
+    """
+    Helper method to check if a key field is Python/GraphQL safe.
+    Used in CustomField for now, should be used in ComputedField and Relationship as well.
+    """
+    if key[0].isdigit():
+        raise ValidationError({"key": "The first letter of the CustomField key cannot be a number"})
+    if " " in key:
+        raise ValidationError({"key": 'There cannot be whitespaces " " in CustomField key'})
+    if "-" in key:
+        raise ValidationError({"key": 'There cannot be hypens "-" in CustomField key'})
 
 
 def migrate_role_data(
