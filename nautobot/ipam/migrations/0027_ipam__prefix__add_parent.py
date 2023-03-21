@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
-                related_name="child_prefixes",
+                related_name="children",
                 to="ipam.prefix",
             ),
         ),

@@ -215,8 +215,8 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(list(self.child1.ancestors(ascending=True)), [self.parent, self.root])
         self.assertEqual(list(self.child1.ancestors(include_self=True)), [self.root, self.parent, self.child1])
 
-        # get_children()
-        self.assertEqual(list(self.parent.get_children()), [self.child1, self.child2])
+        # children.all()
+        self.assertEqual(list(self.parent.children.all()), [self.child1, self.child2])
 
         # descendants()
         self.assertEqual(list(self.root.descendants()), [self.parent, self.child1, self.child2])
@@ -224,16 +224,16 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
             list(self.root.descendants(include_self=True)), [self.root, self.parent, self.child1, self.child2]
         )
 
-        # get_root()
-        self.assertEqual(self.child1.get_root(), self.root)
-        self.assertIsNone(self.root.get_root())
+        # root()
+        self.assertEqual(self.child1.root(), self.root)
+        self.assertIsNone(self.root.root())
 
-        # get_siblings()
-        self.assertEqual(list(self.child1.get_siblings()), [self.child2])
-        self.assertEqual(list(self.child1.get_siblings(include_self=True)), [self.child1, self.child2])
+        # siblings()
+        self.assertEqual(list(self.child1.siblings()), [self.child2])
+        self.assertEqual(list(self.child1.siblings(include_self=True)), [self.child1, self.child2])
         parent2 = Prefix.objects.create(prefix="101.102.0.128/25", status=self.status)
-        self.assertEqual(list(self.parent.get_siblings()), [parent2])
-        self.assertEqual(list(self.parent.get_siblings(include_self=True)), [self.parent, parent2])
+        self.assertEqual(list(self.parent.siblings()), [parent2])
+        self.assertEqual(list(self.parent.siblings(include_self=True)), [self.parent, parent2])
 
     # TODO(jathan): When Namespaces are implemented, these tests must be extended to assert it.
     def test_reparenting(self):
@@ -250,12 +250,21 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         num_deleted, _ = self.parent.delete(force_delete=True)
         self.assertEqual(num_deleted, 1)
 
-        self.assertEqual(list(self.root.get_children()), [self.child1, self.child2])
+        self.assertEqual(list(self.root.children.all()), [self.child1, self.child2])
         self.child1.refresh_from_db()
         self.child2.refresh_from_db()
         self.assertEqual(self.child1.parent, self.root)
         self.assertEqual(self.child2.parent, self.root)
         self.assertEqual(list(self.child1.ancestors()), [self.root])
+
+        # Add /25 back in as a partn and assert that child1/child2 now have it as their parent, and
+        # /24 is its parent.
+        self.parent.save()  # This creates another Prefix using the same instance.
+        self.child1.refresh_from_db()
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child1.parent, self.parent)
+        self.assertEqual(self.child2.parent, self.parent)
+        self.assertEqual(list(self.child1.ancestors()), [self.root, self.parent])
 
     def test_descendants(self):
         vrfs = VRF.objects.all()[:3]

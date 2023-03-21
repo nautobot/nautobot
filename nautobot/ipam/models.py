@@ -396,6 +396,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     Prefixes can optionally be assigned to Locations and VRFs.
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
+    Prefixes are always ordered by `network` and `prefix_length`.
     """
 
     network = VarbinaryIPField(
@@ -414,10 +415,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "self",
         blank=True,
         null=True,
-        related_name="child_prefixes",  # Maybe child_prefixes? Align with "child_ips"?
+        related_name="children",  # `IPAddress` to use `related_name="ip_addresses"`
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this Prefix.",
     )
+    # ip_version is set internally just like network, broadcast, and prefix_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressFamilyChoices,
         null=True,
@@ -588,6 +590,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
                 )
 
     def delete(self, *args, **kwargs):
+        """
+        A Prefix with children will be impossible to delete and raise a `ProtectedError`.
+
+        Passing `force_delete=True` will catch the error and explicitly update the
+        `protected_objects` from the exception setting their parent to the old parent of this
+        prefix, and then this prefix will be deleted.
+        """
         force_delete = kwargs.pop("force_delete", False)
 
         try:
@@ -609,17 +618,15 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
-        for_update = kwargs.pop("for_update", False)
-
-        # Determine if a parent exists.
-        supernets = self.supernets(for_update=for_update)
+        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        supernets = self.supernets()
         if supernets:
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
             self.parent = parent
 
         super().save(*args, **kwargs)
 
-        # Determine our subnets and reparent them.
+        # Determine the subnets and reparent them to this prefix.
         self.reparent_subnets()
 
     def to_csv(self):
@@ -661,8 +668,23 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         return None
 
     def reparent_subnets(self):
-        """Determine the list of child nodes and set the parent to self."""
-        return self.subnets(direct=True, for_update=True).update(parent=self)
+        """
+        Determine the list of child nodes and set the parent to self.
+
+        This query is similiar performing update from the query returned by `subnets(direct=True)`,
+        but explicitly filters for subnets of the parent of this Prefix so they can be reparented.
+        """
+        query = Prefix.objects.select_for_update().filter(
+            ~models.Q(id=self.id),  # Don't include yourself...
+            parent_id=self.parent_id,
+            prefix_length__gt=self.prefix_length,
+            ip_version=self.ip_version,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            # namespace=self.namespace,
+        )
+
+        return query.update(parent=self)
 
     def supernets(self, direct=False, include_self=False, for_update=False):
         """
@@ -736,7 +758,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         """
         Returns whether I am leaf node (no children).
         """
-        return not self.child_prefixes.exists()
+        return not self.children.exists()
 
     def is_root_node(self):
         """
@@ -757,10 +779,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             query = query.reverse()
         return query
 
-    def get_children(self):
-        """Return my immediate children."""
-        return self.subnets(direct=True)
-
     def descendants(self, include_self=False):
         """
         Return all of my children!
@@ -770,13 +788,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         """
         return self.subnets(include_self=include_self)
 
-    def get_root(self):
+    def root(self):
         """
         Returns the root node (the parent of all of my ancestors).
         """
         return self.ancestors().first()
 
-    def get_siblings(self, include_self=False):
+    def siblings(self, include_self=False):
         """
         Return my siblings. Root nodes are siblings to other root nodes.
 
@@ -788,13 +806,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             query = query.exclude(id=self.id)
 
         return query
-
-    def get_child_prefixes(self):
-        """
-        Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
-        Prefixes belonging to any VRF.
-        """
-        return self.descendants()
 
     def get_child_ips(self):
         """

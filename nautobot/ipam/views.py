@@ -367,7 +367,7 @@ class PrefixPrefixesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Child prefixes table
         child_prefixes = (
-            instance.get_child_prefixes()
+            instance.descendants()
             .restrict(request.user, "view")
             # .select_related("location", "status", "role", "vlan")
             .select_related("location", "status", "role", "vlan", "namespace")
