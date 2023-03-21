@@ -498,12 +498,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     # Uniqueness enforcement tests
     #
 
-    def test_duplicate_global(self):
-        """With ENFORCE_GLOBAL_UNIQUE hard-coded, this should raise a ValidationError."""
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertRaises(ValidationError, duplicate_prefix.clean)
-
     def test_duplicate_global_unique(self):
         """With ENFORCE_GLOBAL_UNIQUE hard-coded, this should raise a ValidationError."""
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
