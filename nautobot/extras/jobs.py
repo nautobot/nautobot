@@ -101,6 +101,7 @@ class BaseJob(Task):
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
+        - provides_dry_run (bool)
         - task_queues (list)
         """
 
@@ -390,6 +391,10 @@ class BaseJob(Task):
         return getattr(cls.Meta, "has_sensitive_variables", True)
 
     @classproperty
+    def provides_dry_run(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "provides_dry_run", False)
+
+    @classproperty
     def task_queues(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "task_queues", [])
 
@@ -465,6 +470,11 @@ class BaseJob(Task):
 
         job_model = JobModel.objects.get_for_class_path(self.class_path)
         task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
+
+        if not self.provides_dry_run:
+            # Hide the commit field for read only jobs and jobs that don't support dry run
+            form.fields["_commit"].widget = forms.HiddenInput()
+            form.fields["_commit"].initial = False
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)

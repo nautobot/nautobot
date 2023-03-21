@@ -1,6 +1,7 @@
 import time
 
 from django.conf import settings
+from django.db import transaction
 
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
@@ -122,7 +123,31 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
 
 
+class ExampleDryRunJob(Job):
+    class Meta:
+        approval_required = True
+        has_sensitive_variables = False
+        provides_dry_run = True
+        description = "Example job to remove serial number on all devices, supports dry run mode."
+
+    def run(self, data, commit):
+        try:
+            with transaction.atomic():
+                devices_with_serial = Device.objects.exclude(serial="")
+                log_msg = f"Removing serial on {devices_with_serial.count()} devices."
+                if not commit:
+                    log_msg += " DRYRUN"
+                self.log_info(log_msg)
+                for device in devices_with_serial:
+                    if commit:
+                        device.serial = ""
+                        device.save()
+        except Exception:
+            self.log_failure(f"{self.__name__} failed. Database changes rolled back.")
+
+
 jobs = (
+    ExampleDryRunJob,
     ExampleJob,
     ExampleHiddenJob,
     ExampleLoggingJob,
