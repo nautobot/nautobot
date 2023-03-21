@@ -3,8 +3,9 @@
 
 {% block title %}Change Log{% endblock %}
 
-{% block sidebar %}
-    <div class="text-muted">
+{% block content %}
+    {{ block.super }}
+    <div class="text-muted pull-right">
         Change log retention:
         {% if "CHANGELOG_RETENTION"|settings_or_config %}
             {{ "CHANGELOG_RETENTION"|settings_or_config }} days

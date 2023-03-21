@@ -45,7 +45,6 @@ The base template for listing objects is `generic/object_list.html`, with the fo
 
 * `buttons`: may provide a set of buttons at the top right of the page, to the
   left of the table configuration button.
-* `sidebar`: may implement a sidebar below the search form on the right.
 * `bulk_buttons`: may be a set of buttons at the bottom of the table, to the
   left of potential bulk edit or delete buttons.
 

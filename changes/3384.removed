@@ -1,0 +1,2 @@
+Removed `block sidebar` from aggregate_list.html and objectchange_list.html.
+Removed documenation about `block sidebar` from docs/development/templates.md.
