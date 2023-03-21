@@ -140,7 +140,7 @@ class FilterTestCases:
                 self.skipTest("Not a PrimaryModel")
 
             # Find an instance with at least two tags (should be common given our factory design)
-            for instance in self.queryset:
+            for instance in list(self.queryset):
                 if len(instance.tags.all()) >= 2:
                     tags = list(instance.tags.all()[:2])
                     break
