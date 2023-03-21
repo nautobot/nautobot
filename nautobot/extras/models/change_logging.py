@@ -52,7 +52,7 @@ class ChangeLoggedModel(models.Model):
         route = get_route_for_model(self, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug", "key"]
+        fields = ["pk", "slug"]
         for field in fields:
             if not hasattr(self, field):
                 continue

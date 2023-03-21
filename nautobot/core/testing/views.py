@@ -113,12 +113,6 @@ class ModelViewTestCase(ModelTestCase):
                 return reverse(url_format.format(action), kwargs={"slug": instance.slug})
             except NoReverseMatch:
                 pass
-        # Attempt to resolve using key as the unique identifier if one exists
-        if hasattr(self.model, "key"):
-            try:
-                return reverse(url_format.format(action), kwargs={"key": instance.key})
-            except NoReverseMatch:
-                pass
 
         # Default to using the numeric PK to retrieve the URL for an object
         return reverse(url_format.format(action), kwargs={"pk": instance.pk})

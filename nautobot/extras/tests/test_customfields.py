@@ -929,7 +929,7 @@ class CustomFieldImportTest(TestCase):
             CustomField(label="Integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
             CustomField(label="Boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
             CustomField(label="Date", type=CustomFieldTypeChoices.TYPE_DATE),
-            CustomField(label="Url", type=CustomFieldTypeChoices.TYPE_URL),
+            CustomField(label="URL", type=CustomFieldTypeChoices.TYPE_URL),
             CustomField(
                 label="Select",
                 type=CustomFieldTypeChoices.TYPE_SELECT,
@@ -1219,6 +1219,43 @@ class CustomFieldModelTest(TestCase):
 
     def test_get_computed_fields_only_returns_fields_for_content_type(self):
         self.assertTrue(self.non_location_computed_field.slug not in self.location1.get_computed_fields())
+
+    def test_check_if_key_is_graphql_safe(self):
+        """
+        Check the GraphQL validation method on CustomField Key Attribute.
+        """
+        # Check if it catches the cf.key starting with a digit.
+        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1", key="12_test_1")
+        with self.assertRaises(ValidationError) as error:
+            cf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cf.key with whitespace.
+        cf1.key = "test 1"
+        with self.assertRaises(ValidationError) as error:
+            cf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cf.key with hyphens.
+        cf1.key = "test-1-custom-field"
+        with self.assertRaises(ValidationError) as error:
+            cf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cf.key with special characters
+        cf1.key = "test_1_custom_f)(&d"
+        with self.assertRaises(ValidationError) as error:
+            cf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
 
 
 class CustomFieldFilterTest(TestCase):
