@@ -163,6 +163,8 @@ class TestVarbinaryIPField(TestCase):
 class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def setUp(self):
         super().setUp()
+        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         self.statuses = Status.objects.get_for_model(Prefix)
@@ -255,7 +257,7 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(self.child2.parent, self.root)
         self.assertEqual(list(self.child1.ancestors()), [self.root])
 
-    def test_get_child_prefixes(self):
+    def test_descendants(self):
         vrfs = VRF.objects.all()[:3]
         prefixes = (
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER),
@@ -265,7 +267,7 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"), vrf=vrfs[2]),
         )
         prefix_pks = {p.pk for p in prefixes[1:]}
-        child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
+        child_prefix_pks = {p.pk for p in prefixes[0].descendants()}
 
         # Global container should return all children
         self.assertSetEqual(child_prefix_pks, prefix_pks)
@@ -274,7 +276,7 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         # check is no longer valid so we'll filter it by VRF for now to keep the test working.
         prefixes[0].vrf = vrfs[0]
         prefixes[0].save()
-        child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes().filter(vrf=vrfs[0])}
+        child_prefix_pks = {p.pk for p in prefixes[0].descendants().filter(vrf=vrfs[0])}
 
         # VRF container is limited to its own VRF
         self.assertSetEqual(child_prefix_pks, {prefixes[2].pk})

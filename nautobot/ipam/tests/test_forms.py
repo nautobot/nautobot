@@ -33,8 +33,8 @@ class BaseNetworkFormTest:
         data.update(self.extra_data)
         form = self.form_class(data)
 
-        self.assertFalse(form.is_valid())
-        self.assertEqual(f"Cannot create {self.object_name} with /0 mask.", form.errors[self.field_name][0])
+        # With the advent of `Prefix.parent`, it's now possible to create a /0 .
+        self.assertTrue(form.is_valid())
 
     def test_address_missing_mask(self):
         data = {self.field_name: "192.168.0.1"}

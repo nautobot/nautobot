@@ -587,18 +587,18 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
                 )
 
-    def delete(self, **kwargs):
+    def delete(self, *args, **kwargs):
         force_delete = kwargs.pop("force_delete", False)
 
         try:
-            return super().delete(**kwargs)
+            return super().delete(*args, **kwargs)
         except models.ProtectedError as err:
             # Update protected objects to use the new parent and delete the old parent (self).
             if force_delete:
                 protected_pks = (po.pk for po in err.protected_objects)
                 protected_objects = Prefix.objects.filter(pk__in=protected_pks)
                 protected_objects.update(parent=self.parent)
-                return super().delete(**kwargs)
+                return super().delete(*args, **kwargs)
             else:
                 raise
 
@@ -814,7 +814,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Return all available Prefixes within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_prefixes = netaddr.IPSet([child.prefix for child in self.get_child_prefixes()])
+        child_prefixes = netaddr.IPSet([child.prefix for child in self.descendants()])
         available_prefixes = prefix - child_prefixes
 
         return available_prefixes
@@ -1024,10 +1024,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         if self.address:
-
-            # /0 masks are not acceptable
-            if self.address.prefixlen == 0:
-                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
 
             # Enforce unique IP space (if applicable)
             if self.role not in IPADDRESS_ROLES_NONUNIQUE and (

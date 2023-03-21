@@ -174,7 +174,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         # Find prefix with no child prefixes and large enough to create 4 child prefixes
         for instance in Prefix.objects.filter(vrf__isnull=False):
-            if instance.get_child_prefixes().count() == 0 and instance.prefix.size > 2:
+            if instance.descendants().count() == 0 and instance.prefix.size > 2:
                 prefix = instance
                 break
         else:
@@ -213,7 +213,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         # Find prefix with no child prefixes and large enough to create 4 child prefixes
         for instance in Prefix.objects.filter(vrf__isnull=False):
-            if instance.get_child_prefixes().count() == 0 and instance.prefix.size > 2:
+            if instance.descendants().count() == 0 and instance.prefix.size > 2:
                 prefix = instance
                 break
         else:
