@@ -4,6 +4,7 @@ import hmac
 import inspect
 import logging
 import pkgutil
+import re
 import sys
 
 from django.apps import apps
@@ -497,17 +498,18 @@ def remove_prefix_from_cf_key(field_name):
     return field_name[3:]
 
 
-def check_if_key_is_graphql_safe(key):
+def check_if_key_is_graphql_safe(model_name, key):
     """
     Helper method to check if a key field is Python/GraphQL safe.
     Used in CustomField for now, should be used in ComputedField and Relationship as well.
     """
-    if key[0].isdigit():
-        raise ValidationError({"key": "The first letter of the CustomField key cannot be a number"})
-    if " " in key:
-        raise ValidationError({"key": 'There cannot be whitespaces " " in CustomField key'})
-    if "-" in key:
-        raise ValidationError({"key": 'There cannot be hypens "-" in CustomField key'})
+    graphql_safe_pattern = re.compile("[_A-Za-z][_0-9A-Za-z]*")
+    if not graphql_safe_pattern.fullmatch(key):
+        raise ValidationError(
+            {
+                f"{model_name}'s specific key attribute": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hypens or whitespaces"
+            }
+        )
 
 
 def migrate_role_data(

@@ -415,7 +415,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def clean(self):
         super().clean()
 
-        check_if_key_is_graphql_safe(self.key)
+        check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)

@@ -23,7 +23,9 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
             cf_key = original_cf_key[:max_key_length] + cf_key_append
             append_counter += 1
         if cf_key != original_cf_key:
-            print(f'  CustomField Class "{CustomField.label}" key "{original_cf_key}" is being changed to "{cf_key}".')
+            print(
+                f'  CustomField instance "{custom_field.label}" key attribute "{original_cf_key}" is being changed to "{cf_key}".'
+            )
             custom_field.key = cf_key
             custom_field.save()
         CF_KEY_TO_NAME[custom_field.key] = custom_field.name
