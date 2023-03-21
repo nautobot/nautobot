@@ -209,7 +209,7 @@ class ClusterAddDevicesView(generic.ObjectEditView):
 
     def get(self, request, *args, **kwargs):
         cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = self.form(cluster, initial=normalize_querydict(request.GET))
+        form = self.form(cluster, initial=normalize_querydict(request.GET, form_class=self.form))
 
         return render(
             request,

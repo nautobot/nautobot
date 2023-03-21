@@ -138,6 +138,8 @@
 | ConfigContext      | `sites`       |
 |                    | `regions`     |
 | Device             | `site`        |
+| GitRepository      | `_token`      |
+|                    | `username`    |
 | InventoryItem      | `lft`         |
 |                    | `rght`        |
 |                    | `tree_id`     |

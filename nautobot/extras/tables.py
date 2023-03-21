@@ -30,6 +30,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
+    JobButton,
     JobHook,
     JobResult,
     JobLogEntry,
@@ -542,6 +543,7 @@ class JobTable(BaseTable):
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
+    is_job_button_receiver = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
@@ -578,6 +580,7 @@ class JobTable(BaseTable):
             "hidden",
             "read_only",
             "is_job_hook_receiver",
+            "is_job_button_receiver",
             "approval_required",
             "soft_time_limit",
             "time_limit",
@@ -744,6 +747,37 @@ class JobResultTable(BaseTable):
             "actions",
         )
         default_columns = ("pk", "date_created", "name", "linked_record", "user", "status", "summary", "actions")
+
+
+class JobButtonTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    job = tables.Column(linkify=True)
+    confirmation = BooleanColumn()
+    content_types = ContentTypesColumn(truncate_words=15)
+
+    class Meta(BaseTable.Meta):
+        model = JobButton
+        fields = (
+            "pk",
+            "name",
+            "content_types",
+            "text",
+            "job",
+            "group_name",
+            "weight",
+            "button_class",
+            "confirmation",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "group_name",
+            "weight",
+            "job",
+            "confirmation",
+        )
 
 
 #

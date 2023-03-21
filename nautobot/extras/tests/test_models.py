@@ -177,7 +177,6 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
 
@@ -652,7 +651,6 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
         nonduplicate_template = ExportTemplate(
@@ -704,35 +702,11 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         self.repo.save(trigger_resync=False)
 
-    def test_token_rendered(self):
-        self.assertEqual(self.repo.token_rendered, "—")
-        self.repo._token = self.SAMPLE_TOKEN
-        self.assertEqual(self.repo.token_rendered, GitRepository.TOKEN_PLACEHOLDER)
-        self.repo._token = ""
-        self.assertEqual(self.repo.token_rendered, "—")
-
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
-
-    def test_save_preserve_token(self):
-        self.repo._token = self.SAMPLE_TOKEN
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had submitted an "Edit" form, which displays the token placeholder instead of the actual token
-        self.repo._token = GitRepository.TOKEN_PLACEHOLDER
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had deleted a pre-existing token from the UI
-        self.repo._token = ""
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, "")
-
-    def test_verify_user(self):
-        self.assertEqual(self.repo.username, "oauth2")
 
     def test_save_relocate_directory(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -929,7 +903,6 @@ class JobResultTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
 

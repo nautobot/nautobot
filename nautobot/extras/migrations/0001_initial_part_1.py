@@ -4,7 +4,6 @@ import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
-import django_cryptography.fields
 
 import nautobot.core.models.fields
 import nautobot.core.models.validators
@@ -176,10 +175,7 @@ class Migration(migrations.Migration):
                 ),
                 ("branch", models.CharField(default="main", max_length=64)),
                 ("current_head", models.CharField(blank=True, default="", max_length=48)),
-                (
-                    "_token",
-                    django_cryptography.fields.encrypt(models.CharField(blank=True, default="", max_length=200)),
-                ),
+                ("_token", models.CharField(blank=True, default="", max_length=200)),
                 ("username", models.CharField(blank=True, default="", max_length=64)),
                 (
                     "provided_contents",
