@@ -38,6 +38,7 @@ def is_taggable(obj):
     return False
 
 
+# TODO(timizuo): I think this status__slug should be status__name
 def pretty_print_query(query):
     """
     Given a `Q` object, display it in a more human-readable format.
