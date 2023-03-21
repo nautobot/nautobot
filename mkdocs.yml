@@ -213,6 +213,7 @@ nav:
       - Testing: 'development/testing.md'
       - Application Registry: "development/application-registry.md"
       - Model Features: "development/model-features.md"
+      - Natural Keys: "development/natural-keys.md"
       - Page Templates: "development/templates.md"
       - Navigation Menu: "development/navigation-menu.md"
       - Home Page Panels: "development/homepage.md"

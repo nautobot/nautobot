@@ -16,7 +16,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     widgets,
 )
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
@@ -325,7 +325,7 @@ class RelationshipModel(models.Model):
         return relationships_field_errors
 
 
-class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     def get_for_model(self, model):

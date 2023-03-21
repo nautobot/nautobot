@@ -16,11 +16,10 @@ from django.db.models import signals
 from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
-from django_celery_beat.managers import ExtendedManager
 from prometheus_client import Histogram
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
@@ -43,7 +42,7 @@ from nautobot.extras.constants import (
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.plugins.utils import import_object
-from nautobot.extras.managers import JobResultManager
+from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -240,7 +239,7 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
 
-    objects = JobQuerySet.as_manager()
+    objects = BaseManager.from_queryset(JobQuerySet)()
 
     class Meta:
         managed = True
@@ -925,7 +924,7 @@ class ScheduledJobs(models.Model):
     ident = models.SmallIntegerField(default=1, primary_key=True, unique=True)
     last_update = models.DateTimeField(null=False)
 
-    objects = ExtendedManager()
+    objects = ScheduledJobsManager()
 
     @classmethod
     def changed(cls, instance, raw=False, **kwargs):
@@ -1057,7 +1056,7 @@ class ScheduledJob(BaseModel):
         help_text="Cronjob syntax string for custom scheduling",
     )
 
-    objects = ScheduledJobExtendedQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
     no_changes = False
 
     def __str__(self):

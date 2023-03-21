@@ -1,6 +1,7 @@
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 
+from nautobot.core.models.utils import deconstruct_natural_key_slug
 from nautobot.core.utils import permissions
 
 
@@ -98,3 +99,17 @@ class RestrictedQuerySet(QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
+
+    def filter(self, *args, **kwargs):
+        """
+        Extend base queryset with support for filtering by `natural_key_slug=...`.
+
+        This is an enhanced version of natural-key slug support from django-natural-keys.
+        Counterpart to BaseModel.natural_key_slug property.
+        """
+        natural_key_slug = kwargs.pop("natural_key_slug", None)
+        if natural_key_slug and isinstance(natural_key_slug, str):
+            values = deconstruct_natural_key_slug(natural_key_slug)
+            kwargs.update(self.model.natural_key_args_to_kwargs(values))
+
+        return super().filter(*args, **kwargs)

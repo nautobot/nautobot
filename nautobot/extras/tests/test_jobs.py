@@ -773,7 +773,7 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
-class JobHookTest(TransactionTestCase):
+class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Test job hooks.
     """

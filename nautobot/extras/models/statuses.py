@@ -7,22 +7,7 @@ from django.utils.hashable import make_hashable
 
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
-
-
-class StatusQuerySet(RestrictedQuerySet):
-    """Queryset for `Status` objects."""
-
-    def get_for_model(self, model):
-        """
-        Return all `Status` assigned to the given model.
-        """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.filter(content_types=content_type)
-
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
 
 
 @extras_features(

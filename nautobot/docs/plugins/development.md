@@ -778,6 +778,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | Feature | `django.db.models.Model` | `BaseModel` | `OrganizationalModel` | `PrimaryModel` |
 | ------- | --------------------- | ----------- | --------------------- | -------------- |
 | UUID primary key | ❌ | ✅ | ✅ | ✅ |
+| [Natural keys](../development/natural-keys.md) | ❌ | ✅ | ✅ | ✅ |
 | [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
@@ -803,6 +804,9 @@ class Animal(BaseModel):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        unique_together = [["name", "sound"]]
 ```
 
 Once you have defined the model(s) for your app, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.

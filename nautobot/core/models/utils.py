@@ -1,11 +1,14 @@
 from itertools import count, groupby
 import json
+from urllib.parse import quote_plus, unquote_plus
 
 from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
 from django.utils.tree import Node
 from taggit.managers import _TaggableManager
+
+from nautobot.core.models.constants import NATURAL_KEY_SLUG_SEPARATOR
 
 
 def array_to_string(array):
@@ -170,3 +173,34 @@ def find_models_with_matching_fields(app_models, field_names, field_attributes=N
                 pass
     registry_items = {key: sorted(value) for key, value in registry_items.items()}
     return registry_items
+
+
+def construct_natural_key_slug(values):
+    """
+    Convert the given list of natural key values to a single URL-path-usable string.
+
+    - Non-URL-safe characters are percent-encoded.
+    - Null (`None`) values are percent-encoded as a literal null character `%00`.
+
+    Reversible by `deconstruct_natural_key_slug()`.
+    """
+    values = [str(value) if value is not None else "\0" for value in values]
+    # . and : are generally "safe enough" to use in URL parameters, and are common in some natural key fields,
+    # so we don't quote them by default (although `deconstruct_natural_key_slug` will work just fine if you do!)
+    # / is a bit trickier to handle in URL paths, so for now we *do* quote it, even though it appears in IPAddress, etc.
+    values = NATURAL_KEY_SLUG_SEPARATOR.join(quote_plus(value, safe=".:") for value in values)
+    return values
+
+
+def deconstruct_natural_key_slug(slug):
+    """
+    Convert the given natural key slug string back to a list of distinct values.
+
+    - Percent-encoded characters are converted back to their raw values
+    - Single literal null characters `%00` are converted back to a Python `None`.
+
+    Inverse operation of `construct_natural_key_slug()`.
+    """
+    values = [unquote_plus(value) for value in slug.split(NATURAL_KEY_SLUG_SEPARATOR)]
+    values = [value if value != "\0" else None for value in values]
+    return values
