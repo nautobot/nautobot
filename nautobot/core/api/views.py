@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -35,6 +35,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
@@ -188,6 +189,39 @@ class ModelViewSetMixin:
     # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
     # select_related
     brief_prefetch_fields = []
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
+
+    # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
+    #       UUID PKs and also do NOT support natural-key-slugs.
+    #       The impact of NOT setting this is that per the OpenAPI schema, only UUIDs are permitted for most ViewSets;
+    #       however, "secretly" due to our custom get_object() implementation below, you can actually also specify a
+    #       natural_key_slug value instead of a UUID. We're not currently documenting/using this feature, so OK for now
+    # lookup_value_regex = r"[^/]+"
+
+    def get_object(self):
+        """Extend rest_framework.generics.GenericAPIView.get_object to allow "pk" lookups to use a natural-key-slug."""
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        assert lookup_url_kwarg in self.kwargs, (
+            f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
+            f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
+        )
+
+        if lookup_url_kwarg == "pk" and hasattr(queryset.model, "natural_key_slug"):
+            # Support lookup by either PK (UUID) or natural_key_slug
+            lookup_value = self.kwargs["pk"]
+            if is_uuid(lookup_value):
+                obj = get_object_or_404(queryset, pk=lookup_value)
+            else:
+                obj = get_object_or_404(queryset, natural_key_slug=lookup_value)
+        else:
+            # Default DRF lookup behavior, just in case a viewset has overridden `lookup_url_kwarg` for its own needs
+            obj = get_object_or_404(queryset, **{self.lookup_field: self.kwargs[lookup_url_kwarg]})
+
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def get_serializer(self, *args, **kwargs):
 
@@ -198,17 +232,16 @@ class ModelViewSetMixin:
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
         # If using 'brief' mode, find and return the nested serializer for this model, if one exists
         if self.brief:
-            logger.debug("Request is for 'brief' format; initializing nested serializer")
+            self.logger.debug("Request is for 'brief' format; initializing nested serializer")
             try:
                 serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                logger.debug(f"Using serializer {serializer}")
+                self.logger.debug(f"Using serializer {serializer}")
                 return serializer
             except SerializerNotFound:
-                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+                self.logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
         # Fall back to the hard-coded serializer class
         return self.serializer_class
@@ -259,15 +292,13 @@ class ModelViewSetMixin:
         self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-
         try:
             return super().dispatch(request, *args, **kwargs)
         except ProtectedError as e:
             protected_objects = list(e.protected_objects)
             msg = f"Unable to delete object. {len(protected_objects)} dependent objects were found: "
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
-            logger.warning(msg)
+            self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
 
@@ -281,6 +312,8 @@ class ModelViewSet(
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
+
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     def _validate_objects(self, instance):
         """
@@ -298,8 +331,7 @@ class ModelViewSet(
 
     def perform_create(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Creating new {model._meta.verbose_name}")
+        self.logger.info(f"Creating new {model._meta.verbose_name}")
 
         # Enforce object-level permissions on save()
         try:
@@ -311,8 +343,7 @@ class ModelViewSet(
 
     def perform_update(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
+        self.logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
 
         # Enforce object-level permissions on save()
         try:
@@ -324,8 +355,7 @@ class ModelViewSet(
 
     def perform_destroy(self, instance):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
+        self.logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)
 

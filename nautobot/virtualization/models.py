@@ -5,6 +5,7 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
@@ -265,7 +266,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
     disk = models.PositiveIntegerField(blank=True, null=True, verbose_name="Disk (GB)")
     comments = models.TextField(blank=True)
 
-    objects = ConfigContextModelQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     csv_headers = [
         "name",

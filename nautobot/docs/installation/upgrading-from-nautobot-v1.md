@@ -138,6 +138,8 @@
 | ConfigContext      | `sites`       |
 |                    | `regions`     |
 | Device             | `site`        |
+| GitRepository      | `_token`      |
+|                    | `username`    |
 | InventoryItem      | `lft`         |
 |                    | `rght`        |
 |                    | `tree_id`     |
@@ -695,3 +697,56 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 ## Git Data Source Changes
 
 The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.
+
+## Logging Changes
+
+Where applicable, `logging.getLogger("module_name")` is replaced with `logging.getLogger(__name__)` or `logging.getLogger(__name__ + ".MyFeature")`.
+
+Below is a table documenting changes in logger names that could potentially affect existing deployments with expectations around specific logger names used for specific purposes.
+
+| Old Logger Name                          | New Logger Name                                       |
+|------------------------------------------|-------------------------------------------------------|
+| `nautobot.authentication`                | `nautobot.core.authentication`                        |
+| `nautobot.datasources.git`               | `nautobot.extras.datasources.git`                     |
+| `nautobot.datasources.utils`             | `nautobot.extras.datasources.utils`                   |
+| `nautobot.dcim.cable`                    | `nautobot.dcim.signals.cable`                         |
+| `nautobot.graphql.generators`            | `nautobot.core.graphql.generators`                    |
+| `nautobot.graphql.schema`                | `nautobot.core.graphql.schema`                        |
+| `nautobot.jobs`                          | `nautobot.extras.jobs`                                |
+| `nautobot.jobs.*`                        | `nautobot.extras.jobs.*`                              |
+| `nautobot.releases`                      | `nautobot.core.releases`                              |
+| `nautobot.releases`                      | `nautobot.utilities.tasks`                            |
+| `nautobot.plugins`                       | `nautobot.extras.templatetags.plugins`                |
+| `nautobot.plugins`                       | `nautobot.extras.plugins.utils`                       |
+| `nautobot.views.ObjectEditView`          | `nautobot.core.views.generic.ObjectEditView`          |
+| `nautobot.views.ObjectDeleteView`        | `nautobot.core.views.generic.ObjectDeleteView`        |
+| `nautobot.views.BulkCreateView`          | `nautobot.core.views.generic.BulkCreateView`          |
+| `nautobot.views.ObjectImportView`        | `nautobot.core.views.generic.ObjectImportView`        |
+| `nautobot.views.BulkImportView`          | `nautobot.core.views.generic.BulkImportView`          |
+| `nautobot.views.BulkEditView`            | `nautobot.core.views.generic.BulkEditView`            |
+| `nautobot.views.BulkRenameView`          | `nautobot.core.views.generic.BulkRenameView`          |
+| `nautobot.views.BulkDeleteView`          | `nautobot.core.views.generic.BulkDeleteView`          |
+| `nautobot.views.ComponentCreateView`     | `nautobot.core.views.generic.ComponentCreateView`     |
+| `nautobot.views.BulkComponentCreateView` | `nautobot.core.views.generic.BulkComponentCreateView` |
+
+## Job Database Model Changes
+
+The Job `name` field has been changed to a unique field and the `name` + `grouping` uniqueness constraint has been removed. The processes that refresh jobs (`nautobot-server post_upgrade` and `nautobot-server migrate`) have been updated to gracefully handle duplicate job names.
+
+!!! example
+    ```py
+    class NautobotJob1(Job):
+        class Meta:
+            name = "Sample job"
+
+    class NautobotJob2(Job):
+        class Meta:
+            name = "Sample job"
+    ```
+
+    These jobs would be named `Sample job` and `Sample job (2)`
+
+The Job `slug` has been updated to be derived from the `name` field instead of a combination of `job_source`, `git_repository`, and `job_class`.
+
+!!! example
+    The Nautobot Golden Config backup job's slug will change from `plugins-nautobot_golden_config-jobs-backupjob` to `backup-configurations`.

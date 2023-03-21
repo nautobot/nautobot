@@ -15,6 +15,7 @@ from django.test import override_settings
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -58,10 +59,12 @@ from nautobot.virtualization.models import (
 )
 
 
-class ComputedFieldTest(TestCase):
+class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `ComputedField` Model
     """
+
+    model = ComputedField
 
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
@@ -102,12 +105,14 @@ class ComputedFieldTest(TestCase):
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
-class ConfigContextTest(TestCase):
+class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     """
     These test cases deal with the weighting, ordering, and deep merge logic of config context data.
 
     It also ensures the various config context querysets are consistent.
     """
+
+    model = ConfigContext
 
     def setUp(self):
 
@@ -145,17 +150,15 @@ class ConfigContextTest(TestCase):
             location=self.location,
         )
 
-    def test_higher_weight_wins(self):
+        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
 
-        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
+    def test_higher_weight_wins(self):
+        ConfigContext.objects.create(name="context 2", weight=99, data={"a": 123, "b": 456, "c": 789})
 
         expected_data = {"a": 123, "b": 456, "c": 777}
         self.assertEqual(self.device.get_config_context(), expected_data)
 
     def test_name_ordering_after_weight(self):
-
-        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
         expected_data = {"a": 123, "b": 456, "c": 789}
@@ -165,7 +168,6 @@ class ConfigContextTest(TestCase):
         """
         Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
         """
-        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         with self.assertRaises(ValidationError):
             duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
             duplicate_context.validated_save()
@@ -175,7 +177,6 @@ class ConfigContextTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
 
@@ -187,10 +188,9 @@ class ConfigContextTest(TestCase):
         This test incorporates features from all of the above tests cases to ensure
         the annotate_config_context_data() and get_for_object() queryset methods are the same.
         """
-        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
-        ConfigContext.objects.create(name="context 3", weight=99, data={"d": 1})
-        ConfigContext.objects.create(name="context 4", weight=99, data={"d": 2})
+        ConfigContext.objects.create(name="context 2", weight=99, data={"a": 123, "b": 456, "c": 789})
+        ConfigContext.objects.create(name="context 3", weight=98, data={"d": 1})
+        ConfigContext.objects.create(name="context 4", weight=98, data={"d": 2})
 
         annotated_queryset = Device.objects.filter(name=self.device.name).annotate_config_context_data()
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
@@ -309,7 +309,7 @@ class ConfigContextTest(TestCase):
         device.tags.add(self.tag2)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 1)
+        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)  # including one from setUp()
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_multiple_tags_return_distinct_objects_with_seperate_config_contexts(self):
@@ -340,7 +340,7 @@ class ConfigContextTest(TestCase):
         device.tags.add(self.tag2)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
+        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 3)  # including one from setUp()
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
     @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
@@ -374,10 +374,12 @@ class ConfigContextTest(TestCase):
         self.assertNotIn("dynamic context 1", device2.get_config_context().values())
 
 
-class ConfigContextSchemaTestCase(TestCase):
+class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
     """
     Tests for the ConfigContextSchema model
     """
+
+    model = ConfigContextSchema
 
     def setUp(self):
         context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
@@ -619,10 +621,18 @@ class ConfigContextSchemaTestCase(TestCase):
             invalid_schema.full_clean()
 
 
-class ExportTemplateTest(TestCase):
+class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the ExportTemplate model class.
     """
+
+    model = ExportTemplate
+
+    def setUp(self):
+        self.device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(
+            content_type=self.device_ct, name="Export Template 1", template_code="hello world"
+        )
 
     def test_name_contenttype_uniqueness(self):
         """
@@ -630,11 +640,10 @@ class ExportTemplateTest(TestCase):
 
         See GitHub issue #431.
         """
-        device_ct = ContentType.objects.get_for_model(Device)
-        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
-
         with self.assertRaises(ValidationError):
-            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template = ExportTemplate(
+                content_type=self.device_ct, name="Export Template 1", template_code="foo"
+            )
             duplicate_template.validated_save()
 
         # A differently owned ExportTemplate may have the same name
@@ -642,44 +651,43 @@ class ExportTemplateTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
         nonduplicate_template = ExportTemplate(
-            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+            content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
         )
         nonduplicate_template.validated_save()
 
 
-class FileProxyTest(TestCase):
+class FileProxyTest(ModelTestCases.BaseModelTestCase):
+    model = FileProxy
+
     def setUp(self):
         self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+        self.fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Now refresh it and make sure it was saved and retrieved correctly.
-        fp.refresh_from_db()
+        self.fp.refresh_from_db()
         self.test_file.seek(0)  # Reset cursor since it was previously read
-        self.assertEqual(fp.name, self.test_file.name)
-        self.assertEqual(fp.file.read(), self.test_file.read())
+        self.assertEqual(self.fp.name, self.test_file.name)
+        self.assertEqual(self.fp.file.read(), self.test_file.read())
 
     def test_delete_file_proxy(self):
         """Test deletion of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
-
         # Assert counts before delete
         self.assertEqual(FileProxy.objects.count(), 1)
         self.assertEqual(FileAttachment.objects.count(), 1)
 
         # Assert counts after delete
-        fp.delete()
+        self.fp.delete()
         self.assertEqual(FileProxy.objects.count(), 0)
         self.assertEqual(FileAttachment.objects.count(), 0)
 
 
-class GitRepositoryTest(TransactionTestCase):
+class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Tests for the GitRepository model class.
 
@@ -694,35 +702,11 @@ class GitRepositoryTest(TransactionTestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         self.repo.save(trigger_resync=False)
 
-    def test_token_rendered(self):
-        self.assertEqual(self.repo.token_rendered, "—")
-        self.repo._token = self.SAMPLE_TOKEN
-        self.assertEqual(self.repo.token_rendered, GitRepository.TOKEN_PLACEHOLDER)
-        self.repo._token = ""
-        self.assertEqual(self.repo.token_rendered, "—")
-
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
-
-    def test_save_preserve_token(self):
-        self.repo._token = self.SAMPLE_TOKEN
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had submitted an "Edit" form, which displays the token placeholder instead of the actual token
-        self.repo._token = GitRepository.TOKEN_PLACEHOLDER
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had deleted a pre-existing token from the UI
-        self.repo._token = ""
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, "")
-
-    def test_verify_user(self):
-        self.assertEqual(self.repo.username, "oauth2")
 
     def test_save_relocate_directory(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -740,10 +724,12 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertTrue(os.path.isdir(new_path))
 
 
-class JobModelTest(TestCase):
+class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
     """
+
+    model = JobModel
 
     @classmethod
     def setUpTestData(cls):
@@ -777,8 +763,17 @@ class JobModelTest(TestCase):
             self.assertTrue(job_model.installed)
             self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                else:
+                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
+                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+
+    def test_duplicate_job_name(self):
+        self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
+        self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta (2)").exists())
+        self.assertTrue(JobModel.objects.filter(name="This name is not unique.").exists())
+        self.assertTrue(JobModel.objects.filter(name="This name is not unique. (2)").exists())
 
     def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
@@ -908,7 +903,6 @@ class JobResultTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
 
@@ -950,10 +944,12 @@ class RoleTest(TestCase):
         self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
-class SecretTest(TestCase):
+class SecretTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Secret` model class.
     """
+
+    model = Secret
 
     def setUp(self):
         self.environment_secret = Secret.objects.create(
@@ -1267,10 +1263,12 @@ class SecretTest(TestCase):
         )
 
 
-class SecretsGroupTest(TestCase):
+class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `SecretsGroup` model class.
     """
+
+    model = SecretsGroup
 
     def setUp(self):
         self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
@@ -1339,10 +1337,12 @@ class SecretsGroupTest(TestCase):
         )
 
 
-class StatusTest(TestCase):
+class StatusTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Status` model class.
     """
+
+    model = Status
 
     def setUp(self):
         self.status = Status.objects.create(name="New Device Status")
@@ -1402,7 +1402,9 @@ class StatusTest(TestCase):
             self.assertEqual(str(self.status), test)
 
 
-class TagTest(TestCase):
+class TagTest(ModelTestCases.BaseModelTestCase):
+    model = Tag
+
     def test_create_tag_unicode(self):
         tag = Tag(name="Testing Unicode: 台灣")
         tag.save()
@@ -1410,7 +1412,7 @@ class TagTest(TestCase):
         self.assertEqual(tag.slug, "testing-unicode-台灣")
 
 
-class JobLogEntryTest(TestCase):
+class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
     Tests for the JobLogEntry Model.
     """
@@ -1478,7 +1480,7 @@ class JobLogEntryTest(TestCase):
         self.assertEqual(expected_data, csv_data)
 
 
-class WebhookTest(TestCase):
+class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
     def test_type_error_not_raised_when_calling_check_for_conflicts(self):
         """
         Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments

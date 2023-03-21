@@ -16,27 +16,33 @@ from django.db.models import signals
 from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
-from django_celery_beat.managers import ExtendedManager
 from prometheus_client import Histogram
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField, slugify_dots_to_dashes
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
-from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
+from nautobot.extras.choices import (
+    ButtonClassChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    JobSourceChoices,
+    LogLevelChoices,
+)
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.plugins.utils import import_object
-from nautobot.extras.managers import JobResultManager
+from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -111,9 +117,8 @@ class Job(PrimaryModel):
     )
 
     slug = AutoSlugField(
-        max_length=JOB_MAX_SLUG_LENGTH,
-        populate_from=["class_path"],
-        slugify_function=slugify_dots_to_dashes,
+        max_length=JOB_MAX_NAME_LENGTH,
+        populate_from="name",
     )
 
     # Human-readable information, potentially inherited from the source code
@@ -126,7 +131,7 @@ class Job(PrimaryModel):
     name = models.CharField(
         max_length=JOB_MAX_NAME_LENGTH,
         help_text="Human-readable name of this job",
-        db_index=True,
+        unique=True,
     )
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
@@ -141,6 +146,10 @@ class Job(PrimaryModel):
 
     is_job_hook_receiver = models.BooleanField(
         default=False, editable=False, help_text="Whether this job is a job hook receiver"
+    )
+
+    is_job_button_receiver = models.BooleanField(
+        default=False, editable=False, help_text="Whether this job is a job button receiver"
     )
 
     has_sensitive_variables = models.BooleanField(
@@ -230,15 +239,12 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
 
-    objects = JobQuerySet.as_manager()
+    objects = BaseManager.from_queryset(JobQuerySet)()
 
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
-        unique_together = [
-            ("source", "git_repository", "module_name", "job_class_name"),
-            ("grouping", "name"),
-        ]
+        unique_together = ["source", "git_repository", "module_name", "job_class_name"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -360,11 +366,11 @@ class Job(PrimaryModel):
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
-            raise ValidationError("Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+            raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.slug) > JOB_MAX_SLUG_LENGTH:
-            raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
+        if len(self.slug) > JOB_MAX_NAME_LENGTH:
+            raise ValidationError(f"Slug may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(
@@ -851,6 +857,61 @@ class JobResult(BaseModel, CustomFieldModel):
             logger.log(log_level, message)
 
 
+#
+# Job Button
+#
+
+
+@extras_features("graphql")
+class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
+    """
+    A predefined button that includes all necessary information to run a Nautobot Job based on a single object as a source.
+    The button text field accepts Jinja2 template code to be rendered with an object as context.
+    """
+
+    content_types = models.ManyToManyField(
+        to=ContentType,
+        related_name="job_buttons",
+        verbose_name="Object types",
+        help_text="The object type(s) to which this job button applies.",
+    )
+    name = models.CharField(max_length=100, unique=True)
+    text = models.CharField(
+        max_length=500,
+        help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Buttons which render as empty text will not be displayed.",
+    )
+    job = models.ForeignKey(
+        to="extras.Job",
+        on_delete=models.CASCADE,
+        help_text="Job this button will run",
+        limit_choices_to={"is_job_button_receiver": True},
+    )
+    weight = models.PositiveSmallIntegerField(default=100)
+    group_name = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Buttons with the same group will appear as a dropdown menu. Group dropdown buttons will inherit the button class from the button with the lowest weight in the group.",
+    )
+    button_class = models.CharField(
+        max_length=30,
+        choices=ButtonClassChoices,
+        default=ButtonClassChoices.CLASS_DEFAULT,
+    )
+    confirmation = models.BooleanField(
+        help_text="Enable confirmation pop-up box. <span class='text-danger'>WARNING: unselecting this option will allow the Job to run (and commit changes) with a single click!</span>",
+        default=True,
+    )
+
+    class Meta:
+        ordering = ["group_name", "weight", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("extras:jobbutton", kwargs={"pk": self.pk})
+
+
 class ScheduledJobs(models.Model):
     """Helper table for tracking updates to scheduled tasks.
     This stores a single row with ident=1.  last_update is updated
@@ -862,7 +923,7 @@ class ScheduledJobs(models.Model):
     ident = models.SmallIntegerField(default=1, primary_key=True, unique=True)
     last_update = models.DateTimeField(null=False)
 
-    objects = ExtendedManager()
+    objects = ScheduledJobsManager()
 
     @classmethod
     def changed(cls, instance, raw=False, **kwargs):
@@ -994,7 +1055,7 @@ class ScheduledJob(BaseModel):
         help_text="Cronjob syntax string for custom scheduling",
     )
 
-    objects = ScheduledJobExtendedQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
     no_changes = False
 
     def __str__(self):

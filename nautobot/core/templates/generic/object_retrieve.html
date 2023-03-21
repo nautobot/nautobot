@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load custom_links %}
+{% load job_buttons %}
 {% load helpers %}
 {% load perms %}
 {% load plugins %}
@@ -62,6 +63,7 @@
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">
         {% custom_links object %}
+        {% job_buttons object %}
         {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
 

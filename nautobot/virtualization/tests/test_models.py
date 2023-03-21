@@ -9,7 +9,7 @@ from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster, VMInterface
 
 
-class ClusterTestCase(TestCase):
+class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def test_cluster_validation(self):
         cluster_type = ClusterType.objects.create(name="Test Cluster Type 1")
         location_type = LocationType.objects.create(name="Location Type 1")
@@ -22,7 +22,7 @@ class ClusterTestCase(TestCase):
         location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
 
 
-class VirtualMachineTestCase(TestCase):
+class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def setUp(self):
         statuses = Status.objects.get_for_model(VirtualMachine)
 
@@ -65,7 +65,7 @@ class VirtualMachineTestCase(TestCase):
         vm2.save()
 
 
-class VMInterfaceTestCase(TestCase):
+class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def setUp(self):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)

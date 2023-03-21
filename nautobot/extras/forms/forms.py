@@ -57,6 +57,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobResult,
     Note,
@@ -119,6 +120,9 @@ __all__ = (
     "GraphQLQueryFilterForm",
     "ImageAttachmentForm",
     "JobForm",
+    "JobButtonForm",
+    "JobButtonBulkEditForm",
+    "JobButtonFilterForm",
     "JobEditForm",
     "JobFilterForm",
     "JobHookForm",
@@ -590,19 +594,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
         help_text="Only http:// and https:// URLs are presently supported",
     )
 
-    _token = forms.CharField(
-        required=False,
-        label="Token",
-        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text="Username for token authentication.<br><em>Deprecated</em> - use a secrets group instead",
-    )
-
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
@@ -618,8 +609,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "slug",
             "remote_url",
             "branch",
-            "username",
-            "_token",
             "secrets_group",
             "provided_contents",
             "tags",
@@ -669,18 +658,6 @@ class GitRepositoryBulkEditForm(NautobotBulkEditForm):
     branch = forms.CharField(
         required=False,
     )
-    _token = forms.CharField(
-        required=False,
-        label="Token",
-        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
@@ -849,6 +826,11 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    is_job_button_receiver = forms.NullBooleanField(
+        initial=False,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tag = TagFilterField(model)
 
 
@@ -1008,6 +990,63 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+
+
+#
+# Job Button
+#
+
+
+class JobButtonForm(BootstrapMixin, forms.ModelForm):
+    content_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        label="Object Types",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+    )
+
+    class Meta:
+        model = JobButton
+        fields = (
+            "content_types",
+            "name",
+            "text",
+            "job",
+            "weight",
+            "group_name",
+            "button_class",
+            "confirmation",
+        )
+
+
+class JobButtonBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit form for `JobButton` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=JobButton.objects.all(), widget=forms.MultipleHiddenInput)
+    content_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        label="Object Types",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+        required=False,
+    )
+    weight = forms.IntegerField(required=False)
+    group_name = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = ["group_name"]
+
+
+class JobButtonFilterForm(BootstrapMixin, forms.Form):
+    model = JobButton
+    q = forms.CharField(required=False, label="Search")
+    content_types = CSVContentTypeField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        label="Object Types",
+    )
 
 
 #

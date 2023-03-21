@@ -1,0 +1,1 @@
+Removed support for storing Git repository credentials (username/token) in the Nautobot database. Use [Secrets](../models/extras/secret.md) instead.

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase, override_settings
 
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
@@ -159,7 +160,7 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(prepped, manual)
 
 
-class TestPrefix(TestCase):
+class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def setUp(self):
         super().setUp()
         Prefix.objects.all().delete()
@@ -441,7 +442,9 @@ class TestPrefix(TestCase):
         self.assertRaises(ValidationError, duplicate_prefix.clean)
 
 
-class TestIPAddress(TestCase):
+class TestIPAddress(ModelTestCases.BaseModelTestCase):
+    model = IPAddress
+
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
@@ -542,7 +545,9 @@ class TestIPAddress(TestCase):
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 
 
-class TestVLANGroup(TestCase):
+class TestVLANGroup(ModelTestCases.BaseModelTestCase):
+    model = VLANGroup
+
     def test_vlan_group_validation(self):
         location_type = LocationType.objects.get(name="Elevator")
         location = Location.objects.filter(location_type=location_type).first()
@@ -568,7 +573,9 @@ class TestVLANGroup(TestCase):
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
-class VLANTestCase(TestCase):
+class VLANTestCase(ModelTestCases.BaseModelTestCase):
+    model = VLAN
+
     def test_vlan_validation(self):
         location_type = LocationType.objects.get(name="Root")
         location_type.content_types.set([])

@@ -23,7 +23,7 @@ def null_webhook_fields_to_empty(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0055_configcontext_dynamic_groups"),
+        ("extras", "0057_jobbutton"),
     ]
 
     operations = [
