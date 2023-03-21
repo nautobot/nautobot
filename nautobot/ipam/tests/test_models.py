@@ -204,10 +204,12 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
 
         # is_leaf_node()
         self.assertFalse(self.root.is_leaf_node())
+        self.assertFalse(self.parent.is_leaf_node())
         self.assertTrue(self.child1.is_leaf_node())
 
         # is_root_node()
         self.assertTrue(self.root.is_root_node())
+        self.assertFalse(self.parent.is_leaf_node())
         self.assertFalse(self.child1.is_root_node())
 
         # ancestors()
