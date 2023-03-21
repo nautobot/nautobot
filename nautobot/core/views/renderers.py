@@ -170,7 +170,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
-                initial_data = normalize_querydict(request.GET)
+                initial_data = normalize_querydict(request.GET, form_class=form_class)
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":

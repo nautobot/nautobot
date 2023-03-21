@@ -411,7 +411,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
-        initial_data = normalize_querydict(request.GET)
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 

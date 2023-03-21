@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0065_created_datetime"),
+        ("extras", "0067_created_datetime"),
         ("dcim", "0034_fixup_fks_and_related_names"),
     ]
 
