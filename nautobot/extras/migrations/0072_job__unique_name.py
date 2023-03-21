@@ -7,7 +7,7 @@ import nautobot.core.models.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0069_job__unique_name_data_migration"),
+        ("extras", "0071_job__unique_name_data_migration"),
     ]
 
     operations = [
