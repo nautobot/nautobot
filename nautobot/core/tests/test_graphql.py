@@ -69,6 +69,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.factory import ClusterTypeFactory
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
@@ -863,7 +864,7 @@ class GraphQLQueryTest(TestCase):
         webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
         webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
 
-        clustertype = ClusterType.objects.first()
+        clustertype = ClusterTypeFactory.create()
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype)
         cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",

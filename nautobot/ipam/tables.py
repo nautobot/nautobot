@@ -273,7 +273,7 @@ class RIRTable(BaseTable):
         url_params={"rir": "slug"},
         verbose_name="Assigned Prefixes",
     )
-    actions = ButtonsColumn(RIR, pk_field="slug")
+    actions = ButtonsColumn(RIR, pk_field="pk")
 
     class Meta(BaseTable.Meta):
         model = RIR

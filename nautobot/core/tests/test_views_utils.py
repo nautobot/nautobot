@@ -68,7 +68,7 @@ class CheckFilterForDisplayTest(TestCase):
             example_obj = DeviceRedundancyGroup.objects.first()
             expected_output = {
                 "name": "device_redundancy_group",
-                "display": "Device Redundancy Groups (slug or ID)",
+                "display": "Device Redundancy Groups (name or ID)",
                 "values": [{"name": str(example_obj.pk), "display": str(example_obj)}],
             }
 

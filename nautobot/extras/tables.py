@@ -292,7 +292,7 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
+    actions = ButtonsColumn(DynamicGroup, pk_field="pk")
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
@@ -396,7 +396,7 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
     """
 
     name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
 
     class Meta(DynamicGroupTable.Meta):
         fields = ["name", "members", "description", "actions"]
@@ -976,7 +976,7 @@ class StatusTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
     color = ColorColumn()
-    actions = ButtonsColumn(Status, pk_field="slug")
+    actions = ButtonsColumn(Status, pk_field="pk")
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):

@@ -43,7 +43,7 @@ class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = tables.Column(verbose_name="Clusters")
-    actions = ButtonsColumn(ClusterType, pk_field="slug")
+    actions = ButtonsColumn(ClusterType, pk_field="pk")
 
     class Meta(BaseTable.Meta):
         model = ClusterType

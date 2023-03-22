@@ -305,16 +305,16 @@ class PrettyPrintQueryTest(TestCase):
     (
       location__slug='ams01' OR location__slug='ang01'
     ) AND (
-      NOT (status__slug='active')
+      NOT (status__name='Active')
     )
-  ) OR status__slug='planned'
+  ) OR status__name='Planned'
 )""",
             """\
 (
   (
     location__slug='ams01' OR location__slug='ang01'
   ) AND (
-    NOT (status__slug='active')
+    NOT (status__name='Active')
   )
 )""",
             """\
@@ -324,12 +324,12 @@ class PrettyPrintQueryTest(TestCase):
             """\
 (
   location__slug='ang01' AND (
-    NOT (status__slug='active')
+    NOT (status__name='Active')
   )
 )""",
             """\
 (
-  location__slug='ams01' AND status__slug='planned'
+  location__slug='ams01' AND status__name='Planned'
 )""",
             """\
 (

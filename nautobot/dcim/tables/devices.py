@@ -82,15 +82,15 @@ class PlatformTable(BaseTable):
     name = tables.LinkColumn()
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="Devices",
     )
     virtual_machine_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="VMs",
     )
-    actions = ButtonsColumn(Platform, pk_field="slug")
+    actions = ButtonsColumn(Platform, pk_field="pk")
 
     class Meta(BaseTable.Meta):
         model = Platform
