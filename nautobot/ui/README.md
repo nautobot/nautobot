@@ -19,3 +19,11 @@ Start Nautobot on port `8080/tcp`:
 ```no-highlight
 nautobot-server runserver 0.0.0.0:8080 --insecure
 ```
+
+## Running test
+
+To run all test suite, run:
+
+```no-highlight
+invoke unittest-ui
+```

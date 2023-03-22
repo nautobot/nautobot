@@ -1,6 +1,6 @@
 import axios from "axios"
 import { Button, Frame, Text } from "@nautobot/nautobot-ui"
-import { Card, CardHeader, CardBody } from "@chakra-ui/react"
+import { Card, CardHeader, CardBody } from "@chakra-ui/react"  // TODO import from nautobot-ui when available
 import Cookies from 'js-cookie'
 import { useState } from "react"
 // import { RJSFSchema } from "@rjsf/utils";
