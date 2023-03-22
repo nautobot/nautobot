@@ -680,19 +680,16 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "API DynamicGroup 4",
-            "slug": "api-dynamicgroup-4",
             "content_type": "dcim.device",
             "filter": {"location": ["location-1"]},
         },
         {
             "name": "API DynamicGroup 5",
-            "slug": "api-dynamicgroup-5",
             "content_type": "dcim.device",
             "filter": {"has_interfaces": False},
         },
         {
             "name": "API DynamicGroup 6",
-            "slug": "api-dynamicgroup-6",
             "content_type": "dcim.device",
             "filter": {"location": ["location-2"]},
         },
@@ -944,12 +941,10 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "graphql-query-4",
-            "slug": "graphql-query-4",
             "query": "{ query: locations {name} }",
         },
         {
             "name": "graphql-query-5",
-            "slug": "graphql-query-5",
             "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
         {
@@ -3078,7 +3073,6 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
         },
         {
             "name": "GitHub Token for My Repository",
-            "slug": "github-token-my-repository",
             "provider": "text-file",
             "parameters": {
                 "path": "/github-tokens/user/myusername.txt",
@@ -3124,7 +3118,6 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Secrets Group 1",
-                "slug": "secrets-group-1",
                 "description": "First Secrets Group",
             },
             {
@@ -3201,19 +3194,16 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Pizza",
-            "slug": "pizza",
             "color": "0000ff",
             "content_types": ["dcim.device", "dcim.rack"],
         },
         {
             "name": "Oysters",
-            "slug": "oysters",
             "color": "00ff00",
             "content_types": ["ipam.ipaddress", "ipam.prefix"],
         },
         {
             "name": "Bad combinations",
-            "slug": "bad-combinations",
             "color": "ff0000",
             "content_types": ["dcim.device"],
         },
@@ -3524,19 +3514,16 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Role 1",
-            "slug": "role-1",
             "color": "0000ff",
             "content_types": ["dcim.device", "dcim.rack"],
         },
         {
             "name": "Role 2",
-            "slug": "role-2",
             "color": "0000ff",
             "content_types": ["dcim.rack"],
         },
         {
             "name": "Role 3",
-            "slug": "role-3",
             "color": "0000ff",
             "content_types": ["ipam.ipaddress", "ipam.vlan"],
         },

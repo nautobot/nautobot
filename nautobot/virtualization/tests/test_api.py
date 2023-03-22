@@ -30,15 +30,12 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Cluster Type 4",
-            "slug": "cluster-type-4",
         },
         {
             "name": "Cluster Type 5",
-            "slug": "cluster-type-5",
         },
         {
             "name": "Cluster Type 6",
-            "slug": "cluster-type-6",
         },
         {
             "name": "Cluster Type 7",
@@ -63,15 +60,12 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Cluster Group 4",
-            "slug": "cluster-type-4",
         },
         {
             "name": "Cluster Group 5",
-            "slug": "cluster-type-5",
         },
         {
             "name": "Cluster Group 6",
-            "slug": "cluster-type-6",
         },
         {
             "name": "Cluster Group 7",

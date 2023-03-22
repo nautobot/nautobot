@@ -26,17 +26,14 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Tenant Group 4",
-                "slug": "tenant-group-4",
                 "parent": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant Group 5",
-                "slug": "tenant-group-5",
                 "parent": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant Group 6",
-                "slug": "tenant-group-6",
             },
             {
                 "name": "Tenant Group 7",
@@ -60,17 +57,14 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Tenant 4",
-                "slug": "tenant-4",
                 "tenant_group": TenantGroup.objects.first().pk,
             },
             {
                 "name": "Tenant 5",
-                "slug": "tenant-5",
                 "tenant_group": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant 6",
-                "slug": "tenant-6",
             },
             {
                 "name": "Tenant 7",

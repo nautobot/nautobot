@@ -80,15 +80,12 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "RIR 4",
-            "slug": "rir-4",
         },
         {
             "name": "RIR 5",
-            "slug": "rir-5",
         },
         {
             "name": "RIR 6",
-            "slug": "rir-6",
         },
         {
             "name": "RIR 7",
