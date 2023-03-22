@@ -35,14 +35,12 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 
 
 class ProviderForm(NautobotModelForm):
-    slug = SlugField()
     comments = CommentField()
 
     class Meta:
         model = Provider
         fields = [
             "name",
-            "slug",
             "asn",
             "account",
             "portal_url",

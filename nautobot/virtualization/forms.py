@@ -60,13 +60,10 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 
 class ClusterTypeForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterType
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -83,13 +80,10 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 
 
 class ClusterGroupForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterGroup
         fields = [
             "name",
-            "slug",
             "description",
         ]
 

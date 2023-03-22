@@ -4232,7 +4232,6 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
 class DeviceRedundancyGroupForm(NautobotModelForm):
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     comments = CommentField()
-    slug = SlugField()
 
     class Meta:
         model = DeviceRedundancyGroup
