@@ -1,10 +1,8 @@
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.functional import classproperty
 from django_tables2 import RequestConfig
 
 from nautobot.core.models.querysets import count_related
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Interface
@@ -267,87 +265,39 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    _queryset = None
-    _disable_prefix_list_hierarchy = None
-
-    # 2.0 TODO: Remove this after IPAM models are trees in 2.0. When the data model changes to 1.)
-    # be tree-based, 2.) use NautobotViewSet this can be removed
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def queryset(cls):  # pylint: disable=no-self-argument,method-hidden
-        """
-        Property getter for queryset that acts upon `settings.DISABLE_PREFIX_LIST_HIERARCHY`
-
-        By default we annotate the prefix hierarchy such that child prefixes are indented in the table.
-        When `settings.DISABLE_PREFIX_LIST_HIERARCHY` is True, we do not annotate the queryset, and the
-        table is rendered as a flat list.
-
-        """
-        if cls._queryset is not None and cls._disable_prefix_list_hierarchy == get_settings_or_config(
-            "DISABLE_PREFIX_LIST_HIERARCHY"
-        ):
-            return cls._queryset
-
-        cls._queryset = Prefix.objects.select_related(
-            # "location", "vrf__tenant", "tenant", "vlan", "rir", "role", "status"
-            "location",
-            "namespace",
-            "tenant",
-            "vlan",
-            "rir",
-            "role",
-            "status",
-        )
-        if get_settings_or_config("DISABLE_PREFIX_LIST_HIERARCHY"):
-            cls._queryset = cls._queryset.annotate(parents=Count(None)).order_by(
-                # F("vrf__name").asc(nulls_first=True),
-                "namespace",
-                "network",
-                "prefix_length",
-            )
-            cls._disable_prefix_list_hierarchy = True
-        else:
-            cls._queryset = cls._queryset.annotate_tree()
-            cls._disable_prefix_list_hierarchy = False
-
-        return cls._queryset
+    queryset = Prefix.objects.select_related(
+        "parent",
+        "location",
+        "namespace",
+        "tenant",
+        "vlan",
+        "rir",
+        "role",
+        "status",
+    )
 
 
 class PrefixView(generic.ObjectView):
     queryset = Prefix.objects.select_related(
+        "parent",
         "rir",
         "role",
         "location",
         "status",
         "tenant__tenant_group",
         "vlan__vlan_group",
-        # "vrf",
         "namespace",
     )
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        parent_prefixes = (
-            Prefix.objects.restrict(request.user, "view")
-            .net_contains(instance.prefix)
-            # .filter(Q(vrf=instance.vrf) | Q(vrf__isnull=True))
-            .filter(namespace=instance.namespace)
-            .select_related("role", "location", "status")
-            .annotate_tree()
-        )
+        parent_prefixes = instance.ancestors().restrict(request.user, "view")
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
-        # parent_prefix_table.exclude = ("vrf",)
 
+        # TODO(jathan): Make duplicate prefixes go away entirely.
         # Duplicate prefixes table
-        duplicate_prefixes = (
-            Prefix.objects.restrict(request.user, "view")
-            .net_equals(instance.prefix)
-            # .filter(vrf=instance.vrf)
-            .filter(namespace=instance.namespace)
-            .exclude(pk=instance.pk)
-            .select_related("role", "location", "status")
-        )
+        duplicate_prefixes = Prefix.objects.none()
         duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes), orderable=False)
-        # duplicate_prefix_table.exclude = ("vrf",)
 
         vrfs = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
@@ -369,9 +319,7 @@ class PrefixPrefixesView(generic.ObjectView):
         child_prefixes = (
             instance.descendants()
             .restrict(request.user, "view")
-            # .select_related("location", "status", "role", "vlan")
-            .select_related("location", "status", "role", "vlan", "namespace")
-            .annotate_tree()
+            .select_related("parent", "location", "status", "role", "vlan", "namespace")
         )
 
         # Add available prefixes to the table if requested
@@ -394,8 +342,6 @@ class PrefixPrefixesView(generic.ObjectView):
             "change": request.user.has_perm("ipam.change_prefix"),
             "delete": request.user.has_perm("ipam.delete_prefix"),
         }
-        # vrf_id = instance.vrf.pk if instance.vrf else "0"
-        # bulk_querystring = f"vrf_id={vrf_id}&within={instance.prefix}"
         namespace_id = instance.namespace_id
         bulk_querystring = f"namespace={namespace_id}&within={instance.prefix}"
 
@@ -445,8 +391,6 @@ class PrefixIPAddressesView(generic.ObjectView):
             "change": request.user.has_perm("ipam.change_ipaddress"),
             "delete": request.user.has_perm("ipam.delete_ipaddress"),
         }
-        # vrf_id = instance.vrf.pk if instance.vrf else "0"
-        # bulk_querystring = f"vrf_id={vrf_id}&parent={instance.prefix}"
         namespace_id = instance.namespace_id
         bulk_querystring = f"namespace={namespace_id}&parent={instance.prefix}"
 
@@ -478,7 +422,6 @@ class PrefixBulkImportView(generic.BulkImportView):
 
 
 class PrefixBulkEditView(generic.BulkEditView):
-    # queryset = Prefix.objects.select_related("location", "status", "vrf__tenant", "tenant", "vlan", "role")
     queryset = Prefix.objects.select_related("location", "status", "namespace", "tenant", "vlan", "role")
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
@@ -486,7 +429,6 @@ class PrefixBulkEditView(generic.BulkEditView):
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
-    # queryset = Prefix.objects.select_related("location", "status", "vrf__tenant", "tenant", "vlan", "role")
     queryset = Prefix.objects.select_related("location", "status", "namespace", "tenant", "vlan", "role")
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable

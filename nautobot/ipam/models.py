@@ -9,7 +9,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
-from django.utils.functional import classproperty
+from django.utils.functional import cached_property, classproperty
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
@@ -539,7 +539,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     def __init__(self, *args, **kwargs):
         prefix = kwargs.pop("prefix", None)
-        super(Prefix, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
     def __str__(self):
@@ -572,18 +572,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def clean(self):
         super().clean()
 
-        # TODO(jathan): Restored this check for the purpose of unit testing, but this will go away
-        # once we merge Namespaces.
-        if self.prefix:
-
-            # Enforce unique IP space (if applicable)
-            # if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
-            if self.vrf is None or (self.vrf and self.vrf.enforce_unique):
-                duplicate_prefixes = self.get_duplicates()
-                if duplicate_prefixes:
-                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
-                    raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
-
         # Validate location
         if self.location is not None:
 
@@ -600,19 +588,16 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         `protected_objects` from the exception setting their parent to the old parent of this
         prefix, and then this prefix will be deleted.
         """
-        force_delete = kwargs.pop("force_delete", False)
+        # force_delete = kwargs.pop("force_delete", False)
 
         try:
             return super().delete(*args, **kwargs)
         except models.ProtectedError as err:
             # Update protected objects to use the new parent and delete the old parent (self).
-            if force_delete:
-                protected_pks = (po.pk for po in err.protected_objects)
-                protected_objects = Prefix.objects.filter(pk__in=protected_pks)
-                protected_objects.update(parent=self.parent)
-                return super().delete(*args, **kwargs)
-            else:
-                raise
+            protected_pks = (po.pk for po in err.protected_objects)
+            protected_objects = Prefix.objects.filter(pk__in=protected_pks)
+            protected_objects.update(parent=self.parent)
+            return super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
 
@@ -684,7 +669,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             ip_version=self.ip_version,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
-            # namespace=self.namespace,
+            namespace=self.namespace,
         )
 
         return query.update(parent=self)
@@ -717,7 +702,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
-            # namespace=self.namespace,
+            namespace=self.namespace,
         )
 
     def subnets(self, direct=False, include_self=False, for_update=False):
@@ -748,7 +733,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             prefix_length__gte=self.prefix_length,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
-            # namespace=self.namespace,
+            namespace=self.namespace,
         )
 
     def is_child_node(self):
@@ -790,6 +775,11 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             include_self (bool): Whether to include this Prefix in the list of subnets.
         """
         return self.subnets(include_self=include_self)
+
+    @cached_property
+    def descendants_count(self):
+        """Display count of descendants."""
+        return self.descendants().count()
 
     def root(self):
         """
@@ -888,9 +878,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             UtilizationData (namedtuple): (numerator, denominator)
         """
         if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            # queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
-            queryset = Prefix.objects.net_contained(self.prefix).filter(namespace=self.namespace)
-            child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.descendants())
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
@@ -987,7 +975,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
-        super(IPAddress, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._deconstruct_address(address)
 
     def __str__(self):

@@ -41,7 +41,7 @@ UTILIZATION_GRAPH = """
 
 PREFIX_LINK = """
 {% load helpers %}
-{% for i in record.parents|as_range %}
+{% for i in record.ancestors.count|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
     <a href="\
@@ -59,7 +59,7 @@ PREFIX_LINK = """
 
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% for i in record.parents|as_range %}
+{% for i in record.ancestors.count|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
 <span class="hover_copy">
@@ -360,6 +360,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
+    children = tables.Column(accessor="descendants_count")
     date_allocated = tables.DateTimeColumn()
 
     class Meta(BaseTable.Meta):

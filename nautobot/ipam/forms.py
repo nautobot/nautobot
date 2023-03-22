@@ -323,12 +323,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "date_allocated": DateTimePicker(),
         }
 
-    def __init__(self, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        # self.fields["vrf"].empty_label = "Global"
-
 
 class PrefixCSVForm(
     PrefixFieldMixin,
@@ -393,11 +387,13 @@ class PrefixBulkEditForm(
         choices=add_blank_choice(PrefixTypeChoices),
         required=False,
     )
+    """
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
     )
+    """
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -409,7 +405,7 @@ class PrefixBulkEditForm(
         model = Prefix
         nullable_fields = [
             "location",
-            "vrf",
+            # "vrf",
             "tenant",
             "rir",
             "date_allocated",
@@ -431,8 +427,8 @@ class PrefixFilterForm(
         "type",
         "family",
         "mask_length",
-        "vrf_id",
-        "present_in_vrf_id",
+        # "vrf_id",
+        # "present_in_vrf_id",
         "status",
         "location",
         "role",
@@ -463,6 +459,7 @@ class PrefixFilterForm(
         label="Mask length",
         widget=StaticSelect2(),
     )
+    """
     vrf_id = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -470,6 +467,7 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    """
     type = forms.MultipleChoiceField(
         required=False,
         choices=PrefixTypeChoices,

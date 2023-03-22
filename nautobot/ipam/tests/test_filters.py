@@ -263,7 +263,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         unwanted_prefixes = self.queryset.exclude(pk__in=test_prefixes)
         unwanted_prefixes.update(parent=None)
         unwanted_prefixes.delete()
-        self.queryset.exclude(pk__in=test_prefixes).delete()
         self.queryset.all().update(vrf=None)
         IPAddress.objects.all().update(vrf=None)
         VRF.objects.all().delete()

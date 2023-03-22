@@ -499,14 +499,21 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             # >>> serializer.errors
             # {'__all__': [ErrorDetail(string='Prefix with this Namespace, Network and Prefix length already exists.', code='unique_together')]}
             except ValidationError as err:
-                # msg = f"{obj} failed validation: {err}"
                 logger.exception(err)
                 for field, errors in err.message_dict.items():
                     if field == "__all__":
                         field = None
                     for error in errors:
                         form.add_error(field, error)
-
+            # This is necessary due to the uniqueness constraint from the database for `ipam.Prefix`
+            # bubbling up. Just a quick fix for the time being without debugging too hard, to know
+            # that this at least surfaces the (ugly) error in the UI.
+            except IntegrityError as err:
+                logger.exception(err)
+                models = ", ".join(o.replace("_", " ").title() for o in obj._meta.unique_together[0])
+                model_name = obj._meta.verbose_name.title()
+                msg = f"{model_name} with this {models} already exists."
+                form.add_error(None, msg)
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)

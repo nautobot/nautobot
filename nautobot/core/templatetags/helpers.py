@@ -445,7 +445,7 @@ def as_range(n):
         [list, Range]: range function from o to the value provided. Returns an empty list if n is not valid.
 
     Example:
-        {% for i in record.parents|as_range %}
+        {% for i in record.ancestors.count|as_range %}
             <i class="mdi mdi-circle-small"></i>
         {% endfor %}
     """
