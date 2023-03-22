@@ -519,10 +519,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             "namespace",
             "network",
             "prefix_length",
-        )  # (vrf, prefix) may be non-unique
-        unique_together = ("namespace", "network", "prefix_length")
+        )
+        index_together = [
+            ["network", "broadcast", "prefix_length"],
+            ["namespace", "network", "broadcast", "prefix_length"],
+        ]
+        unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
-        index_together = ["network", "broadcast", "prefix_length"]
 
     def validate_unique(self, exclude=None):
         if self.namespace is None:
