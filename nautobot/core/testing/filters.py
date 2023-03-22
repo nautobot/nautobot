@@ -4,6 +4,7 @@ from django.db.models import Count
 from django.test import tag
 
 from nautobot.core.filters import RelatedMembershipBooleanFilter
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
 
@@ -132,6 +133,24 @@ class FilterTestCases:
                     filterset_result = self.filterset({filter_name: False}, self.queryset).qs
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": True}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+
+        def test_tags_filter(self):
+            """Test the `tags` filter which should be present on all PrimaryModel filtersets."""
+            if not issubclass(self.queryset.model, PrimaryModel):
+                self.skipTest("Not a PrimaryModel")
+
+            # Find an instance with at least two tags (should be common given our factory design)
+            for instance in list(self.queryset):
+                if len(instance.tags.all()) >= 2:
+                    tags = list(instance.tags.all()[:2])
+                    break
+            else:
+                self.fail(f"Couldn't find any {self.queryset.model._meta.object_name} with at least two Tags.")
+            params = {"tags": [tags[0].slug, tags[1].pk]}
+            filterset_result = self.filterset(params, self.queryset).qs
+            # Tags is an AND filter not an OR filter
+            qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
+            self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
     class NameSlugFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name and by slug."""

@@ -1,0 +1,1 @@
+Added ability for `tags` filters to filter by UUID as well as by slug.

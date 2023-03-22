@@ -88,7 +88,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     VirtualChassis,
 )
-from nautobot.extras.models import Role, SecretsGroup, Status
+from nautobot.extras.models import Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
@@ -204,6 +204,8 @@ def common_test_data(cls):
         PowerPanel.objects.create(name="Power Panel 2", location=loc1, rack_group=rack_groups[1]),
         PowerPanel.objects.create(name="Power Panel 3", location=loc1, rack_group=rack_groups[2]),
     )
+    power_panels[0].tags.set(Tag.objects.get_for_model(PowerPanel))
+    power_panels[1].tags.set(Tag.objects.get_for_model(PowerPanel)[:3])
 
     rackroles = Role.objects.get_for_model(Rack)
 
@@ -269,6 +271,8 @@ def common_test_data(cls):
             outer_unit=RackDimensionUnitChoices.UNIT_INCH,
         ),
     )
+    racks[0].tags.set(Tag.objects.get_for_model(Rack))
+    racks[1].tags.set(Tag.objects.get_for_model(Rack)[:3])
 
     cls.device_roles = Role.objects.get_for_model(Device)
 
@@ -296,9 +300,13 @@ def common_test_data(cls):
     VLAN.objects.create(name="VLAN 102", vid=102, location=loc0)
     VLAN.objects.create(name="VLAN 103", vid=103, location=loc1)
 
-    PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0])
-    PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1])
-    PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2])
+    power_feeds = (
+        PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0]),
+        PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1]),
+        PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2]),
+    )
+    power_feeds[0].tags.set(Tag.objects.get_for_model(PowerFeed))
+    power_feeds[1].tags.set(Tag.objects.get_for_model(PowerFeed)[:3])
 
     users = (
         User.objects.create_user(username="TestCaseUser 1"),
@@ -306,27 +314,31 @@ def common_test_data(cls):
         User.objects.create_user(username="TestCaseUser 3"),
     )
 
-    RackReservation.objects.create(
-        rack=racks[0],
-        units=(1, 2, 3),
-        user=users[0],
-        description="Rack Reservation 1",
-        tenant=tenants[0],
+    rack_reservations = (
+        RackReservation.objects.create(
+            rack=racks[0],
+            units=(1, 2, 3),
+            user=users[0],
+            description="Rack Reservation 1",
+            tenant=tenants[0],
+        ),
+        RackReservation.objects.create(
+            rack=racks[1],
+            units=(4, 5, 6),
+            user=users[1],
+            description="Rack Reservation 2",
+            tenant=tenants[1],
+        ),
+        RackReservation.objects.create(
+            rack=racks[2],
+            units=(7, 8, 9),
+            user=users[2],
+            description="Rack Reservation 3",
+            tenant=tenants[2],
+        ),
     )
-    RackReservation.objects.create(
-        rack=racks[1],
-        units=(4, 5, 6),
-        user=users[1],
-        description="Rack Reservation 2",
-        tenant=tenants[1],
-    )
-    RackReservation.objects.create(
-        rack=racks[2],
-        units=(7, 8, 9),
-        user=users[2],
-        description="Rack Reservation 3",
-        tenant=tenants[2],
-    )
+    rack_reservations[0].tags.set(Tag.objects.get_for_model(RackReservation))
+    rack_reservations[1].tags.set(Tag.objects.get_for_model(RackReservation)[:3])
 
     ConsolePortTemplate.objects.create(
         device_type=device_types[0],
@@ -526,55 +538,59 @@ def common_test_data(cls):
     device_statuses = Status.objects.get_for_model(Device)
     device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
-    Device.objects.create(
-        name="Device 1",
-        device_type=device_types[0],
-        role=cls.device_roles[0],
-        platform=platforms[0],
-        rack=racks[0],
-        location=loc0,
-        tenant=tenants[0],
-        status=device_status_map["active"],
-        cluster=clusters[0],
-        asset_tag="1001",
-        face=DeviceFaceChoices.FACE_FRONT,
-        serial="ABC",
-        position=1,
-        secrets_group=secrets_groups[0],
+    devices = (
+        Device.objects.create(
+            name="Device 1",
+            device_type=device_types[0],
+            role=cls.device_roles[0],
+            platform=platforms[0],
+            rack=racks[0],
+            location=loc0,
+            tenant=tenants[0],
+            status=device_status_map["active"],
+            cluster=clusters[0],
+            asset_tag="1001",
+            face=DeviceFaceChoices.FACE_FRONT,
+            serial="ABC",
+            position=1,
+            secrets_group=secrets_groups[0],
+        ),
+        Device.objects.create(
+            name="Device 2",
+            device_type=device_types[1],
+            role=cls.device_roles[1],
+            platform=platforms[1],
+            rack=racks[1],
+            location=loc0,
+            tenant=tenants[1],
+            status=device_status_map["staged"],
+            cluster=clusters[1],
+            asset_tag="1002",
+            face=DeviceFaceChoices.FACE_FRONT,
+            serial="DEF",
+            position=2,
+            secrets_group=secrets_groups[1],
+            local_config_context_data={"foo": 123},
+        ),
+        Device.objects.create(
+            name="Device 3",
+            device_type=device_types[2],
+            role=cls.device_roles[2],
+            platform=platforms[2],
+            rack=racks[2],
+            location=loc1,
+            tenant=tenants[2],
+            status=device_status_map["failed"],
+            cluster=clusters[2],
+            asset_tag="1003",
+            face=DeviceFaceChoices.FACE_REAR,
+            serial="GHI",
+            position=3,
+            secrets_group=secrets_groups[2],
+        ),
     )
-    Device.objects.create(
-        name="Device 2",
-        device_type=device_types[1],
-        role=cls.device_roles[1],
-        platform=platforms[1],
-        rack=racks[1],
-        location=loc0,
-        tenant=tenants[1],
-        status=device_status_map["staged"],
-        cluster=clusters[1],
-        asset_tag="1002",
-        face=DeviceFaceChoices.FACE_FRONT,
-        serial="DEF",
-        position=2,
-        secrets_group=secrets_groups[1],
-        local_config_context_data={"foo": 123},
-    )
-    Device.objects.create(
-        name="Device 3",
-        device_type=device_types[2],
-        role=cls.device_roles[2],
-        platform=platforms[2],
-        rack=racks[2],
-        location=loc1,
-        tenant=tenants[2],
-        status=device_status_map["failed"],
-        cluster=clusters[2],
-        asset_tag="1003",
-        face=DeviceFaceChoices.FACE_REAR,
-        serial="GHI",
-        position=3,
-        secrets_group=secrets_groups[2],
-    )
+    devices[0].tags.set(Tag.objects.get_for_model(Device))
+    devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
 
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -1497,6 +1513,7 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
             devices[0].console_ports.get(name="Console Port 1"),
             devices[1].console_ports.get(name="Console Port 2"),
         )
+        console_ports[0].tags.set(Tag.objects.get_for_model(ConsolePort))
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -1555,6 +1572,7 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
             devices[1].console_server_ports.get(name="Console Server Port 2"),
             devices[2].console_server_ports.get(name="Console Server Port 3"),
         )
+        console_server_ports[0].tags.set(Tag.objects.get_for_model(ConsoleServerPort))
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -1618,6 +1636,8 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
             devices[1].power_ports.get(name="Power Port 2"),
             PowerPort.objects.create(name="Power Port 4", device=devices[2]),
         )
+        power_ports[0].tags.set(Tag.objects.get_for_model(PowerPort))
+        power_ports[1].tags.set(Tag.objects.get_for_model(PowerPort)[:3])
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -1672,6 +1692,8 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
             devices[1].power_outlets.get(name="Power Outlet 2"),
             devices[2].power_outlets.get(name="Power Outlet 3"),
         )
+        power_outlets[0].tags.set(Tag.objects.get_for_model(PowerOutlet))
+        power_outlets[1].tags.set(Tag.objects.get_for_model(PowerOutlet)[:3])
 
         power_ports = (
             devices[0].power_ports.get(name="Power Port 1"),
@@ -1793,6 +1815,8 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         interface_taggable_vlan_1 = VLAN.objects.filter(location=devices[2].location).first()
         interface_taggable_vlan_2 = VLAN.objects.filter(location=devices[2].location).last()
 
+        cabled_interfaces[0].tags.set(Tag.objects.get_for_model(Interface))
+        cabled_interfaces[1].tags.set(Tag.objects.get_for_model(Interface)[:3])
         cabled_interfaces[3].tagged_vlans.add(interface_taggable_vlan_1)
         cabled_interfaces[4].tagged_vlans.add(interface_taggable_vlan_1)
         cabled_interfaces[5].tagged_vlans.add(interface_taggable_vlan_2)
@@ -2131,6 +2155,8 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
                 rear_port_position=1,
             ),
         )
+        front_ports[0].tags.set(Tag.objects.get_for_model(FrontPort))
+        front_ports[1].tags.set(Tag.objects.get_for_model(FrontPort)[:3])
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -2196,6 +2222,8 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
                 positions=6,
             ),
         )
+        rear_ports[0].tags.set(Tag.objects.get_for_model(RearPort))
+        rear_ports[1].tags.set(Tag.objects.get_for_model(RearPort)[:3])
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses.get(slug="connected")
@@ -2281,6 +2309,7 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
             parent_devices[0].device_bays.first(),
             parent_devices[1].device_bays.first(),
         )
+        device_bays[0].tags.set(Tag.objects.get_for_model(DeviceBay))
         device_bays[0].installed_device = child_devices[0]
         device_bays[1].installed_device = child_devices[1]
         device_bays[0].save()
@@ -2350,6 +2379,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 label="inventoryitem3",
             ),
         )
+        inventory_items[0].tags.set(Tag.objects.get_for_model(InventoryItem))
+        inventory_items[1].tags.set(Tag.objects.get_for_model(InventoryItem)[:3])
 
         InventoryItem.objects.create(device=devices[0], name="Inventory Item 1A", parent=inventory_items[0])
         InventoryItem.objects.create(device=devices[1], name="Inventory Item 2A", parent=inventory_items[1])
@@ -2451,6 +2482,8 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
             VirtualChassis.objects.create(name="VC 3", master=devices[4], domain="Domain 3"),
             VirtualChassis.objects.create(name="VC 4"),
         )
+        virtual_chassis[0].tags.set(Tag.objects.get_for_model(VirtualChassis))
+        virtual_chassis[1].tags.set(Tag.objects.get_for_model(VirtualChassis)[:3])
 
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis[0])
         Device.objects.filter(pk=devices[3].pk).update(virtual_chassis=virtual_chassis[1])
@@ -2573,70 +2606,74 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         cls.status_decommissioning = statuses.get(slug="decommissioning")
         cls.status_planned = statuses.get(slug="planned")
 
-        # Cables
-        Cable.objects.create(
-            termination_a=interfaces[0],
-            termination_b=interfaces[3],
-            label="Cable 1",
-            type=CableTypeChoices.TYPE_MMF,
-            status=cls.status_connected,
-            color="aa1409",
-            length=10,
-            length_unit=CableLengthUnitChoices.UNIT_FOOT,
-        )
-        Cable.objects.create(
-            termination_a=interfaces[1],
-            termination_b=interfaces[4],
-            label="Cable 2",
-            type=CableTypeChoices.TYPE_MMF,
-            status=cls.status_connected,
-            color="aa1409",
-            length=20,
-            length_unit=CableLengthUnitChoices.UNIT_FOOT,
-        )
-        Cable.objects.create(
-            termination_a=interfaces[2],
-            termination_b=interfaces[5],
-            label="Cable 3",
-            type=CableTypeChoices.TYPE_CAT5E,
-            status=cls.status_connected,
-            color="f44336",
-            length=30,
-            length_unit=CableLengthUnitChoices.UNIT_FOOT,
-        )
-        Cable.objects.create(
-            termination_a=interfaces[6],
-            termination_b=interfaces[9],
-            label="Cable 4",
-            type=CableTypeChoices.TYPE_CAT5E,
-            status=cls.status_planned,
-            color="f44336",
-            length=40,
-            length_unit=CableLengthUnitChoices.UNIT_FOOT,
-        )
-        Cable.objects.create(
-            termination_a=interfaces[7],
-            termination_b=interfaces[10],
-            label="Cable 5",
-            type=CableTypeChoices.TYPE_CAT6,
-            status=cls.status_planned,
-            color="e91e63",
-            length=10,
-            length_unit=CableLengthUnitChoices.UNIT_METER,
-        )
-
         console_port = ConsolePort.objects.filter(device=devices[2]).first()
         console_server_port = ConsoleServerPort.objects.filter(device=devices[5]).first()
-        Cable.objects.create(
-            termination_a=console_port,
-            termination_b=console_server_port,
-            label="Cable 6",
-            type=CableTypeChoices.TYPE_CAT6,
-            status=cls.status_decommissioning,
-            color="e91e63",
-            length=20,
-            length_unit=CableLengthUnitChoices.UNIT_METER,
+
+        # Cables
+        cables = (
+            Cable.objects.create(
+                termination_a=interfaces[0],
+                termination_b=interfaces[3],
+                label="Cable 1",
+                type=CableTypeChoices.TYPE_MMF,
+                status=cls.status_connected,
+                color="aa1409",
+                length=10,
+                length_unit=CableLengthUnitChoices.UNIT_FOOT,
+            ),
+            Cable.objects.create(
+                termination_a=interfaces[1],
+                termination_b=interfaces[4],
+                label="Cable 2",
+                type=CableTypeChoices.TYPE_MMF,
+                status=cls.status_connected,
+                color="aa1409",
+                length=20,
+                length_unit=CableLengthUnitChoices.UNIT_FOOT,
+            ),
+            Cable.objects.create(
+                termination_a=interfaces[2],
+                termination_b=interfaces[5],
+                label="Cable 3",
+                type=CableTypeChoices.TYPE_CAT5E,
+                status=cls.status_connected,
+                color="f44336",
+                length=30,
+                length_unit=CableLengthUnitChoices.UNIT_FOOT,
+            ),
+            Cable.objects.create(
+                termination_a=interfaces[6],
+                termination_b=interfaces[9],
+                label="Cable 4",
+                type=CableTypeChoices.TYPE_CAT5E,
+                status=cls.status_planned,
+                color="f44336",
+                length=40,
+                length_unit=CableLengthUnitChoices.UNIT_FOOT,
+            ),
+            Cable.objects.create(
+                termination_a=interfaces[7],
+                termination_b=interfaces[10],
+                label="Cable 5",
+                type=CableTypeChoices.TYPE_CAT6,
+                status=cls.status_planned,
+                color="e91e63",
+                length=10,
+                length_unit=CableLengthUnitChoices.UNIT_METER,
+            ),
+            Cable.objects.create(
+                termination_a=console_port,
+                termination_b=console_server_port,
+                label="Cable 6",
+                type=CableTypeChoices.TYPE_CAT6,
+                status=cls.status_decommissioning,
+                color="e91e63",
+                length=20,
+                length_unit=CableLengthUnitChoices.UNIT_METER,
+            ),
         )
+        cables[0].tags.set(Tag.objects.get_for_model(Cable))
+        cables[1].tags.set(Tag.objects.get_for_model(Cable)[:3])
 
     def test_length_unit(self):
         # TODO: Not a generic_filter_test because this is a single-value filter

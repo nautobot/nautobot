@@ -166,9 +166,8 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
         cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[1])
 
-        cls.tag = Tag.objects.get_for_model(Cluster).first()
-        clusters[0].tags.add(cls.tag)
-        clusters[1].tags.add(cls.tag)
+        clusters[0].tags.set(Tag.objects.get_for_model(Cluster))
+        clusters[1].tags.set(Tag.objects.get_for_model(Cluster)[:3])
 
     def test_name(self):
         params = {"name": ["Cluster 1", "Cluster 2"]}
@@ -177,10 +176,6 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     def test_comments(self):
         params = {"comments": ["This is cluster 1", "This is cluster 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_tags(self):
-        params = {"tag": [self.tag.slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
 
     def test_device(self):
         with self.subTest("Devices"):
@@ -431,9 +426,8 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=cls.ipaddresses[0])
         VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip6=cls.ipaddresses[1])
 
-        cls.tag = Tag.objects.get_for_model(VirtualMachine).first()
-        vms[0].tags.add(cls.tag)
-        vms[1].tags.add(cls.tag)
+        vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
+        vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
 
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
@@ -464,10 +458,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(interfaces__in=[self.interfaces[0].pk, self.interfaces[1].pk]),
         )
-
-    def test_tags(self):
-        params = {"tag": [self.tag.slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
 
     def test_vcpus(self):
         params = {"vcpus": [1, 2]}
@@ -703,13 +693,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         vminterfaces[1].add_ip_addresses(ip_address6)
         ip_address6.validated_save()
 
-        cls.tag = Tag.objects.get_for_model(VMInterface).first()
-        vminterfaces[0].tags.add(cls.tag)
-        vminterfaces[1].tags.add(cls.tag)
-
-    def test_tags(self):
-        params = {"tag": [self.tag.slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
+        vminterfaces[0].tags.set(Tag.objects.get_for_model(VMInterface))
+        vminterfaces[1].tags.set(Tag.objects.get_for_model(VMInterface)[:3])
 
     def test_mode(self):
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
