@@ -49,8 +49,7 @@ PREFIX_LINK = """
 {% url 'ipam:prefix' pk=record.pk %}\
 {% else %}\
 {% url 'ipam:prefix_add' %}\
-?prefix={{ record }}\
-{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+?prefix={{ record }}&namespace={{ object.namespace.pk }}\
 {% if object.location %}&location={{ object.location.pk }}{% endif %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
@@ -68,8 +67,7 @@ PREFIX_COPY_LINK = """
 {% url 'ipam:prefix' pk=record.pk %}\
 {% else %}\
 {% url 'ipam:prefix_add' %}\
-?prefix={{ record }}\
-{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+?prefix={{ record }}&namespace={{ object.namespace.pk }}\
 {% if object.location %}&location={{ object.location.pk }}{% endif %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\

@@ -3,8 +3,8 @@ from unittest import skipIf
 import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import connection, models
-from django.test import TestCase, override_settings
+from django.db import connection
+from django.test import TestCase
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
@@ -160,7 +160,9 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(prepped, manual)
 
 
-class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
+class TestPrefix(ModelTestCases.BaseModelTestCase):
+    model = Prefix
+
     def setUp(self):
         super().setUp()
         # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
@@ -246,10 +248,7 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(self.child1.parent, self.parent)
 
         # Delete the parent (/25); child1/child2 now have root (/24) as their parent.
-        # Parent has children, so delete will fail
-        self.assertRaises(models.ProtectedError, self.parent.delete)
-        # Force delete to coerce reparenting
-        num_deleted, _ = self.parent.delete(force_delete=True)
+        num_deleted, _ = self.parent.delete()
         self.assertEqual(num_deleted, 1)
 
         self.assertEqual(list(self.root.children.all()), [self.child1, self.child2])
@@ -501,16 +500,16 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     #
 
     def test_duplicate_global_unique(self):
-        """With ENFORCE_GLOBAL_UNIQUE hard-coded, this should raise a ValidationError."""
+        """This should raise a ValidationError."""
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
         duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertRaises(ValidationError, duplicate_prefix.clean)
+        self.assertRaises(ValidationError, duplicate_prefix.full_clean)
 
     def test_duplicate_vrf(self):
         vrf = VRF.objects.filter(enforce_unique=False).first()
         Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
         duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertIsNone(duplicate_prefix.clean())
+        self.assertIsNone(duplicate_prefix.full_clean())
 
     def test_duplicate_vrf_unique(self):
         vrf = VRF.objects.filter(enforce_unique=True).first()
@@ -536,13 +535,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
     # Uniqueness enforcement tests
     #
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
-    def test_duplicate_global(self):
-        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertIsNone(duplicate_ip.clean())
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
         IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
         duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
@@ -560,7 +552,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         self.assertRaises(ValidationError, duplicate_ip.clean)
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_nonunique_role(self):
         roles = Role.objects.get_for_model(IPAddress)
         IPAddress.objects.create(

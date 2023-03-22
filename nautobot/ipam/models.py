@@ -2,7 +2,6 @@ import logging
 import operator
 
 import netaddr
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -22,7 +21,6 @@ from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .constants import (
-    IPADDRESS_ROLES_NONUNIQUE,
     SERVICE_PORT_MAX,
     SERVICE_PORT_MIN,
     VRF_RD_MAX_LENGTH,
@@ -472,16 +470,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
-    # TODO: The current Prefix model has no appropriate natural key available yet.
-    #       However, by default all BaseModel subclasses now have a `natural_key` property;
-    #       but for this model, accessing the natural_key will raise an exception.
-    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
-    class AttributeRemover:
-        def __get__(self, instance, owner):
-            raise AttributeError("Prefix doesn't yet have a natural key!")
-
-    natural_key = AttributeRemover()
-
     csv_headers = [
         "prefix",
         "type",
@@ -500,6 +488,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "date_allocated",
         "description",
         "location",
+        "namespace",
         "rir",
         "role",
         "status",
@@ -584,11 +573,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         """
         A Prefix with children will be impossible to delete and raise a `ProtectedError`.
 
-        Passing `force_delete=True` will catch the error and explicitly update the
+        If a Prefix has children, this catch the error and explicitly update the
         `protected_objects` from the exception setting their parent to the old parent of this
         prefix, and then this prefix will be deleted.
         """
-        # force_delete = kwargs.pop("force_delete", False)
 
         try:
             return super().delete(*args, **kwargs)
@@ -1011,6 +999,9 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     natural_key = AttributeRemover()
 
+    def get_duplicates(self):
+        return IPAddress.objects.filter(host=self.host).exclude(pk=self.pk)
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
         """Return a cached "slaac" `Status` object for later reference."""
@@ -1026,15 +1017,9 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         if self.address:
-
-            # Enforce unique IP space (if applicable)
-            if self.role not in IPADDRESS_ROLES_NONUNIQUE and (
-                (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique)
-            ):
-                duplicate_ips = self.get_duplicates()
-                if duplicate_ips:
-                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
-                    raise ValidationError({"address": f"Duplicate IP address found in {vrf}: {duplicate_ips.first()}"})
+            duplicate_ips = self.get_duplicates()
+            if duplicate_ips:
+                raise ValidationError({"address": f"Duplicate IP address found: {duplicate_ips.first()}"})
 
         # TODO: update to work with interface M2M
         # This attribute will have been set by `IPAddressForm.clean()` to indicate that the

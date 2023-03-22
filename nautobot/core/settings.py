@@ -63,12 +63,6 @@ NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
 
-# TODO(jathan): ENFORCE_GLOBAL_UNIQUE setting will be removed once we have merged Namespace feature.
-# By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
-# table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
-# ENFORCE_GLOBAL_UNIQUE to True.
-ENFORCE_GLOBAL_UNIQUE = True  # Uniqueness will always be enforced in v2.
-
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
