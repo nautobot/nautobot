@@ -426,7 +426,8 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | VirtualChassis    | `master`               | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`               |
 |                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                 |
 |                   | `tenant`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`               |
-| VLAN              | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
+| VLAN              | `available_on_device`  | Enhanced to permit filtering on multiple values            | `/ipam/vlans/?available_on_device=<uuid>&...`             |
+|                   | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
 
 ### Corrected Filter Fields
 

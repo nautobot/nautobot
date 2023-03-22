@@ -2,7 +2,6 @@ import re
 
 from django import forms
 from django_filters import (
-    BooleanFilter,
     ChoiceFilter,
     DateFilter,
     DateTimeFilter,
@@ -10,7 +9,6 @@ from django_filters import (
     MultipleChoiceFilter,
     NumberFilter,
     TimeFilter,
-    UUIDFilter,
 )
 from django_filters.utils import verbose_lookup_expr
 
@@ -91,14 +89,10 @@ def get_filterset_parameter_form_field(model, parameter):
     from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
     from nautobot.core.forms import (
-        BOOLEAN_CHOICES,
-        DatePicker,
-        DateTimePicker,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
         StaticSelect2,
         StaticSelect2Multiple,
-        TimePicker,
     )
     from nautobot.core.forms.widgets import (
         MultiValueCharInput,
@@ -152,20 +146,6 @@ def get_filterset_parameter_form_field(model, parameter):
         form_attr = {"choices": field.extra.get("choices")}
 
         form_field = form_field_class(**form_attr)
-    elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2()
-        form_attr = {"choices": BOOLEAN_CHOICES}
-
-        form_field = form_field_class(**form_attr)
-    elif isinstance(field, DateTimeFilter):
-        form_field.widget = DateTimePicker()
-    elif isinstance(field, DateFilter):
-        form_field.widget = DatePicker()
-    elif isinstance(field, TimeFilter):
-        form_field.widget = TimePicker()
-    elif isinstance(field, UUIDFilter):
-        form_field.widget = MultiValueCharInput()
 
     form_field.required = False
     form_field.initial = None
