@@ -10,7 +10,7 @@ from nautobot.extras.registry import registry
 register = template_.Library()
 
 
-logger = logging.getLogger("nautobot.plugins")
+logger = logging.getLogger(__name__)
 
 
 def _get_registered_content(obj, method, template_context, return_html=True):

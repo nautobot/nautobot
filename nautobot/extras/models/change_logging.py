@@ -136,6 +136,10 @@ class ObjectChange(BaseModel):
                 name="extras_objectchange_double_idx",
                 fields=["request_id", "changed_object_type_id"],
             ),
+            models.Index(
+                name="extras_objectchange_rtime_idx",
+                fields=["-time"],
+            ),
         ]
 
     def __str__(self):

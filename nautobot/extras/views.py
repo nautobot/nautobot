@@ -28,6 +28,7 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import copy_safe_request, normalize_querydict
 from nautobot.core.views import generic, viewsets
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import csv_format, prepare_cloned_fields
@@ -40,7 +41,7 @@ from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
-from .api.serializers import RoleSerializer
+from .api import serializers
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -62,8 +63,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-)
-from .models import (
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -1047,6 +1047,8 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         if "is_job_hook_receiver" not in request.GET:
             queryset = queryset.filter(is_job_hook_receiver=False)
+        if "is_job_button_receiver" not in request.GET:
+            queryset = queryset.filter(is_job_button_receiver=False)
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1082,28 +1084,31 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get(self, request, class_path=None, slug=None):
         job_model = self._get_job_model_or_404(class_path, slug)
 
-        initial = normalize_querydict(request.GET)
-        if "kwargs_from_job_result" in initial:
-            job_result_pk = initial.pop("kwargs_from_job_result")
-            try:
-                job_result = job_model.job_results.get(pk=job_result_pk)
-                # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
-                # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
-                explicit_initial = initial
-                initial = job_result.task_kwargs.get("data", {}).copy()
-                commit = job_result.task_kwargs.get("commit")
-                if commit is not None:
-                    initial.setdefault("_commit", commit)
-                task_queue = job_result.task_kwargs.get("task_queue")
-                if task_queue is not None:
-                    initial.setdefault("_task_queue", task_queue)
-                initial.update(explicit_initial)
-            except JobResult.DoesNotExist:
-                messages.warning(request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.")
-
-        template_name = "extras/job.html"
         try:
             job_class = job_model.job_class()
+            initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
+            if "kwargs_from_job_result" in initial:
+                job_result_pk = initial.pop("kwargs_from_job_result")
+                try:
+                    job_result = job_model.results.get(pk=job_result_pk)
+                    # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
+                    # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                    explicit_initial = initial
+                    initial = job_result.job_kwargs.get("data", {}).copy()
+                    commit = job_result.job_kwargs.get("commit")
+                    if commit is not None:
+                        initial.setdefault("_commit", commit)
+                    task_queue = job_result.job_kwargs.get("task_queue")
+                    if task_queue is not None:
+                        initial.setdefault("_task_queue", task_queue)
+                    initial.update(explicit_initial)
+                except JobResult.DoesNotExist:
+                    messages.warning(
+                        request,
+                        f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.",
+                    )
+
+            template_name = "extras/job.html"
             job_form = job_class.as_form(initial=initial)
             if hasattr(job_class, "template_name"):
                 try:
@@ -1577,6 +1582,53 @@ class JobLogEntryTableView(View):
 
 
 #
+# Job Button
+#
+
+
+class JobButtonUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobButtonBulkEditForm
+    filterset_class = filters.JobButtonFilterSet
+    filterset_form_class = forms.JobButtonFilterForm
+    form_class = forms.JobButtonForm
+    lookup_field = "pk"
+    queryset = JobButton.objects.all()
+    serializer_class = serializers.JobButtonSerializer
+    table_class = tables.JobButtonTable
+
+
+class JobButtonRunView(ObjectPermissionRequiredMixin, View):
+    """
+    View to run the Job linked to the Job Button.
+    """
+
+    queryset = JobButton.objects.all()
+
+    def get_required_permission(self):
+        return "extras.run_job"
+
+    def post(self, request, pk):
+        post_data = request.POST
+        job_button = JobButton.objects.get(pk=pk)
+        job_model = job_button.job
+        result = JobResult.enqueue_job(
+            func=run_job,
+            name=job_model.class_path,
+            obj_type=get_job_content_type(),
+            user=request.user,
+            data={
+                "object_pk": post_data["object_pk"],
+                "object_model_name": post_data["object_model_name"],
+            },
+            request=copy_safe_request(request),
+            commit=True,
+        )
+        msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
+        messages.info(request=request, message=mark_safe(msg))
+        return redirect(post_data["redirect_path"])
+
+
+#
 # Change logging
 #
 
@@ -1811,7 +1863,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     bulk_update_form_class = RoleBulkEditForm
     filterset_class = RoleFilterSet
     form_class = RoleForm
-    serializer_class = RoleSerializer
+    serializer_class = serializers.RoleSerializer
     table_class = RoleTable
 
     def get_extra_context(self, request, instance):

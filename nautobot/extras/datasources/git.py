@@ -45,7 +45,7 @@ from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
 
 
-logger = logging.getLogger("nautobot.datasources.git")
+logger = logging.getLogger(__name__)
 
 # namedtuple takes a job_result(JobResult instance) and a repository_record(GitRepository instance).
 GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
@@ -248,11 +248,6 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior
             pass
-
-    if not token and repository_record._token:
-        token = repository_record._token
-    if not user and repository_record.username:
-        user = repository_record.username
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.

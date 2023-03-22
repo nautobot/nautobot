@@ -10,11 +10,10 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
-
-from nautobot.core.models.fields import slugify_dots_to_dashes
 
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
 from nautobot.core.models.utils import find_models_with_matching_fields, is_taggable  # noqa: F401
@@ -22,7 +21,6 @@ from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -378,14 +376,10 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
-    from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
-
-    if git_repository is not None:
-        default_slug = slugify_dots_to_dashes(
-            f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
-        )
-    else:
-        default_slug = slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}")
+    from nautobot.extras.jobs import (
+        JobHookReceiver,
+        JobButtonReceiver,
+    )  # imported here to prevent circular import problem
 
     # Unrecoverable errors
     if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
@@ -409,6 +403,12 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
         return (None, False)
+    if issubclass(job_class, JobHookReceiver) and issubclass(job_class, JobButtonReceiver):
+        logger.error(
+            'Job class "%s" must not sub-class from both JobHookReceiver and JobButtonReceiver!',
+            job_class.__name__,
+        )
+        return (None, False)
 
     # Recoverable errors
     if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
@@ -426,20 +426,51 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
 
+    # handle duplicate names by appending an incrementing counter to the end
+    default_job_name = job_class.name[:JOB_MAX_NAME_LENGTH]
+    job_name = default_job_name
+    append_counter = 2
+    existing_job_names = (
+        job_model_class.objects.filter(name__startswith=job_name)
+        .exclude(
+            source=job_source[:JOB_MAX_SOURCE_LENGTH],
+            git_repository=git_repository,
+            module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+            job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+        )
+        .values_list("name", flat=True)
+    )
+    while job_name in existing_job_names:
+        job_name_append = f" ({append_counter})"
+        max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
+        job_name = default_job_name[:max_name_length] + job_name_append
+        append_counter += 1
+    if job_name != default_job_name and "test" not in sys.argv:
+        logger.warning(
+            'Job class "%s" name "%s" is not unique, changing to "%s".',
+            job_class.__name__,
+            default_job_name,
+            job_name,
+        )
+
     job_model, created = job_model_class.objects.get_or_create(
         source=job_source[:JOB_MAX_SOURCE_LENGTH],
         git_repository=git_repository,
         module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
         job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
+            "slug": slugify(job_name)[:JOB_MAX_NAME_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
-            "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+            "name": job_name,
             "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
+            "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
             "installed": True,
             "enabled": False,
         },
     )
+
+    if job_name != default_job_name:
+        job_model.name_override = True
 
     for field_name in JOB_OVERRIDABLE_FIELDS:
         # Was this field directly inherited from the job before, or was it overridden in the database?

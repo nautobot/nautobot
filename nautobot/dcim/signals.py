@@ -189,7 +189,7 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
     """
     When a Cable is saved, check for and update its two connected endpoints
     """
-    logger = logging.getLogger("nautobot.dcim.cable")
+    logger = logging.getLogger(__name__ + ".cable")
     if raw:
         logger.debug(f"Skipping endpoint updates for imported cable {instance}")
         return
@@ -228,7 +228,7 @@ def nullify_connected_endpoints(instance, **kwargs):
     """
     When a Cable is deleted, check for and update its two connected endpoints
     """
-    logger = logging.getLogger("nautobot.dcim.cable")
+    logger = logging.getLogger(__name__ + ".cable")
 
     # Disassociate the Cable from its termination points
     if instance.termination_a is not None:

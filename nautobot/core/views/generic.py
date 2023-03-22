@@ -411,7 +411,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
-        initial_data = normalize_querydict(request.GET)
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
@@ -429,7 +429,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectEditView")
+        logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
@@ -567,7 +567,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectDeleteView")
+        logger = logging.getLogger(__name__ + ".ObjectDeleteView")
         obj = self.get_object(kwargs)
         form = ConfirmationForm(request.POST)
 
@@ -648,7 +648,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkCreateView")
+        logger = logging.getLogger(__name__ + ".BulkCreateView")
         model = self.queryset.model
         form = self.form(request.POST)
         model_form = self.model_form(request.POST)
@@ -750,7 +750,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.ObjectImportView")
+        logger = logging.getLogger(__name__ + ".ObjectImportView")
         form = ImportForm(request.POST)
 
         if form.is_valid():
@@ -911,7 +911,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkImportView")
+        logger = logging.getLogger(__name__ + ".BulkImportView")
         new_objs = []
         form = self._import_form(request.POST, request.FILES)
 
@@ -1012,7 +1012,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return obj
 
     def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkEditView")
+        logger = logging.getLogger(__name__ + ".BulkEditView")
         model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
@@ -1180,7 +1180,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return get_permission_for_model(self.queryset.model, "change")
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkRenameView")
+        logger = logging.getLogger(__name__ + ".BulkRenameView")
         query_pks = request.POST.getlist("pk")
         selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
 
@@ -1278,7 +1278,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return redirect(self.get_return_url(request))
 
     def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkDeleteView")
+        logger = logging.getLogger(__name__ + ".BulkDeleteView")
         model = self.queryset.model
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
@@ -1398,7 +1398,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.ComponentCreateView")
+        logger = logging.getLogger(__name__ + ".ComponentCreateView")
         form = self.form(request.POST, initial=request.GET)
         model_form = self.model_form(request.POST)
 
@@ -1491,7 +1491,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
         return f"dcim.add_{self.queryset.model._meta.model_name}"
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkComponentCreateView")
+        logger = logging.getLogger(__name__ + ".BulkComponentCreateView")
         parent_model_name = self.parent_model._meta.verbose_name_plural
         model_name = self.queryset.model._meta.verbose_name_plural
         model = self.queryset.model

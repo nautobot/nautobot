@@ -34,14 +34,20 @@ class RackTypeChoices(ChoiceSet):
     TYPE_4POST = "4-post-frame"
     TYPE_CABINET = "4-post-cabinet"
     TYPE_WALLFRAME = "wall-frame"
+    TYPE_WALLFRAME_VERTICAL = "wall-frame-vertical"
     TYPE_WALLCABINET = "wall-cabinet"
+    TYPE_WALLCABINET_VERTICAL = "wall-cabinet-vertical"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (TYPE_2POST, "2-post frame"),
         (TYPE_4POST, "4-post frame"),
         (TYPE_CABINET, "4-post cabinet"),
         (TYPE_WALLFRAME, "Wall-mounted frame"),
+        (TYPE_WALLFRAME_VERTICAL, "Wall-mounted frame (vertical)"),
         (TYPE_WALLCABINET, "Wall-mounted cabinet"),
+        (TYPE_WALLCABINET_VERTICAL, "Wall-mounted cabinet (vertical)"),
+        (TYPE_OTHER, "Other"),
     )
 
 
@@ -161,6 +167,7 @@ class ConsolePortTypeChoices(ChoiceSet):
     TYPE_RJ11 = "rj-11"
     TYPE_RJ12 = "rj-12"
     TYPE_RJ45 = "rj-45"
+    TYPE_MINI_DIN_8 = "mini-din-8"
     TYPE_USB_A = "usb-a"
     TYPE_USB_B = "usb-b"
     TYPE_USB_C = "usb-c"
@@ -168,6 +175,7 @@ class ConsolePortTypeChoices(ChoiceSet):
     TYPE_USB_MINI_B = "usb-mini-b"
     TYPE_USB_MICRO_A = "usb-micro-a"
     TYPE_USB_MICRO_B = "usb-micro-b"
+    TYPE_USB_MICRO_AB = "usb-micro-ab"
     TYPE_OTHER = "other"
 
     CHOICES = (
@@ -179,6 +187,7 @@ class ConsolePortTypeChoices(ChoiceSet):
                 (TYPE_RJ11, "RJ-11"),
                 (TYPE_RJ12, "RJ-12"),
                 (TYPE_RJ45, "RJ-45"),
+                (TYPE_MINI_DIN_8, "Mini-DIN 8"),
             ),
         ),
         (
@@ -191,6 +200,7 @@ class ConsolePortTypeChoices(ChoiceSet):
                 (TYPE_USB_MINI_B, "USB Mini B"),
                 (TYPE_USB_MICRO_A, "USB Micro A"),
                 (TYPE_USB_MICRO_B, "USB Micro B"),
+                (TYPE_USB_MICRO_AB, "USB Micro AB"),
             ),
         ),
         ("Other", ((TYPE_OTHER, "Other"),)),
@@ -210,6 +220,7 @@ class PowerPortTypeChoices(ChoiceSet):
     TYPE_IEC_C14 = "iec-60320-c14"
     TYPE_IEC_C16 = "iec-60320-c16"
     TYPE_IEC_C20 = "iec-60320-c20"
+    TYPE_IEC_C22 = "iec-60320-c22"
     # IEC 60309
     TYPE_IEC_PNE4H = "iec-60309-p-n-e-4h"
     TYPE_IEC_PNE6H = "iec-60309-p-n-e-6h"
@@ -265,6 +276,7 @@ class PowerPortTypeChoices(ChoiceSet):
     TYPE_NEMA_L1560P = "nema-l15-60p"
     TYPE_NEMA_L2120P = "nema-l21-20p"
     TYPE_NEMA_L2130P = "nema-l21-30p"
+    TYPE_NEMA_L2230P = "nema-l22-30p"
     # California style
     TYPE_CS6361C = "cs6361c"
     TYPE_CS6365C = "cs6365c"
@@ -273,6 +285,7 @@ class PowerPortTypeChoices(ChoiceSet):
     TYPE_CS8365C = "cs8365c"
     TYPE_CS8465C = "cs8465c"
     # ITA/international
+    TYPE_ITA_C = "ita-c"
     TYPE_ITA_E = "ita-e"
     TYPE_ITA_F = "ita-f"
     TYPE_ITA_EF = "ita-ef"
@@ -293,8 +306,21 @@ class PowerPortTypeChoices(ChoiceSet):
     TYPE_USB_MINI_B = "usb-mini-b"
     TYPE_USB_MICRO_A = "usb-micro-a"
     TYPE_USB_MICRO_B = "usb-micro-b"
+    TYPE_USB_MICRO_AB = "usb-micro-ab"
     TYPE_USB_3_B = "usb-3-b"
     TYPE_USB_3_MICROB = "usb-3-micro-b"
+    # Direct current (DC)
+    TYPE_DC = "dc-terminal"
+    # Proprietary
+    TYPE_SAF_D_GRID = "saf-d-grid"
+    TYPE_NEUTRIK_POWERCON_20A = "neutrik-powercon-20"
+    TYPE_NEUTRIK_POWERCON_32A = "neutrik-powercon-32"
+    TYPE_NEUTRIK_POWERCON_TRUE1 = "neutrik-powercon-true1"
+    TYPE_NEUTRIK_POWERCON_TRUE1_TOP = "neutrik-powercon-true1-top"
+    TYPE_UBIQUITI_SMARTPOWER = "ubiquiti-smartpower"
+    # Other
+    TYPE_HARDWIRED = "hardwired"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (
@@ -305,6 +331,7 @@ class PowerPortTypeChoices(ChoiceSet):
                 (TYPE_IEC_C14, "C14"),
                 (TYPE_IEC_C16, "C16"),
                 (TYPE_IEC_C20, "C20"),
+                (TYPE_IEC_C22, "C22"),
             ),
         ),
         (
@@ -372,6 +399,7 @@ class PowerPortTypeChoices(ChoiceSet):
                 (TYPE_NEMA_L1560P, "NEMA L15-60P"),
                 (TYPE_NEMA_L2120P, "NEMA L21-20P"),
                 (TYPE_NEMA_L2130P, "NEMA L21-30P"),
+                (TYPE_NEMA_L2230P, "NEMA L22-30P"),
             ),
         ),
         (
@@ -388,7 +416,8 @@ class PowerPortTypeChoices(ChoiceSet):
         (
             "International/ITA",
             (
-                (TYPE_ITA_E, "ITA Type E (CEE 7/5)"),
+                (TYPE_ITA_C, "ITA Type C (CEE 7/16)"),
+                (TYPE_ITA_E, "ITA Type E (CEE 7/6)"),
                 (TYPE_ITA_F, "ITA Type F (CEE 7/4)"),
                 (TYPE_ITA_EF, "ITA Type E/F (CEE 7/7)"),
                 (TYPE_ITA_G, "ITA Type G (BS 1363)"),
@@ -412,8 +441,28 @@ class PowerPortTypeChoices(ChoiceSet):
                 (TYPE_USB_MINI_B, "USB Mini B"),
                 (TYPE_USB_MICRO_A, "USB Micro A"),
                 (TYPE_USB_MICRO_B, "USB Micro B"),
+                (TYPE_USB_MICRO_AB, "USB Micro AB"),
                 (TYPE_USB_3_B, "USB 3.0 Type B"),
                 (TYPE_USB_3_MICROB, "USB 3.0 Micro B"),
+            ),
+        ),
+        ("DC", ((TYPE_DC, "DC Terminal"),)),
+        (
+            "Proprietary",
+            (
+                (TYPE_SAF_D_GRID, "Saf-D-Grid"),
+                (TYPE_NEUTRIK_POWERCON_20A, "Neutrik powerCON (20A)"),
+                (TYPE_NEUTRIK_POWERCON_32A, "Neutrik powerCON (32A)"),
+                (TYPE_NEUTRIK_POWERCON_TRUE1, "Neutrik powerCON TRUE1"),
+                (TYPE_NEUTRIK_POWERCON_TRUE1_TOP, "Neutrik powerCON TRUE1 TOP"),
+                (TYPE_UBIQUITI_SMARTPOWER, "Ubiquiti SmartPower"),
+            ),
+        ),
+        (
+            "Other",
+            (
+                (TYPE_HARDWIRED, "Hardwired"),
+                (TYPE_OTHER, "Other"),
             ),
         ),
     )
@@ -432,6 +481,7 @@ class PowerOutletTypeChoices(ChoiceSet):
     TYPE_IEC_C13 = "iec-60320-c13"
     TYPE_IEC_C15 = "iec-60320-c15"
     TYPE_IEC_C19 = "iec-60320-c19"
+    TYPE_IEC_C21 = "iec-60320-c21"
     # IEC 60309
     TYPE_IEC_PNE4H = "iec-60309-p-n-e-4h"
     TYPE_IEC_PNE6H = "iec-60309-p-n-e-6h"
@@ -487,6 +537,7 @@ class PowerOutletTypeChoices(ChoiceSet):
     TYPE_NEMA_L1560R = "nema-l15-60r"
     TYPE_NEMA_L2120R = "nema-l21-20r"
     TYPE_NEMA_L2130R = "nema-l21-30r"
+    TYPE_NEMA_L2230R = "nema-l22-30r"
     # California style
     TYPE_CS6360C = "CS6360C"
     TYPE_CS6364C = "CS6364C"
@@ -506,12 +557,24 @@ class PowerOutletTypeChoices(ChoiceSet):
     TYPE_ITA_M = "ita-m"
     TYPE_ITA_N = "ita-n"
     TYPE_ITA_O = "ita-o"
+    TYPE_ITA_MULTISTANDARD = "ita-multistandard"
     # USB
     TYPE_USB_A = "usb-a"
     TYPE_USB_MICROB = "usb-micro-b"
     TYPE_USB_C = "usb-c"
+    # Direct current (DC)
+    TYPE_DC = "dc-terminal"
     # Proprietary
     TYPE_HDOT_CX = "hdot-cx"
+    TYPE_SAF_D_GRID = "saf-d-grid"
+    TYPE_NEUTRIK_POWERCON_20A = "neutrik-powercon-20a"
+    TYPE_NEUTRIK_POWERCON_32A = "neutrik-powercon-32a"
+    TYPE_NEUTRIK_POWERCON_TRUE1 = "neutrik-powercon-true1"
+    TYPE_NEUTRIK_POWERCON_TRUE1_TOP = "neutrik-powercon-true1-top"
+    TYPE_UBIQUITI_SMARTPOWER = "ubiquiti-smartpower"
+    # Other
+    TYPE_HARDWIRED = "hardwired"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (
@@ -522,6 +585,7 @@ class PowerOutletTypeChoices(ChoiceSet):
                 (TYPE_IEC_C13, "C13"),
                 (TYPE_IEC_C15, "C15"),
                 (TYPE_IEC_C19, "C19"),
+                (TYPE_IEC_C21, "C21"),
             ),
         ),
         (
@@ -589,6 +653,7 @@ class PowerOutletTypeChoices(ChoiceSet):
                 (TYPE_NEMA_L1560R, "NEMA L15-60R"),
                 (TYPE_NEMA_L2120R, "NEMA L21-20R"),
                 (TYPE_NEMA_L2130R, "NEMA L21-30R"),
+                (TYPE_NEMA_L2230R, "NEMA L22-30R"),
             ),
         ),
         (
@@ -605,8 +670,8 @@ class PowerOutletTypeChoices(ChoiceSet):
         (
             "ITA/International",
             (
-                (TYPE_ITA_E, "ITA Type E (CEE7/5)"),
-                (TYPE_ITA_F, "ITA Type F (CEE7/3)"),
+                (TYPE_ITA_E, "ITA Type E (CEE 7/5)"),
+                (TYPE_ITA_F, "ITA Type F (CEE 7/3)"),
                 (TYPE_ITA_G, "ITA Type G (BS 1363)"),
                 (TYPE_ITA_H, "ITA Type H"),
                 (TYPE_ITA_I, "ITA Type I"),
@@ -616,6 +681,7 @@ class PowerOutletTypeChoices(ChoiceSet):
                 (TYPE_ITA_M, "ITA Type M (BS 546)"),
                 (TYPE_ITA_N, "ITA Type N"),
                 (TYPE_ITA_O, "ITA Type O"),
+                (TYPE_ITA_MULTISTANDARD, "ITA Multistandard"),
             ),
         ),
         (
@@ -626,7 +692,26 @@ class PowerOutletTypeChoices(ChoiceSet):
                 (TYPE_USB_C, "USB Type C"),
             ),
         ),
-        ("Proprietary", ((TYPE_HDOT_CX, "HDOT Cx"),)),
+        ("DC", ((TYPE_DC, "DC Terminal"),)),
+        (
+            "Proprietary",
+            (
+                (TYPE_HDOT_CX, "HDOT Cx"),
+                (TYPE_SAF_D_GRID, "Saf-D-Grid"),
+                (TYPE_NEUTRIK_POWERCON_20A, "Neutrik powerCON (20A)"),
+                (TYPE_NEUTRIK_POWERCON_32A, "Neutrik powerCON (32A)"),
+                (TYPE_NEUTRIK_POWERCON_TRUE1, "Neutrik powerCON TRUE1"),
+                (TYPE_NEUTRIK_POWERCON_TRUE1_TOP, "Neutrik powerCON TRUE1 TOP"),
+                (TYPE_UBIQUITI_SMARTPOWER, "Ubiquiti SmartPower"),
+            ),
+        ),
+        (
+            "Other",
+            (
+                (TYPE_HARDWIRED, "Hardwired"),
+                (TYPE_OTHER, "Other"),
+            ),
+        ),
     )
 
 
@@ -656,7 +741,10 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_LAG = "lag"
 
     # Ethernet
+    TYPE_100ME_FX = "100base-fx"
+    TYPE_100ME_LFX = "100base-lfx"
     TYPE_100ME_FIXED = "100base-tx"
+    TYPE_100ME_T1 = "100base-t1"
     TYPE_1GE_FIXED = "1000base-t"
     TYPE_1GE_GBIC = "1000base-x-gbic"
     TYPE_1GE_SFP = "1000base-x-sfp"
@@ -669,6 +757,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_10GE_XENPAK = "10gbase-x-xenpak"
     TYPE_10GE_X2 = "10gbase-x-x2"
     TYPE_25GE_SFP28 = "25gbase-x-sfp28"
+    TYPE_50GE_SFP56 = "50gbase-x-sfp56"
     TYPE_40GE_QSFP_PLUS = "40gbase-x-qsfpp"
     TYPE_50GE_QSFP28 = "50gbase-x-sfp28"
     TYPE_100GE_CFP = "100gbase-x-cfp"
@@ -680,6 +769,19 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_200GE_QSFP56 = "200gbase-x-qsfp56"
     TYPE_400GE_QSFP_DD = "400gbase-x-qsfpdd"
     TYPE_400GE_OSFP = "400gbase-x-osfp"
+    TYPE_800GE_QSFP_DD = "800gbase-x-qsfpdd"
+    TYPE_800GE_OSFP = "800gbase-x-osfp"
+
+    # Ethernet Backplane
+    TYPE_1GE_KX = "1000base-kx"
+    TYPE_10GE_KR = "10gbase-kr"
+    TYPE_10GE_KX4 = "10gbase-kx4"
+    TYPE_25GE_KR = "25gbase-kr"
+    TYPE_40GE_KR4 = "40gbase-kr4"
+    TYPE_50GE_KR = "50gbase-kr"
+    TYPE_100GE_KP4 = "100gbase-kp4"
+    TYPE_100GE_KR2 = "100gbase-kr2"
+    TYPE_100GE_KR4 = "100gbase-kr4"
 
     # Wireless
     TYPE_80211A = "ieee802.11a"
@@ -688,6 +790,9 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_80211AC = "ieee802.11ac"
     TYPE_80211AD = "ieee802.11ad"
     TYPE_80211AX = "ieee802.11ax"
+    TYPE_80211AY = "ieee802.11ay"
+    TYPE_802151 = "ieee802.15.1"
+    TYPE_OTHER_WIRELESS = "other-wireless"
 
     # Cellular
     TYPE_GSM = "gsm"
@@ -730,11 +835,30 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_T3 = "t3"
     TYPE_E3 = "e3"
 
+    # ATM/DSL
+    TYPE_XDSL = "xdsl"
+
+    # Coaxial
+    TYPE_DOCSIS = "docsis"
+
+    # PON
+    TYPE_GPON = "gpon"
+    TYPE_XG_PON = "xg-pon"
+    TYPE_XGS_PON = "xgs-pon"
+    TYPE_NG_PON2 = "ng-pon2"
+    TYPE_EPON = "epon"
+    TYPE_10G_EPON = "10g-epon"
+
     # Stacking
     TYPE_STACKWISE = "cisco-stackwise"
     TYPE_STACKWISE_PLUS = "cisco-stackwise-plus"
     TYPE_FLEXSTACK = "cisco-flexstack"
     TYPE_FLEXSTACK_PLUS = "cisco-flexstack-plus"
+    TYPE_STACKWISE80 = "cisco-stackwise-80"
+    TYPE_STACKWISE160 = "cisco-stackwise-160"
+    TYPE_STACKWISE320 = "cisco-stackwise-320"
+    TYPE_STACKWISE480 = "cisco-stackwise-480"
+    TYPE_STACKWISE1T = "cisco-stackwise-1t"
     TYPE_JUNIPER_VCP = "juniper-vcp"
     TYPE_SUMMITSTACK = "extreme-summitstack"
     TYPE_SUMMITSTACK128 = "extreme-summitstack-128"
@@ -756,7 +880,10 @@ class InterfaceTypeChoices(ChoiceSet):
         (
             "Ethernet (fixed)",
             (
+                (TYPE_100ME_FX, "100BASE-FX (10/100ME FIBER)"),
+                (TYPE_100ME_LFX, "100BASE-LFX (10/100ME FIBER)"),
                 (TYPE_100ME_FIXED, "100BASE-TX (10/100ME)"),
+                (TYPE_100ME_T1, "100BASE-T1 (10/100ME Single Pair)"),
                 (TYPE_1GE_FIXED, "1000BASE-T (1GE)"),
                 (TYPE_2GE_FIXED, "2.5GBASE-T (2.5GE)"),
                 (TYPE_5GE_FIXED, "5GBASE-T (5GE)"),
@@ -774,6 +901,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_10GE_XENPAK, "XENPAK (10GE)"),
                 (TYPE_10GE_X2, "X2 (10GE)"),
                 (TYPE_25GE_SFP28, "SFP28 (25GE)"),
+                (TYPE_50GE_SFP56, "SFP56 (50GE)"),
                 (TYPE_40GE_QSFP_PLUS, "QSFP+ (40GE)"),
                 (TYPE_50GE_QSFP28, "QSFP28 (50GE)"),
                 (TYPE_100GE_CFP, "CFP (100GE)"),
@@ -785,6 +913,22 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_200GE_QSFP56, "QSFP56 (200GE)"),
                 (TYPE_400GE_QSFP_DD, "QSFP-DD (400GE)"),
                 (TYPE_400GE_OSFP, "OSFP (400GE)"),
+                (TYPE_800GE_QSFP_DD, "QSFP-DD (800GE)"),
+                (TYPE_800GE_OSFP, "OSFP (800GE)"),
+            ),
+        ),
+        (
+            "Ethernet (backplane)",
+            (
+                (TYPE_1GE_KX, "1000BASE-KX (1GE)"),
+                (TYPE_10GE_KR, "10GBASE-KR (10GE)"),
+                (TYPE_10GE_KX4, "10GBASE-KX4 (10GE)"),
+                (TYPE_25GE_KR, "25GBASE-KR (25GE)"),
+                (TYPE_40GE_KR4, "40GBASE-KR4 (40GE)"),
+                (TYPE_50GE_KR, "50GBASE-KR (50GE)"),
+                (TYPE_100GE_KP4, "100GBASE-KP4 (100GE)"),
+                (TYPE_100GE_KR2, "100GBASE-KR2 (100GE)"),
+                (TYPE_100GE_KR4, "100GBASE-KR4 (100GE)"),
             ),
         ),
         (
@@ -796,6 +940,9 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_80211AC, "IEEE 802.11ac"),
                 (TYPE_80211AD, "IEEE 802.11ad"),
                 (TYPE_80211AX, "IEEE 802.11ax"),
+                (TYPE_80211AY, "IEEE 802.11ay"),
+                (TYPE_802151, "IEEE 802.15.1 (Bluetooth)"),
+                (TYPE_OTHER_WIRELESS, "Other (Wireless)"),
             ),
         ),
         (
@@ -854,6 +1001,19 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_E3, "E3 (34 Mbps)"),
             ),
         ),
+        ("ATM", ((TYPE_XDSL, "xDSL"),)),
+        ("Coaxial", ((TYPE_DOCSIS, "DOCSIS"),)),
+        (
+            "PON",
+            (
+                (TYPE_GPON, "GPON (2.5 Gbps / 1.25 Gps)"),
+                (TYPE_XG_PON, "XG-PON (10 Gbps / 2.5 Gbps)"),
+                (TYPE_XGS_PON, "XGS-PON (10 Gbps)"),
+                (TYPE_NG_PON2, "NG-PON2 (TWDM-PON) (4x10 Gbps)"),
+                (TYPE_EPON, "EPON (1 Gbps)"),
+                (TYPE_10G_EPON, "10G-EPON (10 Gbps)"),
+            ),
+        ),
         (
             "Stacking",
             (
@@ -861,6 +1021,11 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_STACKWISE_PLUS, "Cisco StackWise Plus"),
                 (TYPE_FLEXSTACK, "Cisco FlexStack"),
                 (TYPE_FLEXSTACK_PLUS, "Cisco FlexStack Plus"),
+                (TYPE_STACKWISE80, "Cisco StackWise-80"),
+                (TYPE_STACKWISE160, "Cisco StackWise-160"),
+                (TYPE_STACKWISE320, "Cisco StackWise-320"),
+                (TYPE_STACKWISE480, "Cisco StackWise-480"),
+                (TYPE_STACKWISE1T, "Cisco StackWise-1T"),
                 (TYPE_JUNIPER_VCP, "Juniper VCP"),
                 (TYPE_SUMMITSTACK, "Extreme SummitStack"),
                 (TYPE_SUMMITSTACK128, "Extreme SummitStack-128"),
@@ -913,29 +1078,45 @@ class PortTypeChoices(ChoiceSet):
     TYPE_8P6C = "8p6c"
     TYPE_8P4C = "8p4c"
     TYPE_8P2C = "8p2c"
+    TYPE_6P6C = "6p6c"
+    TYPE_6P4C = "6p4c"
+    TYPE_6P2C = "6p2c"
+    TYPE_4P4C = "4p4c"
+    TYPE_4P2C = "4p2c"
     TYPE_GG45 = "gg45"
     TYPE_TERA4P = "tera-4p"
     TYPE_TERA2P = "tera-2p"
     TYPE_TERA1P = "tera-1p"
     TYPE_110_PUNCH = "110-punch"
     TYPE_BNC = "bnc"
+    TYPE_F = "f"
+    TYPE_N = "n"
     TYPE_MRJ21 = "mrj21"
     TYPE_ST = "st"
     TYPE_SC = "sc"
+    TYPE_SC_PC = "sc-pc"
+    TYPE_SC_UPC = "sc-upc"
     TYPE_SC_APC = "sc-apc"
     TYPE_FC = "fc"
     TYPE_LC = "lc"
+    TYPE_LC_PC = "lc-pc"
+    TYPE_LC_UPC = "lc-upc"
     TYPE_LC_APC = "lc-apc"
     TYPE_MTRJ = "mtrj"
     TYPE_MPO = "mpo"
     TYPE_LSH = "lsh"
+    TYPE_LSH_PC = "lsh-pc"
+    TYPE_LSH_UPC = "lsh-upc"
     TYPE_LSH_APC = "lsh-apc"
     TYPE_SPLICE = "splice"
     TYPE_CS = "cs"
     TYPE_SN = "sn"
+    TYPE_SMA_905 = "sma-905"
+    TYPE_SMA_906 = "sma-906"
     TYPE_URM_P2 = "urm-p2"
     TYPE_URM_P4 = "urm-p4"
     TYPE_URM_P8 = "urm-p8"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (
@@ -945,12 +1126,19 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_8P6C, "8P6C"),
                 (TYPE_8P4C, "8P4C"),
                 (TYPE_8P2C, "8P2C"),
+                (TYPE_6P6C, "6P6C"),
+                (TYPE_6P4C, "6P4C"),
+                (TYPE_6P2C, "6P2C"),
+                (TYPE_4P4C, "4P4C"),
+                (TYPE_4P2C, "4P2C"),
                 (TYPE_GG45, "GG45"),
                 (TYPE_TERA4P, "TERA 4P"),
                 (TYPE_TERA2P, "TERA 2P"),
                 (TYPE_TERA1P, "TERA 1P"),
                 (TYPE_110_PUNCH, "110 Punch"),
                 (TYPE_BNC, "BNC"),
+                (TYPE_F, "F Connector"),
+                (TYPE_N, "N Connector"),
                 (TYPE_MRJ21, "MRJ21"),
             ),
         ),
@@ -959,22 +1147,31 @@ class PortTypeChoices(ChoiceSet):
             (
                 (TYPE_FC, "FC"),
                 (TYPE_LC, "LC"),
+                (TYPE_LC_PC, "LC/PC"),
+                (TYPE_LC_UPC, "LC/UPC"),
                 (TYPE_LC_APC, "LC/APC"),
                 (TYPE_LSH, "LSH"),
+                (TYPE_LSH_PC, "LSH/PC"),
+                (TYPE_LSH_UPC, "LSH/UPC"),
                 (TYPE_LSH_APC, "LSH/APC"),
                 (TYPE_MPO, "MPO"),
                 (TYPE_MTRJ, "MTRJ"),
                 (TYPE_SC, "SC"),
+                (TYPE_SC_PC, "SC/PC"),
+                (TYPE_SC_UPC, "SC/UPC"),
                 (TYPE_SC_APC, "SC/APC"),
                 (TYPE_ST, "ST"),
                 (TYPE_CS, "CS"),
                 (TYPE_SN, "SN"),
+                (TYPE_SMA_905, "SMA 905"),
+                (TYPE_SMA_906, "SMA 906"),
                 (TYPE_URM_P2, "URM-P2"),
                 (TYPE_URM_P4, "URM-P4"),
                 (TYPE_URM_P8, "URM-P8"),
                 (TYPE_SPLICE, "Splice"),
             ),
         ),
+        ("Other", ((TYPE_OTHER, "Other"),)),
     )
 
 
@@ -1007,6 +1204,7 @@ class CableTypeChoices(ChoiceSet):
     TYPE_SMF_OS2 = "smf-os2"
     TYPE_AOC = "aoc"
     TYPE_POWER = "power"
+    TYPE_OTHER = "other"
 
     CHOICES = (
         (
@@ -1041,6 +1239,7 @@ class CableTypeChoices(ChoiceSet):
             ),
         ),
         (TYPE_POWER, "Power"),
+        ("Other", ((TYPE_OTHER, "Other"),)),
     )
 
 
@@ -1059,14 +1258,21 @@ class CableStatusChoices(ChoiceSet):
 
 class CableLengthUnitChoices(ChoiceSet):
 
+    # Metric
+    UNIT_KILOMETER = "km"
     UNIT_METER = "m"
     UNIT_CENTIMETER = "cm"
+
+    # Imperial
+    UNIT_MILE = "mi"
     UNIT_FOOT = "ft"
     UNIT_INCH = "in"
 
     CHOICES = (
+        (UNIT_KILOMETER, "Kilometers"),
         (UNIT_METER, "Meters"),
         (UNIT_CENTIMETER, "Centimeters"),
+        (UNIT_MILE, "Miles"),
         (UNIT_FOOT, "Feet"),
         (UNIT_INCH, "Inches"),
     )

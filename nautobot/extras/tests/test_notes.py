@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.query import QuerySet
 
-from nautobot.core.testing import TestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import Location
 from nautobot.extras.models import Note
 
@@ -10,7 +10,9 @@ from nautobot.extras.models import Note
 User = get_user_model()
 
 
-class NoteModelTest(TestCase):
+class NoteModelTest(ModelTestCases.BaseModelTestCase):
+    model = Note
+
     @classmethod
     def setUpTestData(cls):
 

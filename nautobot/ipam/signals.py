@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save, m2m_changed
 from django.dispatch import receiver
 
-from nautobot.ipam.models import Prefix, VRF
+from nautobot.ipam.models import VRF
 
 
 @receiver(pre_save, sender=VRF.devices.through)

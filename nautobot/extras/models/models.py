@@ -21,12 +21,12 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
-    CustomLinkButtonClassChoices,
+    ButtonClassChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
@@ -125,7 +125,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
-    objects = ConfigContextQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextQuerySet)()
 
     class Meta:
         ordering = ["weight", "name"]
@@ -348,8 +348,8 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     button_class = models.CharField(
         max_length=30,
-        choices=CustomLinkButtonClassChoices,
-        default=CustomLinkButtonClassChoices.CLASS_DEFAULT,
+        choices=ButtonClassChoices,
+        default=ButtonClassChoices.CLASS_DEFAULT,
         help_text="The class of the first link in a group will be used for the dropdown button",
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")
@@ -525,7 +525,12 @@ class FileProxy(BaseModel):
     class Meta:
         get_latest_by = "uploaded_at"
         ordering = ["name"]
+        # TODO: unique_together = [["name", "uploaded_at"]]
         verbose_name_plural = "file proxies"
+
+    # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
+    # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
+    natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
         delete_file_if_needed(self, "file")
@@ -688,7 +693,7 @@ class Note(BaseModel, ChangeLoggedModel):
 
     slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
-    objects = NotesQuerySet.as_manager()
+    objects = BaseManager.from_queryset(NotesQuerySet)()
 
     class Meta:
         ordering = ["created"]

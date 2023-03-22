@@ -7,14 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ipam', '0027_ipam__namespaces'),
-        ('virtualization', '0019_vminterface_ip_addresses_m2m'),
+        ("ipam", "0027_ipam__namespaces"),
+        ("virtualization", "0019_vminterface_ip_addresses_m2m"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='vminterface',
-            name='vrf',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='vm_interfaces', to='ipam.vrf'),
+            model_name="vminterface",
+            name="vrf",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="vm_interfaces",
+                to="ipam.vrf",
+            ),
         ),
     ]

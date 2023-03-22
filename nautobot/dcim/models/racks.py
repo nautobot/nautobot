@@ -67,6 +67,8 @@ class RackGroup(TreeModel, OrganizationalModel):
             ["location", "slug"],
         ]
 
+    natural_key_field_names = ["name", "location"]  # location needs to be last since it's a variadic natural key
+
     def __str__(self):
         return self.name
 
@@ -230,6 +232,8 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
             ("rack_group", "name"),
             ("rack_group", "facility_id"),
         )
+
+    natural_key_field_names = ["name", "rack_group"]  # rack_group is last since it uses Location as part of its key.
 
     def __str__(self):
         return self.display or super().__str__()
