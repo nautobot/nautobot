@@ -235,10 +235,14 @@
     function changeSelect2FieldValue(dom_element, values){
         dom_element.val(null)
         values.forEach(function (value){
-            let new_option = new Option(value.text, value.id, true, true);
-            dom_element.append(new_option);
+            // Does an element already exist?
+            if (!dom_element.find("option[value='" + value.id + "']").length) {
+                let new_option = new Option(value.text, value.id, true, true);
+                dom_element.append(new_option);
+            }
         })
-        dom_element.trigger('change')
+        dom_element.val(values.map(data => data["id"]));
+        dom_element.trigger('change');
     }
 
     // On change of a select field in default filter form
