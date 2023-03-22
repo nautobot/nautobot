@@ -56,6 +56,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -571,6 +572,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "hidden",
             "read_only",
             "is_job_hook_receiver",
+            "is_job_button_receiver",
             "soft_time_limit",
             "time_limit",
             "grouping_override",
@@ -675,6 +677,36 @@ class ScheduledJobFilterSet(BaseFilterSet):
     class Meta:
         model = ScheduledJob
         fields = ["id", "name", "total_run_count"]
+
+
+#
+# Job Button
+#
+
+
+class JobButtonFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "job__name": "icontains",
+            "text": "icontains",
+        },
+    )
+    content_types = ContentTypeFilter()
+    job = NaturalKeyOrPKMultipleChoiceFilter(queryset=Job.objects.all(), label="Job (slug or ID)")
+
+    class Meta:
+        model = JobButton
+        fields = (
+            "content_types",
+            "name",
+            "text",
+            "job",
+            "weight",
+            "group_name",
+            "button_class",
+            "confirmation",
+        )
 
 
 #

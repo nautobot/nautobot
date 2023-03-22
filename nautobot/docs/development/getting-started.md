@@ -160,8 +160,15 @@ Getting started with Nautobot development is pretty straightforward, and should 
 
 ### Windows Development
 
-Local development on Windows Subsystem for Linux (WSL) is not currently supported. When developing locally on Windows, we recommend
-using a virtual machine running an [officially supported operating system](../installation/index.md#installing-nautobot-dependencies).
+The Docker Compose development workflow on Windows Subsystem for Linux (WSL) has been tested successfully with [Docker Desktop using the WSL2 backend](https://docs.docker.com/desktop/windows/wsl/) and the Ubuntu 20.04 WSL2 distribution. The Poetry workflow has also been tested successfully on the Ubuntu 20.04 WSL2 distribution.
+
+To install WSL2 and Ubuntu follow the instructions from the [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install) or if running Windows 10 version 2004 and higher you can open an administrator Powershell terminal and enter the following command:
+
+```ps1
+wsl --install
+```
+
+This will install the WSL2 Ubuntu distribution. Reboot if prompted. After the image installs successfully you may install Docker Desktop with the WSL2 backend.
 
 ### Docker Compose Workflow
 

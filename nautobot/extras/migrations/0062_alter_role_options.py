@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0059_collect_roles_from_related_apps_roles"),
+        ("extras", "0061_collect_roles_from_related_apps_roles"),
     ]
 
     operations = [

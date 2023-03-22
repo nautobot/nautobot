@@ -36,7 +36,7 @@ def generate_unique_job_names_and_update_slug(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0068_rename_model_fields"),
+        ("extras", "0070_rename_model_fields"),
     ]
 
     operations = [
