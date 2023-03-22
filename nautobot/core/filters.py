@@ -452,10 +452,11 @@ class TagFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """
 
     def __init__(self, *args, **kwargs):
-        from nautobot.extras import models as extras_models  # avoid circular import
+        from nautobot.extras.models import Tag  # avoid circular import
 
+        kwargs.setdefault("field_name", "tags")
         kwargs.setdefault("conjoined", True)
-        kwargs.setdefault("queryset", extras_models.Tag.objects.all())
+        kwargs.setdefault("queryset", Tag.objects.all())
 
         super().__init__(*args, **kwargs)
 
