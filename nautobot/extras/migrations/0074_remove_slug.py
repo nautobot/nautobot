@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0068_rename_model_fields"),
+        ("extras", "0073_remove_gitrepository_fields"),
     ]
 
     operations = [
