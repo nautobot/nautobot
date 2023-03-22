@@ -466,7 +466,6 @@ class DynamicGroupTestCase(
 
         cls.form_data = {
             "name": "new_dynamic_group",
-            "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
             # Management form fields required for the dynamic formset
@@ -680,7 +679,6 @@ class SecretTestCase(
 
         cls.form_data = {
             "name": "View Test 4",
-            "slug": "view-test-4",
             "provider": "environment-variable",
             "parameters": '{"variable": "VIEW_TEST_4"}',
         }
@@ -735,7 +733,6 @@ class SecretsGroupTestCase(
 
         cls.form_data = {
             "name": "Group 4",
-            "slug": "group-4",
             "description": "Some description",
             # Management form fields required for the dynamic Secret formset
             "secrets_group_associations-TOTAL_FORMS": "0",
@@ -2146,7 +2143,6 @@ class StatusTestCase(
 
         cls.form_data = {
             "name": "new_status",
-            "slug": "new-status",
             "description": "I am a new status object.",
             "color": "ffcc00",
             "content_types": [content_type.pk],
@@ -2298,7 +2294,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "New Role",
-            "slug": "new-role",
             "description": "I am a new role object.",
             "color": ColorChoices.COLOR_GREY,
             "content_types": [content_type.pk],

@@ -26,7 +26,6 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "Provider X",
-            "slug": "provider-x",
             "asn": 65123,
             "account": "this-is-a-long-account-number-012345678901234567890123456789",
             "portal_url": "http://example.com/portal",

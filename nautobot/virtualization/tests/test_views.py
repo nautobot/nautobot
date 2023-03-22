@@ -29,7 +29,6 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Cluster Group X",
-            "slug": "cluster-group-x",
             "description": "A new cluster group",
         }
 
@@ -57,7 +56,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Cluster Type X",
-            "slug": "cluster-type-x",
             "description": "A new cluster type",
         }
 

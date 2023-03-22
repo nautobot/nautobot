@@ -12,7 +12,6 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Tenant Group X",
-            "slug": "tenant-group-x",
             "description": "A new tenant group",
         }
 
@@ -39,7 +38,6 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "Tenant X",
-            "slug": "tenant-x",
             "tenant_group": tenant_groups[1].pk,
             "description": "A new tenant",
             "comments": "Some comments",

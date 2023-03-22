@@ -93,7 +93,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "RIR X",
-            "slug": "rir-x",
             "is_private": True,
             "description": "A new RIR",
         }

@@ -548,7 +548,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Manufacturer X",
-            "slug": "manufacturer-x",
             "description": "A new manufacturer",
         }
         cls.csv_data = (
@@ -2726,7 +2725,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "DRG χ",
-            "slug": "region-chi",
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": statuses[3].pk,
             "local_config_context_data": None,
