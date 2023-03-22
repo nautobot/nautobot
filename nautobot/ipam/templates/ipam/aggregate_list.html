@@ -1,9 +1,8 @@
 {% extends 'generic/object_list.html' %}
 {% load humanize %}
 
-{% block content %}
-    {{ block.super }}
-    <div class="panel panel-default pull-right" style="width: 20%;">
+{% block extras %}
+    <div class="panel panel-default">
         <div class="panel-heading">
             <strong><i class="mdi mdi-chart-areaspline"></i> Statistics</strong>
         </div>
