@@ -551,11 +551,11 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new manufacturer",
         }
         cls.csv_data = (
-            "name,slug,description",
-            "Manufacturer 4,manufacturer-4,Fourth manufacturer",
-            "Manufacturer 5,manufacturer-5,Fifth manufacturer",
-            "Manufacturer 6,manufacturer-6,Sixth manufacturer",
-            "Manufacturer 7,,Seventh manufacturer",
+            "name,description",
+            "Manufacturer 4,Fourth manufacturer",
+            "Manufacturer 5,Fifth manufacturer",
+            "Manufacturer 6,Sixth manufacturer",
+            "Manufacturer 7,Seventh manufacturer",
         )
         cls.slug_test_object = manufacturer.name
         cls.slug_source = "name"

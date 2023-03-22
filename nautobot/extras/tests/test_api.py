@@ -2447,9 +2447,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         for relationship in cls.relationships:
             relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
-        cls.location = Location.objects.create(
-            name="Location 1", status=Status.objects.first(), location_type=cls.lt
-        )
+        cls.location = Location.objects.create(name="Location 1", status=Status.objects.first(), location_type=cls.lt)
 
     def test_get_all_relationships_on_location(self):
         """Verify that all relationships are accurately represented when requested."""

@@ -33,11 +33,11 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Cluster Group 4,cluster-group-4,Fourth cluster group",
-            "Cluster Group 5,cluster-group-5,Fifth cluster group",
-            "Cluster Group 6,cluster-group-6,Sixth cluster group",
-            "Cluster Group 7,,Seventh cluster group",
+            "name,description",
+            "Cluster Group 4,Fourth cluster group",
+            "Cluster Group 5,Fifth cluster group",
+            "Cluster Group 6,Sixth cluster group",
+            "Cluster Group 7,Seventh cluster group",
         )
         cls.slug_source = "name"
         cls.slug_test_object = "Cluster Group 8"
@@ -60,11 +60,11 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Cluster Type 4,cluster-type-4,Fourth cluster type",
-            "Cluster Type 5,cluster-type-5,Fifth cluster type",
-            "Cluster Type 6,cluster-type-6,Sixth cluster type",
-            "Cluster Type 7,,Seventh cluster type",
+            "name,description",
+            "Cluster Type 4,Fourth cluster type",
+            "Cluster Type 5,Fifth cluster type",
+            "Cluster Type 6,Sixth cluster type",
+            "Cluster Type 7,Seventh cluster type",
         )
         cls.slug_source = "name"
         cls.slug_test_object = "Cluster Type 8"

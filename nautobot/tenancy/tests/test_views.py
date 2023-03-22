@@ -16,11 +16,11 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Tenant Group 4,tenant-group-4,Fourth tenant group",
-            "Tenant Group 5,tenant-group-5,Fifth tenant group",
-            "Tenant Group 6,tenant-group-6,Sixth tenant group",
-            "Tenant Group 7,,Seventh tenant group",
+            "name,description",
+            "Tenant Group 4,Fourth tenant group",
+            "Tenant Group 5,Fifth tenant group",
+            "Tenant Group 6,Sixth tenant group",
+            "Tenant Group 7,Seventh tenant group",
         )
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant Group 8"
@@ -45,11 +45,11 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug",
-            "Tenant 4,tenant-4",
-            "Tenant 5,tenant-5",
-            "Tenant 6,tenant-6",
-            "Tenant 7,",
+            "name,description",
+            "Tenant 4,A tenant",
+            "Tenant 5,A tenant",
+            "Tenant 6,A tenant",
+            "Tenant 7,A tenant",
         )
 
         cls.bulk_edit_data = {

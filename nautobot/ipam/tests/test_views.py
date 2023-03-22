@@ -98,11 +98,11 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "RIR 4,rir-4,Fourth RIR",
-            "RIR 5,rir-5,Fifth RIR",
-            "RIR 6,rir-6,Sixth RIR",
-            "RIR 7,,Seventh RIR",
+            "name,description",
+            "RIR 4,Fourth RIR",
+            "RIR 5,Fifth RIR",
+            "RIR 6,Sixth RIR",
+            "RIR 7,Seventh RIR",
         )
         cls.slug_source = "name"
         cls.slug_test_object = RIR.objects.first().name
