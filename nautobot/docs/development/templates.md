@@ -47,7 +47,7 @@ The base template for listing objects is `generic/object_list.html`, with the fo
   left of the table configuration button.
 * `bulk_buttons`: may be a set of buttons at the bottom of the table, to the
   left of potential bulk edit or delete buttons.
-* `extras`: may provide extra information to display just above the table,
+* `header_extra`: may provide extra information to display just above the table,
   to the left.
 
 ## Object Edit
