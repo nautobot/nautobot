@@ -99,20 +99,9 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cluster_types = ClusterType.objects.all()[:2]
 
-        cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1"),
-            ClusterType.objects.create(name="Cluster Type 2"),
-        )
-
-        cluster_groups = (
-            ClusterGroup.objects.create(
-                name="Cluster Group 1",
-            ),
-            ClusterGroup.objects.create(
-                name="Cluster Group 2",
-            ),
-        )
+        cluster_groups = ClusterGroup.objects.all()[:2]
 
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])
         Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])

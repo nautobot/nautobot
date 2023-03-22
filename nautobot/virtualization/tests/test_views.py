@@ -84,15 +84,9 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
         )
 
-        clustergroups = (
-            ClusterGroup.objects.create(name="Cluster Group 1"),
-            ClusterGroup.objects.create(name="Cluster Group 2"),
-        )
+        clustergroups = ClusterGroup.objects.all()[:2]
 
-        clustertypes = (
-            ClusterType.objects.create(name="Cluster Type 1"),
-            ClusterType.objects.create(name="Cluster Type 2"),
-        )
+        clustertypes = ClusterType.objects.all()[:2]
 
         Cluster.objects.create(
             name="Cluster 1",
@@ -152,12 +146,9 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
         )
 
-        platforms = (
-            Platform.objects.create(name="Platform 1"),
-            Platform.objects.create(name="Platform 2"),
-        )
+        platforms = Platform.objects.all()[:2]
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        clustertype = ClusterType.objects.first()
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=locations[0]),
@@ -165,7 +156,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(VirtualMachine)
-        status_staged = statuses.get(slug="staged")
+        status_staged = statuses[0]
 
         VirtualMachine.objects.create(
             name="Virtual Machine 1",
@@ -283,7 +274,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
         devicerole = Role.objects.get_for_model(Device).first()
-        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        clustertype = ClusterType.objects.first()
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),

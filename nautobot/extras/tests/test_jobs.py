@@ -292,7 +292,7 @@ class JobTest(TransactionTestCase):
 
         # Prepare the job data
         device_ct = ContentType.objects.get_for_model(Device)
-        role = Role.objects.create(name="Device Role")
+        role = Role.objects.first()
         role.content_types.add(device_ct)
         data = {
             "role": {"name": role.name},

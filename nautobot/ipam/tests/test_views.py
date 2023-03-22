@@ -122,7 +122,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         roles = Role.objects.get_for_model(Prefix)[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
-        status_reserved = statuses.get(slug="reserved")
+        status_reserved = statuses[0]
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
@@ -166,7 +166,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
-        s = Status.objects.create(name="nonexistentstatus")
+        s = Status.objects.first()
         s.content_types.add(ContentType.objects.get_for_model(Prefix))
         self.assertNotEqual(prefixes.count(), 0)
 
@@ -189,7 +189,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
-        status_reserved = statuses.get(slug="reserved")
+        status_reserved = statuses[0]
 
         roles = Role.objects.get_for_model(IPAddress)
 
@@ -265,8 +265,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         roles = Role.objects.get_for_model(VLAN)[:2]
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_active = statuses.get(name="Active")
-        status_reserved = statuses.get(slug="reserved")
+        status_active = statuses[0]
+        status_reserved = statuses[1]
 
         VLAN.objects.create(
             vlan_group=vlangroups[0],
@@ -348,7 +348,7 @@ class ServiceTestCase(
     def setUpTestData(cls):
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)

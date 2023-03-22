@@ -59,7 +59,7 @@ class GitTest(TransactionTestCase):
         self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
         self.location = Location.objects.create(location_type=self.location_type, name="Test Location")
-        self.manufacturer = Manufacturer.objects.create(name="Acme")
+        self.manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
@@ -323,7 +323,7 @@ class GitTest(TransactionTestCase):
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "token.txt")},
                 )
-                secrets_group = SecretsGroup.objects.create(name="Git Credentials")
+                secrets_group = SecretsGroup.objects.first()
                 SecretsGroupAssociation.objects.create(
                     secret=username_secret,
                     secrets_group=secrets_group,

@@ -385,27 +385,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
             uuid.uuid4(),
         ]
 
-        self.invalid_relationship_associations = [
-            RelationshipAssociation(
-                relationship=self.invalid_relationships[0],
-                source=self.locations[1],
-                destination_type=self.invalid_ct,
-                destination_id=self.invalid_object_pks[1],
-            ),
-            RelationshipAssociation(
-                relationship=self.invalid_relationships[1],
-                source_type=self.invalid_ct,
-                source_id=self.invalid_object_pks[0],
-                destination=self.locations[1],
-            ),
-            RelationshipAssociation(
-                relationship=self.invalid_relationships[2],
-                source_type=self.invalid_ct,
-                source_id=self.invalid_object_pks[0],
-                destination_type=self.invalid_ct,
-                destination_id=self.invalid_object_pks[1],
-            ),
-        ]
+        self.invalid_relationship_associations = RelationshipAssociation.objects.all()[:3]
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
 
@@ -647,10 +627,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
 
     def test_str(self):
         """Validate that the str() method works correctly."""
-        associations = [
-            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.locations[1]),
-            RelationshipAssociation(relationship=self.o2os_1, source=self.racks[0], destination=self.racks[1]),
-        ]
+        associations = RelationshipAssociation.objects.all()[:2]
         for association in associations:
             association.validated_save()
 
@@ -671,11 +648,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
 
     def test_get_relationships_data(self):
         # In addition to the invalid associations for locations[1] defined in self.setUp(), add some valid ones
-        associations = [
-            RelationshipAssociation(relationship=self.o2m_1, source=self.locations[1], destination=self.vlans[0]),
-            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.locations[1]),
-            RelationshipAssociation(relationship=self.o2o_2, source=self.locations[0], destination=self.locations[1]),
-        ]
+        associations = RelationshipAssociation.objects.all()[:3]
         for association in associations:
             association.validated_save()
 
@@ -773,14 +746,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
             Location.objects.create(name="new location 3", location_type=location_type),
             Location.objects.create(name="new location 4", location_type=location_type),
         )
-        associations = [
-            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
-            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
-            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0]),
-            # Create an association loop just to make sure it works correctly on deletion
-            RelationshipAssociation(relationship=self.o2o_2, source=locations[2], destination=locations[3]),
-            RelationshipAssociation(relationship=self.o2o_2, source=locations[3], destination=locations[2]),
-        ]
+        associations = RelationshipAssociation.objects.all()[:5]
         for association in associations:
             association.validated_save()
         # Create a self-referential association as well; validated_save() would correctly reject this one as invalid
@@ -811,11 +777,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
 
     def test_generic_relation(self):
         """Verify that the GenericRelations on the involved models work correctly."""
-        associations = (
-            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
-            RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
-            RelationshipAssociation(relationship=self.o2o_1, source=self.racks[0], destination=self.locations[0]),
-        )
+        associations = RelationshipAssociation.objects.all()[:3]
         for association in associations:
             association.validated_save()
 

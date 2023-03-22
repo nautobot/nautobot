@@ -90,16 +90,9 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        providers = Provider.objects.all()[:2]
 
-        providers = (
-            Provider.objects.create(name="Provider 1", asn=65001),
-            Provider.objects.create(name="Provider 2", asn=65002),
-        )
-
-        circuittypes = (
-            CircuitType.objects.create(name="Circuit Type 1"),
-            CircuitType.objects.create(name="Circuit Type 2"),
-        )
+        circuittypes = CircuitType.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Circuit)
 
@@ -158,12 +151,7 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        providers = (
-            Provider(name="Provider 1"),
-            Provider(name="Provider 2"),
-        )
-        Provider.objects.bulk_create(providers)
+        providers = Provider.objects.all()[:2]
 
         ProviderNetwork.objects.bulk_create(
             [
@@ -214,13 +202,13 @@ class CircuitTerminationTestCase(NautobotTestCase):
         """
 
         # Set up the required objects:
-        provider = Provider.objects.create(name="Test Provider", asn=12345)
+        provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(
             name="Test Provider Network",
             slug="test-provider-network",
             provider=provider,
         )
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type")
+        circuit_type = CircuitType.objects.first()
         active_status = Status.objects.get_for_model(Circuit).get(name="Active")
         circuit = Circuit.objects.create(
             cid="Test Circuit",
@@ -251,7 +239,7 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
 
     def test_swap_circuit_termination(self):
         # Set up the required objects:
-        provider = Provider.objects.create(name="Test Provider", asn=12345)
+        provider = Provider.objects.first()
         provider_networks = (
             ProviderNetwork.objects.create(
                 name="Test Provider Network 1",
@@ -264,7 +252,7 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
                 provider=provider,
             ),
         )
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type")
+        circuit_type = CircuitType.objects.first()
         active_status = Status.objects.get_for_model(Circuit).get(name="Active")
         circuit = Circuit.objects.create(
             cid="Test Circuit",

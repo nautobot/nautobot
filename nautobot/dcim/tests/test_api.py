@@ -61,7 +61,6 @@ User = get_user_model()
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("dcim-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -191,18 +190,14 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        cls.status_active = Status.objects.get(name="Active")
-        tenant = Tenant.objects.create(name="Test Tenant")
+        cls.status = Status.objects.get(name="Active")
+        tenant = Tenant.objects.first()
 
-        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status_active)
-        cls.loc2 = Location.objects.create(
-            name="RTP4E", location_type=cls.lt2, status=cls.status_active, parent=cls.loc1
-        )
-        cls.loc3 = Location.objects.create(
-            name="RTP4E-3", location_type=cls.lt3, status=cls.status_active, parent=cls.loc2
-        )
+        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status)
+        cls.loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=cls.status, parent=cls.loc1)
+        cls.loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=cls.status, parent=cls.loc2)
         cls.loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.status_active, parent=cls.loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.status, parent=cls.loc3, tenant=tenant
         )
         for loc in [cls.loc1, cls.loc2, cls.loc3, cls.loc4]:
             loc.validated_save()
@@ -211,20 +206,20 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Downtown Durham",
                 "location_type": cls.lt1.pk,
-                "status": cls.status_active.pk,
+                "status": cls.status.pk,
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
                 "location_type": cls.lt2.pk,
                 "parent": cls.loc1.pk,
-                "status": cls.status_active.pk,
+                "status": cls.status.pk,
             },
             {
                 "name": "RTP4E-2",
                 "location_type": cls.lt3.pk,
                 "parent": cls.loc2.pk,
-                "status": cls.status_active.pk,
+                "status": cls.status.pk,
                 "description": "Second floor of RTP4E",
                 "tenant": tenant.pk,
             },
@@ -252,7 +247,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.status.pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -273,7 +268,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.status.pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -295,7 +290,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.status.pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -317,7 +312,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.status.pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -354,11 +349,11 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.active = Status.objects.get(name="Active")
+        cls.status = Status.objects.get(name="Active")
         location_type = LocationType.objects.create(name="Location Type 1")
         cls.locations = (
-            Location.objects.create(name="Location 1", location_type=location_type, status=cls.active),
-            Location.objects.create(name="Location 2", location_type=location_type, status=cls.active),
+            Location.objects.create(name="Location 1", location_type=location_type, status=cls.status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=cls.status),
         )
         cls.parent_rack_groups = (
             RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
@@ -423,7 +418,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         )
         child_location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
         child_location = Location.objects.create(
-            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.active
+            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.status
         )
 
         data = {
@@ -442,7 +437,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
         # A sibling of locations[0], not a child of it.
         sibling_location = Location.objects.create(
-            name="Location 1B", location_type=self.locations[0].location_type, status=self.active
+            name="Location 1B", location_type=self.locations[0].location_type, status=self.status
         )
 
         data = {
@@ -467,7 +462,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.all()[:2]
 
         rack_groups = (
@@ -677,7 +671,6 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
@@ -1053,7 +1046,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         racks = (
@@ -1063,17 +1055,14 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         device_statuses = Status.objects.get_for_model(Device)
 
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_type = ClusterType.objects.first()
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
         )
 
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1"),
-            SecretsGroup.objects.create(name="Secrets Group 2"),
-        )
+        secrets_groups = SecretsGroup.objects.all()[:2]
 
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
@@ -1939,7 +1928,6 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
 class ConnectedDeviceTest(APITestCase):
     def setUp(self):
-
         super().setUp()
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

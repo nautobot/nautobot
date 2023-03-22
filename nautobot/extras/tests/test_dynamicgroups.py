@@ -54,7 +54,7 @@ class DynamicGroupTestBase(TestCase):
             Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt),
         ]
 
-        cls.manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        cls.manufacturer = Manufacturer.objects.first()
         cls.device_type = DeviceType.objects.create(
             manufacturer=cls.manufacturer,
             model="device Type 1",
@@ -97,62 +97,7 @@ class DynamicGroupTestBase(TestCase):
             ),
         ]
 
-        cls.groups = [
-            DynamicGroup.objects.create(
-                name="Parent",
-                slug="parent",
-                description="The parent group with no filter",
-                filter={},
-                content_type=cls.device_ct,
-            ),
-            # Location-1 only
-            DynamicGroup.objects.create(
-                name="First Child",
-                slug="first-child",
-                description="The first child group",
-                filter={"location": ["location-1"]},
-                content_type=cls.device_ct,
-            ),
-            # Location-2 only
-            DynamicGroup.objects.create(
-                name="Second Child",
-                slug="second-child",
-                description="A second child group",
-                filter={"location": ["location-3"]},
-                content_type=cls.device_ct,
-            ),
-            # Empty filter to use for testing nesting.
-            DynamicGroup.objects.create(
-                name="Third Child",
-                slug="third-child",
-                description="A third child group with a child of its own",
-                filter={},
-                content_type=cls.device_ct,
-            ),
-            # Nested child of third-child to test ancestors/descendants
-            DynamicGroup.objects.create(
-                name="Nested Child",
-                slug="nested-child",
-                description="This will be the child of third-child",
-                filter={"status": ["active"]},
-                content_type=cls.device_ct,
-            ),
-            # No matches (bogus/invalid name match)
-            DynamicGroup.objects.create(
-                name="Invalid Filter",
-                slug="invalid-filter",
-                description="A group with a non-matching filter",
-                filter={"name": ["bogus"]},
-                content_type=cls.device_ct,
-            ),
-            DynamicGroup.objects.create(
-                name="MultiValueCharFilter",
-                slug="multivaluecharfilter",
-                description="A group with a multivaluechar filter",
-                filter={"name": ["device-1", "device-2", "device-3"]},
-                content_type=cls.device_ct,
-            ),
-        ]
+        cls.groups = DynamicGroup.objects.all()[:7]
 
         cls.parent = cls.groups[0]
         cls.first_child = cls.groups[1]

@@ -523,17 +523,7 @@ class FilterExtensionTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        tenant_groups = (
-            TenantGroup.objects.create(
-                name="Tenant Group 1",
-            ),
-            TenantGroup.objects.create(
-                name="Tenant Group 2",
-            ),
-            TenantGroup.objects.create(
-                name="Tenant Group 3",
-            ),
-        )
+        tenant_groups = TenantGroup.objects.all()[:3]
 
         Tenant.objects.create(
             name="Tenant 1", slug="tenant-1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"
@@ -704,8 +694,8 @@ class TestPluginCoreViewOverrides(TestCase):
     def setUp(self):
         super().setUp()
         self.device = create_test_device("Device")
-        provider = Provider.objects.create(name="Provider", asn=65001)
-        circuit_type = CircuitType.objects.create(name="Circuit Type")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
         self.circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,

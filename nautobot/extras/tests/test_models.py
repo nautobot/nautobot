@@ -115,17 +115,16 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     model = ConfigContext
 
     def setUp(self):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
         self.devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.create(name="Location Type 1")
         self.location = Location.objects.create(name="Location 1", location_type=location_type)
-        self.platform = Platform.objects.create(name="Platform")
-        self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
-        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
+        self.platform = Platform.objects.first()
+        self.tenantgroup = TenantGroup.objects.first()
+        self.tenant = Tenant.objects.first()
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
         self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
@@ -240,12 +239,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         tenant_context.tenants.add(self.tenant)
         tag_context = ConfigContext.objects.create(name="tag", weight=100, data={"tag": 1})
         tag_context.tags.add(self.tag)
-        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
+        cluster_group = ClusterGroup.objects.first()
         cluster_group_context = ConfigContext.objects.create(
             name="cluster group", weight=100, data={"cluster_group": 1}
         )
         cluster_group_context.cluster_groups.add(cluster_group)
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_type = ClusterType.objects.first()
         cluster = Cluster.objects.create(
             name="Cluster",
             cluster_group=cluster_group,
@@ -426,7 +425,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         # Device
         status = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="manufacturer")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
@@ -439,7 +438,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type")
+        cluster_type = ClusterType.objects.first()
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
             name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data
@@ -1345,10 +1344,10 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
     model = Status
 
     def setUp(self):
-        self.status = Status.objects.create(name="New Device Status")
+        self.status = Status.objects.first()
         self.status.content_types.add(ContentType.objects.get_for_model(Device))
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1488,28 +1487,7 @@ class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
         device_content_type = ContentType.objects.get_for_model(Device)
         url = "http://example.com/test"
 
-        webhooks = [
-            Webhook(
-                name="webhook-1",
-                enabled=True,
-                type_create=True,
-                type_update=True,
-                type_delete=False,
-                payload_url=url,
-                http_method="POST",
-                http_content_type="application/json",
-            ),
-            Webhook(
-                name="webhook-2",
-                enabled=True,
-                type_create=False,
-                type_update=False,
-                type_delete=True,
-                payload_url=url,
-                http_method="POST",
-                http_content_type="application/json",
-            ),
-        ]
+        webhooks = Webhook.objects.all()[:2]
         for webhook in webhooks:
             webhook.save()
             webhook.content_types.add(device_content_type)

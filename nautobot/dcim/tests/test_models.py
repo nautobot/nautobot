@@ -52,7 +52,7 @@ from nautobot.tenancy.models import Tenant
 class CableLengthTestCase(TestCase):
     def setUp(self):
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
+        self.manufacturer = Manufacturer.objects.first()
         self.devicetype = DeviceType.objects.create(
             manufacturer=self.manufacturer,
             model="Test Device Type 1",
@@ -108,7 +108,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         """
         statuses = Status.objects.get_for_model(Device)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Acme")
+        manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
@@ -157,7 +157,7 @@ class InterfaceTemplateTestCase(TestCase):
         """
         statuses = Status.objects.get_for_model(Device)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Acme")
+        manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         InterfaceTemplate.objects.create(
@@ -302,7 +302,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
             u_height=42,
         )
-        self.manufacturer = Manufacturer.objects.create(name="Acme")
+        self.manufacturer = Manufacturer.objects.first()
 
         self.device_type = {
             "ff2048": DeviceType.objects.create(
@@ -662,8 +662,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     model = Device
 
     def setUp(self):
-
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
@@ -816,7 +815,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
-        tenant = Tenant.objects.create(name="Test Tenant 1")
+        tenant = Tenant.objects.first()
         self.device.tenant = tenant
         self.device.save()
         device2.tenant = tenant
@@ -889,7 +888,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
     def setUp(self):
 
         location = Location.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
@@ -958,9 +957,9 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             rear_port=self.rear_port4,
             rear_port_position=1,
         )
-        self.provider = Provider.objects.create(name="Provider 1")
+        self.provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
-        self.circuittype = CircuitType.objects.create(name="Circuit Type 1")
+        self.circuittype = CircuitType.objects.first()
         self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
         self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
         self.circuittermination1 = CircuitTermination.objects.create(
@@ -1152,7 +1151,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
-        active = Status.objects.get(name="Active")
+        status = Status.objects.first()
         location_type_1 = LocationType.objects.create(name="Location Type 1")
         location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=active)
         power_panel = PowerPanel(name="Power Panel 1", location=location_1)
@@ -1176,7 +1175,7 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
 
 class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
     def setUp(self):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

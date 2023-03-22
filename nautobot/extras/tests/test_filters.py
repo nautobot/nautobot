@@ -172,13 +172,12 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
 
         device_roles = Role.objects.get_for_model(Device)
         cls.device_roles = device_roles
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
 
         device_types = (
             DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
@@ -187,22 +186,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         )
         cls.device_types = device_types
 
-        platforms = (
-            Platform.objects.create(name="Platform 1"),
-            Platform.objects.create(name="Platform 2"),
-            Platform.objects.create(name="Platform 3"),
-        )
+        platforms = Platform.objects.all()[:3]
         cls.platforms = platforms
 
         cls.locations = Location.objects.all()[:3]
 
-        cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1"),
-            ClusterGroup.objects.create(name="Cluster Group 2"),
-            ClusterGroup.objects.create(name="Cluster Group 3"),
-        )
+        cluster_groups = ClusterGroup.objects.all()[:3]
 
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_type = ClusterType.objects.first()
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
@@ -473,7 +464,6 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         content_types = ContentType.objects.filter(model__in=["location", "rack", "device"])
 
         ExportTemplate.objects.create(
@@ -512,10 +502,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         # Create Three GitRepository records
-        secrets_groups = [
-            SecretsGroup.objects.create(name="Secrets Group 1"),
-            SecretsGroup.objects.create(name="Secrets Group 2"),
-        ]
+        secrets_groups = SecretsGroup.objects.all()[:2]
         cls.secrets_groups = secrets_groups
         repos = (
             GitRepository(
@@ -715,7 +702,6 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
@@ -1208,7 +1194,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1326,7 +1312,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1340,64 +1326,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             VLAN.objects.create(vid=2, name="VLAN 2"),
             VLAN.objects.create(vid=3, name="VLAN 3"),
         )
-        cls.relationship_associations = (
-            RelationshipAssociation(
-                relationship=cls.relationships[0],
-                source_type=cls.device_type,
-                source_id=cls.devices[0].pk,
-                destination_type=cls.vlan_type,
-                destination_id=cls.vlans[0].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[0],
-                source_type=cls.device_type,
-                source_id=cls.devices[1].pk,
-                destination_type=cls.vlan_type,
-                destination_id=cls.vlans[1].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[1],
-                source_type=cls.vlan_type,
-                source_id=cls.vlans[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[0].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[1],
-                source_type=cls.vlan_type,
-                source_id=cls.vlans[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[1].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[1],
-                source_type=cls.vlan_type,
-                source_id=cls.vlans[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[2].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[2],
-                source_type=cls.device_type,
-                source_id=cls.devices[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[1].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[2],
-                source_type=cls.device_type,
-                source_id=cls.devices[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[2].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationships[2],
-                source_type=cls.device_type,
-                source_id=cls.devices[1].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[2].pk,
-            ),
-        )
+        cls.relationship_associations = RelationshipAssociation.objects.all()[:8]
         for relationship_association in cls.relationship_associations:
             relationship_association.validated_save()
 
@@ -1505,23 +1434,7 @@ class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = (
-            Secret(
-                name="Secret 1",
-                provider="environment-variable",
-                parameters={"variable": "FILTER_TEST_1"},
-            ),
-            Secret(
-                name="Secret 2",
-                provider="environment-variable",
-                parameters={"variable": "FILTER_TEST_2"},
-            ),
-            Secret(
-                name="Secret 3",
-                provider="text-file",
-                parameters={"path": "/github-tokens/user/myusername.txt"},
-            ),
-        )
+        secrets = Secret.objects.all()[:3]
 
         for secret in secrets:
             secret.validated_save()
@@ -1563,32 +1476,12 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.secrets = (
-            Secret(
-                name="Secret 1",
-                provider="environment-variable",
-                parameters={"variable": "FILTER_TEST_1"},
-            ),
-            Secret(
-                name="Secret 2",
-                provider="environment-variable",
-                parameters={"variable": "FILTER_TEST_2"},
-            ),
-            Secret(
-                name="Secret 3",
-                provider="text-file",
-                parameters={"path": "/github-tokens/user/myusername.txt"},
-            ),
-        )
+        cls.secrets = Secret.objects.all()[:3]
 
         for secret in cls.secrets:
             secret.validated_save()
 
-        cls.groups = (
-            SecretsGroup.objects.create(name="Group 1"),
-            SecretsGroup.objects.create(name="Group 2"),
-            SecretsGroup.objects.create(name="Group 3"),
-        )
+        cls.groups = SecretsGroup.objects.all()[:3]
 
         SecretsGroupAssociation.objects.create(
             secrets_group=cls.groups[0],
@@ -1696,29 +1589,7 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = (
-            Webhook(
-                name="webhook-1",
-                enabled=True,
-                type_create=True,
-                payload_url="http://test-url.com/test-1",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-            Webhook(
-                name="webhook-2",
-                enabled=True,
-                type_update=True,
-                payload_url="http://test-url.com/test-2",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-            Webhook(
-                name="webhook-3",
-                enabled=True,
-                type_delete=True,
-                payload_url="http://test-url.com/test-3",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-        )
+        webhooks = Webhook.objects.all()[:3]
         obj_type = ContentType.objects.get_for_model(Location)
         for webhook in webhooks:
             webhook.save()

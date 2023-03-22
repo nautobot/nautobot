@@ -863,7 +863,7 @@ class GraphQLQueryTest(TestCase):
         webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
         webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        clustertype = ClusterType.objects.first()
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype)
         cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",

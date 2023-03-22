@@ -35,13 +35,6 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-
-        Provider.objects.create(name="Provider 1")
-        Provider.objects.create(name="Provider 2")
-        Provider.objects.create(name="Provider 3")
-
 
 class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
     model = ProviderNetwork
@@ -49,11 +42,7 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        providers = (
-            Provider(name="Provider 1"),
-            Provider(name="Provider 2"),
-        )
-        Provider.objects.bulk_create(providers)
+        providers = Provider.objects.all()[:2]
 
         provider_networks = (
             ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
@@ -108,7 +97,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         CircuitType.objects.create(name="Circuit Type 1")
         CircuitType.objects.create(name="Circuit Type 2")
         CircuitType.objects.create(name="Circuit Type 3")
@@ -120,16 +108,9 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        providers = Provider.objects.all()[:2]
 
-        providers = (
-            Provider.objects.create(name="Provider 1"),
-            Provider.objects.create(name="Provider 2"),
-        )
-
-        circuit_types = (
-            CircuitType.objects.create(name="Circuit Type 1"),
-            CircuitType.objects.create(name="Circuit Type 2"),
-        )
+        circuit_types = CircuitType.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Circuit)
 
@@ -193,8 +174,8 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Location.objects.last(),
         )
 
-        provider = Provider.objects.create(name="Provider 1")
-        circuit_type = CircuitType.objects.create(name="Circuit Type 1")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
 
         circuits = (
             Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),

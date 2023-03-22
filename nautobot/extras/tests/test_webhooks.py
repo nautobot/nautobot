@@ -32,15 +32,7 @@ class WebhookTest(APITestCase):
         MOCK_URL = "http://localhost/"
         MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
 
-        webhooks = (
-            Webhook.objects.create(
-                name="Location Create Webhook",
-                type_create=True,
-                payload_url=MOCK_URL,
-                secret=MOCK_SECRET,
-                additional_headers="X-Foo: Bar",
-            ),
-        )
+        webhooks = Webhook.objects.all()[:1]
         for webhook in webhooks:
             webhook.content_types.set([location_ct])
 

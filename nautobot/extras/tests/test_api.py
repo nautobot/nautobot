@@ -670,26 +670,7 @@ class DynamicGroupTestMixin:
 
         # Then the DynamicGroups.
         cls.content_type = ContentType.objects.get_for_model(Device)
-        cls.groups = [
-            DynamicGroup.objects.create(
-                name="API DynamicGroup 1",
-                slug="api-dynamicgroup-1",
-                content_type=cls.content_type,
-                filter={"status": [statuses[0].name]},
-            ),
-            DynamicGroup.objects.create(
-                name="API DynamicGroup 2",
-                slug="api-dynamicgroup-2",
-                content_type=cls.content_type,
-                filter={"status": [statuses[1].name]},
-            ),
-            DynamicGroup.objects.create(
-                name="API DynamicGroup 3",
-                slug="api-dynamicgroup-3",
-                content_type=cls.content_type,
-                filter={"location": [f"{locations[2].slug}"]},
-            ),
-        ]
+        cls.groups = DynamicGroup.objects.all()[:3]
 
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
@@ -849,10 +830,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1"),
-            SecretsGroup.objects.create(name="Secrets Group 2"),
-        )
+        secrets_groups = SecretsGroup.objects.all()[:2]
 
         cls.repos = (
             GitRepository(
@@ -2470,7 +2448,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
         cls.location = Location.objects.create(
-            name="Location 1", status=Status.objects.get(name="Active"), location_type=cls.lt
+            name="Location 1", status=Status.objects.first(), location_type=cls.lt
         )
 
     def test_get_all_relationships_on_location(self):
@@ -2541,12 +2519,12 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         """Verify that relationship associations can be populated at instance creation time."""
         location_type = LocationType.objects.get(name="Campus")
         existing_location_1 = Location.objects.create(
-            name="Existing Location 1", status=Status.objects.get(name="Active"), location_type=location_type
+            name="Existing Location 1", status=Status.objects.first(), location_type=location_type
         )
         existing_location_2 = Location.objects.create(
-            name="Existing Location 2", status=Status.objects.get(name="Active"), location_type=location_type
+            name="Existing Location 2", status=Status.objects.first(), location_type=location_type
         )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
@@ -2555,14 +2533,14 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         device_role = Role.objects.get_for_model(Device).first()
         existing_device_1 = Device.objects.create(
             name="existing-device-location-1",
-            status=Status.objects.get(name="Active"),
+            status=Status.objects.first(),
             role=device_role,
             device_type=device_type,
             location=existing_location_1,
         )
         existing_device_2 = Device.objects.create(
             name="existing-device-location-2",
-            status=Status.objects.get(name="Active"),
+            status=Status.objects.first(),
             role=device_role,
             device_type=device_type,
             location=existing_location_2,
@@ -2573,7 +2551,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:location-list"),
             data={
                 "name": "New location",
-                "status": Status.objects.get(name="Active").pk,
+                "status": Status.objects.first().pk,
                 "location_type": location_type.pk,
                 "relationships": {
                     self.relationships[0].slug: {
@@ -2761,7 +2739,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.location_type = ContentType.objects.get_for_model(Location)
         cls.device_type = ContentType.objects.get_for_model(Device)
-        cls.status_active = Status.objects.get(name="Active")
+        cls.status = Status.objects.first()
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
@@ -2773,20 +2751,16 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         cls.relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
-            Location.objects.create(
-                name="Empty Location", slug="empty", status=cls.status_active, location_type=cls.lt
-            ),
-            Location.objects.create(
-                name="Occupied Location", slug="occupied", status=cls.status_active, location_type=cls.lt
-            ),
+            Location.objects.create(name="Empty Location", slug="empty", status=cls.status, location_type=cls.lt),
+            Location.objects.create(name="Occupied Location", slug="occupied", status=cls.status, location_type=cls.lt),
             Location.objects.create(
                 name="Another Empty Location",
                 slug="another-empty",
-                status=cls.status_active,
+                status=cls.status,
                 location_type=cls.lt,
             ),
         )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         cls.devices = [
@@ -2795,36 +2769,12 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 device_type=devicetype,
                 role=devicerole,
                 location=cls.locations[1],
-                status=cls.status_active,
+                status=cls.status,
             )
             for num in range(1, 5)
         ]
 
-        cls.associations = (
-            RelationshipAssociation(
-                relationship=cls.relationship,
-                source_type=cls.location_type,
-                source_id=cls.locations[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[0].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationship,
-                source_type=cls.location_type,
-                source_id=cls.locations[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[1].pk,
-            ),
-            RelationshipAssociation(
-                relationship=cls.relationship,
-                source_type=cls.location_type,
-                source_id=cls.locations[0].pk,
-                destination_type=cls.device_type,
-                destination_id=cls.devices[2].pk,
-            ),
-        )
-        for association in cls.associations:
-            association.validated_save()
+        cls.associations = RelationshipAssociation.objects.all()[:3]
 
         cls.create_data = [
             {
@@ -3141,23 +3091,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = (
-            Secret(
-                name="api-test-1",
-                provider="environment-variable",
-                parameters={"variable": "API_TEST_1"},
-            ),
-            Secret(
-                name="api-test-2",
-                provider="environment-variable",
-                parameters={"variable": "API_TEST_2"},
-            ),
-            Secret(
-                name="api-test-3",
-                provider="environment-variable",
-                parameters={"variable": "API_TEST_3"},
-            ),
-        )
+        secrets = Secret.objects.all()[:3]
 
         for secret in secrets:
             secret.validated_save()
@@ -3172,20 +3106,9 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = (
-            Secret.objects.create(
-                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
-            ),
-            Secret.objects.create(
-                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
-            ),
-        )
+        secrets = Secret.objects.all()[:2]
 
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Group A"),
-            SecretsGroup.objects.create(name="Group B"),
-            SecretsGroup.objects.create(name="Group C", description="Some group"),
-        )
+        secrets_groups = SecretsGroup.objects.all()[:3]
 
         SecretsGroupAssociation.objects.create(
             secret=secrets[0],
@@ -3225,23 +3148,9 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = (
-            Secret.objects.create(
-                name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
-            ),
-            Secret.objects.create(
-                name="secret-2", provider="environment-variable", parameters={"variable": "ANOTHER_VAR"}
-            ),
-            Secret.objects.create(
-                name="secret-3", provider="environment-variable", parameters={"variable": "YET_ANOTHER"}
-            ),
-        )
+        secrets = Secret.objects.all()[:3]
 
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Group A"),
-            SecretsGroup.objects.create(name="Group B"),
-            SecretsGroup.objects.create(name="Group C", description="Some group"),
-        )
+        secrets_groups = SecretsGroup.objects.all()[:3]
 
         SecretsGroupAssociation.objects.create(
             secret=secrets[0],
@@ -3439,32 +3348,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.webhooks = (
-            Webhook(
-                name="api-test-1",
-                type_create=True,
-                payload_url="http://example.com/test1",
-                http_method="POST",
-                http_content_type="application/json",
-                ssl_verification=True,
-            ),
-            Webhook(
-                name="api-test-2",
-                type_update=True,
-                payload_url="http://example.com/test2",
-                http_method="POST",
-                http_content_type="application/json",
-                ssl_verification=True,
-            ),
-            Webhook(
-                name="api-test-3",
-                type_delete=True,
-                payload_url="http://example.com/test3",
-                http_method="POST",
-                http_content_type="application/json",
-                ssl_verification=True,
-            ),
-        )
+        cls.webhooks = Webhook.objects.all()[:3]
 
         obj_type = ContentType.objects.get_for_model(DeviceType)
 

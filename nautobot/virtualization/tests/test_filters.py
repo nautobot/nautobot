@@ -29,12 +29,7 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1", description="A"),
-            ClusterType.objects.create(name="Cluster Type 2", description="B"),
-            ClusterType.objects.create(name="Cluster Type 3", description="C"),
-        )
+        cluster_types = ClusterType.objects.all()[:3]
 
         cls.clusters = [
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0]),
@@ -64,17 +59,9 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cluster_groups = ClusterGroup.objects.all()[:3]
 
-        cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1", description="A"),
-            ClusterGroup.objects.create(name="Cluster Group 2", description="B"),
-            ClusterGroup.objects.create(name="Cluster Group 3", description="C"),
-        )
-
-        cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1"),
-            ClusterType.objects.create(name="Cluster Type 2"),
-        )
+        cluster_types = ClusterType.objects.all()[:2]
 
         cls.clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0]),
@@ -105,18 +92,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     @classmethod
     def setUpTestData(cls):
+        cluster_types = ClusterType.objects.all()[:3]
 
-        cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1"),
-            ClusterType.objects.create(name="Cluster Type 2"),
-            ClusterType.objects.create(name="Cluster Type 3"),
-        )
-
-        cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1"),
-            ClusterGroup.objects.create(name="Cluster Group 2"),
-            ClusterGroup.objects.create(name="Cluster Group 3"),
-        )
+        cluster_groups = ClusterGroup.objects.all()[:3]
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
@@ -255,18 +233,9 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     @classmethod
     def setUpTestData(cls):
+        cluster_types = ClusterType.objects.all()[:3]
 
-        cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1"),
-            ClusterType.objects.create(name="Cluster Type 2"),
-            ClusterType.objects.create(name="Cluster Type 3"),
-        )
-
-        cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1"),
-            ClusterGroup.objects.create(name="Cluster Group 2"),
-            ClusterGroup.objects.create(name="Cluster Group 3"),
-        )
+        cluster_groups = ClusterGroup.objects.all()[:3]
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
@@ -298,11 +267,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ),
         )
 
-        platforms = (
-            Platform.objects.create(name="Platform 1"),
-            Platform.objects.create(name="Platform 2"),
-            Platform.objects.create(name="Platform 3"),
-        )
+        platforms = Platform.objects.all()[:3]
         cls.platforms = platforms
 
         roles = Role.objects.get_for_model(VirtualMachine)
@@ -311,7 +276,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VirtualMachine)
-        status_map = {s.slug: s for s in statuses.all()}
 
         vms = (
             VirtualMachine.objects.create(
@@ -320,7 +284,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[0],
                 role=roles[0],
                 tenant=tenants[0],
-                status=status_map["active"],
+                status=statuses[0],
                 vcpus=1,
                 memory=1,
                 disk=1,
@@ -333,7 +297,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[1],
                 role=roles[1],
                 tenant=tenants[1],
-                status=status_map["staged"],
+                status=statuses[2],
                 vcpus=2,
                 memory=2,
                 disk=2,
@@ -345,7 +309,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=status_map["offline"],
+                status=statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -357,7 +321,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=status_map["offline"],
+                status=statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -369,7 +333,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=status_map["offline"],
+                status=statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -381,7 +345,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=status_map["offline"],
+                status=statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -608,12 +572,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1"),
-            ClusterType.objects.create(name="Cluster Type 2"),
-            ClusterType.objects.create(name="Cluster Type 3"),
-        )
+        cluster_types = ClusterType.objects.all()[:3]
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0]),

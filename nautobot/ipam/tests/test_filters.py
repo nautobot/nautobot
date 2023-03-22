@@ -263,11 +263,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         IPAddress.objects.all().update(vrf=None)
         VRF.objects.all().delete()
         RouteTarget.objects.all().delete()
-        route_targets = (
-            RouteTarget.objects.create(name="65000:100"),
-            RouteTarget.objects.create(name="65000:200"),
-            RouteTarget.objects.create(name="65000:300"),
-        )
+        route_targets = RouteTarget.objects.all()[:3]
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:100"),
             VRF.objects.create(name="VRF 2", rd="65000:200"),
@@ -325,14 +321,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     @classmethod
     def setUpTestData(cls):
-
         vrfs = VRF.objects.filter(rd__isnull=False)[:3]
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -363,7 +358,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             Interface.objects.create(device=devices[2], name="Interface 3"),
         )
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        clustertype = ClusterType.objects.first()
         cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (
@@ -381,20 +376,19 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(IPAddress)
-        status_map = {s.slug: s for s in statuses.all()}
         roles = Role.objects.get_for_model(IPAddress)
         cls.ipv4_address = IPAddress.objects.create(
             address="10.0.0.1/24",
             tenant=None,
             vrf=None,
-            status=status_map["active"],
+            status=statuses[0],
             dns_name="ipaddress-a",
         )
         ip0 = IPAddress.objects.create(
             address="10.0.0.2/24",
             tenant=tenants[0],
             vrf=vrfs[0],
-            status=status_map["active"],
+            status=statuses[0],
             dns_name="ipaddress-b",
         )
         interfaces[0].add_ip_addresses(ip0)
@@ -402,7 +396,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="10.0.0.3/24",
             tenant=tenants[1],
             vrf=vrfs[1],
-            status=status_map["reserved"],
+            status=statuses[2],
             role=roles[0],
             dns_name="ipaddress-c",
         )
@@ -411,7 +405,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="10.0.0.4/24",
             tenant=tenants[2],
             vrf=vrfs[2],
-            status=status_map["deprecated"],
+            status=statuses[1],
             role=roles[1],
             dns_name="ipaddress-d",
         )
@@ -420,20 +414,20 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="10.0.0.1/25",
             tenant=None,
             vrf=None,
-            status=status_map["active"],
+            status=statuses[0],
         )
         cls.ipv6_address = IPAddress.objects.create(
             address="2001:db8::1/64",
             tenant=None,
             vrf=None,
-            status=status_map["active"],
+            status=statuses[0],
             dns_name="ipaddress-a",
         )
         ip3 = IPAddress.objects.create(
             address="2001:db8::2/64",
             tenant=tenants[0],
             vrf=vrfs[0],
-            status=status_map["active"],
+            status=statuses[0],
             dns_name="ipaddress-b",
         )
         vminterfaces[0].add_ip_addresses(ip3)
@@ -441,7 +435,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="2001:db8::3/64",
             tenant=tenants[1],
             vrf=vrfs[1],
-            status=status_map["reserved"],
+            status=statuses[2],
             role=roles[2],
             dns_name="ipaddress-c",
         )
@@ -450,7 +444,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="2001:db8::4/64",
             tenant=tenants[2],
             vrf=vrfs[2],
-            status=status_map["deprecated"],
+            status=statuses[1],
             role=roles[1],
             dns_name="ipaddress-d",
         )
@@ -459,7 +453,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             address="2001:db8::1/65",
             tenant=None,
             vrf=None,
-            status=status_map["active"],
+            status=statuses[0],
         )
 
     def test_search(self):
@@ -684,7 +678,6 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     @classmethod
     def setUpTestData(cls):
-
         cls.location_type_1 = LocationType.objects.get(name="Campus")
         cls.location_type_2 = LocationType.objects.get(name="Building")
         cls.locations = (
@@ -705,7 +698,6 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_map = {s.slug: s for s in statuses.all()}
 
         VLAN.objects.create(
             vid=101,
@@ -714,7 +706,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vlan_group=groups[0],
             role=roles[0],
             tenant=tenants[0],
-            status=status_map["active"],
+            status=statuses[0],
         )
         VLAN.objects.create(
             vid=102,
@@ -723,7 +715,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vlan_group=groups[0],
             role=roles[0],
             tenant=tenants[0],
-            status=status_map["active"],
+            status=statuses[0],
         )
         VLAN.objects.create(
             vid=201,
@@ -732,7 +724,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vlan_group=groups[1],
             role=roles[1],
             tenant=tenants[1],
-            status=status_map["deprecated"],
+            status=statuses[1],
         )
         VLAN.objects.create(
             vid=202,
@@ -741,7 +733,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vlan_group=groups[1],
             role=roles[1],
             tenant=tenants[1],
-            status=status_map["deprecated"],
+            status=statuses[1],
         )
         VLAN.objects.create(
             vid=301,
@@ -750,7 +742,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vlan_group=groups[2],
             role=roles[2],
             tenant=tenants[2],
-            status=status_map["reserved"],
+            status=statuses[2],
         )
         VLAN.objects.create(
             vid=302,
@@ -759,7 +751,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             vlan_group=groups[2],
             role=roles[2],
             tenant=tenants[2],
-            status=status_map["reserved"],
+            status=statuses[2],
         )
 
     def test_name(self):
@@ -808,7 +800,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
     def test_available_on_device(self):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         location = self.locations[0]
         devicerole = Role.objects.get_for_model(Device).first()
@@ -826,9 +818,8 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -853,7 +844,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        clustertype = ClusterType.objects.first()
         cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
         virtual_machines = (

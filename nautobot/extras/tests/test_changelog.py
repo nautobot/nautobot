@@ -263,7 +263,7 @@ class ChangeLogAPITest(APITestCase):
         data = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": self.statuses.get(name="Active").pk,
+            "status": self.statuses[0].pk,
             "location_type": f"{location_type.pk}",
             "custom_fields": {
                 "my_field": "ABC",
@@ -295,14 +295,14 @@ class ChangeLogAPITest(APITestCase):
         location = Location.objects.create(
             name="Test Location 1",
             slug="test-location-1",
-            status=self.statuses.get(name="Planned"),
+            status=self.statuses[1],
             location_type=location_type,
         )
 
         data = {
             "name": "Test Location X",
             "slug": "test-location-x",
-            "status": self.statuses.get(name="Active").pk,
+            "status": self.statuses[0].pk,
             "location_type": f"{location_type.pk}",
             "custom_fields": {
                 "my_field": "DEF",
@@ -332,7 +332,7 @@ class ChangeLogAPITest(APITestCase):
             name="Test Location 1",
             slug="test-location-1",
             location_type=location_type,
-            status=self.statuses.get(name="Planned"),
+            status=self.statuses[1],
             _custom_field_data={
                 "my_field": "DEF",
                 "my_field_select": "Foo",
@@ -369,7 +369,7 @@ class ChangeLogAPITest(APITestCase):
             name="Test Location 1",
             slug="test-location-1",
             location_type=location_type,
-            status=self.statuses.get(name="Active"),
+            status=self.statuses[0],
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         location.save()
@@ -399,7 +399,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": self.statuses.get(name="Active").pk,
+            "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
         self.add_permissions("dcim.add_location")
@@ -419,7 +419,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 2",
             "slug": "test-location-2",
-            "status": self.statuses.get(name="Active").pk,
+            "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
         self.add_permissions("dcim.add_location")
@@ -441,7 +441,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": self.statuses.get(name="Active").pk,
+            "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
         self.add_permissions("dcim.add_location")
@@ -462,7 +462,7 @@ class ChangeLogAPITest(APITestCase):
         location_payload = {
             "name": "Test Location 1",
             "slug": "test-location-1",
-            "status": self.statuses.get(name="Active").pk,
+            "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
@@ -480,23 +480,23 @@ class ChangeLogAPITest(APITestCase):
 
     def test_m2m_change(self):
         """Test that ManyToMany change only generates a single ObjectChange instance"""
-        cluster_type = ClusterType.objects.create(name="test_cluster_type")
+        cluster_type = ClusterType.objects.first()
         cluster = Cluster.objects.create(name="test_cluster", cluster_type=cluster_type)
         vm_statuses = Status.objects.get_for_model(VirtualMachine)
         vm = VirtualMachine.objects.create(
             name="test_vm",
             cluster=cluster,
-            status=vm_statuses.get(name="Active"),
+            status=vm_statuses[0],
         )
         vminterface_statuses = Status.objects.get_for_model(VirtualMachine)
         vm_interface = VMInterface.objects.create(
             name="vm interface 1",
             virtual_machine=vm,
-            status=vminterface_statuses.get(name="Active"),
+            status=vminterface_statuses[0],
             mode=InterfaceModeChoices.MODE_TAGGED,
         )
         vlan_statuses = Status.objects.get_for_model(VLAN)
-        tagged_vlan = VLAN.objects.create(vid=100, name="Vlan100", status=vlan_statuses.get(name="Active"))
+        tagged_vlan = VLAN.objects.create(vid=100, name="Vlan100", status=vlan_statuses[0])
 
         payload = {"tagged_vlans": [str(tagged_vlan.pk)], "description": "test vm interface m2m change"}
         self.assertEqual(ObjectChange.objects.count(), 0)

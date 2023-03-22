@@ -53,8 +53,8 @@ class DeviceTestCase(TestCase):
             rack=cls.rack,
             position=1,
         )
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
-        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1")
+        cluster_type = ClusterType.objects.first()
+        cluster_group = ClusterGroup.objects.first()
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
         SecretsGroup.objects.create(name="Secrets Group 1")
 

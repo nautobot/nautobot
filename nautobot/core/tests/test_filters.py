@@ -851,7 +851,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[0],
                 position=1,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
-                status=device_status_map["Active"],
+                status=device_statuses[0],
                 local_config_context_data={"foo": 123},
                 comments="Device 1 comments",
             ),
@@ -866,7 +866,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[1],
                 position=2,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
-                status=device_status_map["Staged"],
+                status=device_statuses[2],
                 comments="Device 2 comments",
             ),
             dcim_models.Device(
@@ -880,7 +880,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[2],
                 position=3,
                 face=dcim_choices.DeviceFaceChoices.FACE_REAR,
-                status=device_status_map["Failed"],
+                status=device_statuses[1],
                 comments="Device 3 comments",
             ),
         )
@@ -1187,7 +1187,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
-        cls.status_active = statuses.get(name="Active")
+        cls.status = statuses[0]
 
     def test_empty_queryset(self):
         with self.assertRaisesMessage(ValueError, self.exception_message):
@@ -1198,7 +1198,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
         for n in range(1, 11):
             dcim_models.Location.objects.create(
                 name=f"getfiltersettestLocation{n}",
-                status=self.status_active,
+                status=self.status,
                 description=f"description {n}",
                 location_type=location_type,
             )
@@ -1214,10 +1214,10 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
         dcim_models.Location.objects.create(
-            name="getfiltersettestLocation1", status=self.status_active, location_type=location_type
+            name="getfiltersettestLocation1", status=self.status, location_type=location_type
         )
         dcim_models.Location.objects.create(
-            name="getfiltersettestLocation2", status=self.status_active, location_type=location_type
+            name="getfiltersettestLocation2", status=self.status, location_type=location_type
         )
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
@@ -1226,7 +1226,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
         location_type = dcim_models.LocationType.objects.get(name="Campus")
         for n in range(1, 11):
             dcim_models.Location.objects.create(
-                name=f"getfiltersettestLocation{n}", status=self.status_active, location_type=location_type
+                name=f"getfiltersettestLocation{n}", status=self.status, location_type=location_type
             )
         for location in self.queryset:
             location.delete()

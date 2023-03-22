@@ -313,35 +313,7 @@ class CustomLinkTestCase(
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
 
-        customlinks = (
-            CustomLink(
-                content_type=obj_type,
-                name="customlink-1",
-                text="customlink text 1",
-                target_url="http://customlink1.com",
-                weight=100,
-                button_class="default",
-                new_window=False,
-            ),
-            CustomLink(
-                content_type=obj_type,
-                name="customlink-2",
-                text="customlink text 2",
-                target_url="http://customlink2.com",
-                weight=100,
-                button_class="default",
-                new_window=False,
-            ),
-            CustomLink(
-                content_type=obj_type,
-                name="customlink-3",
-                text="customlink text 3",
-                target_url="http://customlink3.com",
-                weight=100,
-                button_class="default",
-                new_window=False,
-            ),
-        )
+        customlinks = CustomLink.objects.all()[:3]
 
         for link in customlinks:
             link.save()
@@ -586,10 +558,7 @@ class GitRepositoryTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1"),
-            SecretsGroup.objects.create(name="Secrets Group 2"),
-        )
+        secrets_groups = SecretsGroup.objects.all()[:2]
 
         # Create four GitRepository records
         repos = (
@@ -704,24 +673,7 @@ class SecretTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        secrets = (
-            Secret(
-                name="View Test 1",
-                provider="environment-variable",
-                parameters={"variable": "VIEW_TEST_1"},
-                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
-            ),
-            Secret(
-                name="View Test 2",
-                provider="environment-variable",
-                parameters={"variable": "VIEW_TEST_2"},
-            ),
-            Secret(
-                name="View Test 3",
-                provider="environment-variable",
-                parameters={"variable": "VIEW_TEST_3"},
-            ),
-        )
+        secrets = Secret.objects.all()[:3]
 
         for secret in secrets:
             secret.validated_save()
@@ -758,17 +710,9 @@ class SecretsGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", description="First Group"),
-            SecretsGroup.objects.create(name="Group 2"),
-            SecretsGroup.objects.create(name="Group 3"),
-        )
+        secrets_groups = SecretsGroup.objects.all()[:3]
 
-        secrets = (
-            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),
-        )
+        secrets = Secret.objects.all()[:3]
 
         SecretsGroupAssociation.objects.create(
             secrets_group=secrets_groups[0],
@@ -819,17 +763,14 @@ class GraphQLQueriesTestCase(
         graphqlqueries = (
             GraphQLQuery(
                 name="graphql-query-1",
-                slug="graphql-query-1",
                 query="{ query: locations {name} }",
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                slug="graphql-query-2",
                 query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
-                slug="graphql-query-3",
                 query="""
 query ($device: String!) {
   devices(name: $device) {
@@ -932,7 +873,6 @@ query ($device: String!) {
 
         cls.form_data = {
             "name": "graphql-query-4",
-            "slug": "graphql-query-4",
             "query": "{query: locations {name}}",
         }
 
@@ -2150,7 +2090,7 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
         )
         relationship.validated_save()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.first()
@@ -2328,29 +2268,7 @@ class WebhookTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = (
-            Webhook(
-                name="webhook-1",
-                enabled=True,
-                type_create=True,
-                payload_url="http://test-url.com/test-1",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-            Webhook(
-                name="webhook-2",
-                enabled=True,
-                type_update=True,
-                payload_url="http://test-url.com/test-2",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-            Webhook(
-                name="webhook-3",
-                enabled=True,
-                type_delete=True,
-                payload_url="http://test-url.com/test-3",
-                http_content_type=HTTP_CONTENT_TYPE_JSON,
-            ),
-        )
+        webhooks = Webhook.objects.all()[:3]
 
         obj_type = ContentType.objects.get_for_model(ConsolePort)
 
