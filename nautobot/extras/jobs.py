@@ -1,6 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
-import copy
 import inspect
 import json
 import logging
@@ -17,18 +16,16 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import transaction, IntegrityError
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.test.client import RequestFactory
-from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
 import yaml
 
 from nautobot.core.celery import nautobot_task
-from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -42,12 +39,11 @@ from nautobot.ipam.validators import (
 )
 
 from .choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
+from .utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
 
 
 User = get_user_model()
@@ -72,7 +68,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class BaseJob:
+class RunJobTaskFailed(Exception):
+    """Celery task failed for some reason."""
+
+
+class BaseJob(Task):
     """Base model for jobs (reports, scripts).
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
@@ -117,10 +117,173 @@ class BaseJob:
             if method_name.startswith("test_") and callable(getattr(self, method_name)):
                 self.test_methods.append(method_name)
 
+    def __call__(self, *args, **kwargs):
+        # Attempt to resolve serialized data back into original form by creating querysets or model instances
+        # If we fail to find any objects, we consider this a job execution error, and fail.
+        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
+        # or it might be bad input from an API request, or manual execution.
+        try:
+            deserialized_kwargs = self.__class__.deserialize_data(kwargs)
+        except Exception:
+            stacktrace = traceback.format_exc()
+            self.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
+        return self.run(*args, **deserialized_kwargs)
+
     def __str__(self):
         return str(self.name)
 
     # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
+
+    # TODO(jathan): Could be interesting for custom stuff when the Job is
+    # enabled in the database and then therefore registered in Celery
+    @classmethod
+    def on_bound(cls, app):
+        """Called when the task is bound to an app.
+
+        Note:
+            This class method can be defined to do additional actions when
+            the task class is bound to an app.
+        """
+
+    # TODO(jathan): Could be interesting for showing the Job's class path as the
+    # shadow name vs. the Celery task_name?
+    def shadow_name(self, args, kwargs, options):
+        """Override for custom task name in worker logs/monitoring.
+
+        Example:
+            .. code-block:: python
+
+                from celery.utils.imports import qualname
+
+                def shadow_name(task, args, kwargs, options):
+                    return qualname(args[0])
+
+                @app.task(shadow_name=shadow_name, serializer='pickle')
+                def apply_function_async(fun, *args, **kwargs):
+                    return fun(*args, **kwargs)
+
+        Arguments:
+            args (Tuple): Task positional arguments.
+            kwargs (Dict): Task keyword arguments.
+            options (Dict): Task execution options.
+        """
+
+    def get_job_model(self):
+        return self.get_job_result().job_model
+
+    def get_job_result(self):
+        from nautobot.extras.models.jobs import JobResult  # avoid circular import
+
+        return JobResult.objects.get(task_id=self.request.id)
+
+    def before_start(self, task_id, args, kwargs):
+        """Handler called before the task starts.
+
+        .. versionadded:: 5.2
+
+        Arguments:
+            task_id (str): Unique id of the task to execute.
+            args (Tuple): Original arguments for the task to execute.
+            kwargs (Dict): Original keyword arguments for the task to execute.
+
+        Returns:
+            None: The return value of this handler is ignored.
+        """
+        self.active_test = "initialization"
+
+        try:
+            self.job_result = self.get_job_result()
+        except TypeError:
+            raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}")
+
+        job_model = self.get_job_model()
+        if not job_model.enabled:
+            self.log_failure(
+                message=f"Job {job_model} is not enabled to be run!",
+                obj=job_model,
+            )
+
+        soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+        time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
+        if time_limit <= soft_time_limit:
+            self.log_warning(
+                f"The hard time limit of {time_limit} seconds is less than "
+                f"or equal to the soft time limit of {soft_time_limit} seconds. "
+                f"This job will fail silently after {time_limit} seconds.",
+            )
+
+        self.log_info("Running job")
+        self.active_test = "run"
+
+    def on_success(self, retval, task_id, args, kwargs):
+        """Success handler.
+
+        Run by the worker if the task executes successfully.
+
+        Arguments:
+            retval (Any): The return value of the task.
+            task_id (str): Unique id of the executed task.
+            args (Tuple): Original arguments for the executed task.
+            kwargs (Dict): Original keyword arguments for the executed task.
+
+        Returns:
+            None: The return value of this handler is ignored.
+        """
+
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        """Retry handler.
+
+        This is run by the worker when the task is to be retried.
+
+        Arguments:
+            exc (Exception): The exception sent to :meth:`retry`.
+            task_id (str): Unique id of the retried task.
+            args (Tuple): Original arguments for the retried task.
+            kwargs (Dict): Original keyword arguments for the retried task.
+            einfo (~billiard.einfo.ExceptionInfo): Exception information.
+
+        Returns:
+            None: The return value of this handler is ignored.
+        """
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        """Error handler.
+
+        This is run by the worker when the task fails.
+
+        Arguments:
+            exc (Exception): The exception raised by the task.
+            task_id (str): Unique id of the failed task.
+            args (Tuple): Original arguments for the task that failed.
+            kwargs (Dict): Original keyword arguments for the task that failed.
+            einfo (~billiard.einfo.ExceptionInfo): Exception information.
+
+        Returns:
+            None: The return value of this handler is ignored.
+        """
+
+    def after_return(self, status, retval, task_id, args, kwargs, einfo):
+        """
+        Handler called after the task returns.
+
+        Parameters
+            status - Current task state.
+            retval - Task return value/exception.
+            task_id - Unique id of the task.
+            args - Original arguments for the task that returned.
+            kwargs - Original keyword arguments for the task that returned.
+
+        Keyword Arguments
+            einfo - ExceptionInfo instance, containing the traceback (if any).
+        """
+
+        # Cleanup FileProxy objects
+        file_fields = list(self._get_file_vars())
+        file_ids = [kwargs[f] for f in file_fields]
+        if file_ids:
+            self.delete_files(*file_ids)
+
+        self.log_info("Job completed")
 
     @classproperty
     def file_path(cls):  # pylint: disable=no-self-argument
@@ -301,6 +464,10 @@ class BaseJob:
         }
         """
         return self.job_result.data if self.job_result else None
+
+    @classproperty
+    def registered_name(cls):
+        return f"{cls.__module__}.{cls.__name__}"
 
     def as_form(self, data=None, files=None, initial=None, approval_view=False):
         """
@@ -1041,201 +1208,6 @@ def get_job(class_path):
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
-class RunJobTaskFailed(Exception):
-    """Celery task failed for some reason."""
-
-
-@nautobot_task
-def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
-    """
-    Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
-
-    This function is responsible for setting up the job execution, handing the DB tranaction
-    and rollback conditions, plus post execution cleanup and saving the JobResult record.
-    """
-    from nautobot.extras.models import JobResult  # avoid circular import
-
-    # Getting the correct job result can fail if the stored data cannot be serialized.
-    # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
-    job_result = JobResult.objects.get(pk=job_result_pk)
-
-    job_model = job_result.job_model
-    initialization_failure = None
-    job_model = JobModel.objects.get_for_class_path(job_result.name)
-
-    if not job_model.enabled:
-        initialization_failure = f"Job {job_model} is not enabled to be run!"
-    else:
-        job_class = job_model.job_class
-
-        if not job_model.installed or not job_class:
-            initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
-
-    if initialization_failure:
-        job_result.log(
-            message=initialization_failure,
-            obj=job_model,
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="initialization",
-            logger=logger,
-        )
-        raise RunJobTaskFailed(initialization_failure)
-
-    job = job_class()
-    job.active_test = "initialization"
-    job.job_result = job_result
-
-    soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-    time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
-    if time_limit <= soft_time_limit:
-        job_result.log(
-            f"The hard time limit of {time_limit} seconds is less than "
-            f"or equal to the soft time limit of {soft_time_limit} seconds. "
-            f"This job will fail silently after {time_limit} seconds.",
-            level_choice=LogLevelChoices.LOG_WARNING,
-            grouping="initialization",
-            logger=logger,
-        )
-
-    file_ids = None
-    try:
-        # Capture the file IDs for any FileProxy objects created so we can cleanup later.
-        file_fields = list(job._get_file_vars())
-        file_ids = [data[f] for f in file_fields]
-
-        # Attempt to resolve serialized data back into original form by creating querysets or model instances
-        # If we fail to find any objects, we consider this a job execution error, and fail.
-        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
-        # or it might be bad input from an API request, or manual execution.
-
-        data = job_class.deserialize_data(data)
-    # TODO(jathan): Another place where because `log()` is called which mutates `.data`, we must
-    # explicitly call `save()` again. We need to see if we can move more of this to `NauotbotTask`
-    # and/or the DB backend as well.
-    except Exception:
-        stacktrace = traceback.format_exc()
-        job_result.log(
-            f"Error initializing job:\n```\n{stacktrace}\n```",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="initialization",
-            logger=logger,
-        )
-        job_result.save()
-        if file_ids:
-            # Cleanup FileProxy objects
-            job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
-        raise
-
-    if job_model.read_only:
-        # Force commit to false for read only jobs.
-        commit = False
-
-    # TODO(Glenn): validate that all args required by this job are set in the data or else log helpful errors?
-
-    job.logger.info(f"Running job (commit={commit})")
-
-    # Add the current request as a property of the job
-    job.request = request
-
-    def _run_job():
-        """
-        Core job execution task.
-
-        We capture this within a subfunction to allow for conditionally wrapping it with the change_logging
-        context manager (which is only relevant if commit == True).
-
-        If the job is marked as read_only == True, then commit is forced to False and no log messages will be
-        emitted related to reverting database changes.
-        """
-        started = timezone.now()
-        job.results["output"] = ""
-        try:
-            with transaction.atomic():
-                # Script-like behavior
-                job.active_test = "run"
-                output = job.run(data=data, commit=commit)
-                if output:
-                    job.results["output"] += "\n" + str(output)
-
-                # Report-like behavior
-                for method_name in job.test_methods:
-                    job.active_test = method_name
-                    output = getattr(job, method_name)()
-                    if output:
-                        job.results["output"] += "\n" + str(output)
-
-                job.logger.info("job completed successfully")
-
-                if not commit:
-                    raise AbortTransaction("Database changes have been reverted automatically.")
-
-        except AbortTransaction:
-            if not job_model.read_only:
-                job.log_info(message="Database changes have been reverted automatically.")
-
-        except Exception:
-            if not job_model.read_only:
-                job.log_info(message="Database changes have been reverted due to error.")
-            raise
-
-        # TODO(jathan): For now we still need to call `save()` so that any output data from the job
-        # that was stored gets saved to the `JobResult`. We need to consider where this should be
-        # moved as we get closer to eliminating `run_job()` entirely. Hint: Probably inside of
-        # `NautobotTask` class.
-        finally:
-            _data = copy.deepcopy(job_result.data)
-            job_result.refresh_from_db()
-            job_result.data = _data
-            try:
-                job_result.save()
-            except IntegrityError:
-                # handle job_model deleted while job was running
-                job_result.job_model = None
-                job_result.save()
-            if file_ids:
-                job.delete_files(*file_ids)  # Cleanup FileProxy objects
-
-        # TODO(jathan): Pretty sure this can also be handled by the backend, but
-        # leaving it for now.
-        # record data about this jobrun in the scheduled_job
-        if job_result.scheduled_job:
-            job_result.scheduled_job.total_run_count += 1
-            job_result.scheduled_job.last_run_at = started
-            job_result.scheduled_job.save()
-
-        # Perform any post-run tasks
-        # 2.0 TODO Remove post_run() method entirely
-        job.active_test = "post_run"
-        output = job.post_run()
-        # TODO(jathan): We need to call `save()` here too so that any appended output from
-        # `post_run` gets stored on the `JobResult`. We need to move this out of here as well.
-        if output:
-            job.results["output"] += "\n" + str(output)
-            job_result.save()
-
-        job_result.refresh_from_db()
-        job.logger.info(f"Job completed in {job_result.duration}")
-
-        # TODO(jathan): For now this is only output from `post_run()` which is not straightforward.
-        # We need to think about what we want to be returned from job runs and stored as
-        # `JobResult.result`, otherwise it will always be `None`.
-        return output
-
-    # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
-    # process change logs, webhooks, etc.
-    if commit:
-        context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
-        change_context = context_class(user=request.user, context_detail=job_model.slug)
-        with change_logging(change_context):
-            output = _run_job()
-    else:
-        output = _run_job()
-
-    # This is just passing through the return value from `post_run()` which for now will always be
-    # `None` (see above).
-    return output
-
-
 @nautobot_task
 def scheduled_job_handler(*args, **kwargs):
     """
@@ -1248,15 +1220,12 @@ def scheduled_job_handler(*args, **kwargs):
 
     user_pk = kwargs.pop("user")
     user = User.objects.get(pk=user_pk)
-    name = kwargs.pop("name")
+    kwargs.pop("name")  # TODO(gary): remove this?
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
     celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
-    job_content_type = get_job_content_type()
-    JobResult.enqueue_job(
-        run_job, name, job_content_type, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs
-    )
+    JobResult.enqueue_job(schedule.job_model, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs)
 
 
 def enqueue_job_hooks(object_change):
@@ -1286,14 +1255,11 @@ def enqueue_job_hooks(object_change):
 
     # Enqueue the jobs related to the job_hooks
     for job_hook in job_hooks:
-        job_content_type = get_job_content_type()
         job_model = job_hook.job
         request = RequestFactory().request(SERVER_NAME="job_hook")
         request.user = object_change.user
         JobResult.enqueue_job(
-            run_job,
-            job_model.class_path,
-            job_content_type,
+            job_model,
             object_change.user,
             data=job_model.job_class.serialize_data({"object_change": object_change}),
             request=copy_safe_request(request),

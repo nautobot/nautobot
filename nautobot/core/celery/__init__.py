@@ -25,7 +25,30 @@ logger = logging.getLogger(__name__)
 # NOT need to be called here.
 # nautobot.setup()
 
-app = Celery("nautobot", task_cls="nautobot.core.celery.task:NautobotTask")
+
+class NautobotCelery(Celery):
+    task_cls = "nautobot.core.celery.task:NautobotTask"
+
+    def register_task(self, task, **options):
+        """Utility for registering a task-based class.
+
+        Note:
+            This is here for compatibility with old Celery 1.0
+            style task classes, you should not need to use this for
+            new projects.
+        """
+        from nautobot.extras.jobs import Job
+
+        if issubclass(task, Job):
+            task = task()
+            task.name = task.__class__.registered_name
+
+        return super().register_task(task, **options)
+
+
+# TODO(gary): local jobs are not being loaded on the worker. may need to append JOBS_ROOT to sys.path?
+
+app = NautobotCelery("nautobot")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes. Again, this is possible
@@ -43,7 +66,7 @@ DjangoFixup(app).install()
 app.autodiscover_tasks()
 
 
-@signals.worker_ready.connect()
+@signals.worker_ready.connect
 def setup_prometheus(**kwargs):
     """This sets up an HTTP server to serve prometheus metrics from the celery workers."""
     # Don't set up the server if the port is undefined

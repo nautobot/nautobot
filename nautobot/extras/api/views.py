@@ -64,7 +64,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from . import nested_serializers, serializers
 
@@ -558,8 +557,6 @@ def _run_job(request, job_model, legacy_response=False):
     if not get_worker_count(queue=task_queue):
         raise CeleryWorkerNotRunningException(queue=task_queue)
 
-    job_content_type = get_job_content_type()
-
     # Default to a null JobResult.
     job_result = None
 
@@ -594,9 +591,7 @@ def _run_job(request, job_model, legacy_response=False):
     # ... If we can't create one, create a JobResult instead.
     if schedule is None:
         job_result = JobResult.enqueue_job(
-            run_job,
-            job.class_path,
-            job_content_type,
+            job,
             request.user,
             celery_kwargs={"queue": task_queue},
             data=job_class.serialize_data(cleaned_data),
@@ -954,11 +949,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job with commit=False
-        job_content_type = get_job_content_type()
         job_result = JobResult.enqueue_job(
-            run_job,
-            job_model.class_path,
-            job_content_type,
+            job_model,
             request.user,
             celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
             data=scheduled_job.kwargs.get("data", {}),

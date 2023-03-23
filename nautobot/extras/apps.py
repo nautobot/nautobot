@@ -59,6 +59,3 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
-
-        # Import job_tasks to trigger Celery registration
-        from nautobot.extras import job_tasks

@@ -19,7 +19,7 @@ from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
 from prometheus_client import Histogram
 
-from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.celery import app, NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -336,6 +336,10 @@ class Job(PrimaryModel):
             and self.job_class is not None
             and not (self.has_sensitive_variables and self.approval_required)
         )
+
+    @property
+    def job_task(self):
+        return app.tasks.get(self.job_class.registered_name, None)
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -728,7 +732,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
+    def enqueue_job(cls, job_model, user, *args, celery_kwargs=None, schedule=None, **kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
@@ -746,50 +750,31 @@ class JobResult(BaseModel, CustomFieldModel):
         # and will likely go away in the future.
         job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
         job_result = cls.objects.create(
-            name=name,
-            obj_type=obj_type,
+            name=job_model.class_path,
+            obj_type=ContentType.objects.get_for_model(job_model),
             user=user,
             task_id=uuid.uuid4(),
             scheduled_job=schedule,
         )
 
-        kwargs["job_result_pk"] = job_result.pk
-
         # Prepare kwargs that will be sent to Celery
         if celery_kwargs is None:
             celery_kwargs = {}
 
-        if obj_type.app_label == "extras" and obj_type.model.lower() == "job":
-            try:
-                job_model = Job.objects.get_for_class_path(name)
-                if job_model.soft_time_limit > 0:
-                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-                if job_model.time_limit > 0:
-                    celery_kwargs["time_limit"] = job_model.time_limit
-                if not job_model.has_sensitive_variables:
-                    job_result.task_kwargs = job_result_kwargs
-                job_result.job_model = job_model
-                job_result.save()
-            except Job.DoesNotExist:
-                # 2.0 TODO: remove this fallback logic, database records should always exist
-                from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
-
-                job_class = get_job(name)
-                if job_class is not None:
-                    logger.error("No Job instance found in the database corresponding to %s", name)
-                    if hasattr(job_class.Meta, "soft_time_limit"):
-                        celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
-                    if hasattr(job_class.Meta, "time_limit"):
-                        celery_kwargs["time_limit"] = job_class.Meta.time_limit
-                    if not job_class.has_sensitive_variables:
-                        job_result.task_kwargs = job_result_kwargs
-                        job_result.save()
-                else:
-                    logger.error("Neither a Job database record nor a Job source class were found for %s", name)
+        if job_model.soft_time_limit > 0:
+            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            celery_kwargs["time_limit"] = job_model.time_limit
+        if not job_model.has_sensitive_variables:
+            job_result.task_kwargs = job_result_kwargs
+        job_result.job_model = job_model
+        job_result.save()
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
         transaction.on_commit(
-            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.task_id), **celery_kwargs)
+            lambda: job_model.job_task.apply_async(
+                args=args, kwargs=kwargs, task_id=str(job_result.task_id), **celery_kwargs
+            )
         )
 
         return job_result

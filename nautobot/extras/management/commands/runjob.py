@@ -10,7 +10,7 @@ from django.utils import timezone
 from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import Job, JobLogEntry, JobResult
-from nautobot.extras.jobs import get_job, run_job
+from nautobot.extras.jobs import get_job
 from nautobot.extras.utils import get_job_content_type
 
 
@@ -84,7 +84,7 @@ class Command(BaseCommand):
                 job_model=job,
                 task_id=uuid.uuid4(),
             )
-            run_job(
+            job.job_task(
                 data=data,
                 request=copy_safe_request(request) if request else None,
                 commit=options["commit"],
@@ -94,9 +94,7 @@ class Command(BaseCommand):
 
         else:
             job_result = JobResult.enqueue_job(
-                run_job,
-                job_class.class_path,
-                job_content_type,
+                job,
                 user,
                 data=data,
                 request=copy_safe_request(request) if request else None,

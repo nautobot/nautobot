@@ -17,7 +17,6 @@ from nautobot.core.testing.utils import (
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
 from nautobot.core.utils.requests import copy_safe_request
-from nautobot.extras.jobs import run_job
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
 
@@ -95,7 +94,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
 
     # This runs the job synchronously in the current thread as if it were being executed by a
     # worker, therefore resulting in updating the `JobResult` as expected.
-    celery_result = run_job.apply(
+    celery_result = job.job_task.apply(
         kwargs=dict(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk),
         task_id=job_result.task_id,
     )

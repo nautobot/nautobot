@@ -34,7 +34,7 @@ from nautobot.core.views.utils import csv_format, prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
@@ -50,7 +50,7 @@ from .datasources import (
 from .filters import RoleFilterSet
 from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from .jobs import Job as JobClass
-from .jobs import get_job, run_job
+from .jobs import get_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -1153,6 +1153,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
+            task_queue = job_form.cleaned_data.get("_task_queue", None)
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
@@ -1189,7 +1190,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job_model.class_path,
-                    "task_queue": job_form.cleaned_data.get("_task_queue", None),
+                    "task_queue": task_queue,
                 }
                 if task_queue:
                     task_kwargs["celery_kwargs"] = {"queue": task_queue}
@@ -1220,17 +1221,15 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_content_type = get_job_content_type()
+                job_kwargs = job_form.cleaned_data
+                for key in list(job_kwargs.keys()):
+                    if not hasattr(job_model.job_class, key):
+                        job_kwargs.pop(key)
                 job_result = JobResult.enqueue_job(
-                    run_job,
-                    job_model.class_path,
-                    job_content_type,
+                    job_model,
                     request.user,
                     celery_kwargs={"queue": task_queue},
-                    data=job_model.job_class.serialize_data(job_form.cleaned_data),
-                    request=copy_safe_request(request),
-                    commit=commit,
-                    task_queue=job_form.cleaned_data.get("_task_queue", None),
+                    **job_model.job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1336,20 +1335,15 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to run this job")
             else:
                 # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-                job_content_type = get_job_content_type()
+                # TODO(gary): serialize initial args and omit any args not declared on the job class
                 initial = scheduled_job.kwargs.get("data", {})
-                initial["_commit"] = False
+                initial.pop("_commit")
                 celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
                 job_result = JobResult.enqueue_job(
-                    run_job,
-                    job_model.job_class.class_path,
-                    job_content_type,
+                    job_model,
                     request.user,
                     celery_kwargs=celery_kwargs,
-                    data=job_model.job_class.serialize_data(initial),
-                    request=copy_safe_request(request),
-                    commit=False,  # force a dry-run
-                    task_queue=scheduled_job.kwargs.get("task_queue", None),
+                    **initial,
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
