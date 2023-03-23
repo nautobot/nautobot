@@ -112,6 +112,9 @@ def common_test_data(cls):
     loc0 = Location.objects.filter(location_type=lt1).first()
     loc1 = Location.objects.filter(location_type=lt1).first()
     loc2 = Location.objects.filter(location_type=lt2).first()
+
+    for instance in [loc0, loc1]:
+        instance.tags.set(Tag.objects.get_for_model(Location))
     loc2.parent = loc1
     loc3 = Location.objects.filter(location_type=lt3).first()
     loc3.parent = loc2
@@ -133,6 +136,11 @@ def common_test_data(cls):
     cls.manufacturers = manufacturers
 
     platforms = Platform.objects.all()[:3]
+    for num, platform in enumerate(platforms):
+        platform.napalm_driver = f"driver-{num}",
+        platform.napalm_args = ["--test", f"--arg{num}"],
+        platform.save()
+
     cls.platforms = platforms
 
     device_types = (
@@ -184,8 +192,7 @@ def common_test_data(cls):
 
     rackroles = Role.objects.get_for_model(Rack)
 
-    rack_statuses = Status.objects.get_for_model(Rack)
-    cls.rack_status_map = {s.name: s for s in rack_statuses.all()}
+    cls.rack_statuses = Status.objects.get_for_model(Rack)
 
     racks = (
         Rack.objects.create(
@@ -195,7 +202,7 @@ def common_test_data(cls):
             location=loc0,
             rack_group=rack_groups[0],
             tenant=tenants[0],
-            status=cls.rack_status_map["Active"],
+            status=cls.rack_statuses[0],
             role=rackroles[0],
             serial="ABC",
             asset_tag="1001",
@@ -214,7 +221,7 @@ def common_test_data(cls):
             rack_group=rack_groups[1],
             location=loc0,
             tenant=tenants[1],
-            status=cls.rack_status_map["Planned"],
+            status=cls.rack_statuses[1],
             role=rackroles[1],
             serial="DEF",
             asset_tag="1002",
@@ -233,7 +240,7 @@ def common_test_data(cls):
             rack_group=rack_groups[2],
             location=loc0,
             tenant=tenants[2],
-            status=cls.rack_status_map["Reserved"],
+            status=cls.rack_statuses[2],
             role=rackroles[2],
             serial="GHI",
             asset_tag="1003",
@@ -251,7 +258,7 @@ def common_test_data(cls):
 
     cls.device_roles = Role.objects.get_for_model(Device)
 
-    cluster_type = ClusterType.objects.first()
+    cluster_type = ClusterType.objects.create(name="Circuit Type 2")
     clusters = (
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=loc0),
         Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, location=loc1),
@@ -504,10 +511,13 @@ def common_test_data(cls):
         description="Device Bay Description 3",
     )
 
-    secrets_groups = SecretsGroup.objects.all()[:3]
+    secrets_groups = (
+         SecretsGroup.objects.create(name="Secrets group 1"),
+         SecretsGroup.objects.create(name="Secrets group 2"),
+         SecretsGroup.objects.create(name="Secrets group 3"),
+     )
 
     device_statuses = Status.objects.get_for_model(Device)
-    device_status_map = {ds.name: ds for ds in device_statuses.all()}
 
     devices = (
         Device.objects.create(
@@ -518,7 +528,7 @@ def common_test_data(cls):
             rack=racks[0],
             location=loc0,
             tenant=tenants[0],
-            status=device_status_map["Active"],
+            status=device_statuses[0],
             cluster=clusters[0],
             asset_tag="1001",
             face=DeviceFaceChoices.FACE_FRONT,
@@ -534,7 +544,7 @@ def common_test_data(cls):
             rack=racks[1],
             location=loc0,
             tenant=tenants[1],
-            status=device_status_map["Staged"],
+            status=device_statuses[1],
             cluster=clusters[1],
             asset_tag="1002",
             face=DeviceFaceChoices.FACE_FRONT,
@@ -551,7 +561,7 @@ def common_test_data(cls):
             rack=racks[2],
             location=loc1,
             tenant=tenants[2],
-            status=device_status_map["Failed"],
+            status=device_statuses[2],
             cluster=clusters[2],
             asset_tag="1003",
             face=DeviceFaceChoices.FACE_REAR,
@@ -771,7 +781,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             location=cls.loc1,
             rack_group=rack_group,
             tenant=tenant,
-            status=cls.rack_status_map["Active"],
+            status=cls.rack_statuses[0],
             role=rack_role,
             serial="ABCDEF",
             asset_tag="1004",
@@ -889,7 +899,7 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         common_test_data(cls)
 
         manufacturer = Manufacturer.objects.first()
-        DeviceType.objects.create(
+        device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             comments="Device type 4",
             model="Model 4",
@@ -898,6 +908,7 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             u_height=4,
             is_full_depth=True,
         )
+        device_type.tags.set(Tag.objects.get_for_model(DeviceType))
 
     def test_is_full_depth(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
@@ -1486,7 +1497,7 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
         console_ports[0].tags.set(Tag.objects.get_for_model(ConsolePort))
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(
@@ -1545,7 +1556,7 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
         console_server_ports[0].tags.set(Tag.objects.get_for_model(ConsoleServerPort))
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(
@@ -1610,7 +1621,7 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         power_ports[1].tags.set(Tag.objects.get_for_model(PowerPort)[:3])
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(
@@ -1746,7 +1757,6 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         vlans = VLAN.objects.all()[:3]
 
         interface_statuses = Status.objects.get_for_model(Interface)
-        interface_status_map = {s.name: s for s in interface_statuses.all()}
 
         # Cabled interfaces
         cabled_interfaces = (
@@ -1821,18 +1831,18 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             interface.refresh_from_db()
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        cable_status_map = {cs.name: cs for cs in cable_statuses.all()}
+        connected_status = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(
             termination_a=cabled_interfaces[0],
             termination_b=cabled_interfaces[3],
-            status=cable_statuses[1],
+            status=connected_status,
         )
         Cable.objects.create(
             termination_a=cabled_interfaces[1],
             termination_b=cabled_interfaces[4],
-            status=cable_statuses[1],
+            status=connected_status,
         )
         # Third pair is not connected
 
@@ -2760,7 +2770,6 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         )
 
         pf_statuses = Status.objects.get_for_model(PowerFeed)
-        pf_status_map = {s.name: s for s in pf_statuses.all()}
 
         PowerFeed.objects.filter(pk=power_feeds[0].pk).update(
             status=pf_statuses[0],
@@ -2806,7 +2815,7 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[3]
+        status_connected = cable_statuses.get(name="Connected")
 
         Cable.objects.create(
             termination_a=power_feeds[0],
@@ -2858,6 +2867,8 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
         common_test_data(cls)
 
         device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
+        for device_redundancy_group in device_redundancy_groups:
+            device_redundancy_group.tags.set(Tag.objects.get_for_model(DeviceRedundancyGroup))
 
         secrets_groups = list(SecretsGroup.objects.all()[:2])
 
