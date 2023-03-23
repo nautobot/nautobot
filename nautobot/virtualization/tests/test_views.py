@@ -302,12 +302,12 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cf.content_types.set([obj_type])
 
         statuses = Status.objects.get_for_model(VMInterface)
-        status_active = statuses.get(name="Active")
+        status = statuses.first()
 
         cls.form_data = {
             "virtual_machine": virtualmachines[1].pk,
             "name": "Interface X",
-            "status": status_active.pk,
+            "status": status.pk,
             "enabled": False,
             "bridge": interfaces[3].pk,
             "mac_address": EUI("01-02-03-04-05-06"),
@@ -325,7 +325,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "enabled": False,
             "bridge": interfaces[3].pk,
-            "status": status_active.pk,
+            "status": status.pk,
             "mac_address": EUI("01-02-03-04-05-06"),
             "mtu": 2000,
             "description": "New description",
@@ -340,7 +340,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "virtual_machine": virtualmachines[1].pk,
             "name_pattern": "Interface [4-6]",
             "enabled": True,
-            "status": status_active.pk,
+            "status": status.pk,
             "mtu": 1500,
             "description": "New Description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -358,7 +358,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.bulk_edit_data = {
             "enabled": False,
             "mtu": 2000,
-            "status": status_active.pk,
+            "status": status.pk,
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,

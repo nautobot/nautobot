@@ -208,12 +208,12 @@ class CircuitTerminationTestCase(NautobotTestCase):
             provider=provider,
         )
         circuit_type = CircuitType.objects.first()
-        active_status = Status.objects.get_for_model(Circuit).get(name="Active")
+        status = Status.objects.get_for_model(Circuit).first()
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
             circuit_type=circuit_type,
-            status=active_status,
+            status=status,
         )
         termination = CircuitTermination.objects.create(
             circuit=circuit, provider_network=provider_network, term_side=CircuitTerminationSideChoices.SIDE_A
@@ -252,12 +252,12 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
             ),
         )
         circuit_type = CircuitType.objects.first()
-        active_status = Status.objects.get_for_model(Circuit).get(name="Active")
+        status = Status.objects.get_for_model(Circuit).first()
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
             circuit_type=circuit_type,
-            status=active_status,
+            status=status,
         )
         CircuitTermination.objects.create(
             circuit=circuit,

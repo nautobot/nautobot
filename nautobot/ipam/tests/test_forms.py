@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from nautobot.extras.models import Status
 from nautobot.ipam import forms, models
+from nautobot.ipam.models import IPAddress, Prefix
 
 
 class BaseNetworkFormTest:
@@ -53,7 +54,7 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
     def setUp(self):
         super().setUp()
         self.extra_data = {
-            "status": Status.objects.get(name="Active"),
+            "status": Status.objects.get_for_model(Prefix).first(),
             "type": "network",
             "rir": models.RIR.objects.first(),
         }
@@ -66,7 +67,7 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(name="Active")}
+        self.extra_data = {"status": Status.objects.get_for_model(IPAddress).first()}
 
     def test_slaac_valid_ipv6(self):
         form = self.form_class(

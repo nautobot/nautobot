@@ -207,7 +207,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             # Because we have a mix of root and non-root LocationTypes,
             # we can't bulk-edit the parent in this generic test
             "tenant": tenant.pk,
-            "status": Status.objects.get(name="Planned").pk,
+            "status": Status.objects.get_for_model(Location).last().pk,
             "asn": 65009,
             "time_zone": pytz.timezone("US/Eastern"),
         }
@@ -1191,9 +1191,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             platform.save()
 
         secrets_groups = (
-             SecretsGroup.objects.create(name="Secrets Group 1"),
-             SecretsGroup.objects.create(name="Secrets Group 2"),
-         )
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
 
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]

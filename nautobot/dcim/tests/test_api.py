@@ -190,7 +190,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        cls.status = Status.objects.get(name="Active")
+        cls.status = Status.objects.first()
         tenant = Tenant.objects.first()
 
         cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status)
@@ -349,7 +349,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.status = Status.objects.get(name="Active")
+        cls.status = Status.objects.first()
         location_type = LocationType.objects.create(name="Location Type 1")
         cls.locations = (
             Location.objects.create(name="Location 1", location_type=location_type, status=cls.status),

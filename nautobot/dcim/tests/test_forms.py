@@ -23,7 +23,7 @@ def get_id(model, slug):
 
 class DeviceTestCase(TestCase):
     def setUp(self):
-        self.device_status = Status.objects.get_for_model(Device).get(name="Active")
+        self.device_status = Status.objects.get_for_model(Device).first()
 
     @classmethod
     def setUpTestData(cls):
@@ -46,15 +46,15 @@ class DeviceTestCase(TestCase):
 
         Device.objects.create(
             name="Device 1",
-            status=Status.objects.get_for_model(Device).get(name="Active"),
+            status=Status.objects.get_for_model(Device).first(),
             device_type=cls.device_type,
             role=cls.device_role,
             location=cls.location,
             rack=cls.rack,
             position=1,
         )
-        cluster_type = ClusterType.objects.first()
-        cluster_group = ClusterGroup.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1")
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
         SecretsGroup.objects.create(name="Secrets Group 1")
 
@@ -168,7 +168,7 @@ class LabelTestCase(TestCase):
 
     def test_interface_label_count_valid(self):
         """Test that a `label` can be generated for each generated `name` from `name_pattern` on InterfaceCreateForm"""
-        status_active = Status.objects.get_for_model(Interface).get(name="Active")
+        status_active = Status.objects.get_for_model(Interface).first()
         interface_data = {
             "device": self.device.pk,
             "name_pattern": "eth[0-9]",
@@ -282,6 +282,7 @@ class TestInterfaceCSVForm(TestCase):
         )
         Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=virtualchassis, vc_position=1)
         Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=virtualchassis, vc_position=2)
+        cls.status = Status.objects.get_for_model(Interface).first()
 
         cls.interfaces = (
             Interface.objects.create(
@@ -329,11 +330,10 @@ class TestInterfaceCSVForm(TestCase):
 
     def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
-
         data_1 = {
             "device": self.devices[0].name,
             "name": "interface test",
-            "status": "active",
+            "status": self.status.name,
             "parent_interface": self.interfaces[0].name,
             "bridge": self.interfaces[2].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -351,7 +351,7 @@ class TestInterfaceCSVForm(TestCase):
         data_2 = {
             "device": self.devices[0].name,
             "name": "interface lagged",
-            "status": "active",
+            "status": self.status.name,
             "lag": self.interfaces[2].name,
             "bridge": self.interfaces[1].name,
             "type": InterfaceTypeChoices.TYPE_100ME_FIXED,
@@ -370,7 +370,7 @@ class TestInterfaceCSVForm(TestCase):
         data = {
             "device": self.devices[0].name,
             "name": "interface test",
-            "status": "active",
+            "status": self.status.name,
             "parent_interface": self.interfaces[4].name,
             "bridge": self.interfaces[4].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -385,7 +385,7 @@ class TestInterfaceCSVForm(TestCase):
         data = {
             "device": self.devices[0].name,
             "name": "interface lagged",
-            "status": "active",
+            "status": self.status.name,
             "lag": self.interfaces[3].name,
             "bridge": self.interfaces[1].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,

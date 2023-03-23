@@ -137,8 +137,8 @@ def common_test_data(cls):
 
     platforms = Platform.objects.all()[:3]
     for num, platform in enumerate(platforms):
-        platform.napalm_driver = f"driver-{num}",
-        platform.napalm_args = ["--test", f"--arg{num}"],
+        platform.napalm_driver = f"driver-{num}"
+        platform.napalm_args = ["--test", f"--arg{num}"]
         platform.save()
 
     cls.platforms = platforms
@@ -512,10 +512,10 @@ def common_test_data(cls):
     )
 
     secrets_groups = (
-         SecretsGroup.objects.create(name="Secrets group 1"),
-         SecretsGroup.objects.create(name="Secrets group 2"),
-         SecretsGroup.objects.create(name="Secrets group 3"),
-     )
+        SecretsGroup.objects.create(name="Secrets group 1"),
+        SecretsGroup.objects.create(name="Secrets group 2"),
+        SecretsGroup.objects.create(name="Secrets group 3"),
+    )
 
     device_statuses = Status.objects.get_for_model(Device)
 

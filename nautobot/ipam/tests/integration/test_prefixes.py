@@ -29,7 +29,7 @@ class PrefixHierarchyTest(SeleniumTestCase):
         """
         Test that 10.0.0.0/24 is shown under 10.0.0.0/16
         """
-        status = Status.objects.get(name="Active")
+        status = Status.objects.first()
         Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=status).validated_save()
         Prefix(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=status).validated_save()
 
@@ -49,7 +49,7 @@ class PrefixHierarchyTest(SeleniumTestCase):
         """
         Test that 10.0.0.0/24 is NOT shown under 10.0.0.0/16, so the table is a flat list
         """
-        status = Status.objects.get(name="Active")
+        status = Status.objects.first()
         Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=status).validated_save()
         Prefix(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=status).validated_save()
 

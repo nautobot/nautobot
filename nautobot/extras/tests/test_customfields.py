@@ -24,11 +24,11 @@ from nautobot.virtualization.models import VirtualMachine
 class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we have some baseline custom-field records
     def setUp(self):
         super().setUp()
-        active_status = Status.objects.get_for_model(Location).get(name="Active")
+        location_status = Status.objects.get_for_model(Location).first()
         lt = LocationType.objects.get(name="Campus")
-        Location.objects.create(name="Location A", slug="location-a", status=active_status, location_type=lt)
-        Location.objects.create(name="Location B", slug="location-b", status=active_status, location_type=lt)
-        Location.objects.create(name="Location C", slug="location-c", status=active_status, location_type=lt)
+        Location.objects.create(name="Location A", slug="location-a", status=location_status, location_type=lt)
+        Location.objects.create(name="Location B", slug="location-b", status=location_status, location_type=lt)
+        Location.objects.create(name="Location C", slug="location-c", status=location_status, location_type=lt)
 
     def test_immutable_fields(self):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
@@ -1122,7 +1122,7 @@ class CustomFieldModelTest(TestCase):
         cls.lt = LocationType.objects.get(name="Campus")
 
     def setUp(self):
-        self.active_status = Status.objects.get_for_model(Location).get(name="Active")
+        self.location_status = Status.objects.get_for_model(Location).first()
         self.location1 = Location.objects.create(name="NYC", location_type=self.lt)
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
@@ -1173,7 +1173,7 @@ class CustomFieldModelTest(TestCase):
         from the database.
         """
         location = Location(
-            name="Test Location", slug="test-location", status=self.active_status, location_type=self.lt
+            name="Test Location", slug="test-location", status=self.location_status, location_type=self.lt
         )
 
         # Check custom field data on new instance
@@ -1725,7 +1725,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
         self.choice = CustomFieldChoice(custom_field=self.cf, value="Foo")
         self.choice.save()
 
-        active_status = Status.objects.get_for_model(Location).get(name="Active")
+        location_status = Status.objects.get_for_model(Location).first()
         self.location_type = LocationType.objects.get(name="Campus")
         self.location = Location(
             name="Location 1",
@@ -1734,7 +1734,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
             _custom_field_data={
                 "cf1": "Foo",
             },
-            status=active_status,
+            status=location_status,
         )
         self.location.validated_save()
 
@@ -1940,7 +1940,7 @@ class CustomFieldTableTest(TestCase):
         # Create a location
         location_type = LocationType.objects.create(name="Root Type 4")
         self.location = Location.objects.create(
-            name="Location Custom", slug="location-1", status=statuses.get(name="Active"), location_type=location_type
+            name="Location Custom", slug="location-1", status=statuses.first(), location_type=location_type
         )
 
         # Assign custom field values for location 2

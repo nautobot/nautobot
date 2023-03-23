@@ -528,7 +528,7 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
         )
 
-        self.status = Status.objects.get(name="Active")
+        self.status = Status.objects.get_for_model(Location).first()
 
     def test_custom_natural_key_field_lookups(self):
         """Test that the custom implementation of Location.natural_key_field_lookups works as intended."""
@@ -571,12 +571,12 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Location).get(name="Active")
+        status = Status.objects.get_for_model(Location).first()
         location = Location(
             location_type=self.root_type,
             name="Location A",
             slug="location-a",
-            status=active_status,
+            status=status,
             longitude=55.1234567896,
             latitude=55.1234567896,
         )
@@ -669,7 +669,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             slug="test-device-type-1",
         )
         self.device_role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(name="Active")
+        self.device_status = Status.objects.get_for_model(Device).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")

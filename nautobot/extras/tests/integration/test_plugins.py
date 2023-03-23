@@ -187,12 +187,12 @@ class PluginTabsTestCase(SeleniumTestCase):
             provider=provider,
         )
         circuit_type = CircuitType.objects.first()
-        active_status = Status.objects.get_for_model(Circuit).get(name="Active")
+        status = Status.objects.get_for_model(Circuit).first()
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
             circuit_type=circuit_type,
-            status=active_status,
+            status=status,
         )
         # Visit the circuit's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("circuits:circuit", args=[str(circuit.pk)])}')

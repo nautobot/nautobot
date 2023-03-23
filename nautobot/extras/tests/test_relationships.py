@@ -1057,7 +1057,7 @@ class RequiredRelationshipTestMixin(TestCase):
                 "create_data": {
                     "vid": "1",
                     "name": "New VLAN",
-                    "status": str(Status.objects.get_for_model(VLAN).get(name="Active").pk),
+                    "status": str(Status.objects.get_for_model(VLAN).first().pk),
                 },
                 "relationship": relationship_m2m,
                 "required_objects_generator": [

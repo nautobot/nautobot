@@ -94,11 +94,11 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(name="Active")
+        status = Status.objects.get_for_model(Tenant).first()
         location_type = LocationType.objects.create(name="Root Type")
         cls.locations = (
-            Location.objects.create(name="Root 1", location_type=location_type, status=active, tenant=cls.queryset[0]),
-            Location.objects.create(name="Root 2", location_type=location_type, status=active, tenant=cls.queryset[1]),
+            Location.objects.create(name="Root 1", location_type=location_type, status=status, tenant=cls.queryset[0]),
+            Location.objects.create(name="Root 2", location_type=location_type, status=status, tenant=cls.queryset[1]),
         )
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
@@ -119,7 +119,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
                 location=cls.locations[0],
-                status=active,
+                status=status,
                 tenant=Tenant.objects.first(),
             ),
             Device.objects.create(
@@ -128,7 +128,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
                 location=cls.locations[0],
-                status=active,
+                status=status,
                 tenant=Tenant.objects.last(),
             ),
         )

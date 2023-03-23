@@ -668,15 +668,16 @@ class GraphQLQueryTest(TestCase):
             PowerPanel.objects.create(name="location1-powerpanel2", location=cls.location1),
             PowerPanel.objects.create(name="location1-powerpanel3", location=cls.location1),
         ]
+        powerfeed_status = Status.objects.get_for_model(PowerFeed).first()
         cls.location1_power_feeds = [
             PowerFeed.objects.create(
                 name="location1-powerfeed1",
-                status=Status.objects.get(name="Active"),
+                status=powerfeed_status,
                 power_panel=cls.location1_power_panels[0],
             ),
             PowerFeed.objects.create(
                 name="location1-powerfeed2",
-                status=Status.objects.get(name="Active"),
+                status=powerfeed_status,
                 power_panel=cls.location1_power_panels[1],
             ),
         ]
@@ -831,27 +832,28 @@ class GraphQLQueryTest(TestCase):
             enabled=False,
         )
 
+        cable_statuses = Status.objects.get_for_model(Cable)
         cls.cable1 = Cable.objects.create(
             termination_a=cls.interface11,
             termination_b=cls.interface12,
-            status=Status.objects.get_for_model(Cable)[0],
+            status=cable_statuses[0],
         )
         cls.cable2 = Cable.objects.create(
             termination_a=cls.interface31,
             termination_b=cls.interface21,
-            status=Status.objects.get_for_model(Cable)[1],
+            status=cable_statuses[1],
         )
 
         # Power Cables
         cls.cable3 = Cable.objects.create(
             termination_a=cls.device1_power_ports[0],
             termination_b=cls.upsdevice1_power_outlets[0],
-            status=Status.objects.get(name="Active"),
+            status=cable_statuses[0],
         )
         cls.cable3 = Cable.objects.create(
             termination_a=cls.upsdevice1_power_ports[0],
             termination_b=cls.location1_power_feeds[0],
-            status=Status.objects.get(name="Active"),
+            status=cable_statuses[0],
         )
 
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
