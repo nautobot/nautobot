@@ -989,6 +989,7 @@ class CustomFieldImportTest(TestCase):
         Import a Location in CSV format, including a value for each CustomField.
         """
         LocationType.objects.create(name="Test Root")
+        location_status = Status.objects.get_for_model(Location).first()
         data = (
             [
                 "name",
@@ -1007,7 +1008,7 @@ class CustomFieldImportTest(TestCase):
                 "Location 1",
                 "location-1",
                 "Test Root",
-                "active",
+                location_status.name,
                 "ABC",
                 "123",
                 "True",
@@ -1020,7 +1021,7 @@ class CustomFieldImportTest(TestCase):
                 "Location 2",
                 "location-2",
                 "Test Root",
-                "active",
+                location_status.name,
                 "DEF",
                 "456",
                 "False",
@@ -1029,7 +1030,7 @@ class CustomFieldImportTest(TestCase):
                 "Choice B",
                 '"Choice A,Choice B"',
             ],
-            ["Location 3", "location-3", "Test Root", "active", "", "", "", "", "", "", ""],
+            ["Location 3", "location-3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
         )
         if "example_plugin" in settings.PLUGINS:
             data[0].append("cf_example_plugin_auto_custom_field")
