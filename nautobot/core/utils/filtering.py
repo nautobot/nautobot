@@ -3,12 +3,9 @@ import re
 from django import forms
 from django_filters import (
     ChoiceFilter,
-    DateFilter,
-    DateTimeFilter,
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
     NumberFilter,
-    TimeFilter,
 )
 from django_filters.utils import verbose_lookup_expr
 
@@ -91,11 +88,7 @@ def get_filterset_parameter_form_field(model, parameter):
     from nautobot.core.forms import (
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
-        StaticSelect2,
         StaticSelect2Multiple,
-    )
-    from nautobot.core.forms.widgets import (
-        MultiValueCharInput,
     )
     from nautobot.virtualization.models import VirtualMachine
 
