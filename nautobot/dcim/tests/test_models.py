@@ -317,24 +317,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
                 u_height=0,
             ),
         }
-        self.role = {
-            "Server": Role.objects.create(
-                name="Server",
-                slug="server",
-            ),
-            "Switch": Role.objects.create(
-                name="Switch",
-                slug="switch",
-            ),
-            "Console Server": Role.objects.create(
-                name="Console Server",
-                slug="console-server",
-            ),
-            "PDU": Role.objects.create(
-                name="PDU",
-                slug="pdu",
-            ),
-        }
+        self.roles = Role.objects.get_for_model(Rack)
+        self.device_roles = Role.objects.get_for_model(Device)
 
     def test_rack_device_outside_height(self):
 
@@ -349,8 +333,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            role=Role.objects.get(slug="switch"),
+            device_type=DeviceType.objects.filter(manufacturer=self.manufacturer).first(),
+            role=self.device_roles[0],
             location=self.location1,
             rack=rack1,
             position=43,
@@ -365,8 +349,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            role=Role.objects.get(slug="switch"),
+            device_type=DeviceType.objects.filter(manufacturer=self.manufacturer).first(),
+            role=self.device_roles[1],
             location=self.location1,
             rack=self.rack,
             position=10,
@@ -394,7 +378,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
     def test_mount_zero_ru(self):
         pdu = Device.objects.create(
             name="TestPDU",
-            role=self.role.get("PDU"),
+            role=self.device_roles[3],
             device_type=self.device_type.get("cc5000"),
             location=self.location1,
             rack=self.rack,
@@ -414,14 +398,14 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
         # Device2 is explicitly assigned to the same location as the Rack
         device2 = Device.objects.create(
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
 
         # Move self.rack to a new location
@@ -442,7 +426,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
 
         # Move self.rack to a new location that permits Racks but not Devices
@@ -1153,7 +1137,7 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
     def test_power_panel_validation(self):
         status = Status.objects.first()
         location_type_1 = LocationType.objects.create(name="Location Type 1")
-        location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=active)
+        location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=status)
         power_panel = PowerPanel(name="Power Panel 1", location=location_1)
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
@@ -1162,7 +1146,7 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
         location_type_1.content_types.add(ContentType.objects.get_for_model(PowerPanel))
         rack_group = RackGroup.objects.create(name="Rack Group 1", location=location_1)
         power_panel.rack_group = rack_group
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type_1, status=active)
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type_1, status=status)
         rack_group.location = location_2
         rack_group.save()
         with self.assertRaises(ValidationError) as cm:
