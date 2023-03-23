@@ -12,7 +12,7 @@ from nautobot.circuits.filters import (
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Role, Status, Tag
 
 
 class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -36,6 +36,7 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
 
         providers = Provider.objects.all()[:2]
+        providers[0].tags.set(Tag.objects.get_for_model(Provider))
         circuit_types = CircuitType.objects.all()[:2]
         cls.locations = Location.objects.filter(children__isnull=True)[:2]
 
@@ -91,6 +92,11 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["circuit_termination_z"],
         ["circuit_terminations"],
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        instances = Circuit.objects.all()[:3]
+        instances[0].tags.set(Tag.objects.get_for_model(Circuit))
 
     def test_location(self):
         locations = Location.objects.filter(children__isnull=True, parent__isnull=True)[:2]
@@ -154,6 +160,8 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         interface2 = Interface.objects.create(device=device2, name="eth0")
 
         circuit_terminations = CircuitTermination.objects.all()
+        circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))
+
 
         cable_statuses = Status.objects.get_for_model(Cable)
         status_connected = cable_statuses[0]
@@ -200,3 +208,8 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["provider", "provider__id"],
         ["provider", "provider__name"],
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        instances = ProviderNetwork.objects.all()[:3]
+        instances[0].tags.set(Tag.objects.get_for_model(ProviderNetwork))

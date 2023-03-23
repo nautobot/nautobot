@@ -36,11 +36,11 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name",
-            "Provider 4",
-            "Provider 5",
-            "Provider 6",
-            "Provider 7",
+            "name,asn,comments",
+            "Provider 4,1234,A comment",
+            "Provider 5,1234,A comment",
+            "Provider 6,1234,A comment",
+            "Provider 7,1234,A comment",
         )
 
         cls.bulk_edit_data = {
@@ -73,11 +73,11 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name",
-            "Circuit Type 4",
-            "Circuit Type 5",
-            "Circuit Type 6",
-            "Circuit Type 7",
+            "name,description",
+            "Circuit Type 4,A circuit type",
+            "Circuit Type 5,A circuit type",
+            "Circuit Type 6,A circuit type",
+            "Circuit Type 7,A circuit type",
         )
 
         cls.slug_source = "name"
@@ -129,9 +129,9 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "cid,provider,circuit_type,status",
-            "Circuit 4,Provider 1,Circuit Type 1,Active",
-            "Circuit 5,Provider 1,Circuit Type 1,Planned",
-            "Circuit 6,Provider 1,Circuit Type 1,Decommissioned",
+            f"Circuit 4,{providers[0].name},{circuittypes[0].name},{statuses.first().name}",
+            f"Circuit 5,{providers[0].name},{circuittypes[1].name},{statuses.first().name}",
+            f"Circuit 6,{providers[1].name},{circuittypes[1].name},{statuses.first().name}",
         )
 
         cls.bulk_edit_data = {
@@ -172,10 +172,10 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,provider,description",
-            "Provider Network 4,provider-network-4,Provider 1,Foo",
-            "Provider Network 5,provider-network-5,Provider 1,Bar",
-            "Provider Network 6,provider-network-6,Provider 1,Baz",
-            "Provider Network 7,,Provider 1,Baz",
+            f"Provider Network 4,provider-network-4,{providers[0].name},Foo",
+            f"Provider Network 5,provider-network-5,{providers[0].name},Bar",
+            f"Provider Network 6,provider-network-6,{providers[0].name},Baz",
+            f"Provider Network 7,,{providers[0].name},Baz",
         )
 
         cls.bulk_edit_data = {
