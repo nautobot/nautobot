@@ -206,6 +206,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:jobbutton_list",
+                        name="Job Buttons",
+                        weight=600,
+                        permissions=[
+                            "extras.view_jobbutton",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:jobbutton_add",
+                                permissions=[
+                                    "extras.add_jobbutton",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),

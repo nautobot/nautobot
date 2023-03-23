@@ -10,7 +10,7 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.factory import PrefixFactory
 from nautobot.ipam.filters import (
@@ -862,42 +862,46 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
             VirtualMachine.objects.create(name="Virtual Machine 3", cluster=cluster),
         )
 
-        Service.objects.create(
-            device=devices[0],
-            name="Service 1",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
-            ports=[1001],
+        services = (
+            Service.objects.create(
+                device=devices[0],
+                name="Service 1",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[1001],
+            ),
+            Service.objects.create(
+                device=devices[1],
+                name="Service 2",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[1002],
+            ),
+            Service.objects.create(
+                device=devices[2],
+                name="Service 3",
+                protocol=ServiceProtocolChoices.PROTOCOL_UDP,
+                ports=[1003],
+            ),
+            Service.objects.create(
+                virtual_machine=virtual_machines[0],
+                name="Service 4",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[2001],
+            ),
+            Service.objects.create(
+                virtual_machine=virtual_machines[1],
+                name="Service 5",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[2002],
+            ),
+            Service.objects.create(
+                virtual_machine=virtual_machines[2],
+                name="Service 6",
+                protocol=ServiceProtocolChoices.PROTOCOL_UDP,
+                ports=[2003],
+            ),
         )
-        Service.objects.create(
-            device=devices[1],
-            name="Service 2",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
-            ports=[1002],
-        )
-        Service.objects.create(
-            device=devices[2],
-            name="Service 3",
-            protocol=ServiceProtocolChoices.PROTOCOL_UDP,
-            ports=[1003],
-        )
-        Service.objects.create(
-            virtual_machine=virtual_machines[0],
-            name="Service 4",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
-            ports=[2001],
-        )
-        Service.objects.create(
-            virtual_machine=virtual_machines[1],
-            name="Service 5",
-            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
-            ports=[2002],
-        )
-        Service.objects.create(
-            virtual_machine=virtual_machines[2],
-            name="Service 6",
-            protocol=ServiceProtocolChoices.PROTOCOL_UDP,
-            ports=[2003],
-        )
+        services[0].tags.set(Tag.objects.get_for_model(Service))
+        services[1].tags.set(Tag.objects.get_for_model(Service)[:3])
 
     def test_name(self):
         params = {"name": ["Service 1", "Service 2"]}

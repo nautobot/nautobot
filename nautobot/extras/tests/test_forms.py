@@ -16,6 +16,7 @@ from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
+    JobButtonForm,
     JobEditForm,
     JobHookForm,
     RelationshipModelFormMixin,
@@ -24,7 +25,17 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
     WebhookForm,
 )
-from nautobot.extras.models import Job, JobHook, Note, Relationship, RelationshipAssociation, Role, Status, Webhook
+from nautobot.extras.models import (
+    Job,
+    JobButton,
+    JobHook,
+    Note,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+    Status,
+    Webhook,
+)
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
 
@@ -150,6 +161,68 @@ class JobHookFormTestCase(TestCase):
             error_msg["type_update"][0]["message"],
             "A job hook already exists for update on dcim | device type to job TestJobHookReceiverLog",
         )
+
+
+class JobButtonFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        job_button = JobButton.objects.create(
+            name="JobButton1",
+            text="JobButton1",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+        )
+        device_ct = ContentType.objects.get_for_model(dcim_models.Device)
+        location_ct = ContentType.objects.get_for_model(dcim_models.Location)
+        job_button.content_types.set([device_ct])
+
+        cls.job_buttons_data = (
+            {
+                "name": "JobButton2",
+                "text": "JobButton2",
+                "content_types": [device_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                "weight": 100,
+                "button_class": "primary",
+            },
+            {
+                "name": "JobButton3",
+                "text": "JobButton3",
+                "content_types": [location_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                "weight": 100,
+                "button_class": "primary",
+            },
+        )
+
+    def test_create_job_button_with_same_content_type_diff_job(self):
+        """
+        Create a new job button with the same content_types and different job from a job button that exists
+
+        Example:
+            Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: dcim | device, Job(job_class_name="TestJobButtonReceiverSimple")
+        """
+        form = JobButtonForm(data=self.job_buttons_data[0])
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+
+        self.assertEqual(JobButton.objects.filter(name=self.job_buttons_data[0]["name"]).count(), 1)
+
+    def test_create_job_button_with_same_job_diff_content_type(self):
+        """
+        Create a new job button with the same job and different content types from a job button that exists
+
+        Example:
+            Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: dcim | site, Job(job_class_name="TestJobButtonReceiverComplex")
+        """
+        form = JobButtonForm(data=self.job_buttons_data[1])
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+
+        self.assertEqual(JobButton.objects.filter(name=self.job_buttons_data[1]["name"]).count(), 1)
 
 
 class NoteModelFormTestCase(TestCase):

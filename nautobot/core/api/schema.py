@@ -79,6 +79,12 @@ class NautobotAutoSchema(AutoSchema):
                 "required": True,
             }
 
+        # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
+        if "parameters" in operation:
+            for param in operation["parameters"]:
+                if param["name"] == "id" and "description" not in param:
+                    param["description"] = "Unique object identifier, either a UUID primary key or a natural-key slug."
+
         return operation
 
     def get_operation_id(self):

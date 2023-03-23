@@ -14,8 +14,8 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    Note,
     JobHook,
+    Note,
     Relationship,
     Secret,
     SecretsGroup,
@@ -24,10 +24,10 @@ from nautobot.extras.models import (
     Webhook,
 )
 
-
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 
 urlpatterns = [
@@ -487,6 +487,8 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
+    # Job Button Run
+    path("job-button/<uuid:pk>/run/", views.JobButtonRunView.as_view(), name="jobbutton_run"),
     # Notes
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
     path("notes/<slug:slug>/", views.NoteView.as_view(), name="note"),

@@ -196,7 +196,7 @@ class DynamicGroupTestBase(TestCase):
         )
 
 
-class DynamicGroupModelTest(DynamicGroupTestBase):
+class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroup model tests."""
 
     def test_content_type_is_immutable(self):
@@ -939,7 +939,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
 
-class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
+class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroupMembership model tests."""
 
     def test_clean_content_type(self):

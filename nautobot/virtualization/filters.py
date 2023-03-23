@@ -9,7 +9,6 @@ from nautobot.core.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.data import is_uuid
@@ -109,11 +108,10 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID or slug)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = Cluster
-        fields = ["id", "name", "comments"]
+        fields = ["id", "comments", "name", "tags"]
 
 
 class VirtualMachineFilterSet(
@@ -197,11 +195,10 @@ class VirtualMachineFilterSet(
         field_name="interfaces",
         label="Has interfaces",
     )
-    tag = TagFilter()
 
     class Meta:
         model = VirtualMachine
-        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments"]
+        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments", "tags"]
 
     def generate_query__has_primary_ip(self, value):
         query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
@@ -300,7 +297,6 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     )
     ip_addresses = MultiValueCharFilter(method="filter_ip_addresses", label="IP addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
-    tag = TagFilter()
 
     def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
@@ -311,4 +307,4 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
 
     class Meta:
         model = VMInterface
-        fields = ["id", "name", "description", "enabled", "mtu", "mode"]
+        fields = ["id", "name", "description", "enabled", "mtu", "mode", "tags"]

@@ -35,6 +35,29 @@ PLUGINS = [
     "example_plugin",
 ]
 
+
+#
+# Development Environment for SSO
+# Configure `invoke.yml` based on example for SSO development environment
+#
+
+# OIDC Dev ENV
+if is_truthy(os.getenv("ENABLE_OIDC", "False")):
+    import requests
+
+    AUTHENTICATION_BACKENDS = (
+        "social_core.backends.keycloak.KeycloakOAuth2",
+        "nautobot.core.authentication.ObjectPermissionBackend",
+    )
+    SOCIAL_AUTH_KEYCLOAK_KEY = "nautobot"
+    SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"
+    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/", timeout=15).json()[
+        "public_key"
+    ]
+    SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = "http://localhost:8087/realms/nautobot/protocol/openid-connect/auth"
+    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"
+    SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
+
 METRICS_ENABLED = True
 
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]

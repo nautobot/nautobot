@@ -1,6 +1,7 @@
 import copy
 import re
 
+from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -226,7 +227,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     return final_filter_params
 
 
-def normalize_querydict(querydict):
+def normalize_querydict(querydict, form_class=None):
     """
     Convert a QueryDict to a normal, mutable dictionary, preserving list values. For example,
 
@@ -238,7 +239,25 @@ def normalize_querydict(querydict):
 
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
+
+    A `form_class` can be provided as a way to hint which query parameters should be treated as lists.
     """
-    if not querydict:
-        return {}
-    return {k: v if len(v) > 1 else v[0] for k, v in querydict.lists()}
+    result = {}
+    if querydict:
+        for key, value_list in querydict.lists():
+            if len(value_list) > 1:
+                # More than one value in the querydict for this key, so keep it as a list
+                # TODO: we could check here and de-listify value_list if the form_class field is a single-value one?
+                result[key] = value_list
+            elif (
+                form_class is not None
+                and key in form_class.base_fields
+                # ModelMultipleChoiceField is *not* itself a subclass of MultipleChoiceField, thanks Django!
+                and isinstance(form_class.base_fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
+            ):
+                # Even though there's only a single value in the querydict for this key, the form wants it as a list
+                result[key] = value_list
+            else:
+                # Only a single value in the querydict for this key, and no guidance otherwise, so make it single
+                result[key] = value_list[0]
+    return result

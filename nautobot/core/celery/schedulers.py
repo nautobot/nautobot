@@ -30,7 +30,7 @@ class NautobotScheduleEntry(ModelEntry):
             logger.exception("Removing schedule %s for argument deserialization error: %s", self.name, exc)
             self._disable(model)
         try:
-            self.schedule = model.scheduled_job
+            self.schedule = model.schedule
         except model.DoesNotExist:
             logger.error(
                 "Disabling schedule %s that was removed from database",

@@ -25,7 +25,7 @@ from nautobot.core.forms import (
     StaticSelect2Multiple,
     add_blank_choice,
 )
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
@@ -40,7 +40,7 @@ from nautobot.extras.utils import check_if_key_is_graphql_safe, FeatureQuery, ex
 logger = logging.getLogger(__name__)
 
 
-class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     def get_for_model(self, model):
@@ -281,7 +281,7 @@ class CustomFieldModel(models.Model):
         return computed_fields_dict
 
 
-class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     def get_for_model(self, model):

@@ -1,0 +1,29 @@
+---
+version: "3.4"
+services:
+  nautobot:
+    environment:
+      - "ENABLE_OIDC=True"
+  keycloak:
+    image: "quay.io/keycloak/keycloak:21.0"
+    env_file:
+      - keycloak.env
+    ports:
+      - 8087:8087
+    depends_on:
+      - keycloak_db
+    volumes:
+      - ./nautobot-realms.json:/opt/keycloak/data/import/realm.json
+    command:
+      - start-dev
+      - --import-realm
+      - --http-port=8087
+  keycloak_db:
+    image: postgres:13
+    env_file:
+      - keycloak.env
+    volumes:
+      - pgdata_keycloak:/var/lib/postgresql/data
+
+volumes:
+  pgdata_keycloak:

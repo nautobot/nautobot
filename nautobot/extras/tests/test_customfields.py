@@ -10,6 +10,7 @@ from rest_framework import status
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import LocationCSVForm
@@ -21,7 +22,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
 
-class CustomFieldTest(TestCase):
+class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we have some baseline custom-field records
     def setUp(self):
         super().setUp()
         active_status = Status.objects.get_for_model(Location).get(slug="active")
@@ -1715,7 +1716,9 @@ class CustomFieldFilterTest(TestCase):
         )
 
 
-class CustomFieldChoiceTest(TestCase):
+class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
+    model = CustomFieldChoice
+
     def setUp(self):
         obj_type = ContentType.objects.get_for_model(Location)
         self.cf = CustomField.objects.create(

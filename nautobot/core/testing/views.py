@@ -17,6 +17,7 @@ from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
 from nautobot.core import testing
+from nautobot.core.views import utils as view_utils
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
@@ -807,12 +808,14 @@ class ViewTestCases:
             # {'name': 'AFRINIC', 'slug': 'afrinic', 'is_private': '', 'description': ...'}
             data = [dict(row) for row in reader][0]
 
-            instance1_csv_data = [str(x) if x is not None else "" for x in instance1.to_csv()]
-            # append instance
-            instance1_cf_values = ["" if value is None else value for value in instance1.get_custom_fields().values()]
-            instance1_csv_data += instance1_cf_values
-            # Since values in `data` are all in str; cast all values in instance1_csv_data to str
-            instance1_csv_data = [str(val) for val in instance1_csv_data]
+            # Get expected data
+            instance1_unformatted_data = [
+                *instance1.to_csv(),
+                *instance1.get_custom_fields().values(),
+            ]
+            # Format expected data using `csv_format`, parse back with `csv` and get first row
+            instance1_csv_data = next(iter(csv.reader([view_utils.csv_format(instance1_unformatted_data)])))
+
             instance1_cf_headers = [cf.add_prefix_to_cf_key() for cf in instance1.get_custom_fields().keys()]
             instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
             self.assertEqual(instance1_csv_headers, list(data.keys()))

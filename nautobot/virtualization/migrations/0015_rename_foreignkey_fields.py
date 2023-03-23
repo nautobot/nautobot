@@ -9,7 +9,7 @@ import nautobot.extras.utils
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0063_rename_configcontext_role"),
+        ("extras", "0065_rename_configcontext_role"),
         ("contenttypes", "0002_remove_content_type_name"),
         ("virtualization", "0014_rename_virtualmachine_roles"),
     ]

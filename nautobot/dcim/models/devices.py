@@ -11,6 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
@@ -518,7 +519,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         null=True,
     )
 
-    objects = ConfigContextModelQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     csv_headers = [
         "name",
