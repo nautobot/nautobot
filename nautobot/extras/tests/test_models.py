@@ -953,25 +953,21 @@ class SecretTest(ModelTestCases.BaseModelTestCase):
     def setUp(self):
         self.environment_secret = Secret.objects.create(
             name="Environment Variable Secret",
-            slug="env-var",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
         )
         self.environment_secret_templated = Secret.objects.create(
             name="Environment Variable Templated Secret",
-            slug="env-var-templated",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_{{ obj.slug | upper }}"},
         )
         self.text_file_secret = Secret.objects.create(
             name="Text File Secret",
-            slug="text",
             provider="text-file",
             parameters={"path": os.path.join(tempfile.gettempdir(), "secret-file.txt")},
         )
         self.text_file_secret_templated = Secret.objects.create(
             name="Text File Templated Secret",
-            slug="text-templated",
             provider="text-file",
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
@@ -1117,7 +1113,6 @@ class SecretTest(ModelTestCases.BaseModelTestCase):
     def test_text_file_clean_validation(self):
         secret = Secret.objects.create(
             name="Path shenanigans",
-            slug="path-shenanigans",
             provider="text-file",
             parameters={"path": "relative/path/to/file"},
         )
@@ -1270,12 +1265,11 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
     model = SecretsGroup
 
     def setUp(self):
-        self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
+        self.secrets_group = SecretsGroup(name="Secrets Group 1")
         self.secrets_group.validated_save()
 
         self.environment_secret = Secret.objects.create(
             name="Environment Variable Secret",
-            slug="env-var",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
         )
@@ -1487,7 +1481,28 @@ class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
         device_content_type = ContentType.objects.get_for_model(Device)
         url = "http://example.com/test"
 
-        webhooks = Webhook.objects.all()[:2]
+        webhooks = [
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                type_update=True,
+                type_delete=False,
+                payload_url=url,
+                http_method="POST",
+                http_content_type="application/json",
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_create=False,
+                type_update=False,
+                type_delete=True,
+                payload_url=url,
+                http_method="POST",
+                http_content_type="application/json",
+            ),
+        ]
         for webhook in webhooks:
             webhook.save()
             webhook.content_types.add(device_content_type)

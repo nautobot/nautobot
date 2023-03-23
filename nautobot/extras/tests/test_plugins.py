@@ -309,7 +309,6 @@ class PluginTest(TestCase):
         # The "constant-value" provider is implemented by the plugin
         secret = Secret.objects.create(
             name="Constant Secret",
-            slug="constant-secret",
             provider="constant-value",
             parameters={"constant": "It's a secret to everybody"},
         )
@@ -525,15 +524,9 @@ class FilterExtensionTest(TestCase):
     def setUpTestData(cls):
         tenant_groups = TenantGroup.objects.all()[:3]
 
-        Tenant.objects.create(
-            name="Tenant 1", slug="tenant-1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 2", slug="tenant-2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
-        )
+        Tenant.objects.create(name="Tenant 1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com")
+        Tenant.objects.create(name="Tenant 2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com")
+        Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com")
         location_type = LocationType.objects.get(name="Campus")
         Location.objects.create(
             name="Location 1",

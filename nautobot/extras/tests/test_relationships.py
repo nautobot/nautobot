@@ -385,7 +385,27 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
             uuid.uuid4(),
         ]
 
-        self.invalid_relationship_associations = RelationshipAssociation.objects.all()[:3]
+        self.invalid_relationship_associations = [
+            RelationshipAssociation(
+                relationship=self.invalid_relationships[0],
+                source=self.locations[1],
+                destination_type=self.invalid_ct,
+                destination_id=self.invalid_object_pks[1],
+            ),
+            RelationshipAssociation(
+                relationship=self.invalid_relationships[1],
+                source_type=self.invalid_ct,
+                source_id=self.invalid_object_pks[0],
+                destination=self.locations[1],
+            ),
+            RelationshipAssociation(
+                relationship=self.invalid_relationships[2],
+                source_type=self.invalid_ct,
+                source_id=self.invalid_object_pks[0],
+                destination_type=self.invalid_ct,
+                destination_id=self.invalid_object_pks[1],
+            ),
+        ]
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
 
