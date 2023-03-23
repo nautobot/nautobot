@@ -163,7 +163,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for lt in [lt1, lt2, lt3]:
             lt.validated_save()
 
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(Location).first()
         tenant = Tenant.objects.first()
 
         loc1 = Location.objects.create(name="Root 1", location_type=lt1, status=status)
@@ -197,9 +197,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,location_type,parent,status,tenant,description",
-            f'Root 3,root-3,"{lt1.name}",,active,,',
-            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",active,"{tenant.name}",Hello world!',
-            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",active,"{tenant.name}",',
+            f'Root 3,root-3,"{lt1.name}",,{status.name},,',
+            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",{status.name},"{tenant.name}",Hello world!',
+            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
@@ -315,7 +315,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.status = statuses[0]
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        cls.cable_connected = cable_statuses[1]
+        cls.cable_connected = cable_statuses.get(name="Connected")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, name="rack-colors", default=[]),
@@ -395,9 +395,9 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "location,rack_group,name,width,u_height,status",
-            f"{cls.locations[0].name},,Rack 4,19,42,planned",
-            f"{cls.locations[0].name},Rack Group 1,Rack 5,19,42,active",
-            f"{cls.locations[1].name},Rack Group 2,Rack 6,19,42,reserved",
+            f"{cls.locations[0].name},,Rack 4,19,42,{statuses[0].name}",
+            f"{cls.locations[0].name},Rack Group 1,Rack 5,19,42,{statuses[1].name}",
+            f"{cls.locations[1].name},Rack Group 2,Rack 6,19,42,{statuses[2].name}",
         )
 
         cls.bulk_edit_data = {
@@ -1186,8 +1186,14 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         deviceroles = Role.objects.get_for_model(Device)[:2]
 
         platforms = Platform.objects.all()[:2]
+        for platform in platforms:
+            platform.manufacturer = manufacturer
+            platform.save()
 
-        secrets_groups = SecretsGroup.objects.all()[:2]
+        secrets_groups = (
+             SecretsGroup.objects.create(name="Secrets Group 1"),
+             SecretsGroup.objects.create(name="Secrets Group 2"),
+         )
 
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]
@@ -1285,9 +1291,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "role,manufacturer,device_type,status,name,location,rack_group,rack,position,face,secrets_group",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 4,{locations[0].name},Rack Group 1,Rack 1,10,front,",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 5,{locations[0].name},Rack Group 1,Rack 1,20,front,",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 6,{locations[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
+            f"{deviceroles[0].name},{manufacturer.name},Device Type 1,{statuses[0].name},Device 4,{locations[0].name},Rack Group 1,Rack 1,10,front,",
+            f"{deviceroles[0].name},{manufacturer.name},Device Type 1,{statuses[0].name},Device 5,{locations[0].name},Rack Group 1,Rack 1,20,front,",
+            f"{deviceroles[0].name},{manufacturer.name},Device Type 1,{statuses[0].name},Device 6,{locations[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -1798,9 +1804,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name,type,status",
-            "Device 1,Interface 4,1000base-t,active",
-            "Device 1,Interface 5,1000base-t,active",
-            "Device 1,Interface 6,1000base-t,active",
+            f"Device 1,Interface 4,1000base-t,{statuses[0].name}",
+            f"Device 1,Interface 5,1000base-t,{statuses[0].name}",
+            f"Device 1,Interface 6,1000base-t,{statuses[0].name}",
         )
 
 
@@ -2162,9 +2168,9 @@ class CableTestCase(
 
         cls.csv_data = (
             "side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name,status",
-            "Device 3,dcim.interface,Interface 1,Device 4,dcim.interface,Interface 1,planned",
-            "Device 3,dcim.interface,Interface 2,Device 4,dcim.interface,Interface 2,planned",
-            "Device 3,dcim.interface,Interface 3,Device 4,dcim.interface,Interface 3,planned",
+            f"Device 3,dcim.interface,Interface 1,Device 4,dcim.interface,Interface 1,{statuses[0].name}",
+            f"Device 3,dcim.interface,Interface 2,Device 4,dcim.interface,Interface 2,{statuses[0].name}",
+            f"Device 3,dcim.interface,Interface 3,Device 4,dcim.interface,Interface 3,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {
@@ -2201,7 +2207,7 @@ class CableTestCase(
             ),
         ]
 
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(Cable).first()
         cables = [
             Cable.objects.create(termination_a=circuit_terminations[0], termination_b=interfaces[0], status=status),
             Cable.objects.create(termination_a=circuit_terminations[1], termination_b=interfaces[1], status=status),
@@ -2409,7 +2415,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
         )
 
-        status = Status.objects.first()
+        connected = Status.objects.get(name="Connected")
 
         Cable.objects.create(termination_a=cls.interfaces[0], termination_b=cls.device_2_interface, status=connected)
         Cable.objects.create(termination_a=cls.interfaces[1], termination_b=circuittermination, status=connected)
@@ -2640,9 +2646,9 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "location,power_panel,name,voltage,amperage,max_utilization,status",
-            f"{location.name},Power Panel 1,Power Feed 4,120,20,80,active",
-            f"{location.name},Power Panel 1,Power Feed 5,120,20,80,failed",
-            f"{location.name},Power Panel 1,Power Feed 6,120,20,80,offline",
+            f"{location.name},Power Panel 1,Power Feed 4,120,20,80,{statuses[0].name}",
+            f"{location.name},Power Panel 1,Power Feed 5,120,20,80,{statuses[0].name}",
+            f"{location.name},Power Panel 1,Power Feed 6,120,20,80,{statuses[1].name}",
         )
 
         cls.bulk_edit_data = {
@@ -2732,10 +2738,10 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,failover_strategy,status",
-            "DRG δ,,active",
-            "DRG ε,,planned",
-            "DRG ζ,active-active,staging",
-            "DRG 7,active-passive,retired",
+            f"DRG δ,,{statuses[0].name}",
+            f"DRG ε,,{statuses[0].name}",
+            f"DRG ζ,active-active,{statuses[1].name}",
+            f"DRG 7,active-passive,{statuses[1].name}",
         )
 
         cls.bulk_edit_data = {
