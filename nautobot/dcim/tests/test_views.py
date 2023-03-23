@@ -705,7 +705,7 @@ device-bays:
 """
 
         # Create the manufacturer
-        Manufacturer.objects.create(name="Generic")
+        Manufacturer.objects.first()
 
         # Add all required permissions to the test user
         self.add_permissions(
@@ -2699,7 +2699,7 @@ class PathTraceViewTestCase(ModelViewTestCase):
         self.add_permissions("dcim.view_cable", "dcim.view_rearport")
         active = Status.objects.get(name="Active")
         connected = Status.objects.get(name="Connected")
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.get(name="Campus")

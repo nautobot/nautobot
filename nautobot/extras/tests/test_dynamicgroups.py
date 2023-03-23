@@ -248,7 +248,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Create the Dynamic Group filtering on Location A
         group = DynamicGroup.objects.create(
             name="Devices Location",
-            slug="devices-location",
             content_type=self.device_ct,
             filter={"location": ["location-a"]},
         )
@@ -264,7 +263,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # the same number of members.
         parent_group = DynamicGroup.objects.create(
             name="Parent of Devices Location",
-            slug="parent-devices-location",
             content_type=self.device_ct,
             filter={},
         )

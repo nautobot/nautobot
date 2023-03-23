@@ -1135,7 +1135,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(Location).first()
         location_type_1 = LocationType.objects.create(name="Location Type 1")
         location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=status)
         power_panel = PowerPanel(name="Power Panel 1", location=location_1)

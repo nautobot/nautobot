@@ -317,7 +317,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL)
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(Prefix).first()
 
         # 5 Prefixes
         requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": status.pk} for i in range(1, 6)]
@@ -331,7 +331,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_ips_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL)
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(Prefix).first()
 
         # 8 IPs
         requests = [{"description": f"Test IP {i}", "status": status.pk} for i in range(1, 9)]

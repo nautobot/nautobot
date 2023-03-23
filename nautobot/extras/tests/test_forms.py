@@ -232,7 +232,7 @@ class NoteModelFormTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(Note).first()
         cls.user = User.objects.create(username="formuser1")
         cls.location_type = LocationType.objects.get(name="Campus")
 
@@ -240,7 +240,7 @@ class NoteModelFormTestCase(TestCase):
             "name": "Location 1",
             "slug": "location-1",
             "location_type": cls.location_type.pk,
-            "status": active.pk,
+            "status": status.pk,
         }
 
     def test_note_object_edit_form(self):
@@ -304,14 +304,15 @@ class RelationshipModelFormTestCase(TestCase):
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
         cls.device_role = Role.objects.get_for_model(Device).first()
         cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
-        cls.status = Status.objects.first()
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.ipaddress_status = Status.objects.get_for_model(ipam_models.IPAddress).first()
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             location=cls.location,
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
-            status=cls.status,
+            status=cls.device_status,
         )
         cls.device_2 = dcim_models.Device.objects.create(
             name="Device 2",
@@ -319,7 +320,7 @@ class RelationshipModelFormTestCase(TestCase):
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
-            status=cls.status,
+            status=cls.device_status,
         )
         cls.device_3 = dcim_models.Device.objects.create(
             name="Device 3",
@@ -327,11 +328,11 @@ class RelationshipModelFormTestCase(TestCase):
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
-            status=cls.status,
+            status=cls.device_status,
         )
 
-        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.status)
-        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.status)
+        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.ipaddress_status)
+        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.ipaddress_status)
 
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
             name="VLAN Group 1", slug="vlan-group-1", location=cls.location
@@ -592,7 +593,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
-                "status": self.status,
+                "status": self.device_status,
                 f"cr_{self.relationship_1.slug}__destination": self.ipaddress_2.pk,
                 f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_2.pk],
                 f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
@@ -641,7 +642,7 @@ class RelationshipModelFormTestCase(TestCase):
             instance=self.ipaddress_1,
             data={
                 "address": self.ipaddress_1.address,
-                "status": self.status,
+                "status": self.ipaddress_status,
                 f"cr_{self.relationship_1.slug}__source": self.device_2.pk,
             },
         )
@@ -709,7 +710,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
-                "status": self.status,
+                "status": self.device_status,
                 f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
             },
         )
@@ -735,7 +736,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
-                "status": self.status,
+                "status": self.device_status,
                 f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
             },
         )
@@ -753,11 +754,11 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        status = Status.objects.first()
+        status = Status.objects.get_for_model(ipam_models.IPAddress).first()
         cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         cls.ipaddresses = [
-            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
-            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),
+            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status),
+            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status),
         ]
 
         cls.rel_1to1 = Relationship(

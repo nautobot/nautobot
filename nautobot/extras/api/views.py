@@ -373,7 +373,7 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(

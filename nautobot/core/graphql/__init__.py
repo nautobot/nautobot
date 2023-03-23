@@ -34,7 +34,7 @@ def execute_query(query, variables=None, request=None, user=None):
         return document.execute(context_value=request)
 
 
-def execute_saved_query(saved_query_slug, **kwargs):
+def execute_saved_query(saved_query_name, **kwargs):
     """Execute saved query from the ORM.
 
     Args:
@@ -46,7 +46,7 @@ def execute_saved_query(saved_query_slug, **kwargs):
     Returns:
         GraphQL Object: Result for query
     """
-    query = GraphQLQuery.objects.get(name=saved_query_slug)
+    query = GraphQLQuery.objects.get(name=saved_query_name)
     return execute_query(query=query.query, **kwargs)
 
 
