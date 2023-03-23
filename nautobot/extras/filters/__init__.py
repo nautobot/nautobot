@@ -441,18 +441,18 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
         filter_predicates={
             "operator": "icontains",
             "group__name": "icontains",
-            "group__slug": "icontains",
             "parent_group__name": "icontains",
-            "parent_group__slug": "icontains",
         },
     )
     group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DynamicGroup.objects.all(),
-        label="Group (slug or ID)",
+        label="Group (name or ID)",
+        to_field_name="name",
     )
     parent_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DynamicGroup.objects.all(),
-        label="Parent Group (slug or ID)",
+        label="Parent Group (name or ID)",
+        to_field_name="name",
     )
 
     class Meta:

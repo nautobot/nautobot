@@ -316,7 +316,10 @@ class ViewTestCases:
             # order_by() is no supported by django TreeNode,
             # So we directly retrieve the instance by "slug".
             if isinstance(self._get_queryset().first(), TreeNode):
-                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+                treenode_filter_by_field_name = getattr(self, "treenode_filter_by_field_name", "slug")
+                instance = self._get_queryset().get(
+                    **{treenode_filter_by_field_name: self.form_data.get(treenode_filter_by_field_name)}
+                )
                 self.assertInstanceEqual(instance, self.form_data)
             else:
                 if hasattr(self.model, "last_updated"):
@@ -371,7 +374,11 @@ class ViewTestCases:
             # order_by() is no supported by django TreeNode,
             # So we directly retrieve the instance by "slug".
             if isinstance(self._get_queryset().first(), TreeNode):
-                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+                # treenode_filter_by_field_name: Determines which field the queryset should be filtered by
+                treenode_filter_by_field_name = getattr(self, "treenode_filter_by_field_name", "slug")
+                instance = self._get_queryset().get(
+                    **{treenode_filter_by_field_name: self.form_data.get(treenode_filter_by_field_name)}
+                )
                 self.assertInstanceEqual(instance, self.form_data)
             else:
                 if hasattr(self.model, "last_updated"):

@@ -55,7 +55,7 @@ class TenantGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
-        url_params={"tenant_group": "slug"},
+        url_params={"tenant_group": "name"},
         verbose_name="Tenants",
     )
     actions = ButtonsColumn(TenantGroup, pk_field="pk")

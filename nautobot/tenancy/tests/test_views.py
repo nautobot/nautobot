@@ -8,8 +8,6 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        TenantGroup.objects.create(name="Tenant Group 8")
-
         cls.form_data = {
             "name": "Tenant Group X",
             "description": "A new tenant group",
@@ -23,7 +21,8 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Tenant Group 7,Seventh tenant group",
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "Tenant Group 8"
+        cls.slug_test_object = TenantGroup.objects.last().name
+        cls.treenode_filter_by_field_name = "name"
 
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -34,7 +33,7 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         tenant_groups = TenantGroup.objects.all()[:2]
 
-        Tenant.objects.create(name="Tenant 8", tenant_group=tenant_groups[0])
+        tenant = Tenant.objects.create(name="Tenant 8", tenant_group=tenant_groups[0])
 
         cls.form_data = {
             "name": "Tenant X",
@@ -56,8 +55,8 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant_group": tenant_groups[1].pk,
         }
         cls.slug_source = "name"
-        cls.slug_test_object = "Tenant 8"
+        cls.slug_test_object = tenant.name
 
-    def get_deletable_object_pks(self):
-        tenants = Tenant.objects.all()[:3]
-        return [t.pk for t in tenants]
+    # def get_deletable_object_pks(self):
+    #     tenants = Tenant.objects.all()[:3]
+    #     return [t.pk for t in tenants]
