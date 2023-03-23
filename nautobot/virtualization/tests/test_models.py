@@ -11,7 +11,7 @@ from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster,
 
 class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def test_cluster_validation(self):
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         location_type = LocationType.objects.create(name="Location Type 1")
         location = Location.objects.create(name="Location 1", location_type=location_type)
         cluster = Cluster(name="Test Cluster 1", cluster_type=cluster_type, location=location)
@@ -26,7 +26,7 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def setUp(self):
         statuses = Status.objects.get_for_model(VirtualMachine)
 
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         self.cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=cluster_type)
         self.status = statuses[0]
 
@@ -69,7 +69,7 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def setUp(self):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)
-        clustertype = ClusterType.objects.first()
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         self.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
 

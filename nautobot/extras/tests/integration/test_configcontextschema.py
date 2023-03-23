@@ -129,7 +129,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         VirtualMachine.objects.create(
             name="virtual_machine",

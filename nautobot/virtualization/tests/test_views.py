@@ -146,7 +146,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         platforms = Platform.objects.all()[:2]
 
-        clustertype = ClusterType.objects.first()
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=locations[0]),
@@ -272,7 +272,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
         devicerole = Role.objects.get_for_model(Device).first()
-        clustertype = ClusterType.objects.first()
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),

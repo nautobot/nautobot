@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
-from nautobot.dcim.models import Device, LocationType
+from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
     ConfigContextForm,
@@ -232,7 +232,7 @@ class NoteModelFormTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        status = Status.objects.get_for_model(Note).first()
+        status = Status.objects.get_for_model(Location).first()
         cls.user = User.objects.create(username="formuser1")
         cls.location_type = LocationType.objects.get(name="Campus")
 
@@ -306,6 +306,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
         cls.device_status = Status.objects.get_for_model(Device).first()
         cls.ipaddress_status = Status.objects.get_for_model(ipam_models.IPAddress).first()
+        cls.vlangroup_status = Status.objects.get_for_model(ipam_models.VLANGroup).first()
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             location=cls.location,
@@ -377,14 +378,14 @@ class RelationshipModelFormTestCase(TestCase):
             "face": None,
             "position": None,
             "platform": cls.platform.pk,
-            "status": cls.status.pk,
+            "status": cls.device_status.pk,
         }
         cls.ipaddress_form_base_data = {
             "address": "10.3.3.3/24",
-            "status": cls.status.pk,
+            "status": cls.ipaddress_status.pk,
         }
         cls.vlangroup_form_base_data = {
-            "location": cls.location.pk,
+            "location": cls.vlangroup_status.pk,
             "name": "New VLAN Group",
             "slug": "new-vlan-group",
         }

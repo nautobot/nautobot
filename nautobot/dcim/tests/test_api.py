@@ -1055,7 +1055,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         device_statuses = Status.objects.get_for_model(Device)
 
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),

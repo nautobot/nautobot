@@ -42,7 +42,8 @@ class ConfigContextRoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("field_name", "roles")
         kwargs.setdefault("queryset", Role.objects.get_for_models([Device, VirtualMachine]))
-        kwargs.setdefault("label", "Role (slug or ID)")
+        kwargs.setdefault("label", "Role (name or ID)")
+        kwargs.setdefault("to_field_name", "name")
 
         super().__init__(*args, **kwargs)
 

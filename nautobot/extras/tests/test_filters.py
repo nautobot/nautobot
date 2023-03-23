@@ -191,9 +191,13 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         cls.locations = Location.objects.all()[:3]
 
-        cluster_groups = ClusterGroup.objects.all()[:3]
+        cluster_groups = (
+            ClusterGroup.objects.create(name="Cluster Group 1"),
+            ClusterGroup.objects.create(name="Cluster Group 2"),
+            ClusterGroup.objects.create(name="Cluster Group 3"),
+        )
 
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
@@ -244,7 +248,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     def test_role(self):
         device_role = Role.objects.get_for_model(Device).first()
         vm_role = Role.objects.get_for_model(VirtualMachine).first()
-        params = {"role": [device_role.pk, vm_role.slug]}
+        params = {"role": [device_role.pk, vm_role.name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(roles__in=[vm_role, device_role]).distinct(),
@@ -265,7 +269,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         platforms = list(self.platforms[:2])
         filter_params = [
             {"platform_id": [platforms[0].pk, platforms[1].pk]},
-            {"platform": [platforms[0].pk, platforms[1].slug]},
+            {"platform": [platforms[0].pk, platforms[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -276,7 +280,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         cluster_groups = list(ClusterGroup.objects.all()[:2])
         filter_params = [
             {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
-            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].slug]},
+            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -293,7 +297,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         tenant_groups = list(self.tenant_groups[:2])
         filter_params = [
             {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]},
-            {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].pk]},
+            {"tenant_group": [tenant_groups[0].name, tenant_groups[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -305,7 +309,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         tenants = list(self.tenants[:2])
         filter_params = [
             {"tenant_id": [tenants[0].pk, tenants[1].pk]},
-            {"tenant": [tenants[0].slug, tenants[1].pk]},
+            {"tenant": [tenants[0].name, tenants[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -502,7 +506,10 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         # Create Three GitRepository records
-        secrets_groups = SecretsGroup.objects.all()[:2]
+        secrets_groups = [
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        ]
         cls.secrets_groups = secrets_groups
         repos = (
             GitRepository(
@@ -568,7 +575,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
     def test_secrets_group(self):
         filter_params = [
             {"secrets_group_id": [self.secrets_groups[0].pk, self.secrets_groups[1].pk]},
-            {"secrets_group": [self.secrets_groups[0].slug, self.secrets_groups[1].pk]},
+            {"secrets_group": [self.secrets_groups[0].name, self.secrets_groups[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -887,10 +894,6 @@ class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_job(self):
         jobs = Job.objects.filter(job_class_name__in=["TestJobHookReceiverLog", "TestJobHookReceiverChange"])[:2]
         params = {"job": [jobs[0].slug, jobs[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_slug(self):
-        params = {"slug": ["jobhook1", "jobhook2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type_create(self):
@@ -1330,7 +1333,64 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             VLAN.objects.create(vid=2, name="VLAN 2"),
             VLAN.objects.create(vid=3, name="VLAN 3"),
         )
-        cls.relationship_associations = RelationshipAssociation.objects.all()[:8]
+        cls.relationship_associations = (
+            RelationshipAssociation(
+                relationship=cls.relationships[0],
+                source_type=cls.device_type,
+                source_id=cls.devices[0].pk,
+                destination_type=cls.vlan_type,
+                destination_id=cls.vlans[0].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[0],
+                source_type=cls.device_type,
+                source_id=cls.devices[1].pk,
+                destination_type=cls.vlan_type,
+                destination_id=cls.vlans[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[1],
+                source_type=cls.vlan_type,
+                source_id=cls.vlans[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[0].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[1],
+                source_type=cls.vlan_type,
+                source_id=cls.vlans[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[1],
+                source_type=cls.vlan_type,
+                source_id=cls.vlans[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[2],
+                source_type=cls.device_type,
+                source_id=cls.devices[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[2],
+                source_type=cls.device_type,
+                source_id=cls.devices[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationships[2],
+                source_type=cls.device_type,
+                source_id=cls.devices[1].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+        )
         for relationship_association in cls.relationship_associations:
             relationship_association.validated_save()
 
@@ -1438,8 +1498,23 @@ class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = Secret.objects.all()[:3]
-
+        secrets = (
+            Secret(
+                name="Secret 1",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_1"},
+            ),
+            Secret(
+                name="Secret 2",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_2"},
+            ),
+            Secret(
+                name="Secret 3",
+                provider="text-file",
+                parameters={"path": "/github-tokens/user/myusername.txt"},
+            ),
+        )
         for secret in secrets:
             secret.validated_save()
         secrets[0].tags.set(Tag.objects.get_for_model(Secret))
@@ -1475,19 +1550,36 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = SecretsGroupAssociation.objects.all()
     filterset = SecretsGroupAssociationFilterSet
 
-    generic_filter_tests = (
-        ["secrets_group", "secrets_group__id"],
-        ["secrets_group", "secrets_group__slug"],
-    )
+    generic_filter_tests = (["secrets_group", "secrets_group__id"],)
 
     @classmethod
     def setUpTestData(cls):
-        cls.secrets = Secret.objects.all()[:3]
+        cls.secrets = (
+            Secret(
+                name="Secret 1",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_1"},
+            ),
+            Secret(
+                name="Secret 2",
+                provider="environment-variable",
+                parameters={"variable": "FILTER_TEST_2"},
+            ),
+            Secret(
+                name="Secret 3",
+                provider="text-file",
+                parameters={"path": "/github-tokens/user/myusername.txt"},
+            ),
+        )
 
         for secret in cls.secrets:
             secret.validated_save()
 
-        cls.groups = SecretsGroup.objects.all()[:3]
+        cls.groups = (
+            SecretsGroup.objects.create(name="Group 1"),
+            SecretsGroup.objects.create(name="Group 2"),
+            SecretsGroup.objects.create(name="Group 3"),
+        )
 
         SecretsGroupAssociation.objects.create(
             secrets_group=cls.groups[0],
@@ -1511,7 +1603,7 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     def test_secret(self):
         filter_params = [
             {"secret_id": [self.secrets[0].pk, self.secrets[1].pk]},
-            {"secret": [self.secrets[0].slug, self.secrets[1].pk]},
+            {"secret": [self.secrets[0].name, self.secrets[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -1548,7 +1640,7 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"q": "active"}
         # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
-        q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
+        q = Q(id__iexact="active") | Q(name__icontains="active")
         # pylint: enable=unsupported-binary-operation
         q |= Q(content_types__model__icontains="active")
         self.assertQuerysetEqualAndNotEmpty(
@@ -1595,7 +1687,29 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = Webhook.objects.all()[:3]
+        webhooks = (
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                payload_url="http://test-url.com/test-1",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_update=True,
+                payload_url="http://test-url.com/test-2",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-3",
+                enabled=True,
+                type_delete=True,
+                payload_url="http://test-url.com/test-3",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+        )
         obj_type = ContentType.objects.get_for_model(Location)
         for webhook in webhooks:
             webhook.save()

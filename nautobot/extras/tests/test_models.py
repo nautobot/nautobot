@@ -244,7 +244,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             name="cluster group", weight=100, data={"cluster_group": 1}
         )
         cluster_group_context.cluster_groups.add(cluster_group)
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(
             name="Cluster",
             cluster_group=cluster_group,
@@ -438,7 +438,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
             name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data

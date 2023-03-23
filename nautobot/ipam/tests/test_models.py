@@ -40,7 +40,7 @@ class IPAddressToInterfaceTest(TestCase):
             status=int_status,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
-        cluster_type = ClusterType.objects.first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
         vmint_status = Status.objects.get_for_model(VMInterface).first()
         cls.test_vm = VirtualMachine.objects.create(

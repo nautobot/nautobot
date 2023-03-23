@@ -69,14 +69,14 @@ class DynamicGroupTestBase(TestCase):
         cls.devices = [
             Device.objects.create(
                 name="device-location-1",
-                status=cls.status_active,
+                status=cls.status_1,
                 role=cls.device_role,
                 device_type=cls.device_type,
                 location=cls.locations[0],
             ),
             Device.objects.create(
                 name="device-location-2",
-                status=cls.status_active,
+                status=cls.status_1,
                 role=cls.device_role,
                 device_type=cls.device_type,
                 serial="abc123",
@@ -84,14 +84,14 @@ class DynamicGroupTestBase(TestCase):
             ),
             Device.objects.create(
                 name="device-location-3",
-                status=cls.status_planned,
+                status=cls.status_2,
                 role=cls.device_role,
                 device_type=cls.device_type,
                 location=cls.locations[2],
             ),
             Device.objects.create(
                 name="device-location-4",
-                status=cls.status_staged,
+                status=cls.status_3,
                 role=cls.device_role,
                 device_type=cls.device_type,
                 location=cls.locations[3],
