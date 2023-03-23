@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0030_migrate_region_and_site_data_to_locations"),
-        ("extras", "0071_remove_gitrepository_fields"),
+        ("extras", "0073_remove_gitrepository_fields"),
         ("ipam", "0022_aggregate_to_prefix_data_migration"),
     ]
 
