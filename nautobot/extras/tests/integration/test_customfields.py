@@ -196,7 +196,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         and checks it appears ONLY there!.
         """
         device = self.device
-        custom_field = CustomField(
+        custom_field = CustomField.objects.create(
             type="text",
             label="Device Custom Field",
             key="test_custom_field",
@@ -235,7 +235,7 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         It then edits the value of the custom field by adding valid JSON.
         """
-        custom_field = CustomField(
+        custom_field = CustomField.objects.create(
             type="json",
             label="Device Valid JSON Field",
             key="test_valid_json_field",
@@ -261,7 +261,7 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         It then edits the value of the custom field by adding invalid JSON.
         """
-        custom_field = CustomField(
+        custom_field = CustomField.objects.create(
             type="json",
             label="Device Invalid JSON Field",
             key="test_invalid_json_field",
@@ -289,7 +289,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         It then checks that page is now on the self.device object's page (without any validation error after updating).
         """
         device = self.device
-        custom_field = CustomField(
+        custom_field = CustomField.objects.create(
             type="select",
             label="Device Selection Field",
             key="test_selection_field",

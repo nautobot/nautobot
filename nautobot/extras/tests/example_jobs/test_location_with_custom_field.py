@@ -13,7 +13,7 @@ class TestCreateLocationWithCustomField(Job):
 
     def run(self, data, commit):
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(label="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="-")
+        cf = CustomField.objects.create(label="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="-")
         cf.validated_save()
         cf.content_types.set([obj_type])
 

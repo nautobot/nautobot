@@ -522,9 +522,9 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         location_ct = ContentType.objects.get_for_model(Location)
 
         custom_fields = (
-            CustomField(key="cf1", label="Custom Field 1", type="text"),
-            CustomField(key="cf2", label="Custom Field 2", type="integer"),
-            CustomField(key="cf3", label="Custom Field 3", type="boolean"),
+            CustomField.objects.create(key="cf1", label="Custom Field 1", type="text"),
+            CustomField.objects.create(key="cf2", label="Custom Field 2", type="integer"),
+            CustomField.objects.create(key="cf3", label="Custom Field 3", type="boolean"),
         )
         for cf in custom_fields:
             cf.validated_save()

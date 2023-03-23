@@ -25,12 +25,12 @@ class ChangeLogViewTest(ModelViewTestCase):
     def setUpTestData(cls):
         # Create a custom field on the Location model
         ct = ContentType.objects.get_for_model(Location)
-        cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="My Field", required=False)
+        cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="My Field", required=False)
         cf.validated_save()
         cf.content_types.set([ct])
 
         # Create a select custom field on the Location model
-        cf_select = CustomField(
+        cf_select = CustomField.objects.create(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             label="My Field Select",
             required=False,
@@ -238,12 +238,12 @@ class ChangeLogAPITest(APITestCase):
 
         # Create a custom field on the Location model
         ct = ContentType.objects.get_for_model(Location)
-        cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="My Field", required=False)
+        cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="My Field", required=False)
         cf.save()
         cf.content_types.set([ct])
 
         # Create a select custom field on the Location model
-        cf_select = CustomField(
+        cf_select = CustomField.objects.create(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             label="My Field Select",
             required=False,
