@@ -1002,7 +1002,7 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
 ```
 
 !!! note
-    Using a field other than the default `slug` or the alternative field `pk` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id. 
+    Using a field other than the default `slug` or the alternative field `pk` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id.
 
 #### View Template Context
 
