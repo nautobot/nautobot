@@ -78,13 +78,6 @@ class Command(BaseCommand):
             default=True,
             help="Do not automatically generate missing cable paths.",
         )
-        parser.add_argument(
-            "--allow-ui-build-failure",
-            action="store_true",
-            dest="allow_ui_build_failure",
-            default=False,
-            help="Allow build errors in development (UI may fail to build)",
-        )
 
     def handle(self, *args, **options):
         # Run migrate
@@ -107,7 +100,7 @@ class Command(BaseCommand):
         # Run build
         if options.get("build_ui"):
             self.stdout.write("Building user interface...")
-            call_command("build_ui", npm_install=True, allow_ui_build_failure=options.get("allow_ui_build_failure"))
+            call_command("build_ui", npm_install=True)
             self.stdout.write()
 
         # Run collectstatic

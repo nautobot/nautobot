@@ -37,13 +37,6 @@ class Command(BaseCommand):
             default=True,
             help="Do not compile UI.",
         )
-        parser.add_argument(
-            "--allow-ui-build-failure",
-            action="store_true",
-            dest="allow_ui_build_failure",
-            default=True,
-            help="Allow build errors in development (UI may fail to build)",
-        )
 
     def render_app_imports(self):
         """Render `app_imports.js` and update `jsconfig.json` to map to the path for each."""
@@ -92,7 +85,7 @@ class Command(BaseCommand):
         # Touch the router to attempt to trigger a server reload.
         Path(router_file_path).touch()
 
-    def run_command(self, command, message, cwd=settings.NAUTOBOT_UI_DIR, allow_fail=False):
+    def run_command(self, command, message, cwd=settings.NAUTOBOT_UI_DIR):
         """
         Run a `command`, displaying `message` and exit. This splits it for you and runs it.
 
@@ -118,8 +111,7 @@ class Command(BaseCommand):
         if result.returncode:
             self.stdout.write(self.style.NOTICE(result.stdout))
             self.stderr.write(self.style.ERROR(result.stderr))
-            if not allow_fail:
-                raise CommandError(f"'{command}' failed with exit code {result.returncode}")
+            raise CommandError(f"'{command}' failed with exit code {result.returncode}")
 
     def handle(self, *args, **options):
         verbosity = options["verbosity"]
@@ -149,12 +141,11 @@ class Command(BaseCommand):
         # Run `npm build` and keep it silent by default.
         if options["npm_build"]:
             args = f"run build {loglevel}"
-            self.run_command(f"npm {args}", ">>> Compiling Nautobot UI packages...", allow_fail=options["allow_ui_build_failure"])
+            self.run_command(f"npm {args}", ">>> Compiling Nautobot UI packages...")
             self.run_command(
                 f"cp {Path(settings.NAUTOBOT_UI_DIR, 'build' ,'asset-manifest.json')} "
                 f"{Path(settings.NAUTOBOT_UI_DIR, 'build' , 'static', 'asset-manifest.json')}",
                 ">>> Copying built manifest...",
-                allow_fail=options["allow_ui_build_failure"],
             )
 
         self.stdout.write(self.style.SUCCESS(">>> Nautobot UI build complete! 🎉"))

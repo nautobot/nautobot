@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.db.models import Count
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.decorators import action
@@ -42,7 +44,8 @@ class UserViewSet(ModelViewSet):
         serializer = self.serializer_class(instance=request.user, context={"request": request})
         return Response(serializer.data)
 
-    @action(methods=["GET"], detail=False, url_path="session", permission_classes=[AllowAny])
+    @method_decorator(ensure_csrf_cookie)
+    @action(methods=["GET"], detail=False, permission_classes=[AllowAny])
     def session(self, request):
         from django.conf import settings as django_settings
         from nautobot.core.settings_funcs import sso_auth_enabled
@@ -62,7 +65,7 @@ class UserViewSet(ModelViewSet):
         resp = {
             "user": serializer.data,
             "logged_in": request.user.is_authenticated,
-            "sso_enabled": sso_auth_enabled(django_settings.AUTHENTICATION_BACKENDS),
+            "sso_enabled": sso_enabled,
             "sso_user": (len(social_auth_backends["associated"]) > 0),
             "backends": _backends,
         }
