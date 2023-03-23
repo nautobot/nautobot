@@ -57,6 +57,11 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     filterset = VRFFilterSet
     tenancy_related_name = "vrfs"
 
+    @classmethod
+    def setUpTestData(cls):
+        instance = cls.queryset.first()
+        instance.tags.set(Tag.objects.all()[:2])
+
     def test_name(self):
         names = list(self.queryset.values_list("name", flat=True))[:2]
         params = {"name": names}
@@ -114,6 +119,11 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Tenanc
     filterset = RouteTargetFilterSet
     tenancy_related_name = "route_targets"
 
+    @classmethod
+    def setUpTestData(cls):
+        instance = cls.queryset.first()
+        instance.tags.set(Tag.objects.all()[:2])
+
     def test_name(self):
         params = {"name": [self.queryset[0].name, self.queryset[1].name, self.queryset[2].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
@@ -163,10 +173,10 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     generic_filter_tests = (
         ["date_allocated"],
         ["rir", "rir__id"],
-        ["rir", "rir__slug"],
+        ["rir", "rir__name"],
         ["role", "role__id"],
-        ["role", "role__slug"],
-        ["status", "status__slug"],
+        ["role", "role__name"],
+        ["status", "status__name"],
         ["type"],
     )
 
@@ -263,7 +273,11 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         IPAddress.objects.all().update(vrf=None)
         VRF.objects.all().delete()
         RouteTarget.objects.all().delete()
-        route_targets = RouteTarget.objects.all()[:3]
+        route_targets = (
+            RouteTarget.objects.create(name="65000:100"),
+            RouteTarget.objects.create(name="65000:200"),
+            RouteTarget.objects.create(name="65000:300"),
+        )
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:100"),
             VRF.objects.create(name="VRF 2", rd="65000:200"),
@@ -620,7 +634,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(IPAddress).filter(ip_addresses__isnull=False)[:2])
-        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        params = {"status": [statuses[0].name, statuses[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses)
         )
@@ -699,60 +713,64 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
         statuses = Status.objects.get_for_model(VLAN)
 
-        VLAN.objects.create(
-            vid=101,
-            name="VLAN 101",
-            location=cls.locations[0],
-            vlan_group=groups[0],
-            role=roles[0],
-            tenant=tenants[0],
-            status=statuses[0],
+        vlans = (
+            VLAN.objects.create(
+                vid=101,
+                name="VLAN 101",
+                location=cls.locations[0],
+                vlan_group=groups[0],
+                role=roles[0],
+                tenant=tenants[0],
+                status=statuses[0],
+            ),
+            VLAN.objects.create(
+                vid=102,
+                name="VLAN 102",
+                location=cls.locations[0],
+                vlan_group=groups[0],
+                role=roles[0],
+                tenant=tenants[0],
+                status=statuses[0],
+            ),
+            VLAN.objects.create(
+                vid=201,
+                name="VLAN 201",
+                location=cls.locations[1],
+                vlan_group=groups[1],
+                role=roles[1],
+                tenant=tenants[1],
+                status=statuses[1],
+            ),
+            VLAN.objects.create(
+                vid=202,
+                name="VLAN 202",
+                location=cls.locations[1],
+                vlan_group=groups[1],
+                role=roles[1],
+                tenant=tenants[1],
+                status=statuses[1],
+            ),
+            VLAN.objects.create(
+                vid=301,
+                name="VLAN 301",
+                location=cls.locations[2],
+                vlan_group=groups[2],
+                role=roles[2],
+                tenant=tenants[2],
+                status=statuses[2],
+            ),
+            VLAN.objects.create(
+                vid=302,
+                name="VLAN 302",
+                location=cls.locations[2],
+                vlan_group=groups[2],
+                role=roles[2],
+                tenant=tenants[2],
+                status=statuses[2],
+            ),
         )
-        VLAN.objects.create(
-            vid=102,
-            name="VLAN 102",
-            location=cls.locations[0],
-            vlan_group=groups[0],
-            role=roles[0],
-            tenant=tenants[0],
-            status=statuses[0],
-        )
-        VLAN.objects.create(
-            vid=201,
-            name="VLAN 201",
-            location=cls.locations[1],
-            vlan_group=groups[1],
-            role=roles[1],
-            tenant=tenants[1],
-            status=statuses[1],
-        )
-        VLAN.objects.create(
-            vid=202,
-            name="VLAN 202",
-            location=cls.locations[1],
-            vlan_group=groups[1],
-            role=roles[1],
-            tenant=tenants[1],
-            status=statuses[1],
-        )
-        VLAN.objects.create(
-            vid=301,
-            name="VLAN 301",
-            location=cls.locations[2],
-            vlan_group=groups[2],
-            role=roles[2],
-            tenant=tenants[2],
-            status=statuses[2],
-        )
-        VLAN.objects.create(
-            vid=302,
-            name="VLAN 302",
-            location=cls.locations[2],
-            vlan_group=groups[2],
-            role=roles[2],
-            tenant=tenants[2],
-            status=statuses[2],
-        )
+        vlans[0].tags.set(Tag.objects.all()[:2])
+        vlans[1].tags.set(Tag.objects.all()[:2])
 
     def test_name(self):
         names = list(VLAN.objects.all().values_list("name", flat=True)[:2])
@@ -784,14 +802,14 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_role(self):
         roles = Role.objects.get_for_model(VLAN)[:2]
-        params = {"role": [roles[0].pk, roles[1].slug]}
+        params = {"role": [roles[0].pk, roles[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
         )
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(vlans__isnull=False).distinct())[:2]
-        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        params = {"status": [statuses[0].name, statuses[1].name]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
 
     def test_search(self):

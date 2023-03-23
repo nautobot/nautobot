@@ -270,7 +270,7 @@ class RIRTable(BaseTable):
     is_private = BooleanColumn(verbose_name="Private")
     assigned_prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
-        url_params={"rir": "slug"},
+        url_params={"rir": "name"},
         verbose_name="Assigned Prefixes",
     )
     actions = ButtonsColumn(RIR, pk_field="pk")

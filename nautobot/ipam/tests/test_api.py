@@ -101,7 +101,11 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
         return RIR.objects.create(name="DELETE ME")
 
     def get_deletable_object_pks(self):
-        RIRs = RIR.objects.all()[:3]
+        RIRs = [
+            RIR.objects.create(name="Deletable RIR 1"),
+            RIR.objects.create(name="Deletable RIR 2"),
+            RIR.objects.create(name="Deletable RIR 3"),
+        ]
         return [rir.pk for rir in RIRs]
 
 

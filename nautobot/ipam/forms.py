@@ -267,7 +267,11 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "group_id": "$vlan_group",
         },
     )
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    rir = DynamicModelChoiceField(
+        queryset=RIR.objects.all(),
+        required=False,
+        label="RIR",
+    )
 
     class Meta:
         model = Prefix

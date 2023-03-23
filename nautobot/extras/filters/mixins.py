@@ -332,7 +332,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
 
     def get_filter_predicate(self, value):
         """Always use the field's name and the `to_field_name` attribute as predicate."""
-        # e.g. `status__slug`
+        # e.g. `status__name`
         to_field_name = self.field.to_field_name
         name = f"{self.field_name}__{to_field_name}"
         # Sometimes the incoming value is an instance. This block of logic comes from the base

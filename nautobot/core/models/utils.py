@@ -56,10 +56,10 @@ def pretty_print_query(query):
         >>> print(pretty_print_query(Q))
         (
           site__slug='ams01' OR site__slug='bkk01' OR (
-            site__slug='can01' AND status__slug='active'
+            site__slug='can01' AND status__name='Active'
           ) OR (
             site__slug='del01' AND (
-              NOT (site__slug='del01' AND status__slug='decommissioning')
+              NOT (site__slug='del01' AND status__name='Decommissioning')
             )
           )
         )

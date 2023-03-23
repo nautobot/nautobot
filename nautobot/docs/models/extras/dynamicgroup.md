@@ -84,7 +84,7 @@ A key to understand here is that generally, within a single Dynamic Group, addit
   (
     site__slug='ams01' OR site__name='BBK1'
   ) AND (
-    status__slug='active' OR status__name='Offline'
+    status__name='Offline'
   )
 )
 ```

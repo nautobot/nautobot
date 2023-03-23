@@ -203,7 +203,8 @@ class PrefixFilterSet(
     )
     rir = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RIR.objects.all(),
-        label="RIR (slug or ID)",
+        label="RIR (name or ID)",
+        to_field_name="name",
     )
     has_rir = RelatedMembershipBooleanFilter(
         field_name="rir",
