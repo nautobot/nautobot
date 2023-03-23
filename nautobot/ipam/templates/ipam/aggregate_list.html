@@ -2,13 +2,6 @@
 {% load humanize %}
 
 {% block header_extra %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong><i class="mdi mdi-chart-areaspline"></i> Statistics</strong>
-        </div>
-        <ul class="list-group">
-            <li class="list-group-item">Total IPv4 IPs <span class="badge">{{ ipv4_total|intcomma }}</span></li>
-            <li class="list-group-item">Total IPv6 /64s <span class="badge">{{ ipv6_total|intcomma }}</span></li>
-        </ul>
-    </div>
-{% endblock %}
+   Total IPv4 IPs: <span class="badge">{{ ipv4_total|intcomma }}</span>
+   Total IPv6 /64s: <span class="badge">{{ ipv6_total|intcomma }}</span>
+{% endblock header_extra %}
