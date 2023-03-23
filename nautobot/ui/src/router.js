@@ -11,44 +11,44 @@ import Logout from "@views/Logout";
 
 // TODO: Dynamic route injection
 export default function NautobotRouter() {
-  let element = useRoutes([
-    {
-      path: "/",
-      element: <Home />,
-      children: []
-    },
-    {
-      path: "/login/",
-      element: <Login />
-    },
-    {
-      path: "/logout/",
-      element: <Logout />
-    },
-    {
-      path: "/:app_name/:model_name",
-      element: <ListView />,
-      children: []
-    },
-    {
-      path: "/:app_name/:model_name/:pk",
-      element: <DetailView />,
-      children: []
-    },
-    {
-      path: "/:app_name/:model_name/add",
-      element: <CreateView />,
-      children: []
-    },
-    {
-      path: "/plugins/",
-      children: [
+    let element = useRoutes([
         {
-          path: "installed-plugins",
-          element: <InstalledApps />
+            path: "/",
+            element: <Home />,
+            children: []
+        },
+        {
+            path: "/login/",
+            element: <Login />
+        },
+        {
+            path: "/logout/",
+            element: <Logout />
+        },
+        {
+            path: "/:app_name/:model_name",
+            element: <ListView />,
+            children: []
+        },
+        {
+            path: "/:app_name/:model_name/add",
+            element: <CreateView />,
+            children: []
+        },
+        {
+            path: "/:app_name/:model_name/:object_id",
+            element: <DetailView />,
+            children: []
+        },
+        {
+            path: "/plugins/",
+            children: [
+                {
+                    path: "installed-plugins",
+                    element: <InstalledApps />
+                }
+            ]
         }
-      ]
-    }
-  ]);
-  return element;
+    ]);
+    return element;
 }
