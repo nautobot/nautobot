@@ -517,7 +517,7 @@ def check_if_key_is_graphql_safe(model_name, key):
     if not graphql_safe_pattern.fullmatch(key):
         raise ValidationError(
             {
-                f"key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
+                "key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
             }
         )
 
