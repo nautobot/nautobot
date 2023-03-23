@@ -43,7 +43,7 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
-from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
+from .choices import IPAddressVersionChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -425,7 +425,7 @@ class PrefixFilterForm(
         "q",
         "within_include",
         "type",
-        "family",
+        "ip_version",
         "mask_length",
         # "vrf_id",
         # "present_in_vrf_id",
@@ -447,10 +447,10 @@ class PrefixFilterForm(
         ),
         label="Search within",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
+        choices=add_blank_choice(IPAddressVersionChoices),
+        label="IP version",
         widget=StaticSelect2(),
     )
     mask_length = forms.ChoiceField(
@@ -699,7 +699,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
     )
     family = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
+        choices=add_blank_choice(IPAddressVersionChoices),
         label="Address family",
         widget=StaticSelect2(),
     )

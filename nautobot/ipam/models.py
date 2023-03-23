@@ -419,7 +419,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     )
     # ip_version is set internally just like network, broadcast, and prefix_length.
     ip_version = models.IntegerField(
-        choices=choices.IPAddressFamilyChoices,
+        choices=choices.IPAddressVersionChoices,
         null=True,
         editable=False,
         db_index=True,
@@ -637,12 +637,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def prefix(self, prefix):
         self._deconstruct_prefix(prefix)
 
-    @property
-    def family(self):
-        if self.prefix:
-            return self.prefix.version
-        return None
-
     def reparent_subnets(self):
         """
         Determine the list of child nodes and set the parent to self.
@@ -794,12 +788,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         child IPAddresses belonging to any VRF.
         """
         return IPAddress.objects.net_host_contained(self.prefix)
-        """
-        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            return IPAddress.objects.net_host_contained(self.prefix)
-        else:
-            return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
-        """
 
     def get_available_prefixes(self):
         """
@@ -822,9 +810,9 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
             [
-                self.family == 6,
+                self.ip_version == 6,
                 self.type == choices.PrefixTypeChoices.TYPE_POOL,
-                self.family == 4 and self.prefix.prefixlen >= 31,
+                self.ip_version == 4 and self.prefix_length >= 31,
             ]
         ):
             return available_ips
@@ -855,7 +843,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         available_ips = self.get_available_ips()
         if not available_ips:
             return None
-        return f"{next(available_ips.__iter__())}/{self.prefix.prefixlen}"
+        return f"{next(available_ips.__iter__())}/{self.prefix_length}"
 
     def get_utilization(self):
         """Get the child prefix size and parent size.
@@ -873,8 +861,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             prefix_size = self.prefix.size
             if all(
                 [
-                    self.prefix.version == 4,
-                    self.prefix.prefixlen < 31,
+                    self.ip_version == 4,
+                    self.prefix_length < 31,
                     self.type != choices.PrefixTypeChoices.TYPE_POOL,
                 ]
             ):

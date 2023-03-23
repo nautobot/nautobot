@@ -248,7 +248,7 @@ class PrefixFactory(PrimaryModelFactory):
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
         has_vlan = NautobotBoolIterator()
-        has_vrf = NautobotBoolIterator()
+        # has_vrf = NautobotBoolIterator()
         is_container = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
@@ -323,7 +323,7 @@ class PrefixFactory(PrimaryModelFactory):
             return
 
         action = "create" if create else "build"
-        is_ipv6 = self.family == 6
+        is_ipv6 = self.ip_version == 6
 
         # Create child prefixes for containers, otherwise create child ip addresses
         child_factory = PrefixFactory if self.type == PrefixTypeChoices.TYPE_CONTAINER else IPAddressFactory
@@ -355,7 +355,7 @@ class PrefixFactory(PrimaryModelFactory):
             # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
             child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
             # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
-            if child_cidr > 128 or self.family == 4 and child_cidr > 32:
+            if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
             # Create child prefixes, preserving location, vrf and is_ipv6 from parent
