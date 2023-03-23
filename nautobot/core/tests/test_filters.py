@@ -405,7 +405,6 @@ class BaseFilterSetTest(TestCase):
         )
         multiplechoicefield = django_filters.MultipleChoiceFilter(field_name="choicefield")
         multivaluecharfield = filters.MultiValueCharFilter(field_name="charfield")
-        tagfield = filters.TagFilter()
         treeforeignkeyfield = filters.TreeNodeMultipleChoiceFilter(queryset=TestModel.objects.all())
 
         class Meta:
@@ -423,7 +422,7 @@ class BaseFilterSetTest(TestCase):
                 "modelchoicefield",
                 "modelmultiplechoicefield",
                 "multiplechoicefield",
-                "tagfield",
+                "tags",
                 "textfield",
                 "timefield",
                 "treeforeignkeyfield",
@@ -756,11 +755,11 @@ class BaseFilterSetTest(TestCase):
             self.assertEqual(self.filters[f"{field}__nire"].exclude, True)
 
     def test_tag_filter(self):
-        self.assertIsInstance(self.filters["tagfield"], filters.TagFilter)
-        self.assertEqual(self.filters["tagfield"].lookup_expr, "exact")
-        self.assertEqual(self.filters["tagfield"].exclude, False)
-        self.assertEqual(self.filters["tagfield__n"].lookup_expr, "exact")
-        self.assertEqual(self.filters["tagfield__n"].exclude, True)
+        self.assertIsInstance(self.filters["tags"], filters.TagFilter)
+        self.assertEqual(self.filters["tags"].lookup_expr, "exact")
+        self.assertEqual(self.filters["tags"].exclude, False)
+        self.assertEqual(self.filters["tags__n"].lookup_expr, "exact")
+        self.assertEqual(self.filters["tags__n"].exclude, True)
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], filters.TreeNodeMultipleChoiceFilter)

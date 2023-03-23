@@ -152,24 +152,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
 
-@extend_schema_field(OpenApiTypes.STR)
-class TagFilter(django_filters.ModelMultipleChoiceFilter):
-    """
-    Match on one or more assigned tags. If multiple tags are specified (e.g. ?tag=foo&tag=bar), the queryset is filtered
-    to objects matching all tags.
-    """
-
-    def __init__(self, *args, **kwargs):
-        from nautobot.extras import models as extras_models  # avoid circular import
-
-        kwargs.setdefault("field_name", "tags__slug")
-        kwargs.setdefault("to_field_name", "slug")
-        kwargs.setdefault("conjoined", True)
-        kwargs.setdefault("queryset", extras_models.Tag.objects.all())
-
-        super().__init__(*args, **kwargs)
-
-
 class NumericArrayFilter(django_filters.NumberFilter):
     """
     Filter based on the presence of an integer within an ArrayField.
@@ -400,6 +382,7 @@ class MappedPredicatesFilterMixin:
 
 
 # TODO(timizuo): NaturalKeyOrPKMultipleChoiceFilter is not currently handling pk Integer field properly; resolve this in issue #3336
+@extend_schema_field(OpenApiTypes.STR)
 class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter that supports filtering on values matching the `pk` field and another
@@ -460,6 +443,22 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
 
     label = "Search"
+
+
+class TagFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Match on one or more assigned tags. If multiple tags are specified (e.g. ?tag=foo&tag=bar), the queryset is filtered
+    to objects matching all tags.
+    """
+
+    def __init__(self, *args, **kwargs):
+        from nautobot.extras.models import Tag  # avoid circular import
+
+        kwargs.setdefault("field_name", "tags")
+        kwargs.setdefault("conjoined", True)
+        kwargs.setdefault("queryset", Tag.objects.all())
+
+        super().__init__(*args, **kwargs)
 
 
 class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):

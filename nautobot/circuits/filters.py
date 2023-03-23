@@ -7,7 +7,6 @@ from nautobot.core.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.filters import (
@@ -56,11 +55,20 @@ class ProviderFilterSet(NautobotFilterSet):
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Provider
-        fields = ["account", "admin_contact", "asn", "comments", "id", "name", "noc_contact", "portal_url"]
+        fields = [
+            "account",
+            "admin_contact",
+            "asn",
+            "comments",
+            "id",
+            "name",
+            "noc_contact",
+            "portal_url",
+            "tags",
+        ]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -96,11 +104,10 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Provider (name or ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = ProviderNetwork
-        fields = ["comments", "description", "id", "name", "slug"]
+        fields = ["comments", "description", "id", "name", "slug", "tags"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -162,18 +169,18 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         queryset=CircuitTermination.objects.all(),
         label="Termination Z (ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Circuit
         fields = [
             "cid",
+            "circuit_terminations",
             "comments",
             "commit_rate",
             "description",
             "id",
             "install_date",
-            "circuit_terminations",
+            "tags",
         ]
 
 
@@ -203,4 +210,4 @@ class CircuitTerminationFilterSet(
 
     class Meta:
         model = CircuitTermination
-        fields = ["description", "port_speed", "pp_info", "term_side", "upstream_speed", "xconnect_id"]
+        fields = ["description", "port_speed", "pp_info", "tags", "term_side", "upstream_speed", "xconnect_id"]
