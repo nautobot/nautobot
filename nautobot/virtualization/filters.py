@@ -97,7 +97,8 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),
-        label="Parent group (ID or slug)",
+        label="Parent group (ID or name)",
+        to_field_name="name",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_type",
@@ -106,7 +107,8 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
     )
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ClusterType.objects.all(),
-        label="Cluster type (ID or slug)",
+        label="Cluster type (ID or name)",
+        to_field_name="name",
     )
 
     class Meta:
@@ -135,7 +137,8 @@ class VirtualMachineFilterSet(
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
-        label="Cluster group (ID or slug)",
+        label="Cluster group (ID or name)",
+        to_field_name="name",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__cluster_type",
@@ -145,7 +148,8 @@ class VirtualMachineFilterSet(
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
-        label="Cluster type (ID or slug)",
+        label="Cluster type (ID or name)",
+        to_field_name="name",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),

@@ -7,6 +7,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
+from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -21,11 +22,7 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        ClusterGroup.objects.create(name="Cluster Group 1")
-        ClusterGroup.objects.create(name="Cluster Group 2")
-        ClusterGroup.objects.create(name="Cluster Group 3")
-        ClusterGroup.objects.create(name="Cluster Group 8")
+        cluster_groups = ClusterGroupFactory.create_batch(4)
 
         cls.form_data = {
             "name": "Cluster Group X",
@@ -40,7 +37,7 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Cluster Group 7,Seventh cluster group",
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "Cluster Group 8"
+        cls.slug_test_object = cluster_groups[1].name
 
 
 class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -82,9 +79,9 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
         )
 
-        clustergroups = ClusterGroup.objects.all()[:2]
+        clustergroups = ClusterGroupFactory.create_batch(2)
 
-        clustertypes = ClusterType.objects.all()[:2]
+        clustertypes = ClusterTypeFactory.create_batch(2)
 
         Cluster.objects.create(
             name="Cluster 1",
@@ -117,9 +114,9 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,cluster_type",
-            "Cluster 4,Cluster Type 1",
-            "Cluster 5,Cluster Type 1",
-            "Cluster 6,Cluster Type 1",
+            f"Cluster 4,{clustertypes[0].name}",
+            f"Cluster 5,{clustertypes[0].name}",
+            f"Cluster 6,{clustertypes[0].name}",
         )
 
         cls.bulk_edit_data = {
@@ -197,9 +194,9 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,cluster,status",
-            "Virtual Machine 4,Cluster 1,active",
-            "Virtual Machine 5,Cluster 1,active",
-            "Virtual Machine 6,Cluster 1,staged",
+            f"Virtual Machine 4,Cluster 1,{statuses[0].name}",
+            f"Virtual Machine 5,Cluster 1,{statuses[0].name}",
+            f"Virtual Machine 6,Cluster 1,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {
@@ -350,9 +347,9 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "virtual_machine,name,status",
-            "Virtual Machine 2,Interface 4,active",
-            "Virtual Machine 2,Interface 5,active",
-            "Virtual Machine 2,Interface 6,active",
+            f"Virtual Machine 2,Interface 4,{statuses[0].name}",
+            f"Virtual Machine 2,Interface 5,{statuses[0].name}",
+            f"Virtual Machine 2,Interface 6,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {

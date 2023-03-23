@@ -100,7 +100,6 @@ class ClusterGroup(OrganizationalModel):
     def to_csv(self):
         return (
             self.name,
-            self.pk,
             self.description,
         )
 

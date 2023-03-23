@@ -99,54 +99,54 @@ class DynamicGroupTestBase(TestCase):
         ]
 
         cls.groups = [
-             DynamicGroup.objects.create(
-                 name="Parent",
-                 description="The parent group with no filter",
-                 filter={},
-                 content_type=cls.device_ct,
-             ),
-             # Location-1 only
-             DynamicGroup.objects.create(
-                 name="First Child",
-                 description="The first child group",
-                 filter={"location": ["location-1"]},
-                 content_type=cls.device_ct,
-             ),
-             # Location-2 only
-             DynamicGroup.objects.create(
-                 name="Second Child",
-                 description="A second child group",
-                 filter={"location": ["location-3"]},
-                 content_type=cls.device_ct,
-             ),
-             # Empty filter to use for testing nesting.
-             DynamicGroup.objects.create(
-                 name="Third Child",
-                 description="A third child group with a child of its own",
-                 filter={},
-                 content_type=cls.device_ct,
-             ),
-             # Nested child of third-child to test ancestors/descendants
-             DynamicGroup.objects.create(
-                 name="Nested Child",
-                 description="This will be the child of third-child",
-                 filter={"status": ["active"]},
-                 content_type=cls.device_ct,
-             ),
-             # No matches (bogus/invalid name match)
-             DynamicGroup.objects.create(
-                 name="Invalid Filter",
-                 description="A group with a non-matching filter",
-                 filter={"name": ["bogus"]},
-                 content_type=cls.device_ct,
-             ),
-             DynamicGroup.objects.create(
-                 name="MultiValueCharFilter",
-                 description="A group with a multivaluechar filter",
-                 filter={"name": ["device-1", "device-2", "device-3"]},
-                 content_type=cls.device_ct,
-             ),
-         ]
+            DynamicGroup.objects.create(
+                name="Parent",
+                description="The parent group with no filter",
+                filter={},
+                content_type=cls.device_ct,
+            ),
+            # Location-1 only
+            DynamicGroup.objects.create(
+                name="First Child",
+                description="The first child group",
+                filter={"location": ["location-1"]},
+                content_type=cls.device_ct,
+            ),
+            # Location-2 only
+            DynamicGroup.objects.create(
+                name="Second Child",
+                description="A second child group",
+                filter={"location": ["location-3"]},
+                content_type=cls.device_ct,
+            ),
+            # Empty filter to use for testing nesting.
+            DynamicGroup.objects.create(
+                name="Third Child",
+                description="A third child group with a child of its own",
+                filter={},
+                content_type=cls.device_ct,
+            ),
+            # Nested child of third-child to test ancestors/descendants
+            DynamicGroup.objects.create(
+                name="Nested Child",
+                description="This will be the child of third-child",
+                filter={"status": ["active"]},
+                content_type=cls.device_ct,
+            ),
+            # No matches (bogus/invalid name match)
+            DynamicGroup.objects.create(
+                name="Invalid Filter",
+                description="A group with a non-matching filter",
+                filter={"name": ["bogus"]},
+                content_type=cls.device_ct,
+            ),
+            DynamicGroup.objects.create(
+                name="MultiValueCharFilter",
+                description="A group with a multivaluechar filter",
+                filter={"name": ["device-1", "device-2", "device-3"]},
+                content_type=cls.device_ct,
+            ),
+        ]
 
         cls.parent = cls.groups[0]
         cls.first_child = cls.groups[1]

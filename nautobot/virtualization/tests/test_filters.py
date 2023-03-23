@@ -29,7 +29,11 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cluster_types = ClusterType.objects.all()[:3]
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", description="A"),
+            ClusterType.objects.create(name="Cluster Type 2", description="B"),
+            ClusterType.objects.create(name="Cluster Type 3", description="C"),
+        )
 
         cls.clusters = [
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0]),
@@ -59,9 +63,17 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cluster_groups = ClusterGroup.objects.all()[:3]
+        cluster_groups = (
+            ClusterGroup.objects.create(name="Cluster Group 1", description="A"),
+            ClusterGroup.objects.create(name="Cluster Group 2", description="B"),
+            ClusterGroup.objects.create(name="Cluster Group 3", description="C"),
+        )
 
-        cluster_types = ClusterType.objects.all()[:2]
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", description="A"),
+            ClusterType.objects.create(name="Cluster Type 2", description="B"),
+            ClusterType.objects.create(name="Cluster Type 3", description="C"),
+        )
 
         cls.clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0]),
@@ -92,9 +104,17 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     @classmethod
     def setUpTestData(cls):
-        cluster_types = ClusterType.objects.all()[:3]
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", description="A"),
+            ClusterType.objects.create(name="Cluster Type 2", description="B"),
+            ClusterType.objects.create(name="Cluster Type 3", description="C"),
+        )
 
-        cluster_groups = ClusterGroup.objects.all()[:3]
+        cluster_groups = (
+            ClusterGroup.objects.create(name="Cluster Group 1", description="A"),
+            ClusterGroup.objects.create(name="Cluster Group 2", description="B"),
+            ClusterGroup.objects.create(name="Cluster Group 3", description="C"),
+        )
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
@@ -195,7 +215,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         cluster_groups = list(ClusterGroup.objects.all()[:2])
         filter_params = [
             {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]},
-            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].slug]},
+            {"cluster_group": [cluster_groups[0].pk, cluster_groups[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -207,7 +227,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         cluster_types = list(ClusterType.objects.all()[:2])
         filter_params = [
             {"cluster_type_id": [cluster_types[0].pk, cluster_types[1].pk]},
-            {"cluster_type": [cluster_types[0].pk, cluster_types[1].slug]},
+            {"cluster_type": [cluster_types[0].pk, cluster_types[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -228,9 +248,17 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     @classmethod
     def setUpTestData(cls):
-        cluster_types = ClusterType.objects.all()[:3]
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", description="A"),
+            ClusterType.objects.create(name="Cluster Type 2", description="B"),
+            ClusterType.objects.create(name="Cluster Type 3", description="C"),
+        )
 
-        cluster_groups = ClusterGroup.objects.all()[:3]
+        cluster_groups = (
+            ClusterGroup.objects.create(name="Cluster Group 1", description="A"),
+            ClusterGroup.objects.create(name="Cluster Group 2", description="B"),
+            ClusterGroup.objects.create(name="Cluster Group 3", description="C"),
+        )
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
@@ -270,7 +298,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
-        statuses = Status.objects.get_for_model(VirtualMachine)
+        cls.statuses = Status.objects.get_for_model(VirtualMachine)
 
         vms = (
             VirtualMachine.objects.create(
@@ -279,7 +307,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[0],
                 role=roles[0],
                 tenant=tenants[0],
-                status=statuses[0],
+                status=cls.statuses[0],
                 vcpus=1,
                 memory=1,
                 disk=1,
@@ -292,7 +320,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[1],
                 role=roles[1],
                 tenant=tenants[1],
-                status=statuses[2],
+                status=cls.statuses[2],
                 vcpus=2,
                 memory=2,
                 disk=2,
@@ -304,7 +332,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=statuses[1],
+                status=cls.statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -316,7 +344,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=statuses[1],
+                status=cls.statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -328,7 +356,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=statuses[1],
+                status=cls.statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -340,7 +368,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 platform=platforms[2],
                 role=roles[2],
                 tenant=tenants[2],
-                status=statuses[1],
+                status=cls.statuses[1],
                 vcpus=3,
                 memory=3,
                 disk=3,
@@ -438,14 +466,17 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {"status": ["active", "staged"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"status": [self.statuses[0].name, self.statuses[1].name]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(status__in=[self.statuses[0], self.statuses[1]]),
+        )
 
     def test_cluster_group(self):
         groups = list(ClusterGroup.objects.all()[:2])
         filter_params = [
             {"cluster_group_id": [groups[0].pk, groups[1].pk]},
-            {"cluster_group": [groups[0].pk, groups[1].slug]},
+            {"cluster_group": [groups[0].pk, groups[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -457,7 +488,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         types = list(ClusterType.objects.all()[:2])
         filter_params = [
             {"cluster_type_id": [types[0].pk, types[1].pk]},
-            {"cluster_type": [types[0].pk, types[1].slug]},
+            {"cluster_type": [types[0].pk, types[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -486,7 +517,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_role(self):
         roles = self.roles[:2]
-        params = {"role": [roles[0].pk, roles[1].slug]}
+        params = {"role": [roles[0].pk, roles[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
         )
@@ -495,7 +526,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         platforms = self.platforms[:2]
         filter_params = [
             {"platform_id": [platforms[0].pk, platforms[1].pk]},
-            {"platform": [platforms[0].pk, platforms[1].slug]},
+            {"platform": [platforms[0].pk, platforms[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -551,7 +582,6 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         ["mtu"],
         ["name"],
         ["parent_interface"],
-        ["status", "status__slug"],
         ["tagged_vlans", "tagged_vlans__pk"],
         ["tagged_vlans", "tagged_vlans__vid"],
         ["untagged_vlan", "untagged_vlan__pk"],
@@ -562,7 +592,11 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cluster_types = ClusterType.objects.all()[:3]
+        cluster_types = (
+            ClusterType.objects.create(name="Cluster Type 1", description="A"),
+            ClusterType.objects.create(name="Cluster Type 2", description="B"),
+            ClusterType.objects.create(name="Cluster Type 3", description="C"),
+        )
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0]),
