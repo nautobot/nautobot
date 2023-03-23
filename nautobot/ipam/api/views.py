@@ -308,12 +308,16 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
     update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
 )
 class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    queryset = IPAddress.objects.select_related(
+    # Resolves issue #3480
+    queryset = IPAddress.objects.prefetch_related(
+        "assigned_object",
         "nat_inside",
+        "nat_outside_list",
         "status",
+        "tags",
         "tenant",
         "vrf__tenant",
-    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
+    )
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 

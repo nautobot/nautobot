@@ -619,7 +619,8 @@ class IPAddressListView(generic.ObjectListView):
 
 
 class IPAddressView(generic.ObjectView):
-    queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
+    # Resolves issue #3480
+    queryset = IPAddress.objects.prefetch_related("vrf__tenant", "tenant")
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table

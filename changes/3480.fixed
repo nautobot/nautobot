@@ -1,0 +1,1 @@
+Resolved issues with ProgrammingError when constraint is applied to an IPAddress to limit access based on `IPAddress.host__net_host_contained`.
