@@ -228,7 +228,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
-        label="Cluster group (ID or slug)",
+        to_field_name="name",
+        label="Cluster group (ID or name)",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="clusters",
@@ -243,7 +244,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
-        label="Tenant group (ID or slug)",
+        label="Tenant group (ID or name)",
+        to_field_name="name",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         field_name="tenants",
@@ -253,13 +255,14 @@ class ConfigContextFilterSet(BaseFilterSet):
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tenants",
         queryset=Tenant.objects.all(),
-        label="Tenant (ID or slug)",
+        label="Tenant (ID or name)",
+        to_field_name="name",
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_redundancy_groups",
         queryset=DeviceRedundancyGroup.objects.all(),
-        to_field_name="slug",
-        label="Device Redundancy Group (slug or PK)",
+        to_field_name="name",
+        label="Device Redundancy Group (name or PK)",
     )
     tag = django_filters.ModelMultipleChoiceFilter(
         field_name="tags__slug",
@@ -276,7 +279,8 @@ class ConfigContextFilterSet(BaseFilterSet):
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
                 queryset=DynamicGroup.objects.all(),
-                label="Dynamic Groups (slug or ID)",
+                label="Dynamic Groups (name or ID)",
+                to_field_name="name",
             )
 
     class Meta:
@@ -499,7 +503,8 @@ class GitRepositoryFilterSet(NautobotFilterSet):
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Secrets group (ID or slug)",
+        label="Secrets group (ID or name)",
+        to_field_name="name",
     )
 
     class Meta:
@@ -591,7 +596,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
 
 class JobHookFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
+    q = SearchFilter(filter_predicates={"name": "icontains"})
     content_types = ContentTypeMultipleChoiceFilter(
         choices=ChangeLoggedModelsQuery().get_choices,
     )
@@ -883,7 +888,8 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
 
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Secrets Group (ID or slug)",
+        label="Secrets Group (ID or name)",
+        to_field_name="name",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),
@@ -891,7 +897,8 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
     )
     secret = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Secret.objects.all(),
-        label="Secret (ID or slug)",
+        label="Secret (ID or name)",
+        to_field_name="name",
     )
     access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
     secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
