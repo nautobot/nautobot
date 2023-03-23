@@ -383,7 +383,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 | Model             | Enhanced Filter Field  | Changes                                                    | UI and Rest API endpoints Available in v2.X               |
 |-------------------|------------------------|------------------------------------------------------------|-----------------------------------------------------------|
-| (all)             | `created[__(gte/lte)]` | Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`                     |
+| (all)             | `created[__(gte/lte)]` | Now can filter on multiple values; now supports date-times | `?created__gte=2023-02-14%2012:00:00`                     |
 | Circuit           | `circuit_type`         | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`            |
 |                   | `provider`             | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`                |
 |                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                    |
