@@ -124,7 +124,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.location = Location.objects.create(name="Location 1", location_type=location_type)
         self.platform = Platform.objects.first()
         self.tenantgroup = TenantGroup.objects.first()
-        self.tenant = Tenant.objects.first()
+        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
         self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
@@ -239,7 +239,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         tenant_context.tenants.add(self.tenant)
         tag_context = ConfigContext.objects.create(name="tag", weight=100, data={"tag": 1})
         tag_context.tags.add(self.tag)
-        cluster_group = ClusterGroup.objects.first()
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
         cluster_group_context = ConfigContext.objects.create(
             name="cluster group", weight=100, data={"cluster_group": 1}
         )
@@ -1338,7 +1338,7 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
     model = Status
 
     def setUp(self):
-        self.status = Status.objects.first()
+        self.status = Status.objects.create(name="New Device Status")
         self.status.content_types.add(ContentType.objects.get_for_model(Device))
 
         manufacturer = Manufacturer.objects.first()
