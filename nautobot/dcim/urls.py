@@ -227,28 +227,28 @@ urlpatterns = [
         name="manufacturer_bulk_delete",
     ),
     path(
-        "manufacturers/<slug:slug>/",
+        "manufacturers/<uuid:pk>/",
         views.ManufacturerView.as_view(),
         name="manufacturer",
     ),
     path(
-        "manufacturers/<slug:slug>/edit/",
+        "manufacturers/<uuid:pk>/edit/",
         views.ManufacturerEditView.as_view(),
         name="manufacturer_edit",
     ),
     path(
-        "manufacturers/<slug:slug>/delete/",
+        "manufacturers/<uuid:pk>/delete/",
         views.ManufacturerDeleteView.as_view(),
         name="manufacturer_delete",
     ),
     path(
-        "manufacturers/<slug:slug>/changelog/",
+        "manufacturers/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="manufacturer_changelog",
         kwargs={"model": Manufacturer},
     ),
     path(
-        "manufacturers/<slug:slug>/notes/",
+        "manufacturers/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="manufacturer_notes",
         kwargs={"model": Manufacturer},
