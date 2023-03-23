@@ -585,7 +585,10 @@ class GitRepositoryTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        secrets_groups = SecretsGroup.objects.all()[:2]
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
 
         # Create four GitRepository records
         repos = (
@@ -700,7 +703,24 @@ class SecretTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        secrets = Secret.objects.all()[:3]
+        secrets = (
+            Secret(
+                name="View Test 1",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_1"},
+                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
+            ),
+            Secret(
+                name="View Test 2",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_2"},
+            ),
+            Secret(
+                name="View Test 3",
+                provider="environment-variable",
+                parameters={"variable": "VIEW_TEST_3"},
+            ),
+        )
 
         for secret in secrets:
             secret.validated_save()
@@ -736,9 +756,17 @@ class SecretsGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        secrets_groups = SecretsGroup.objects.all()[:3]
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 2"),
+            SecretsGroup.objects.create(name="Group 3"),
+        )
 
-        secrets = Secret.objects.all()[:3]
+        secrets = (
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),
+        )
 
         SecretsGroupAssociation.objects.create(
             secrets_group=secrets_groups[0],
@@ -1981,6 +2009,7 @@ class RelationshipTestCase(
         interface_type = ContentType.objects.get_for_model(Interface)
         device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
+        status = Status.objects.get_for_model(Interface).first()
 
         Relationship(
             name="Device VLANs",
@@ -2010,7 +2039,7 @@ class RelationshipTestCase(
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
-            "source_filter": '{"status": ["active"]}',
+            "source_filter": '{"status": ["' + status.name + '"]}',
             "destination_type": interface_type.pk,
             "destination_label": "VLANs",
             "destination_hidden": True,
@@ -2292,7 +2321,29 @@ class WebhookTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        webhooks = Webhook.objects.all()[:3]
+        webhooks = (
+            Webhook(
+                name="webhook-1",
+                enabled=True,
+                type_create=True,
+                payload_url="http://test-url.com/test-1",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-2",
+                enabled=True,
+                type_update=True,
+                payload_url="http://test-url.com/test-2",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+            Webhook(
+                name="webhook-3",
+                enabled=True,
+                type_delete=True,
+                payload_url="http://test-url.com/test-3",
+                http_content_type=HTTP_CONTENT_TYPE_JSON,
+            ),
+        )
 
         obj_type = ContentType.objects.get_for_model(ConsolePort)
 
@@ -2328,11 +2379,11 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,weight,color,content_types",
-            'test_role1,1000,ffffff,"dcim.device"',
-            'test_role2,200,ffffff,"dcim.device,dcim.rack"',
-            'test_role3,100,ffffff,"dcim.device,ipam.prefix"',
-            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan"',
+            "name,weight,color,content_types,description",
+            'test_role1,1000,ffffff,"dcim.device",A Role',
+            'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
+            'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
+            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
         )
 
         cls.bulk_edit_data = {

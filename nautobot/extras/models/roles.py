@@ -28,6 +28,15 @@ class Role(NameColorContentTypesModel):
     class Meta:
         ordering = ("weight", "name")
 
+    def to_csv(self):
+        return (
+            self.name,
+            self.weight,
+            self.color,
+            self.get_content_types(),
+            self.description,
+        )
+
 
 class RoleField(ForeignKeyLimitedByContentTypes):
     """Model database field that automatically limits role choices

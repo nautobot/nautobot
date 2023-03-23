@@ -32,7 +32,15 @@ class WebhookTest(APITestCase):
         MOCK_URL = "http://localhost/"
         MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
 
-        webhooks = Webhook.objects.all()[:1]
+        webhooks = (
+            Webhook.objects.create(
+                name="Location Create Webhook",
+                type_create=True,
+                payload_url=MOCK_URL,
+                secret=MOCK_SECRET,
+                additional_headers="X-Foo: Bar",
+            ),
+        )
         for webhook in webhooks:
             webhook.content_types.set([location_ct])
 
@@ -70,9 +78,9 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["data"]["name"], "Location Update")
             self.assertEqual(body["data"]["status"]["name"], self.statuses[1].name)
             self.assertEqual(body["snapshots"]["prechange"]["name"], "Location 1")
-            self.assertEqual(body["snapshots"]["prechange"]["status"]["slug"], self.statuses[0].name)
+            self.assertEqual(body["snapshots"]["prechange"]["status"]["name"], self.statuses[0].name)
             self.assertEqual(body["snapshots"]["postchange"]["name"], "Location Update")
-            self.assertEqual(body["snapshots"]["postchange"]["status"]["slug"], self.statuses[0].name)
+            self.assertEqual(body["snapshots"]["postchange"]["status"]["name"], self.statuses[1].name)
             self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Location Update")
 
@@ -89,7 +97,7 @@ class WebhookTest(APITestCase):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(
-                    name="Location 1", slug="location-1", status=self.statuses, location_type=location_type
+                    name="Location 1", slug="location-1", status=self.statuses[0], location_type=location_type
                 )
                 location.save()
 
@@ -216,7 +224,7 @@ class WebhookTest(APITestCase):
             # Validate the outgoing request body
             body = json.loads(request.body)
 
-            self.assertEqual(body["snapshots"]["prechange"]["status"], str(self.statuses.id))
+            self.assertEqual(body["snapshots"]["prechange"]["status"], str(self.statuses[0].id))
             self.assertEqual(body["snapshots"]["postchange"]["name"], "Location Update")
             self.assertEqual(body["snapshots"]["postchange"]["status"], str(self.statuses[1].id))
             self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
@@ -234,7 +242,7 @@ class WebhookTest(APITestCase):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(
-                    name="Location 1", slug="location-1", status=self.statuses, location_type=location_type
+                    name="Location 1", slug="location-1", status=self.statuses[0], location_type=location_type
                 )
                 location.save()
 

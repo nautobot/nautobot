@@ -896,9 +896,9 @@ class RoleTable(BaseTable):
     """Table for list view of `Role` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:role", args=[Accessor("slug")])
+    name = tables.LinkColumn(viewname="extras:role", args=[Accessor("name")])
     color = ColorColumn()
-    actions = ButtonsColumn(Role, pk_field="slug")
+    actions = ButtonsColumn(Role, pk_field="pk")
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
@@ -974,7 +974,7 @@ class StatusTable(BaseTable):
     """Table for list view of `Status` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
+    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("pk")])
     color = ColorColumn()
     actions = ButtonsColumn(Status, pk_field="pk")
     content_types = ContentTypesColumn(truncate_words=15)
