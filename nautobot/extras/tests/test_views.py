@@ -313,7 +313,35 @@ class CustomLinkTestCase(
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Location)
 
-        customlinks = CustomLink.objects.all()[:3]
+        customlinks = (
+             CustomLink(
+                 content_type=obj_type,
+                 name="customlink-1",
+                 text="customlink text 1",
+                 target_url="http://customlink1.com",
+                 weight=100,
+                 button_class="default",
+                 new_window=False,
+             ),
+             CustomLink(
+                 content_type=obj_type,
+                 name="customlink-2",
+                 text="customlink text 2",
+                 target_url="http://customlink2.com",
+                 weight=100,
+                 button_class="default",
+                 new_window=False,
+             ),
+             CustomLink(
+                 content_type=obj_type,
+                 name="customlink-3",
+                 text="customlink text 3",
+                 target_url="http://customlink3.com",
+                 weight=100,
+                 button_class="default",
+                 new_window=False,
+             ),
+         )
 
         for link in customlinks:
             link.save()
