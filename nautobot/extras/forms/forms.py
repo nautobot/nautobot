@@ -725,12 +725,6 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
-    _commit = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Commit changes",
-        help_text="Commit changes to the database (uncheck for a dry-run)",
-    )
     _task_queue = forms.ChoiceField(
         required=False,
         help_text="The task queue to route this job to",
@@ -740,18 +734,9 @@ class JobForm(BootstrapMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _task_queue and _commit to the end of the form
+        # Move _task_queue to the end of the form
         task_queue = self.fields.pop("_task_queue")
         self.fields["_task_queue"] = task_queue
-        commit = self.fields.pop("_commit")
-        self.fields["_commit"] = commit
-
-    @property
-    def requires_input(self):
-        """
-        A boolean indicating whether the form requires user input (ignore the _commit field).
-        """
-        return bool(len(self.fields) > 1)
 
 
 class JobEditForm(NautobotModelForm):

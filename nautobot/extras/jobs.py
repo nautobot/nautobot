@@ -19,7 +19,6 @@ from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
-from django.test.client import RequestFactory
 from django.utils.functional import classproperty
 import netaddr
 import yaml
@@ -30,7 +29,6 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.core.utils.requests import copy_safe_request
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -80,9 +78,7 @@ class BaseJob(Task):
 
     For backward compatibility with NetBox, this class has several APIs that can be implemented by the user:
 
-    1. run(self, data, commit) - First method called when invoking a Job, can handle setup and parameter storage.
-    2. test_*(self) - Any method matching this pattern will be called next
-    3. post_run(self) - Last method called, will be called even in case of an exception during the above methods
+    1. run(self, *args, **kwargs) - Method called when invoking a Job.
     """
 
     class Meta:
@@ -105,7 +101,6 @@ class BaseJob(Task):
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-        # self.request = None
         self.active_test = "main"
         self.failed = False
         self._job_result = None
@@ -481,25 +476,19 @@ class BaseJob(Task):
 
         form = FormClass(data, files, initial=initial)
 
-        try:
-            job_model = JobModel.objects.get_for_class_path(self.class_path)
-            read_only = job_model.read_only if job_model.read_only_override else self.read_only
-            commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
-        except JobModel.DoesNotExist:
-            # 2.0 TODO: remove this fallback, Job records should always exist.
-            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
-            read_only = self.read_only
-            commit_default = self.commit_default
-            task_queues = self.task_queues
+        job_model = JobModel.objects.get_for_class_path(self.class_path)
+        # read_only = job_model.read_only if job_model.read_only_override else self.read_only
+        # commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+        task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
 
-        if read_only:
-            # Hide the commit field for read only jobs
-            form.fields["_commit"].widget = forms.HiddenInput()
-            form.fields["_commit"].initial = False
-        elif not initial or "_commit" not in initial:
-            # Set initial "commit" checkbox state based on the Meta parameter
-            form.fields["_commit"].initial = commit_default
+        # TODO(gary): handle readonly jobs
+        # if read_only:
+        #     # Hide the commit field for read only jobs
+        #     form.fields["_commit"].widget = forms.HiddenInput()
+        #     form.fields["_commit"].initial = False
+        # elif not initial or "_commit" not in initial:
+        #     # Set initial "commit" checkbox state based on the Meta parameter
+        #     form.fields["_commit"].initial = commit_default
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
@@ -512,9 +501,6 @@ class BaseJob(Task):
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
-
-            # Alter the commit help text to avoid confusion concerning approval dry-runs
-            form.fields["_commit"].help_text = "Commit changes to the database"
 
         return form
 
@@ -568,7 +554,7 @@ class BaseJob(Task):
             raise TypeError("Data should be a dictionary.")
 
         for field_name, value in data.items():
-            # If a field isn't a var, skip it (e.g. `_commit`).
+            # If a field isn't a var, skip it (e.g. `_task_queue`).
             try:
                 var = cls_vars[field_name]
             except KeyError:
@@ -672,14 +658,9 @@ class BaseJob(Task):
         logger.debug(f"Deleted {num} file proxies")
         return num
 
-    def run(self, data, commit):
+    def run(self, *args, **kwargs):
         """
-        Method invoked when this Job is run, before any "test_*" methods.
-        """
-
-    def post_run(self):
-        """
-        Method invoked after "run()" and all "test_*" methods.
+        Method invoked when this Job is run.
         """
 
     # Logging
@@ -1026,9 +1007,8 @@ class JobHookReceiver(Job):
 
     object_change = ObjectVar(model=ObjectChange)
 
-    def run(self, data, commit):
+    def run(self, object_change):
         """JobHookReceiver subclasses generally shouldn't need to override this method."""
-        object_change = data["object_change"]
         self.receive_job_hook(
             change=object_change,
             action=object_change.action,
@@ -1256,12 +1236,8 @@ def enqueue_job_hooks(object_change):
     # Enqueue the jobs related to the job_hooks
     for job_hook in job_hooks:
         job_model = job_hook.job
-        request = RequestFactory().request(SERVER_NAME="job_hook")
-        request.user = object_change.user
         JobResult.enqueue_job(
             job_model,
             object_change.user,
-            data=job_model.job_class.serialize_data({"object_change": object_change}),
-            request=copy_safe_request(request),
-            commit=True,
+            **job_model.job_class.serialize_data({"object_change": object_change}),
         )

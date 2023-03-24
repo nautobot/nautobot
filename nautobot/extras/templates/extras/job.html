@@ -62,30 +62,22 @@
                             </div>
                         {% endif %}
                         {% csrf_token %}
-                        {% if job_form.requires_input %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
-                                    <strong>Job Data</strong>
-                                </div>
-                                <div class="panel-body">
-                                    {% render_form job_form %}
-                                </div>
-                                {% if job_model.has_sensitive_variables %}
-                                    <div class="panel-footer">
-                                        <span class="help-block">
-                                            <i class="mdi mdi-information-outline"></i>
-                                            This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
-                                        </span>
-                                    </div>
-                                {% endif %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <strong>Job Data</strong>
                             </div>
-                        {% else %}
-                             <div class="alert alert-info">
-                                <i class="mdi mdi-information"></i>
-                                This job does not require any input to run.
+                            <div class="panel-body">
+                                {% render_form job_form %}
                             </div>
-                            {% render_form job_form %}
-                        {% endif %}
+                            {% if job_model.has_sensitive_variables %}
+                                <div class="panel-footer">
+                                    <span class="help-block">
+                                        <i class="mdi mdi-information-outline"></i>
+                                        This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
                         <div class="panel panel-default job_execution">
                             <div class="panel-heading">
                                 <strong>Job Execution</strong>
