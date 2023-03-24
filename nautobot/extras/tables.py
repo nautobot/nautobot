@@ -974,7 +974,7 @@ class StatusTable(BaseTable):
     """Table for list view of `Status` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("pk")])
+    name = tables.Column(linkify=True)
     color = ColorColumn()
     actions = ButtonsColumn(Status, pk_field="pk")
     content_types = ContentTypesColumn(truncate_words=15)

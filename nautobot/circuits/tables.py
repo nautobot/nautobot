@@ -97,7 +97,7 @@ class CircuitTypeTable(BaseTable):
 class CircuitTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     cid = tables.LinkColumn(verbose_name="ID")
-    provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__name")])
+    provider = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="circuits:circuit_list")
 
