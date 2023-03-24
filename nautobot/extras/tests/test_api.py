@@ -548,6 +548,8 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         self.maxDiff = None
         self.assertEqual(
             response.data,
+            # Since we are setting blank=True on the key field, we only need to check
+            # error messages from the label field.
             {"label": ["This field is required."]},
         )
 
