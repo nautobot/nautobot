@@ -26,13 +26,14 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
-from nautobot.core.utils.requests import copy_safe_request, normalize_querydict
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import csv_format, prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.extras.jobs import ScriptVariable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
@@ -1090,10 +1091,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
                 # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                 explicit_initial = initial
-                initial = job_result.task_kwargs.get("data", {}).copy()
-                commit = job_result.task_kwargs.get("commit")
-                if commit is not None:
-                    initial.setdefault("_commit", commit)
+                initial = job_result.task_kwargs.copy()
                 task_queue = job_result.task_kwargs.get("task_queue")
                 if task_queue is not None:
                     initial.setdefault("_task_queue", task_queue)
@@ -1155,7 +1153,6 @@ class JobView(ObjectPermissionRequiredMixin, View):
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             task_queue = job_form.cleaned_data.get("_task_queue", None)
             # Run the job. A new JobResult is created.
-            commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1184,25 +1181,14 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
-                task_kwargs = {
-                    "data": job_model.job_class.serialize_data(job_form.cleaned_data),
-                    "request": copy_safe_request(request),
-                    "user": request.user.pk,
-                    "commit": commit,
-                    "name": job_model.class_path,
-                    "task_queue": task_queue,
-                }
-                if task_queue:
-                    task_kwargs["celery_kwargs"] = {"queue": task_queue}
-
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
-                    task="nautobot.extras.jobs.scheduled_job_handler",
+                    task=job_model.job_class.registered_name,
                     job_class=job_model.class_path,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=task_kwargs,
+                    kwargs=job_model.job_class.serialize_data(job_form.cleaned_data),
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     queue=task_queue,
@@ -1223,7 +1209,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 # Enqueue job for immediate execution
                 job_kwargs = job_form.cleaned_data
                 for key in list(job_kwargs.keys()):
-                    if not hasattr(job_model.job_class, key):
+                    attr = getattr(job_model.job_class, key, None)
+                    if not isinstance(attr, ScriptVariable):
                         job_kwargs.pop(key)
                 job_result = JobResult.enqueue_job(
                     job_model,
@@ -1334,16 +1321,18 @@ class JobApprovalRequestView(generic.ObjectView):
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
             else:
-                # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-                # TODO(gary): serialize initial args and omit any args not declared on the job class
-                initial = scheduled_job.kwargs.get("data", {})
-                initial.pop("_commit")
+                # Immediately enqueue the job and send the user to the normal JobResult view
+                job_kwargs = scheduled_job.kwargs.get("data", {})
+                for key in list(job_kwargs.keys()):
+                    attr = getattr(job_model.job_class, key, None)
+                    if not isinstance(attr, ScriptVariable):
+                        job_kwargs.pop(key)
                 celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
                     celery_kwargs=celery_kwargs,
-                    **initial,
+                    **job_model.job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)

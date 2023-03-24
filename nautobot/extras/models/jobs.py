@@ -986,8 +986,6 @@ class ScheduledJob(BaseModel):
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""
-        # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
-        self.kwargs["scheduled_job_pk"] = self.pk
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:

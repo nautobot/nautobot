@@ -164,7 +164,7 @@ class BaseJob(Task):
         """
 
     def get_job_model(self):
-        return self.get_job_result().job_model
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__class__.__name__)
 
     def get_job_result(self):
         from nautobot.extras.models.jobs import JobResult  # avoid circular import
@@ -1200,7 +1200,7 @@ def scheduled_job_handler(*args, **kwargs):
 
     user_pk = kwargs.pop("user")
     user = User.objects.get(pk=user_pk)
-    kwargs.pop("name")  # TODO(gary): remove this?
+    kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
     celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
@@ -1236,8 +1236,4 @@ def enqueue_job_hooks(object_change):
     # Enqueue the jobs related to the job_hooks
     for job_hook in job_hooks:
         job_model = job_hook.job
-        JobResult.enqueue_job(
-            job_model,
-            object_change.user,
-            **job_model.job_class.serialize_data({"object_change": object_change}),
-        )
+        JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
