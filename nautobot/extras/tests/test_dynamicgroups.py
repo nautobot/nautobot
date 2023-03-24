@@ -130,7 +130,7 @@ class DynamicGroupTestBase(TestCase):
             DynamicGroup.objects.create(
                 name="Nested Child",
                 description="This will be the child of third-child",
-                filter={"status": ["active"]},
+                filter={"status": [statuses[0].name]},
                 content_type=cls.device_ct,
             ),
             # No matches (bogus/invalid name match)
@@ -335,7 +335,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             self.invalid_filter.count: 0,
         }
         for grp, cnt in expected.items():
-            print([grp, cnt], "COUNT")
             self.assertEqual(grp, cnt)
 
     def test_get_queryset(self):
@@ -1023,7 +1022,6 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
         }
         for value, cnt in tests.items():
             params = {"q": value}
-            print(params)
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
 
 
@@ -1062,7 +1060,7 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
             "intersection": 2,  # operator
             "First Child": 1,  # group__name
             "Parent": 3,  # parent_group__name,
-            "Second Child": 2,  # parent_group__slug OR group__slug,
+            "Third Child": 2,  # parent_group__slug OR group__slug,
         }
         for value, cnt in tests.items():
             params = {"q": value}
