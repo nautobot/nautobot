@@ -23,7 +23,6 @@ def _postgresql_varbin_to_broadcast(length):
 
 
 def _postgresql_varbin_to_integer(lhs, length, alias=None):
-    # alias = None
     if alias:
         return f"right({alias}.{lhs}::text, -1)::varbit::bit({length})"
     return f"right({lhs}::text, -1)::varbit::bit({length})"
