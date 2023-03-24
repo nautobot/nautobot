@@ -373,22 +373,22 @@ class CustomFieldTestCase(
         obj_type = ContentType.objects.get_for_model(Location)
 
         custom_fields = [
-            CustomField.objects.create(
+            CustomField(
                 type=CustomFieldTypeChoices.TYPE_BOOLEAN,
                 label="Custom Field Boolean Type",
                 default="",
             ),
-            CustomField.objects.create(
+            CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 label="Custom Field Text",
                 default="",
             ),
-            CustomField.objects.create(
+            CustomField(
                 type=CustomFieldTypeChoices.TYPE_INTEGER,
                 label="Custom Field Integer",
                 default="",
             ),
-            CustomField.objects.create(
+            CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 # https://github.com/nautobot/nautobot/issues/1962
                 label="Custom field? With special / unusual characters!",

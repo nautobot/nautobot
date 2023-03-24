@@ -64,6 +64,11 @@ def slugify_dots_to_dashes(content):
 
 def slugify_dashes_to_underscores(content):
     """Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name."""
+    graphql_safe_pattern = re.compile("[_A-Za-z]")
+    # If the first letter of the slug is not GraphQL safe.
+    # We append "a" to it.
+    if graphql_safe_pattern.fullmatch(content[0]) is None:
+        content = "a" + content
     return slugify(content).replace("-", "_")
 
 

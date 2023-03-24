@@ -627,7 +627,7 @@ class JSONFieldTest(testing.TestCase):
         self.user.is_superuser = True
         self.user.save()
         test_views.create_test_device("Foo Device")
-        custom_field = extras_models.CustomField.objects.create(
+        custom_field = extras_models.CustomField(
             type="json",
             label="JSON Field",
             required=False,

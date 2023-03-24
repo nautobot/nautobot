@@ -33,7 +33,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
 
     def test_immutable_fields(self):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
-        instance = CustomField.objects.create(
+        instance = CustomField(
             # 2.0 TODO: #824 remove name field
             label="Custom Field",
             key="custom_field",
@@ -113,7 +113,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         obj_type = ContentType.objects.get_for_model(Location)
 
         for data in DATA:
-            cf = CustomField.objects.create(type=data["field_type"], label="My Field", required=False)
+            cf = CustomField(type=data["field_type"], label="My Field", required=False)
             cf.save()  # not validated_save this time, as we're testing backwards-compatibility
             cf.content_types.set([obj_type])
             # Assert that slug and label were auto-populated correctly
@@ -143,7 +143,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         obj_type = ContentType.objects.get_for_model(Location)
 
         # Create a custom field
-        cf = CustomField.objects.create(
+        cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             label="My Field",
             required=False,
@@ -177,7 +177,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         obj_type = ContentType.objects.get_for_model(Location)
 
         # Create a custom field
-        cf = CustomField.objects.create(
+        cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
             label="My Field",
             required=False,
@@ -211,7 +211,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         obj_type = ContentType.objects.get_for_model(Location)
 
         # Create a custom field
-        cf = CustomField.objects.create(
+        cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
             label="My Field",
             required=False,
@@ -268,7 +268,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         obj_type = ContentType.objects.get_for_model(Location)
 
         # Create a custom field
-        cf = CustomField.objects.create(
+        cf = CustomField(
             type=CustomFieldTypeChoices.TYPE_TEXT,
             label="My Text Field",
             required=False,
@@ -313,7 +313,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
                 continue
 
             # Create a custom field
-            cf = CustomField.objects.create(
+            cf = CustomField(
                 type=cf_type,
                 label=f"cf_test_{cf_type}",
                 required=False,
@@ -346,9 +346,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
         content_type = ContentType.objects.get_for_model(Location)
-        custom_field = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo"
-        )
+        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
         custom_field.save()
         custom_field.content_types.set([content_type])
 
@@ -369,21 +367,21 @@ class CustomFieldDataAPITest(APITestCase):
         content_type = ContentType.objects.get_for_model(Location)
 
         # Text custom field
-        cls.cf_text = CustomField.objects.create(
+        cls.cf_text = CustomField(
             type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", key="text_cf", default="foo"
         )
         cls.cf_text.save()
         cls.cf_text.content_types.set([content_type])
 
         # Integer custom field
-        cls.cf_integer = CustomField.objects.create(
+        cls.cf_integer = CustomField(
             type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", key="number_cf", default=123
         )
         cls.cf_integer.save()
         cls.cf_integer.content_types.set([content_type])
 
         # Boolean custom field
-        cls.cf_boolean = CustomField.objects.create(
+        cls.cf_boolean = CustomField(
             type=CustomFieldTypeChoices.TYPE_BOOLEAN,
             label="Boolean Field",
             key="boolean_cf",
@@ -393,7 +391,7 @@ class CustomFieldDataAPITest(APITestCase):
         cls.cf_boolean.content_types.set([content_type])
 
         # Date custom field
-        cls.cf_date = CustomField.objects.create(
+        cls.cf_date = CustomField(
             type=CustomFieldTypeChoices.TYPE_DATE,
             label="Date Field",
             key="date_cf",
@@ -403,7 +401,7 @@ class CustomFieldDataAPITest(APITestCase):
         cls.cf_date.content_types.set([content_type])
 
         # URL custom field
-        cls.cf_url = CustomField.objects.create(
+        cls.cf_url = CustomField(
             type=CustomFieldTypeChoices.TYPE_URL,
             label="URL Field",
             key="url_cf",
@@ -413,7 +411,7 @@ class CustomFieldDataAPITest(APITestCase):
         cls.cf_url.content_types.set([content_type])
 
         # Select custom field
-        cls.cf_select = CustomField.objects.create(
+        cls.cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             label="Choice Field",
             key="choice_cf",
@@ -427,7 +425,7 @@ class CustomFieldDataAPITest(APITestCase):
         cls.cf_select.save()
 
         # Multi-select custom field
-        cls.cf_multi_select = CustomField.objects.create(
+        cls.cf_multi_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
             label="Multiple Choice Field",
             key="multi_choice_cf",
@@ -928,16 +926,16 @@ class CustomFieldImportTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         custom_fields = (
-            CustomField.objects.create(label="Text", type=CustomFieldTypeChoices.TYPE_TEXT),
-            CustomField.objects.create(label="Integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
-            CustomField.objects.create(label="Boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
-            CustomField.objects.create(label="Date", type=CustomFieldTypeChoices.TYPE_DATE),
-            CustomField.objects.create(label="URL", type=CustomFieldTypeChoices.TYPE_URL),
-            CustomField.objects.create(
+            CustomField(label="Text", type=CustomFieldTypeChoices.TYPE_TEXT),
+            CustomField(label="Integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
+            CustomField(label="Boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
+            CustomField(label="Date", type=CustomFieldTypeChoices.TYPE_DATE),
+            CustomField(label="URL", type=CustomFieldTypeChoices.TYPE_URL),
+            CustomField(
                 label="Select",
                 type=CustomFieldTypeChoices.TYPE_SELECT,
             ),
-            CustomField.objects.create(
+            CustomField(
                 label="Multiselect",
                 type=CustomFieldTypeChoices.TYPE_MULTISELECT,
             ),
@@ -1081,11 +1079,11 @@ class CustomFieldModelTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cf1 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Foo")
+        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Foo")
         cf1.save()
         cf1.content_types.set([ContentType.objects.get_for_model(Location)])
 
-        cf2 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Bar")
+        cf2 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Bar")
         cf2.save()
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
         cls.lt = LocationType.objects.get(name="Campus")
@@ -1173,7 +1171,7 @@ class CustomFieldModelTest(TestCase):
         """
         Check that a ValidationError is raised if any required custom fields are not present.
         """
-        cf3 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Baz", required=True)
+        cf3 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Baz", required=True)
         cf3.save()
         cf3.content_types.set([ContentType.objects.get_for_model(Location)])
 
@@ -1228,7 +1226,7 @@ class CustomFieldModelTest(TestCase):
         Check the GraphQL validation method on CustomField Key Attribute.
         """
         # Check if it catches the cf.key starting with a digit.
-        cf1 = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1", key="12_test_1")
+        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1", key="12_test_1")
         with self.assertRaises(ValidationError) as error:
             cf1.validated_save()
         self.assertIn(
@@ -1274,17 +1272,17 @@ class CustomFieldFilterTest(TestCase):
         obj_type = ContentType.objects.get_for_model(Location)
 
         # Integer filtering
-        cf = CustomField.objects.create(label="CF1", type=CustomFieldTypeChoices.TYPE_INTEGER)
+        cf = CustomField(label="CF1", type=CustomFieldTypeChoices.TYPE_INTEGER)
         cf.save()
         cf.content_types.set([obj_type])
 
         # Boolean filtering
-        cf = CustomField.objects.create(label="CF2", type=CustomFieldTypeChoices.TYPE_BOOLEAN)
+        cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_BOOLEAN)
         cf.save()
         cf.content_types.set([obj_type])
 
         # Exact text filtering
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF3",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
@@ -1293,7 +1291,7 @@ class CustomFieldFilterTest(TestCase):
         cf.content_types.set([obj_type])
 
         # Loose text filtering
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF4",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
@@ -1302,12 +1300,12 @@ class CustomFieldFilterTest(TestCase):
         cf.content_types.set([obj_type])
 
         # Date filtering
-        cf = CustomField.objects.create(label="CF5", type=CustomFieldTypeChoices.TYPE_DATE)
+        cf = CustomField(label="CF5", type=CustomFieldTypeChoices.TYPE_DATE)
         cf.save()
         cf.content_types.set([obj_type])
 
         # Exact URL filtering
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF6",
             type=CustomFieldTypeChoices.TYPE_URL,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
@@ -1316,7 +1314,7 @@ class CustomFieldFilterTest(TestCase):
         cf.content_types.set([obj_type])
 
         # Loose URL filtering
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF7",
             type=CustomFieldTypeChoices.TYPE_URL,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
@@ -1325,7 +1323,7 @@ class CustomFieldFilterTest(TestCase):
         cf.content_types.set([obj_type])
 
         # Selection filtering
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF8",
             type=CustomFieldTypeChoices.TYPE_SELECT,
         )
@@ -1336,7 +1334,7 @@ class CustomFieldFilterTest(TestCase):
         CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
 
         # Multi-select filtering
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF9",
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
         )
@@ -1721,7 +1719,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
     def setUp(self):
         obj_type = ContentType.objects.get_for_model(Location)
-        self.cf = CustomField.objects.create(
+        self.cf = CustomField(
             label="CF1",
             type=CustomFieldTypeChoices.TYPE_SELECT,
         )
@@ -1776,7 +1774,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
                 continue
 
             # Create a custom field
-            cf = CustomField.objects.create(
+            cf = CustomField(
                 type=cf_type,
                 label=f"cf_test_{cf_type}",
                 required=False,
@@ -1812,7 +1810,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location.save()
 
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField.objects.create(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
+        cf = CustomField(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
         cf.save()
         cf.content_types.set([obj_type])
 
@@ -1822,7 +1820,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     def test_delete_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF1",
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
@@ -1847,7 +1845,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField.objects.create(
+        cf = CustomField(
             label="CF1",
             type=CustomFieldTypeChoices.TYPE_SELECT,
         )
@@ -1879,19 +1877,17 @@ class CustomFieldTableTest(TestCase):
         content_type = ContentType.objects.get_for_model(Location)
 
         # Text custom field
-        cf_text = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
+        cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
         cf_text.validated_save()
         cf_text.content_types.set([content_type])
 
         # Integer custom field
-        cf_integer = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", default=123
-        )
+        cf_integer = CustomField(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", default=123)
         cf_integer.validated_save()
         cf_integer.content_types.set([content_type])
 
         # Boolean custom field
-        cf_boolean = CustomField.objects.create(
+        cf_boolean = CustomField(
             type=CustomFieldTypeChoices.TYPE_BOOLEAN,
             label="Boolean Field",
             default=False,
@@ -1900,7 +1896,7 @@ class CustomFieldTableTest(TestCase):
         cf_boolean.content_types.set([content_type])
 
         # Date custom field
-        cf_date = CustomField.objects.create(
+        cf_date = CustomField(
             type=CustomFieldTypeChoices.TYPE_DATE,
             label="Date Field",
             default="2020-01-01",
@@ -1909,7 +1905,7 @@ class CustomFieldTableTest(TestCase):
         cf_date.content_types.set([content_type])
 
         # URL custom field
-        cf_url = CustomField.objects.create(
+        cf_url = CustomField(
             type=CustomFieldTypeChoices.TYPE_URL,
             label="URL Field",
             default="http://example.com/1",
@@ -1918,7 +1914,7 @@ class CustomFieldTableTest(TestCase):
         cf_url.content_types.set([content_type])
 
         # Select custom field
-        cf_select = CustomField.objects.create(
+        cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             label="Choice Field",
         )
@@ -1931,7 +1927,7 @@ class CustomFieldTableTest(TestCase):
         cf_select.validated_save()
 
         # Multi-select custom field
-        cf_multi_select = CustomField.objects.create(
+        cf_multi_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
             label="Multi Choice Field",
         )

@@ -318,7 +318,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         blank=False,
     )
     key = AutoSlugField(
-        blank=False,
+        blank=True,
         max_length=50,
         separator="_",
         populate_from="label",
@@ -402,7 +402,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def clean(self):
         super().clean()
 
-        check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+        if self.key != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
