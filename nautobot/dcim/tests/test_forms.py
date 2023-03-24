@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from nautobot.dcim.forms import CableCSVForm, DeviceForm, InterfaceCreateForm, InterfaceCSVForm
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceStatusChoices, InterfaceTypeChoices
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices
 
 from nautobot.dcim.models import (
     Device,

@@ -70,7 +70,7 @@ from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.factory import ClusterTypeFactory
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()

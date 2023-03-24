@@ -632,8 +632,9 @@ class DeviceTypeTestCase(
         # TODO: Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
         #       (not "rear_port_template"). This is intentional as we are testing for backwards compatibility with
         #       the netbox/devicetype-library repository.
-        IMPORT_DATA = """
-manufacturer: Generic
+        manufacturer = Manufacturer.objects.first()
+        IMPORT_DATA = f"""
+manufacturer: {manufacturer.name}
 model: TEST-1000
 slug: test-1000
 u_height: 2
@@ -724,6 +725,7 @@ device-bays:
         form_data = {"data": IMPORT_DATA, "format": "yaml"}
         response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
         self.assertHttpStatus(response, 200)
+        print(response.content.decode(response.charset))
 
         dt = DeviceType.objects.get(model="TEST-1000")
         self.assertEqual(dt.comments, "test comment")
