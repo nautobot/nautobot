@@ -129,9 +129,9 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "cid,provider,circuit_type,status",
-            f"Circuit 4,{providers[0].name},{circuittypes[0].name},{statuses.first().name}",
-            f"Circuit 5,{providers[0].name},{circuittypes[1].name},{statuses.first().name}",
-            f"Circuit 6,{providers[1].name},{circuittypes[1].name},{statuses.first().name}",
+            f'Circuit 4,"{providers[0].name}",{circuittypes[0].name},{statuses.first().name}',
+            f'Circuit 5,"{providers[0].name}",{circuittypes[1].name},{statuses.first().name}',
+            f'Circuit 6,"{providers[1].name}",{circuittypes[1].name},{statuses.first().name}',
         )
 
         cls.bulk_edit_data = {
@@ -172,10 +172,10 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,provider,description",
-            f"Provider Network 4,provider-network-4,{providers[0].name},Foo",
-            f"Provider Network 5,provider-network-5,{providers[0].name},Bar",
-            f"Provider Network 6,provider-network-6,{providers[0].name},Baz",
-            f"Provider Network 7,,{providers[0].name},Baz",
+            f'Provider Network 4,provider-network-4,"{providers[0].name}",Foo',
+            f'Provider Network 5,provider-network-5,"{providers[0].name}",Bar',
+            f'Provider Network 6,provider-network-6,"{providers[0].name}",Baz',
+            f'Provider Network 7,,"{providers[0].name}",Baz',
         )
 
         cls.bulk_edit_data = {
