@@ -8,7 +8,9 @@ def _mysql_varbin_to_broadcast():
     return "HEX(broadcast)"
 
 
-def _mysql_varbin_to_hex(lhs):
+def _mysql_varbin_to_hex(lhs, alias=None):
+    if alias:
+        return f"HEX({alias}.{lhs})"
     return f"HEX({lhs})"
 
 
@@ -24,8 +26,7 @@ def _postgresql_varbin_to_integer(lhs, length, alias=None):
     # alias = None
     if alias:
         return f"right({alias}.{lhs}::text, -1)::varbit::bit({length})"
-    else:
-        return f"right({lhs}::text, -1)::varbit::bit({length})"
+    return f"right({lhs}::text, -1)::varbit::bit({length})"
 
 
 def _postgresql_varbin_to_network(lhs, length):
@@ -55,7 +56,7 @@ def get_ip_info(field_name, ip_str, alias=None):
         ip_details.bcast_addr = f"'{py_to_hex(ip[-1], ip_details.length)}'"
         ip_details.q_net = _mysql_varbin_to_network()
         ip_details.q_bcast = _mysql_varbin_to_broadcast()
-        ip_details.q_ip = _mysql_varbin_to_hex(field_name)
+        ip_details.q_ip = _mysql_varbin_to_hex(field_name, alias=alias)
 
     elif _connection.vendor == "postgresql":
         ip_details.rhs = bin(int(ip_details.addr))[2:].zfill(ip_details.length)
@@ -203,7 +204,7 @@ class NetHost(Lookup):
         field_name = self.lhs.field.name
         if field_name != "host":
             raise NotSupportedError(f"Lookup only provided on the host fields, not {field_name}.")
-        self.ip = get_ip_info(field_name, self.rhs)
+        self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
         return str(self.ip.ip)
 
     def process_rhs(self, qn, connection):
@@ -231,7 +232,7 @@ class NetIn(Lookup):
             raise NotSupportedError(f"Lookup only provided on the host field, not {field_name}.")
         self.ips = []
         for _ip in self.rhs:
-            ip = get_ip_info(field_name, _ip)
+            ip = get_ip_info(field_name, _ip, alias=self.lhs.alias)
             self.ips.append(ip)
         # This is to satisfy an issue with django cacheops, specifically this line:
         # https://github.com/Suor/django-cacheops/blob/a5ed1ac28c7259f5ad005e596cc045d1d61e2c51/cacheops/query.py#L175
