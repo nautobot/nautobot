@@ -20,8 +20,12 @@ def _postgresql_varbin_to_broadcast(length):
     return f"right(broadcast::text, -1)::varbit::bit({length})"
 
 
-def _postgresql_varbin_to_integer(lhs, length):
-    return f"right({lhs}::text, -1)::varbit::bit({length})"
+def _postgresql_varbin_to_integer(lhs, length, alias=None):
+    # alias = None
+    if alias:
+        return f"right({alias}.{lhs}::text, -1)::varbit::bit({length})"
+    else:
+        return f"right({lhs}::text, -1)::varbit::bit({length})"
 
 
 def _postgresql_varbin_to_network(lhs, length):
@@ -33,7 +37,7 @@ def py_to_hex(ip, length):
     return str(hex(int(ip)))[2:].zfill(int(length / 4))
 
 
-def get_ip_info(field_name, ip_str):
+def get_ip_info(field_name, ip_str, alias=None):
     """Function to set all details about an IP, that may be needed."""
     ip_details = IPDetails()
     ip = netaddr.IPNetwork(ip_str)
@@ -60,7 +64,7 @@ def get_ip_info(field_name, ip_str):
         ip_details.bcast_addr = f"B'{bin(int(ip[-1]))[2:].zfill(ip_details.length)}'"
         ip_details.q_net = _postgresql_varbin_to_network(field_name, ip_details.length)
         ip_details.q_bcast = _postgresql_varbin_to_broadcast(ip_details.length)
-        ip_details.q_ip = _postgresql_varbin_to_integer(field_name, ip_details.length)
+        ip_details.q_ip = _postgresql_varbin_to_integer(field_name, ip_details.length, alias=alias)
 
     return ip_details
 
@@ -133,7 +137,7 @@ class NetworkFieldMixin:
             raise NotSupportedError(f"Lookup for network field does not include the {self.lookup_name} lookup.")
         if field_name == "host" and self.lookup_name not in ["net_host", "net_host_contained", "net_in"]:
             raise NotSupportedError(f"Lookup for host field does not include the {self.lookup_name} lookup.")
-        self.ip = get_ip_info(field_name, self.rhs)
+        self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
         return str(self.ip.ip)
 
     def process_rhs(self, qn, connection):
