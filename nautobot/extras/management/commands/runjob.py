@@ -4,10 +4,8 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.test.client import RequestFactory
 from django.utils import timezone
 
-from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import Job, JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job
@@ -19,11 +17,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("job", help="Job in the class path form: `<grouping_name>/<module_name>/<JobClassName>`")
-        parser.add_argument(
-            "--commit",
-            action="store_true",
-            help="Commit changes to DB (defaults to dry-run if unset). --username is mandatory if using this argument",
-        )
         parser.add_argument(
             "-u",
             "--username",
@@ -47,7 +40,6 @@ class Command(BaseCommand):
             raise CommandError(f'Job "{options["job"]}" not found')
 
         user = None
-        request = None
         if options["commit"] and not options["username"]:
             # Job execution with commit=True uses change_logging(), which requires a user as the author of any changes
             raise CommandError("--username is mandatory when --commit is used")
@@ -59,10 +51,6 @@ class Command(BaseCommand):
             except User.DoesNotExist as exc:
                 raise CommandError("No such user") from exc
 
-            request = RequestFactory().request(SERVER_NAME="nautobot_server_runjob")
-            request.id = uuid.uuid4()
-            request.user = user
-
         data = {}
         try:
             if options.get("data"):
@@ -71,12 +59,12 @@ class Command(BaseCommand):
             raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
         job_content_type = get_job_content_type()
+        job = Job.objects.get_for_class_path(job_class.class_path)
 
         # Run the job and create a new JobResult
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
-            job = Job.objects.get_for_class_path(job_class.class_path)
             job_result = JobResult.objects.create(
                 name=job.class_path,
                 obj_type=job_content_type,
@@ -84,22 +72,12 @@ class Command(BaseCommand):
                 job_model=job,
                 task_id=uuid.uuid4(),
             )
-            job.job_task(
-                data=data,
-                request=copy_safe_request(request) if request else None,
-                commit=options["commit"],
-                job_result_pk=job_result.pk,
-            )
+            # TODO(gary): calling task synchronously doesn't update the jobresult status
+            job.job_task.apply(kwargs=data, task_id=str(job_result.task_id))
             job_result.refresh_from_db()
 
         else:
-            job_result = JobResult.enqueue_job(
-                job,
-                user,
-                data=data,
-                request=copy_safe_request(request) if request else None,
-                commit=options["commit"],
-            )
+            job_result = JobResult.enqueue_job(job, user, **data)
 
             # Wait on the job to finish
             while job_result.status not in JobResultStatusChoices.READY_STATES:
@@ -135,8 +113,8 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(f"\t\t{status}: {log_entry.message}")
 
-        if job_result.data["output"]:
-            self.stdout.write(job_result.data["output"])
+        if job_result.result:
+            self.stdout.write(job_result.result)
 
         if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
             status = self.style.ERROR("FAILURE")
