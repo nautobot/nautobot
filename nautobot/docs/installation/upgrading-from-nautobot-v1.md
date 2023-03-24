@@ -383,7 +383,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 | Model             | Enhanced Filter Field  | Changes                                                    | UI and Rest API endpoints Available in v2.X               |
 |-------------------|------------------------|------------------------------------------------------------|-----------------------------------------------------------|
-| (all)             | `created[__(gte/lte)]` | Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`                     |
+| (all)             | `created[__(gte/lte)]` | Now can filter on multiple values; now supports date-times | `?created__gte=2023-02-14%2012:00:00`                     |
 | Circuit           | `circuit_type`         | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`            |
 |                   | `provider`             | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`                |
 |                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                    |
@@ -426,7 +426,8 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | VirtualChassis    | `master`               | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`               |
 |                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                 |
 |                   | `tenant`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`               |
-| VLAN              | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
+| VLAN              | `available_on_device`  | Enhanced to permit filtering on multiple values            | `/ipam/vlans/?available_on_device=<uuid>&...`             |
+|                   | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
 
 ### Corrected Filter Fields
 
