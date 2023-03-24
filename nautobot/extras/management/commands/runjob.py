@@ -25,6 +25,11 @@ class Command(BaseCommand):
             help="Commit changes to DB (defaults to dry-run if unset). --username is mandatory if using this argument",
         )
         parser.add_argument(
+            "--profile",
+            action="store_true",
+            help="Run cProfile on the job execution and write the result to the disk under /tmp (use --local to run the job locally, writing to the local filesystem).",
+        )
+        parser.add_argument(
             "-u",
             "--username",
             help="User account to impersonate as the requester of this job",
@@ -88,6 +93,7 @@ class Command(BaseCommand):
                 data=data,
                 request=copy_safe_request(request) if request else None,
                 commit=options["commit"],
+                profile=options["profile"],
                 job_result_pk=job_result.pk,
             )
             job_result.refresh_from_db()
@@ -101,6 +107,7 @@ class Command(BaseCommand):
                 data=data,
                 request=copy_safe_request(request) if request else None,
                 commit=options["commit"],
+                profile=options["profile"],
             )
 
             # Wait on the job to finish

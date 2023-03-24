@@ -46,12 +46,12 @@ def get_job_class_and_model(module, name):
     return (job_class, job_model)
 
 
-def create_job_result_and_run_job(module, name, *, data=None, commit=True, request=None):
+def create_job_result_and_run_job(module, name, *, data=None, commit=True, profile=False, request=None):
     """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
     if data is None:
         data = {}
     _job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
+    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, profile=profile, request=request)
     job_result.refresh_from_db()
     return job_result
 
@@ -428,6 +428,13 @@ class JobTest(TransactionTestCase):
             <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
             form.as_table(),
         )
+
+    def test_job_profiling(self):
+        module = "test_profiling"
+        name = "TestProfilingJob"
+
+        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
+        create_job_result_and_run_job(module, name)
 
 
 class JobFileUploadTest(TransactionTestCase):

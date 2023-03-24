@@ -738,6 +738,28 @@ class MyJobTestCase(TransactionTestCase):
         populate_status_choices(apps, None)
 ```
 
+## Debugging job performance
+
+Debugging the performance of Nautobot jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the job execution.
+
+The 'profile' form field on jobs is automatically available when the `DEBUG` settings is `True`. When you select that checkbox, a profiling report in the pstats format will be written to the file system of the worker instance - the path will be logged in the job.
+
+!!! note
+    If you need to run this in an environment with `DEBUG` set to `True` you have to option of using `nautobot-server runjob` with the `--profile` flag. According to the docs, `cProfile` should have minimal impact on the performance of the job, still - proceed with caution when using this in a production environment.
+
+### Reading profiling reports
+
+A full description on how to deal with the output of `cProfile` can be found in the [Instant's users manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual), but here is something to get you started:
+
+```python
+import pstats
+job_result_uuid = "66b70231-002f-412b-8cc4-1cc9609c2c9b"
+stats = pstats.Stats(f"/tmp/{job_result_uuid}.pstats")
+stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
+```
+
+This will print the 10 function that the job execution spent their most time in - adapt this to your needs!
+
 ## Example Jobs
 
 ### Creating objects for a planned site
