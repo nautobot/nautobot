@@ -2249,7 +2249,6 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
         child_device_type = DeviceType.objects.get(slug="model-3")
 
         device_statuses = Status.objects.get_for_model(Device)
-        device_status_map = {ds.name: ds for ds in device_statuses.all()}
 
         child_devices = (
             Device.objects.create(

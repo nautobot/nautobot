@@ -814,7 +814,6 @@ class DynamicFilterLookupExpressionTest(TestCase):
         device_roles = extras_models.Role.objects.get_for_model(Device)
 
         device_statuses = extras_models.Status.objects.get_for_model(dcim_models.Device)
-        device_status_map = {ds.name: ds for ds in device_statuses.all()}
 
         platforms = (
             dcim_models.Platform(name="Platform 1"),

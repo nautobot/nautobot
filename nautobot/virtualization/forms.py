@@ -14,7 +14,6 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    SlugField,
     SmallTextarea,
     StaticSelect2,
     TagFilterField,

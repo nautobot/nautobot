@@ -1062,7 +1062,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
         )
 
-        secrets_groups = SecretsGroup.objects.all()[:2]
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
 
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
