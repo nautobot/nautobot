@@ -8,7 +8,4 @@ Each prefix and IP address may be assigned to one (and only one) VRF. If you hav
 
 By default, Nautobot will allow duplicate prefixes to be assigned to a VRF. This behavior can be toggled by setting the "enforce unique" flag on the VRF model.
 
-!!! note
-    Enforcement of unique IP space can be toggled for global table (non-VRF prefixes) using the `ENFORCE_GLOBAL_UNIQUE` configuration setting.
-
 Each VRF may have one or more import and/or export route targets applied to it. Route targets are used to control the exchange of routes (prefixes) among VRFs in L3VPNs.

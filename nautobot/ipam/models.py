@@ -1,14 +1,14 @@
 import logging
+import operator
 
 import netaddr
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
-from django.utils.functional import classproperty
+from django.utils.functional import cached_property, classproperty
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
@@ -21,7 +21,6 @@ from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .constants import (
-    IPADDRESS_ROLES_NONUNIQUE,
     SERVICE_PORT_MAX,
     SERVICE_PORT_MIN,
     VRF_RD_MAX_LENGTH,
@@ -395,6 +394,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     Prefixes can optionally be assigned to Locations and VRFs.
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
+    Prefixes are always ordered by `network` and `prefix_length`.
     """
 
     network = VarbinaryIPField(
@@ -408,6 +408,21 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         max_length=50,
         choices=choices.PrefixTypeChoices,
         default=choices.PrefixTypeChoices.TYPE_NETWORK,
+    )
+    parent = models.ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        related_name="children",  # `IPAddress` to use `related_name="ip_addresses"`
+        on_delete=models.PROTECT,
+        help_text="The parent Prefix of this Prefix.",
+    )
+    # ip_version is set internally just like network, broadcast, and prefix_length.
+    ip_version = models.IntegerField(
+        choices=choices.IPAddressVersionChoices,
+        null=True,
+        editable=False,
+        db_index=True,
     )
     location = models.ForeignKey(
         to="dcim.Location",
@@ -455,16 +470,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
-    # TODO: The current Prefix model has no appropriate natural key available yet.
-    #       However, by default all BaseModel subclasses now have a `natural_key` property;
-    #       but for this model, accessing the natural_key will raise an exception.
-    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
-    class AttributeRemover:
-        def __get__(self, instance, owner):
-            raise AttributeError("Prefix doesn't yet have a natural key!")
-
-    natural_key = AttributeRemover()
-
     csv_headers = [
         "prefix",
         "type",
@@ -483,6 +488,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "date_allocated",
         "description",
         "location",
+        "namespace",
         "rir",
         "role",
         "status",
@@ -502,8 +508,12 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             "namespace",
             "network",
             "prefix_length",
-        )  # (vrf, prefix) may be non-unique
-        unique_together = ("namespace", "network", "prefix_length")
+        )
+        index_together = [
+            ["network", "broadcast", "prefix_length"],
+            ["namespace", "network", "broadcast", "prefix_length"],
+        ]
+        unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
 
     def validate_unique(self, exclude=None):
@@ -518,16 +528,16 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     def __init__(self, *args, **kwargs):
         prefix = kwargs.pop("prefix", None)
-        super(Prefix, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
     def __str__(self):
         return str(self.prefix)
 
-    def _deconstruct_prefix(self, pre):
-        if pre:
-            if isinstance(pre, str):
-                pre = netaddr.IPNetwork(pre)
+    def _deconstruct_prefix(self, prefix):
+        if prefix:
+            if isinstance(prefix, str):
+                prefix = netaddr.IPNetwork(prefix)
             # Note that our "broadcast" field is actually the last IP address in this prefix.
             # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
             # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
@@ -536,35 +546,20 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             #    We store this address as both the network and the "broadcast".
             # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
             # of addresses and prefixes, not for packet forwarding. :-)
-            broadcast = pre.broadcast if pre.broadcast else pre[-1]
-            self.network = str(pre.network)
+            broadcast = prefix.broadcast if prefix.broadcast else prefix[-1]
+            self.network = str(prefix.network)
             self.broadcast = str(broadcast)
-            self.prefix_length = pre.prefixlen
+            self.prefix_length = prefix.prefixlen
+            self.ip_version = prefix.version
 
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
+    def get_duplicates(self):
+        return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
+
     def clean(self):
         super().clean()
-
-        if self.prefix:
-
-            # Why not??
-            """
-            # /0 masks are not acceptable
-            if self.prefix.prefixlen == 0:
-                raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
-            """
-
-            # Nope
-            """
-            # Enforce unique IP space (if applicable)
-            if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
-                duplicate_prefixes = self.get_duplicates()
-                if duplicate_prefixes:
-                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
-                    raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
-            """
 
         # Validate location
         if self.location is not None:
@@ -574,6 +569,24 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+    def delete(self, *args, **kwargs):
+        """
+        A Prefix with children will be impossible to delete and raise a `ProtectedError`.
+
+        If a Prefix has children, this catch the error and explicitly update the
+        `protected_objects` from the exception setting their parent to the old parent of this
+        prefix, and then this prefix will be deleted.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except models.ProtectedError as err:
+            # Update protected objects to use the new parent and delete the old parent (self).
+            protected_pks = (po.pk for po in err.protected_objects)
+            protected_objects = Prefix.objects.filter(pk__in=protected_pks)
+            protected_objects.update(parent=self.parent)
+            return super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
 
         if isinstance(self.prefix, netaddr.IPNetwork):
@@ -581,7 +594,16 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
+        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        supernets = self.supernets()
+        if supernets:
+            parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            self.parent = parent
+
         super().save(*args, **kwargs)
+
+        # Determine the subnets and reparent them to this prefix.
+        self.reparent_subnets()
 
     def to_csv(self):
         return (
@@ -615,28 +637,150 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def prefix(self, prefix):
         self._deconstruct_prefix(prefix)
 
-    @property
-    def family(self):
-        if self.prefix:
-            return self.prefix.version
-        return None
+    def reparent_subnets(self):
+        """
+        Determine the list of child nodes and set the parent to self.
 
-    def get_duplicates(self):
-        # return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
-        return Prefix.objects.none()
+        This query is similiar performing update from the query returned by `subnets(direct=True)`,
+        but explicitly filters for subnets of the parent of this Prefix so they can be reparented.
+        """
+        query = Prefix.objects.select_for_update().filter(
+            ~models.Q(id=self.id),  # Don't include yourself...
+            parent_id=self.parent_id,
+            prefix_length__gt=self.prefix_length,
+            ip_version=self.ip_version,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            namespace=self.namespace,
+        )
 
-    def get_child_prefixes(self):
+        return query.update(parent=self)
+
+    def supernets(self, direct=False, include_self=False, for_update=False):
         """
-        Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
-        Prefixes belonging to any VRF.
+        Return supernets of this Prefix.
+
+        Args:
+            direct (bool): Whether to only return the direct ancestor.
+            include_self (bool): Whether to include this Prefix in the list of supernets.
+            for_update (bool): Lock rows until the end of any subsequent transactions.
+
+        Returns:
+            QuerySet
         """
-        return Prefix.objects.net_contained(self.prefix).filter(namespace=self.namespace)
+        query = Prefix.objects.all()
+
+        if for_update:
+            query = query.select_for_update()
+
+        if direct:
+            return query.filter(id=self.parent_id)
+
+        if not include_self:
+            query = query.exclude(id=self.id)
+
+        return query.filter(
+            ip_version=self.ip_version,
+            prefix_length__lte=self.prefix_length,
+            network__lte=self.network,
+            broadcast__gte=self.broadcast,
+            namespace=self.namespace,
+        )
+
+    def subnets(self, direct=False, include_self=False, for_update=False):
         """
-        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            return Prefix.objects.net_contained(self.prefix)
-        else:
-            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
+        Return subnets of this Prefix.
+
+        Args:
+            direct (bool): Whether to only return direct descendants.
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+            for_update (bool): Lock rows until the end of any subsequent transactions.
+
+        Returns:
+            QuerySet
         """
+        query = Prefix.objects.all()
+
+        if for_update:
+            query = query.select_for_update()
+
+        if direct:
+            return query.filter(parent_id=self.id)
+
+        if not include_self:
+            query = query.exclude(id=self.id)
+
+        return query.filter(
+            ip_version=self.ip_version,
+            prefix_length__gte=self.prefix_length,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            namespace=self.namespace,
+        )
+
+    def is_child_node(self):
+        """
+        Returns whether I am a child node.
+        """
+        return self.parent is not None
+
+    def is_leaf_node(self):
+        """
+        Returns whether I am leaf node (no children).
+        """
+        return not self.children.exists()
+
+    def is_root_node(self):
+        """
+        Returns whether I am a root node (no parent).
+        """
+        return self.parent is None
+
+    def ancestors(self, ascending=False, include_self=False):
+        """
+        Return my ancestors descending from larger to smaller prefix lengths.
+
+        Args:
+            ascending (bool): If set, reverses the return order.
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+        """
+        query = self.supernets(include_self=include_self)
+        if ascending:
+            query = query.reverse()
+        return query
+
+    def descendants(self, include_self=False):
+        """
+        Return all of my children!
+
+        Args:
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+        """
+        return self.subnets(include_self=include_self)
+
+    @cached_property
+    def descendants_count(self):
+        """Display count of descendants."""
+        return self.descendants().count()
+
+    def root(self):
+        """
+        Returns the root node (the parent of all of my ancestors).
+        """
+        return self.ancestors().first()
+
+    def siblings(self, include_self=False):
+        """
+        Return my siblings. Root nodes are siblings to other root nodes.
+
+        Args:
+            include_self (bool): Whether to include this Prefix in the list of subnets.
+        """
+        query = Prefix.objects.filter(parent=self.parent)
+        if not include_self:
+            query = query.exclude(id=self.id)
+
+        return query
 
     def get_child_ips(self):
         """
@@ -644,19 +788,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         child IPAddresses belonging to any VRF.
         """
         return IPAddress.objects.net_host_contained(self.prefix)
-        """
-        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            return IPAddress.objects.net_host_contained(self.prefix)
-        else:
-            return IPAddress.objects.net_host_contained(self.prefix).filter(vrf=self.vrf)
-        """
 
     def get_available_prefixes(self):
         """
         Return all available Prefixes within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_prefixes = netaddr.IPSet([child.prefix for child in self.get_child_prefixes()])
+        child_prefixes = netaddr.IPSet([child.prefix for child in self.descendants()])
         available_prefixes = prefix - child_prefixes
 
         return available_prefixes
@@ -672,9 +810,9 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
             [
-                self.family == 6,
+                self.ip_version == 6,
                 self.type == choices.PrefixTypeChoices.TYPE_POOL,
-                self.family == 4 and self.prefix.prefixlen >= 31,
+                self.ip_version == 4 and self.prefix_length >= 31,
             ]
         ):
             return available_ips
@@ -705,7 +843,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         available_ips = self.get_available_ips()
         if not available_ips:
             return None
-        return f"{next(available_ips.__iter__())}/{self.prefix.prefixlen}"
+        return f"{next(available_ips.__iter__())}/{self.prefix_length}"
 
     def get_utilization(self):
         """Get the child prefix size and parent size.
@@ -716,17 +854,15 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             UtilizationData (namedtuple): (numerator, denominator)
         """
         if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            # queryset = Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
-            queryset = Prefix.objects.net_contained(self.prefix).filter(namespace=self.namespace)
-            child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.descendants())
             return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
         else:
             prefix_size = self.prefix.size
             if all(
                 [
-                    self.prefix.version == 4,
-                    self.prefix.prefixlen < 31,
+                    self.ip_version == 4,
+                    self.prefix_length < 31,
                     self.type != choices.PrefixTypeChoices.TYPE_POOL,
                 ]
             ):
@@ -815,7 +951,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
-        super(IPAddress, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._deconstruct_address(address)
 
     def __str__(self):
@@ -851,6 +987,9 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     natural_key = AttributeRemover()
 
+    def get_duplicates(self):
+        return IPAddress.objects.filter(host=self.host).exclude(pk=self.pk)
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
         """Return a cached "slaac" `Status` object for later reference."""
@@ -866,19 +1005,9 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         if self.address:
-
-            # /0 masks are not acceptable
-            if self.address.prefixlen == 0:
-                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
-
-            # Enforce unique IP space (if applicable)
-            if self.role not in IPADDRESS_ROLES_NONUNIQUE and (
-                (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique)
-            ):
-                duplicate_ips = self.get_duplicates()
-                if duplicate_ips:
-                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
-                    raise ValidationError({"address": f"Duplicate IP address found in {vrf}: {duplicate_ips.first()}"})
+            duplicate_ips = self.get_duplicates()
+            if duplicate_ips:
+                raise ValidationError({"address": f"Duplicate IP address found: {duplicate_ips.first()}"})
 
         # TODO: update to work with interface M2M
         # This attribute will have been set by `IPAddressForm.clean()` to indicate that the

@@ -38,15 +38,11 @@ class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()
-    family = graphene.Int()
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     class Meta:
         model = models.Prefix
         filterset_class = filters.PrefixFilterSet
-
-    def resolve_family(self, args):
-        return self.family
 
     def resolve_dynamic_groups(self, args):
         return DynamicGroup.objects.get_for_object(self)

@@ -4,7 +4,7 @@ import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
@@ -160,11 +160,21 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(prepped, manual)
 
 
-class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
+class TestPrefix(ModelTestCases.BaseModelTestCase):
+    model = Prefix
+
     def setUp(self):
         super().setUp()
+        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         self.statuses = Status.objects.get_for_model(Prefix)
+        self.status = self.statuses.first()
+        self.root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status)
+        self.parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status)
+        self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status)
+        self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status)
 
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
@@ -175,17 +185,89 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
-    def test_get_duplicates(self):
-        prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
+    def test_tree_methods(self):
+        """Test the various tree methods work as expected."""
+
+        # supernets()
+        self.assertEqual(list(self.root.supernets()), [])
+        self.assertEqual(list(self.child1.supernets()), [self.root, self.parent])
+        self.assertEqual(list(self.child1.supernets(include_self=True)), [self.root, self.parent, self.child1])
+        self.assertEqual(list(self.child1.supernets(direct=True)), [self.parent])
+
+        # subnets()
+        self.assertEqual(list(self.root.subnets()), [self.parent, self.child1, self.child2])
+        self.assertEqual(list(self.root.subnets(direct=True)), [self.parent])
+        self.assertEqual(list(self.root.subnets(include_self=True)), [self.root, self.parent, self.child1, self.child2])
+
+        # is_child_node()
+        self.assertFalse(self.root.is_child_node())
+        self.assertTrue(self.parent.is_child_node())
+        self.assertTrue(self.child1.is_child_node())
+
+        # is_leaf_node()
+        self.assertFalse(self.root.is_leaf_node())
+        self.assertFalse(self.parent.is_leaf_node())
+        self.assertTrue(self.child1.is_leaf_node())
+
+        # is_root_node()
+        self.assertTrue(self.root.is_root_node())
+        self.assertFalse(self.parent.is_leaf_node())
+        self.assertFalse(self.child1.is_root_node())
+
+        # ancestors()
+        self.assertEqual(list(self.child1.ancestors()), [self.root, self.parent])
+        self.assertEqual(list(self.child1.ancestors(ascending=True)), [self.parent, self.root])
+        self.assertEqual(list(self.child1.ancestors(include_self=True)), [self.root, self.parent, self.child1])
+
+        # children.all()
+        self.assertEqual(list(self.parent.children.all()), [self.child1, self.child2])
+
+        # descendants()
+        self.assertEqual(list(self.root.descendants()), [self.parent, self.child1, self.child2])
+        self.assertEqual(
+            list(self.root.descendants(include_self=True)), [self.root, self.parent, self.child1, self.child2]
         )
-        duplicate_prefix_pks = [p.pk for p in prefixes[0].get_duplicates()]
 
-        self.assertSetEqual(set(duplicate_prefix_pks), {prefixes[1].pk, prefixes[2].pk})
+        # root()
+        self.assertEqual(self.child1.root(), self.root)
+        self.assertIsNone(self.root.root())
 
-    def test_get_child_prefixes(self):
+        # siblings()
+        self.assertEqual(list(self.child1.siblings()), [self.child2])
+        self.assertEqual(list(self.child1.siblings(include_self=True)), [self.child1, self.child2])
+        parent2 = Prefix.objects.create(prefix="101.102.0.128/25", status=self.status)
+        self.assertEqual(list(self.parent.siblings()), [parent2])
+        self.assertEqual(list(self.parent.siblings(include_self=True)), [self.parent, parent2])
+
+    # TODO(jathan): When Namespaces are implemented, these tests must be extended to assert it.
+    def test_reparenting(self):
+        """Test that reparenting algorithm works in its most basic form."""
+        # tree hierarchy
+        self.assertIsNone(self.root.parent)
+        self.assertEqual(self.parent.parent, self.root)
+        self.assertEqual(self.child1.parent, self.parent)
+
+        # Delete the parent (/25); child1/child2 now have root (/24) as their parent.
+        num_deleted, _ = self.parent.delete()
+        self.assertEqual(num_deleted, 1)
+
+        self.assertEqual(list(self.root.children.all()), [self.child1, self.child2])
+        self.child1.refresh_from_db()
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child1.parent, self.root)
+        self.assertEqual(self.child2.parent, self.root)
+        self.assertEqual(list(self.child1.ancestors()), [self.root])
+
+        # Add /25 back in as a partn and assert that child1/child2 now have it as their parent, and
+        # /24 is its parent.
+        self.parent.save()  # This creates another Prefix using the same instance.
+        self.child1.refresh_from_db()
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child1.parent, self.parent)
+        self.assertEqual(self.child2.parent, self.parent)
+        self.assertEqual(list(self.child1.ancestors()), [self.root, self.parent])
+
+    def test_descendants(self):
         vrfs = VRF.objects.all()[:3]
         prefixes = (
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER),
@@ -194,17 +276,17 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.2.0/24"), vrf=vrfs[1]),
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"), vrf=vrfs[2]),
         )
-        child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
+        prefix_pks = {p.pk for p in prefixes[1:]}
+        child_prefix_pks = {p.pk for p in prefixes[0].descendants()}
 
         # Global container should return all children
-        self.assertSetEqual(
-            child_prefix_pks,
-            {prefixes[1].pk, prefixes[2].pk, prefixes[3].pk, prefixes[4].pk},
-        )
+        self.assertSetEqual(child_prefix_pks, prefix_pks)
 
+        # TODO(jathan): VRF is no longer considered for uniqueness/parenting algorithm, so this
+        # check is no longer valid so we'll filter it by VRF for now to keep the test working.
         prefixes[0].vrf = vrfs[0]
         prefixes[0].save()
-        child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
+        child_prefix_pks = {p.pk for p in prefixes[0].descendants().filter(vrf=vrfs[0])}
 
         # VRF container is limited to its own VRF
         self.assertSetEqual(child_prefix_pks, {prefixes[2].pk})
@@ -417,23 +499,17 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     # Uniqueness enforcement tests
     #
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
-    def test_duplicate_global(self):
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertIsNone(duplicate_prefix.clean())
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
+        """This should raise a ValidationError."""
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
         duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertRaises(ValidationError, duplicate_prefix.clean)
+        self.assertRaises(ValidationError, duplicate_prefix.full_clean)
 
     def test_duplicate_vrf(self):
         vrf = VRF.objects.filter(enforce_unique=False).first()
         Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
         duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertIsNone(duplicate_prefix.clean())
+        self.assertIsNone(duplicate_prefix.full_clean())
 
     def test_duplicate_vrf_unique(self):
         vrf = VRF.objects.filter(enforce_unique=True).first()
@@ -459,13 +535,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
     # Uniqueness enforcement tests
     #
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
-    def test_duplicate_global(self):
-        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertIsNone(duplicate_ip.clean())
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
         IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
         duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
@@ -483,7 +552,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         self.assertRaises(ValidationError, duplicate_ip.clean)
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_nonunique_role(self):
         roles = Role.objects.get_for_model(IPAddress)
         IPAddress.objects.create(

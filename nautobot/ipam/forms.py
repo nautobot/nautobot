@@ -43,7 +43,7 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
-from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
+from .choices import IPAddressVersionChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -323,12 +323,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "date_allocated": DateTimePicker(),
         }
 
-    def __init__(self, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        # self.fields["vrf"].empty_label = "Global"
-
 
 class PrefixCSVForm(
     PrefixFieldMixin,
@@ -393,11 +387,13 @@ class PrefixBulkEditForm(
         choices=add_blank_choice(PrefixTypeChoices),
         required=False,
     )
+    """
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
     )
+    """
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -409,7 +405,7 @@ class PrefixBulkEditForm(
         model = Prefix
         nullable_fields = [
             "location",
-            "vrf",
+            # "vrf",
             "tenant",
             "rir",
             "date_allocated",
@@ -429,10 +425,10 @@ class PrefixFilterForm(
         "q",
         "within_include",
         "type",
-        "family",
+        "ip_version",
         "mask_length",
-        "vrf_id",
-        "present_in_vrf_id",
+        # "vrf_id",
+        # "present_in_vrf_id",
         "status",
         "location",
         "role",
@@ -451,10 +447,10 @@ class PrefixFilterForm(
         ),
         label="Search within",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
+        choices=add_blank_choice(IPAddressVersionChoices),
+        label="IP version",
         widget=StaticSelect2(),
     )
     mask_length = forms.ChoiceField(
@@ -463,6 +459,7 @@ class PrefixFilterForm(
         label="Mask length",
         widget=StaticSelect2(),
     )
+    """
     vrf_id = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -470,6 +467,7 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    """
     type = forms.MultipleChoiceField(
         required=False,
         choices=PrefixTypeChoices,
@@ -701,7 +699,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
     )
     family = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
+        choices=add_blank_choice(IPAddressVersionChoices),
         label="Address family",
         widget=StaticSelect2(),
     )

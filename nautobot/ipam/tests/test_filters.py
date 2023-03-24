@@ -258,7 +258,11 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
         test_prefixes = list(self.queryset.values_list("pk", flat=True)[:10])
-        self.queryset.exclude(pk__in=test_prefixes).delete()
+        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        unwanted_prefixes = self.queryset.exclude(pk__in=test_prefixes)
+        unwanted_prefixes.update(parent=None)
+        unwanted_prefixes.delete()
         self.queryset.all().update(vrf=None)
         IPAddress.objects.all().update(vrf=None)
         VRF.objects.all().delete()

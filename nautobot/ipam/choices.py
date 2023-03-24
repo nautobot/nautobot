@@ -1,14 +1,14 @@
 from nautobot.core.choices import ChoiceSet
 
 
-class IPAddressFamilyChoices(ChoiceSet):
+class IPAddressVersionChoices(ChoiceSet):
 
-    FAMILY_4 = 4
-    FAMILY_6 = 6
+    VERSION_4 = 4
+    VERSION_6 = 6
 
     CHOICES = (
-        (FAMILY_4, "IPv4"),
-        (FAMILY_6, "IPv6"),
+        (VERSION_4, "IPv4"),
+        (VERSION_6, "IPv6"),
     )
 
 

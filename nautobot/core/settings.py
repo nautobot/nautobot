@@ -63,11 +63,6 @@ NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
 
-# By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
-# table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
-# ENFORCE_GLOBAL_UNIQUE to True.
-ENFORCE_GLOBAL_UNIQUE = is_truthy(os.getenv("NAUTOBOT_ENFORCE_GLOBAL_UNIQUE", "False"))
-
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
@@ -537,10 +532,6 @@ CONSTANCE_CONFIG = {
         90,
         "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
     ],
-    "DISABLE_PREFIX_LIST_HIERARCHY": [
-        False,
-        "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
-    ],
     "HIDE_RESTRICTED_UI": [
         False,
         "If set to True, users with limited permissions will not be shown menu items and home-page elements that "
@@ -598,7 +589,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
+    "User Interface": ["HIDE_RESTRICTED_UI"],
 }
 
 #

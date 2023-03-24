@@ -235,7 +235,9 @@ class PrefixQuerysetTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
+        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        cls.queryset.update(parent=None)
         cls.queryset.delete()
 
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"))

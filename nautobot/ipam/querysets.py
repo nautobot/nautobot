@@ -1,15 +1,7 @@
 import re
 
 import netaddr
-from django.db.models import (
-    Count,
-    IntegerField,
-    F,
-    OuterRef,
-    Subquery,
-    Q,
-    Value,
-)
+from django.db.models import F, Q
 from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
@@ -203,48 +195,6 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
 
 class PrefixQuerySet(BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
-
-    def annotate_tree(self):
-        """
-        Annotate the number of parent and child prefixes for each Prefix.
-
-        The UUID being used is fake for purposes of satisfying the COALESCE condition.
-        """
-        # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
-        # The value itself has no meaning, so we just generate a random UUID for the query.
-
-        from nautobot.ipam.models import Prefix
-
-        return self.annotate(
-            parents=Subquery(
-                Prefix.objects.filter(
-                    Q(prefix_length__lt=OuterRef("prefix_length"))
-                    & Q(network__lte=OuterRef("network"))
-                    & Q(broadcast__gte=OuterRef("broadcast"))
-                    & Q(namespace=OuterRef("namespace"))
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-            children=Subquery(
-                Prefix.objects.filter(
-                    Q(prefix_length__gt=OuterRef("prefix_length"))
-                    & Q(network__gte=OuterRef("network"))
-                    & Q(broadcast__lte=OuterRef("broadcast"))
-                    & Q(namespace=OuterRef("namespace"))
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-        )
 
     def ip_family(self, family):
         try:
