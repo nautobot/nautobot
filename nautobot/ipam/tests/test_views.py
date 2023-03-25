@@ -87,9 +87,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        RIR.objects.create(name="RFC N/A")
-        RIR.objects.create(name="MAGICNIC")
-        RIR.objects.create(name="NOTANIC")
 
         cls.form_data = {
             "name": "RIR X",
@@ -104,8 +101,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "RIR 6,Sixth RIR",
             "RIR 7,Seventh RIR",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = RIR.objects.first().name
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):

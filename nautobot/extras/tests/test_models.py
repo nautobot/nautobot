@@ -50,7 +50,7 @@ from nautobot.extras.models import (
 from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -123,8 +123,8 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         location_type = LocationType.objects.create(name="Location Type 1")
         self.location = Location.objects.create(name="Location 1", location_type=location_type)
         self.platform = Platform.objects.first()
-        self.tenantgroup = TenantGroup.objects.first()
-        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
+        self.tenant = Tenant.objects.first()
+        self.tenantgroup = self.tenant.tenant_group
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
         self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",

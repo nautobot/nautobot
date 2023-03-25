@@ -82,9 +82,6 @@ class APIPaginationTestCase(testing.APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        for i in range(10):
-            Provider.objects.create(name=f"Provider {i}")
-
         cls.url = reverse("circuits-api:provider-list")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=5, MAX_PAGE_SIZE=10)

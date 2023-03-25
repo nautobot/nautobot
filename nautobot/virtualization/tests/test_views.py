@@ -22,7 +22,7 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cluster_groups = ClusterGroupFactory.create_batch(4)
+        ClusterGroupFactory.create_batch(4)
 
         cls.form_data = {
             "name": "Cluster Group X",
@@ -36,8 +36,6 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Cluster Group 6,Sixth cluster group",
             "Cluster Group 7,Seventh cluster group",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = cluster_groups[1].name
 
 
 class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -63,8 +61,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Cluster Type 6,Sixth cluster type",
             "Cluster Type 7,Seventh cluster type",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = "Cluster Type 8"
 
 
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):

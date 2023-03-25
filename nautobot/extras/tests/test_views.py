@@ -738,9 +738,6 @@ class SecretTestCase(
             'View Test 7,environment-variable,{"variable": "VIEW_TEST_7"}',
         )
 
-        cls.slug_source = "name"
-        cls.slug_test_object = "View Test 3"
-
 
 # Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
 class SecretsGroupTestCase(
@@ -796,9 +793,6 @@ class SecretsGroupTestCase(
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Group 3"
 
 
 class GraphQLQueriesTestCase(
@@ -2217,9 +2211,6 @@ class StatusTestCase(
             "color": "000000",
         }
 
-        cls.slug_source = "name"
-        cls.slug_test_object = Status.objects.first().name
-
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
@@ -2389,6 +2380,3 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.bulk_edit_data = {
             "color": "000000",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = Role.objects.first().name

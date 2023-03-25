@@ -637,8 +637,6 @@ class FilterExtensionTest(TestCase):
             data={
                 "example_plugin_description": "tenant-1.nautobot.com",
                 "example_plugin_dtype": "model-1",
-                "slug__ic": "tenant-1",
-                "slug": "tenant-1",
                 "example_plugin_sdescrip": "tenant-1",
             }
         )

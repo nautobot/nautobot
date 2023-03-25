@@ -537,9 +537,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturer = Manufacturer.objects.first()
-
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
@@ -557,8 +554,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Manufacturer 6,Sixth manufacturer",
             "Manufacturer 7,Seventh manufacturer",
         )
-        cls.slug_test_object = manufacturer.name
-        cls.slug_source = "name"
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -1141,7 +1136,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
 
         manufacturer = Manufacturer.objects.first()
-        platform = Platform.objects.first()
 
         cls.form_data = {
             "name": "Platform X",
@@ -1158,9 +1152,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Platform 6,Sixth platform",
             "Platform 7,Seventh platform",
         )
-
-        cls.slug_test_object = platform.name
-        cls.slug_source = "name"
 
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):

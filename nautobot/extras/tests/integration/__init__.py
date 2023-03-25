@@ -13,7 +13,6 @@ def create_test_device():
     device_role.content_types.add(device_ct)
     manufacturer = Manufacturer.objects.create(
         name=f"Test Manufacturer {test_uuid}",
-        slug=f"test-manufacturer-{test_uuid}",
     )
     device_type = DeviceType.objects.create(
         manufacturer=manufacturer, model=f"Test Model {test_uuid}", slug=f"test-model-{test_uuid}"

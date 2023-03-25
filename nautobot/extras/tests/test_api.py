@@ -212,9 +212,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         """
         Test rendering config context data for a device.
         """
-        manufacturer = Manufacturer.objects.create(
-            name="Manufacturer 1",
-        )
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

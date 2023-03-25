@@ -95,7 +95,7 @@ class TenantFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
