@@ -6,6 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("ipam", "0027_remove_rir_slug"),
+        ("dcim", "0039_remove_slug"),
+        ("circuits", "0015_remove_circuittype_provider_slug"),
+        ("tenancy", "0007_remove_tenant_tenantgroup_slug"),
+        ("virtualization", "0020_remove_clustergroup_clustertype_slug"),
         ("extras", "0073_remove_gitrepository_fields"),
     ]
 

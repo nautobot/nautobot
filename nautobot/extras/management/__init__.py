@@ -1,6 +1,7 @@
 import sys
 
 from django.apps import apps as global_apps
+from django.core.exceptions import FieldError
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 from django.utils.text import slugify
 
@@ -114,6 +115,7 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
         choice_kwargs = dict(
             name=value,
             description=description_map[value],
+            slug=slugify(value),
             color=color_map[value],
         )
         choices.append(choice_kwargs)
@@ -172,15 +174,15 @@ def create_custom_statuses(
             # has had its name, slug, color and/or description changed from the defaults.
             # First, try to find by slug
             defaults = choice_kwargs.copy()
-            name = defaults.pop("name")
+            slug = defaults.pop("slug")
             try:
                 # may fail if a status with a different slug has a name matching this one
-                obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
+                obj, created = Status.objects.get_or_create(slug=slug, defaults=defaults)
             except IntegrityError:
-                # Integrity error would occur when running extras.0004_populate_default_status_records migration
-                # since slug is still present at that point
+                # OK, what if we look up by name instead?
+                defaults = choice_kwargs.copy()
+                name = defaults.pop("name")
                 try:
-                    defaults["slug"] = slugify(name)
                     obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
                 except IntegrityError as err:
                     raise SystemExit(
