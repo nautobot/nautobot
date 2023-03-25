@@ -46,7 +46,7 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
         cf_list = []
         for instance in model.objects.all():
             new_custom_field_data = {}
-            for cf in relevant_custom_fields:  # TODO could probably cache the key<->name mapping for efficiency
+            for cf in relevant_custom_fields:
                 new_custom_field_data[cf.key] = instance._custom_field_data.pop(CF_KEY_TO_NAME.get(cf.key), None)
             instance._custom_field_data = new_custom_field_data
             cf_list.append(instance)
