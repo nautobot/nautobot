@@ -13,7 +13,6 @@ from nautobot.dcim.choices import (
     PowerOutletTypeChoices,
     PowerOutletFeedLegChoices,
     InterfaceTypeChoices,
-    InterfaceStatusChoices,
     PortTypeChoices,
 )
 
