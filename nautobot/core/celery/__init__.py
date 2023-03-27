@@ -2,6 +2,8 @@ import json
 import logging
 import os
 from pathlib import Path
+import pkgutil
+import sys
 
 from celery import Celery, shared_task, signals
 from celery.fixups.django import DjangoFixup
@@ -10,6 +12,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +33,12 @@ class NautobotCelery(Celery):
     task_cls = "nautobot.core.celery.task:NautobotTask"
 
     def register_task(self, task, **options):
-        """Utility for registering a task-based class.
-
-        Note:
-            This is here for compatibility with old Celery 1.0
-            style task classes, you should not need to use this for
-            new projects.
-        """
+        """Override the default task name for job classes to allow app provided jobs to use the full module path."""
         from nautobot.extras.jobs import Job
 
         if issubclass(task, Job):
             task = task()
-            task.name = task.__class__.registered_name
+            task.name = task.registered_name
 
         return super().register_task(task, **options)
 
@@ -64,6 +61,17 @@ DjangoFixup(app).install()
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+
+# Load jobs from JOBS_ROOT on celery workers
+@signals.import_modules.connect
+def import_tasks_from_jobs_root(sender, **kwargs):
+    jobs_root = settings.JOBS_ROOT
+    if jobs_root and os.path.exists(jobs_root):
+        if jobs_root not in sys.path:
+            sys.path.append(jobs_root)
+        for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
+            sender.loader.import_task_module(module_name)
 
 
 @signals.worker_ready.connect
@@ -173,6 +181,6 @@ register("nautobot_json", _dumps, _loads, content_type="application/x-nautobot-j
 nautobot_task = shared_task
 
 
-def register_jobs(jobs):
+def register_jobs(*jobs):
     for job in jobs:
         app.register_task(job)
