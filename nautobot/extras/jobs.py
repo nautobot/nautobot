@@ -164,7 +164,7 @@ class BaseJob(Task):
         """
 
     def get_job_model(self):
-        return self.get_job_result().job_model
+        return self.job_result.job_model
 
     def get_job_result(self):
         from nautobot.extras.models.jobs import JobResult  # avoid circular import
@@ -187,7 +187,7 @@ class BaseJob(Task):
         self.active_test = "initialization"
 
         try:
-            self.job_result = self.get_job_result()
+            self.get_job_result()
         except TypeError:
             raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}")
 
@@ -436,14 +436,9 @@ class BaseJob(Task):
 
     @property
     def job_result(self):
+        if self._job_result is None:
+            self._job_result = self.get_job_result()
         return self._job_result
-
-    @job_result.setter
-    def job_result(self, value):
-        # Initialize job_result data format for our usage
-        value.data = OrderedDict()
-
-        self._job_result = value
 
     @property
     def results(self):
