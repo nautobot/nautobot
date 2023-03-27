@@ -1098,7 +1098,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
-                        request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs."
+                        request,
+                        f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.",
                     )
 
             template_name = "extras/job.html"

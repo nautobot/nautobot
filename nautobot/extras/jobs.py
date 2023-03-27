@@ -1039,11 +1039,8 @@ class JobButtonReceiver(Job):
     object_pk = StringVar()
     object_model_name = StringVar()
 
-    def run(self, data, commit):
+    def run(self, object_pk, object_model_name):
         """JobButtonReceiver subclasses generally shouldn't need to override this method."""
-        object_pk = data["object_pk"]
-        object_model_name = data["object_model_name"]
-
         model = get_model_from_name(object_model_name)
         obj = model.objects.get(pk=object_pk)
 

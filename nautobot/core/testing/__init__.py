@@ -46,8 +46,6 @@ def run_job_for_testing(job, kwargs=None, username="test-user"):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
-    The Celery task result will be stored at the `JobResult.celery_result` attribute.
-
     Args:
       job (Job): Job model instance (not Job class) to run
       kwargs (dict): Input keyword arguments for Job run method.
