@@ -31,7 +31,7 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
+from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import ScriptVariable
@@ -65,7 +65,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_worker_count
 from . import nested_serializers, serializers
 
 
@@ -452,7 +452,7 @@ def _create_schedule(serializer, data, commit, job_model, request, celery_kwargs
     return scheduled_job
 
 
-def _run_job(request, job_model, legacy_response=False):
+def _run_job(request, job_model):
     """An internal function providing logic shared between JobModelViewSet.run() and JobViewSet.run()."""
     if not request.user.has_perm("extras.run_job"):
         raise PermissionDenied("This user does not have permission to run jobs.")
@@ -624,43 +624,6 @@ class JobViewSet(
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
-    @extend_schema(
-        deprecated=True,
-        operation_id="extras_jobs_read_deprecated",
-        responses={"200": serializers.JobClassDetailSerializer()},
-    )
-    @action(
-        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
-        methods=["get"],
-        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)",  # /api/extras/jobs/<class_path>/
-        url_name="detail",
-    )
-    def retrieve_deprecated(self, request, class_path):
-        """
-        Get details of a Job as identified by its class-path.
-
-        This API endpoint is deprecated; it is recommended to use the extras_jobs_read endpoint instead.
-        """
-        if not request.user.has_perm("extras.view_job"):
-            raise PermissionDenied("This user does not have permission to view jobs.")
-        try:
-            job_model = Job.objects.restrict(request.user, "view").get_for_class_path(class_path)
-        except Job.DoesNotExist:
-            raise Http404
-        if not job_model.installed or job_model.job_class is None:
-            raise Http404
-        job_content_type = get_job_content_type()
-        job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
-        job.result = JobResult.objects.filter(
-            obj_type=job_content_type,
-            name=job.class_path,
-            status__in=JobResultStatusChoices.READY_STATES,
-        ).first()
-
-        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
-
-        return Response(serializer.data)
-
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True, filterset_class=None)
     def variables(self, request, pk):
@@ -727,35 +690,6 @@ class JobViewSet(
         """Run the specified Job."""
         job_model = self.get_object()
         return _run_job(request, job_model)
-
-    @extend_schema(
-        deprecated=True,
-        methods=["post"],
-        request=serializers.JobInputSerializer,
-        responses={"200": serializers.JobClassDetailSerializer()},
-        operation_id="extras_jobs_run_deprecated",
-    )
-    @action(
-        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
-        methods=["post"],
-        permission_classes=[JobRunTokenPermissions],
-        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",  # /api/extras/jobs/<class_path>/run/
-        url_name="run",
-        parser_classes=[JSONParser, MultiPartParser],
-    )
-    def run_deprecated(self, request, class_path):
-        """
-        Run a Job as identified by its class-path.
-
-        This API endpoint is deprecated; it is recommended to use the extras_jobs_run endpoint instead.
-        """
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied("This user does not have permission to run jobs.")
-        try:
-            job_model = Job.objects.restrict(request.user, "run").get_for_class_path(class_path)
-        except Job.DoesNotExist:
-            raise Http404
-        return _run_job(request, job_model, legacy_response=True)
 
 
 #
