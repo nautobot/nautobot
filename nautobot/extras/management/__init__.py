@@ -30,7 +30,7 @@ CHOICESET_MAP = {
 }
 
 
-# Map of slug -> default hex_color used when importing color choices in `export_statuses_from_choiceset()`.
+# Map of status name -> default hex_color used when importing color choices in `export_statuses_from_choiceset()`.
 # Only a small subset of colors are used by default as these originally were derived from Bootstrap CSS classes.
 COLOR_MAP = {
     "Active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
@@ -55,7 +55,7 @@ COLOR_MAP = {
 }
 
 
-# Map of slug -> description used when importing status choices in `export_statuses_from_choiceset()`.
+# Map of status name -> description used when importing status choices in `export_statuses_from_choiceset()`.
 DESCRIPTION_MAP = {
     "Active": "Unit is active",
     "Available": "Unit is available",
