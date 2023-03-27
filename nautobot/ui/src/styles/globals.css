@@ -1,42 +1,8 @@
+/* Font should be pulled in earlier to prevent jumpy experience */
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono&family=Ubuntu:wght@400;500&display=swap');
+
 html,
 body {
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-  body {
-    color: white;
-    background: black;
-  }
-}
-
-a {
-  text-decoration: none !important;
-}
-.page-container {
-  margin-top: 75px;
-  max-width: 100%;
-  margin-bottom: 50px;
-}
-.action-btn {
-  margin-right: 5px;
-}
-.action-items-container {
-  text-align: right;
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  font-family: 'Ubuntu', sans-serif;
+  background-color: #f1f1f1;
 }

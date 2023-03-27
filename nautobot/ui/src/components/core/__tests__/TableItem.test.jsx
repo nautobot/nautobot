@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import BSTableItem from "../BSTableItem";
+import BSTableItem from "../TableItem";
 
 
 describe("BSTableItem", () => {

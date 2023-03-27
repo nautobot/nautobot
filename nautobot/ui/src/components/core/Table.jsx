@@ -1,8 +1,8 @@
 import { Checkbox, Table, Thead, Tr, Th, Tbody, Td } from "@nautobot/nautobot-ui"
 
-import BSTableItem from "@components/core/BSTableItem"
+import TableItem from "@components/core/TableItem"
 
-
+// A standard Nautobot table. This _may_ be beneficial to move into nautobot-ui
 export default function NautobotTable({ data, headers }) {
   return (
     <Table>
@@ -24,7 +24,7 @@ export default function NautobotTable({ data, headers }) {
             </Td>
             {headers.map((header, idx) => (
               <Td key={idx}>
-                <BSTableItem
+                <TableItem
                   name={header.name}
                   obj={item[header.name]}
                   url={window.location.pathname + item["id"]}

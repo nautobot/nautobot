@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
-import Layout from '../BSLayout';
+import Layout from '../Layout';
 
 jest.mock('react-router-dom', () => ({
   useLocation: jest.fn()

@@ -418,7 +418,7 @@ class ModelViewSet(
     BulkDestroyModelMixin,
     ModelViewSetMixin,
     ModelViewSet_,
-    MyFormSchemaViewSetMixin,
+    # MyFormSchemaViewSetMixin,  # TODO: This can/should be limited to /api/ui/ schemas
 ):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.

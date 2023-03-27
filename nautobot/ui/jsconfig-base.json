@@ -5,6 +5,9 @@
             "@utils/*": [
                 "src/utils/*"
             ],
+            "@constants/*": [
+                "src/constants/*"
+            ],
             "@views/*": [
                 "src/views/*"
             ],

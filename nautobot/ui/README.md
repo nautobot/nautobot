@@ -27,3 +27,7 @@ To run all test suite, run:
 ```no-highlight
 invoke unittest-ui
 ```
+
+## Debugging Startup/Build Failures
+
+Nautobot will attempt to build the UI on startup when running `post_upgrade` but during development the React project may fail to build, never allowing the Node.JS container from starting. In that situation, skip running the `post_upgrade` until the React app can start. In container workflows that will mean setting the `NAUTOBOT_DOCKER_SKIP_INIT` environment variable to `True`.
