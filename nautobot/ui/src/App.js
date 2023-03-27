@@ -5,6 +5,16 @@ import { NautobotUIProvider } from "@nautobot/nautobot-ui"
 import Layout from '@components/layouts/Layout';
 import NautobotRouter from "src/router"
 
+import { extendTheme } from '@chakra-ui/react'
+
+const theme = {
+  fonts: {
+    heading: `'Ubuntu', sans-serif`,
+    body: `'Ubuntu', sans-serif`,
+    mono: `'Ubuntu Mono', monospace`,
+  },
+}
+
 // TODO: See if we can/need to continue this pattern:
 // Global API pattern needs these arguments passed through:
 //   { updateStore, globalApi }
@@ -12,7 +22,7 @@ import NautobotRouter from "src/router"
 
 function App() {
   return (
-    <NautobotUIProvider>
+    <NautobotUIProvider theme={theme}>
       <BrowserRouter>
         <Layout>
           <NautobotRouter />
