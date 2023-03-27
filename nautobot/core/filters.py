@@ -15,13 +15,14 @@ from drf_spectacular.utils import extend_schema_field
 from taggit.managers import TaggableManager
 
 from nautobot.core import constants, forms
+from nautobot.core.forms import widgets
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import data as data_utils
 
 logger = logging.getLogger(__name__)
 
 
-def multivalue_field_factory(field_class):
+def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
     """
     Given a form field class, return a subclass capable of accepting multiple values. This allows us to OR on multiple
     filter values while maintaining the field's built-in validation. Example: GET /api/dcim/devices/?name=foo&name=bar
@@ -57,7 +58,7 @@ def multivalue_field_factory(field_class):
             "run_validators": run_validators,
             "to_python": to_python,
             "validate": validate,
-            "widget": django_forms.SelectMultiple,
+            "widget": widget,
         },
     )
 
@@ -77,11 +78,13 @@ class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleCho
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(django_forms.DateField)
+    # TODO we don't currently have a MultiValueDatePicker widget
+    field_class = multivalue_field_factory(django_forms.DateField, widget=forms.DatePicker)
 
 
 class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(django_forms.DateTimeField)
+    # TODO we don't currently have a MultiValueDateTimePicker widget
+    field_class = multivalue_field_factory(django_forms.DateTimeField, widget=forms.DateTimePicker)
 
 
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
@@ -101,7 +104,8 @@ class MultiValueDecimalFilter(django_filters.NumberFilter, django_filters.Multip
 
 
 class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(django_forms.TimeField)
+    # TODO we don't currently have a MultiValueTimePicker widget
+    field_class = multivalue_field_factory(django_forms.TimeField, widget=forms.TimePicker)
 
 
 class MACAddressFilter(django_filters.CharFilter):
@@ -115,7 +119,7 @@ class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(django_forms.UUIDField)
+    field_class = multivalue_field_factory(django_forms.UUIDField, widget=widgets.MultiValueCharInput)
 
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
@@ -148,6 +152,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             method=method,
             distinct=distinct,
             exclude=exclude,
+            widget=forms.StaticSelect2(choices=forms.BOOLEAN_CHOICES),
             **kwargs,
         )
 
@@ -675,9 +680,11 @@ class BaseFilterSet(django_filters.FilterSet):
             )
 
         cls.base_filters[new_filter_name] = new_filter_field
-        cls.base_filters.update(
-            cls._generate_lookup_expression_filters(filter_name=new_filter_name, filter_field=new_filter_field)
-        )
+        # django-filters has no concept of "abstract" filtersets, so we have to fake it
+        if cls._meta.model is not None:
+            cls.base_filters.update(
+                cls._generate_lookup_expression_filters(filter_name=new_filter_name, filter_field=new_filter_field)
+            )
 
     @classmethod
     def get_fields(cls):
@@ -694,13 +701,19 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
-        new_filters = {}
-        for existing_filter_name, existing_filter in filters.items():
-            new_filters.update(
-                cls._generate_lookup_expression_filters(filter_name=existing_filter_name, filter_field=existing_filter)
-            )
+        # django-filters has no concept of "abstract" filtersets, so we have to fake it
+        if cls._meta.model is not None:
+            new_filters = {}
+            for existing_filter_name, existing_filter in filters.items():
+                new_filters.update(
+                    cls._generate_lookup_expression_filters(
+                        filter_name=existing_filter_name,
+                        filter_field=existing_filter,
+                    )
+                )
 
-        filters.update(new_filters)
+            filters.update(new_filters)
+
         return filters
 
     @classmethod
