@@ -199,15 +199,13 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="text",
             label="Device Custom Field",
-            name="test_custom_field",
-            slug="test_custom_field",
+            key="test_custom_field",
             required=False,
         )
         custom_field.save()
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
-        # 2.0 TODO: #824 replace custom_field.name with custom_field.slug
-        device.cf[custom_field.name] = "This is some testing text"
+        device.cf[custom_field.key] = "This is some testing text"
         device.validated_save()
         # Visit the device detail page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
@@ -240,8 +238,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="json",
             label="Device Valid JSON Field",
-            name="test_valid_json_field",
-            slug="test_valid_json_field",
+            key="test_valid_json_field",
             required=False,
         )
         custom_field.save()
@@ -267,8 +264,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="json",
             label="Device Invalid JSON Field",
-            name="test_invalid_json_field",
-            slug="test_invalid_json_field",
+            key="test_invalid_json_field",
             required=False,
         )
         custom_field.save()
@@ -296,8 +292,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="select",
             label="Device Selection Field",
-            name="test_selection_field",
-            slug="test_selection_field",
+            key="test_selection_field",
             required=False,
         )
         custom_field.save()

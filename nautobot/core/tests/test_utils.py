@@ -28,7 +28,6 @@ class DictToFilterParamsTest(TestCase):
     """
 
     def test_dict_to_filter_params(self):
-
         input_ = {
             "a": True,
             "foo": {
@@ -70,7 +69,6 @@ class DeepMergeTest(TestCase):
     """
 
     def test_deepmerge(self):
-
         dict1 = {
             "active": True,
             "foo": 123,
@@ -367,6 +365,8 @@ class SlugifyFunctionsTest(TestCase):
         for content, expected in (
             ("Locations / Regions", "locations_regions"),
             ("alpha-beta_gamma delta", "alpha_beta_gamma_delta"),
+            ("123 main st", "a123_main_st"),
+            (" 123 main st", "a_123_main_st"),
         ):
             self.assertEqual(core_fields.slugify_dashes_to_underscores(content), expected)
 

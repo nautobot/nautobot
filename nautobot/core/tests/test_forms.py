@@ -629,7 +629,7 @@ class JSONFieldTest(testing.TestCase):
         test_views.create_test_device("Foo Device")
         custom_field = extras_models.CustomField(
             type="json",
-            name="json-field",
+            label="JSON Field",
             required=False,
         )
         custom_field.save()

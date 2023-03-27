@@ -174,7 +174,7 @@ class GraphQLExtendSchemaType(TestCase):
 
         # Create custom fields for Location objects
         for data in self.datas:
-            cf = CustomField.objects.create(type=data["field_type"], name=data["field_name"], required=False)
+            cf = CustomField.objects.create(type=data["field_type"], label=data["field_name"], required=False)
             cf.content_types.set([obj_type])
 
         self.schema = generate_schema_type(app_name="dcim", model=Location)
