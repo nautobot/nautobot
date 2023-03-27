@@ -503,11 +503,11 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | VirtualChassis          | `master`                  | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`                    |
 |                         | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                      |
 |                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/virtual-chassis/?tenant=<uuid/name>`                    |
-| VirtualMachine          | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/vitualization/virtual-machines/?cluster_group=<uuid/name>`   |
-|                         | `cluster_type`            | Enhanced to support primary key UUIDs in addition to names | `/vitualization/virtual-machines/?cluster_type=<uuid/name>`    |
-|                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/vitualization/virtual-machines/?tenant=<uuid/name>`          |
-|                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/vitualization/virtual-machines/?tenant_group=<uuid/name>`    |
-|                         | `platform`                | Enhanced to support primary key UUIDs in addition to names | `/vitualization/virtual-machines/?platform=<uuid/name>`        |
+| VirtualMachine          | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?cluster_group=<uuid/name>`  |
+|                         | `cluster_type`            | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?cluster_type=<uuid/name>`   |
+|                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?tenant=<uuid/name>`         |
+|                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?tenant_group=<uuid/name>`   |
+|                         | `platform`                | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?platform=<uuid/name>`       |
 | VRF                     | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/ipam/vrfs/?tenant=<uuid/name>`                               |
 |                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/ipam/vrfs/?tenant_group=<uuid/name>`                         |
 | VLAN                    | `vlan_group`              | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                          |
