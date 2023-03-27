@@ -279,6 +279,7 @@ class BaseJob(Task):
             self.delete_files(*file_ids)
 
         self.log_info("Job completed")
+        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
 
     @classproperty
     def file_path(cls):  # pylint: disable=no-self-argument
