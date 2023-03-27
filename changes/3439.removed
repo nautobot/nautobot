@@ -1,3 +1,1 @@
-Removed slug field from these models CircuitType, ClusterGroup, ClusterType, CustomLink, DeviceRedundancyGroup,
-DynamicGroup, GraphQLQuery, JobHook, Manufacturer, Platform, Provider, RIR, RelationshipAssociation, Role,
-RouteTarget, Secret, SecretsGroup, SecretsGroupAssociation, Status, Tenant, TenantGroup and Webhook.
+Removed `slug` field from many database models.
