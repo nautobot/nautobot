@@ -967,7 +967,6 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
     ]
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -3125,7 +3124,6 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             },
         },
     ]
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -3155,8 +3153,6 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroup
     brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
-
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -3300,7 +3296,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.device"],
         },
     ]
-    slug_source = "name"
 
 
 class TagTest(APIViewTestCases.APIViewTestCase):
@@ -3640,4 +3635,3 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["ipam.ipaddress", "ipam.vlan"],
         },
     ]
-    slug_source = "name"

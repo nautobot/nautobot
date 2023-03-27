@@ -33,7 +33,6 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "asn": 1234,
     }
-    slug_source = "name"
 
 
 class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
@@ -93,7 +92,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):

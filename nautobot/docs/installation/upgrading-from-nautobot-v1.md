@@ -131,35 +131,57 @@
 
 ### Removed Database Fields
 
-| Model              | Removed Field |
-|--------------------|---------------|
-| CircuitTermination | `site`        |
-| Cluster            | `site`        |
-| ConfigContext      | `sites`       |
-|                    | `regions`     |
-| Device             | `site`        |
-| GitRepository      | `_token`      |
-|                    | `username`    |
-| InventoryItem      | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| Location           | `site`        |
-| Rack               | `site`        |
-| RackGroup          | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| PowerFeed          | `site`        |
-| PowerPanel         | `site`        |
-| Prefix             | `is_pool`     |
-|                    | `site`        |
-| Region             | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| TenantGroup        | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| VLAN               | `site`        |
-| VLANGroup          | `site`        |
+| Model                   | Removed Field |
+|-------------------------|---------------|
+| CircuitTermination      | `site`        |
+| CircuitType             | `slug`        |
+| Cluster                 | `site`        |
+| ClusterGroup            | `slug`        |
+| ClusterType             | `slug`        |
+| ConfigContext           | `sites`       |
+| CustomLink              | `slug`        |
+|                         | `regions`     |
+| Device                  | `site`        |
+| DeviceRedundancyGroup   | `slug`        |
+| DynamicGroup            | `slug`        |
+| GitRepository           | `_token`      |
+| GraphQLQuery            | `slug`        |
+|                         | `username`    |
+| InventoryItem           | `lft`         |
+|                         | `rght`        |
+|                         | `tree_id`     |
+| JobHook                 | `slug`        |
+| Location                | `site`        |
+| Manufacturer            | `slug`        |
+| Platform                | `slug`        |
+| Provider                | `slug`        |
+| PowerFeed               | `site`        |
+| PowerPanel              | `site`        |
+| Prefix                  | `is_pool`     |
+|                         | `site`        |
+| Rack                    | `site`        |
+| RackGroup               | `lft`         |
+|                         | `rght`        |
+|                         | `tree_id`     |
+| Region                  | `lft`         |
+|                         | `rght`        |
+|                         | `tree_id`     |
+| RIR                     | `slug`        |
+| RelationshipAssociation | `slug`        |
+| Role                    | `slug`        |
+| RouteTarget             | `slug`        |
+| Secret                  | `slug`        |
+| SecretsGroup            | `slug`        |
+| SecretsGroupAssociation | `slug`        |
+| Status                  | `slug`        |
+| Tenant                  | `slug`        |
+| TenantGroup             | `lft`         |
+|                         | `rght`        |
+|                         | `slug`        |
+|                         | `tree_id`     |
+| VLAN                    | `site`        |
+| VLANGroup               | `site`        |
+| Webhook                 | `slug`        |
 
 ### Replaced Models
 
@@ -269,23 +291,44 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 
 ### Removed Serializer Fields
 
-| Model/Endpoint                    | Removed Field        | Comments                                              |
-|-----------------------------------|----------------------|-------------------------------------------------------|
-| `/api/status/`                    | `rq-workers-running` | Removed as RQ is no longer supported                  |
-| `/ipam/prefixes/`                 | `is_pool`            | Functionality replaced by `type` field                |
-| `/circuits/circuit-terminations/` | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/virtualization/clusters/`       | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/extras/config-contexts/`        | `regions`            | `Site` and `Region` models are replaced by `Location` |
-|                                   | `sites`              | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/devices/`                  | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/locations/`                | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/power-feeds/`              | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/power-panels/`             | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/racks/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/rack-groups/`              | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/prefixes/`                 | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/vlans/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/vlangroups/`               | `site`               | `Site` and `Region` models are replaced by `Location` |
+| Model/Endpoint                       | Removed Field        | Comments                                              |
+|--------------------------------------|----------------------|-------------------------------------------------------|
+| `/api/status/`                       | `rq-workers-running` | Removed as RQ is no longer supported                  |
+| `/ipam/prefixes/`                    | `is_pool`            | Functionality replaced by `type` field                |
+| `/circuits/circuit-terminations/`    | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/circuits/circuit-types/`           | `slug`               | `slug` field no longer supported                      |
+| `/circuits/providers/`               | `slug`               | `slug` field no longer supported                      |
+| `/extras/config-contexts/`           | `regions`            | `Site` and `Region` models are replaced by `Location` |
+|                                      | `sites`              | `Site` and `Region` models are replaced by `Location` |
+| `/dcim/device-redundancy-groups/`    | `slug`               | `slug` field no longer supported                      |
+| `/dcim/devices/`                     | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/dcim/locations/`                   | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/dcim/manufacturers/`               | `slug`               | `slug` field no longer supported                      |
+| `/dcim/platforms/`                   | `slug`               | `slug` field no longer supported                      |
+| `/dcim/power-feeds/`                 | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/dcim/power-panels/`                | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/dcim/racks/`                       | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/dcim/rack-groups/`                 | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/extras/custom-links/`              | `slug`               | `slug` field no longer supported                      |
+| `/extras/dynamic-groups/`            | `slug`               | `slug` field no longer supported                      |
+| `/extras/graphql-queries/`           | `slug`               | `slug` field no longer supported                      |
+| `/extras/job-hooks/`                 | `slug`               | `slug` field no longer supported                      |
+| `/extras/relationship-associations/` | `slug`               | `slug` field no longer supported                      |
+| `/extras/roles/`                     | `slug`               | `slug` field no longer supported                      |
+| `/extras/secrets/`                   | `slug`               | `slug` field no longer supported                      |
+| `/extras/secrets-groups/`            | `slug`               | `slug` field no longer supported                      |
+| `/extras/statuses/`                  | `slug`               | `slug` field no longer supported                      |
+| `/extras/webhooks/`                  | `slug`               | `slug` field no longer supported                      |
+| `/ipam/prefixes/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/ipam/rirs/`                        | `slug`               | `slug` field no longer supported                      |
+| `/ipam/route-targets/`               | `slug`               | `slug` field no longer supported                      |
+| `/ipam/vlans/`                       | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/ipam/vlangroups/`                  | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/virtualization/clusters/`          | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/tenancy/tenants/`                  | `slug`               | `slug` field no longer supported                      |
+| `/tenancy/tenant-groups/`            | `slug`               | `slug` field no longer supported                      |
+| `/virtualization/cluster-groups/`    | `slug`               | `slug` field no longer supported                      |
+| `/virtualization/cluster-types/`     | `slug`               | `slug` field no longer supported                      |
 
 ### Removed 1.X Version Endpoints and Serializer Representations
 
@@ -381,52 +424,56 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0.md#enhanced-filter-fields-2804) in v2.x.
 
-| Model             | Enhanced Filter Field  | Changes                                                    | UI and Rest API endpoints Available in v2.X               |
-|-------------------|------------------------|------------------------------------------------------------|-----------------------------------------------------------|
-| (all)             | `created[__(gte/lte)]` | Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`                     |
-| Circuit           | `circuit_type`         | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`            |
-|                   | `provider`             | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`                |
-|                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                    |
-| ConsolePort       | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`                 |
-| ConsoleServerPort | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`          |
-| Device            | `cluster_id`           | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`                      |
-|                   | `device_type_id`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`                  |
-|                   | `manufacturer`         | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`                 |
-|                   | `model`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`                        |
-|                   | `platform`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`                     |
-|                   | `role`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`                         |
-|                   | `rack_id`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`                         |
-|                   | `rack_group_id`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`                   |
-|                   | `serial`               | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`         |
-|                   | `secrets_group`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?secrets_group=<uuid/slug>`                |
-|                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`                         |
-|                   | `virtual_chassis_id`   | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`              |
-| DeviceBay         | `cable`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`                       |
-|                   | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`                   |
-| DeviceType        | `manufacturer`         | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/device-types/?manufacturer=<uuid/slug>`            |
-| FrontPort         | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/front-ports/?device=<uuid/name>`                   |
-| Interface         | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/interfaces/?device=<uuid/name>`                    |
-| InventoryItem     | `device`               | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`               |
-|                   | `manufacturer`         | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`         |
-|                   | `serial`               | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...` |
-|                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`                 |
-| Platform          | `manufacturer`         | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/platforms/?manufacturer=<uuid/slug>`               |
-| PowerFeed         | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`                     |
-| PowerOutlet       | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`                 |
-| PowerPort         | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-ports/?device=<uuid/name>`                   |
-| Provider          | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/providers/?site=<uuid/slug>`                   |
-| ProviderNetwork   | `provider`             | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/provider-networks/?provider=<uuid/slug>`       |
-| Rack              | `role`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/racks/?role=<uuid/slug>`                           |
-|                   | `serial`               | Enhanced to permit filtering on multiple values            | `/dcim/racks/?serial=<value>&serial=<value>...`           |
-| RackGroup         | `parent`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-groups/?parent=<uuid/slug>`                   |
-| RackReservation   | `user`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-reservations/?user=<uuid/slug>`               |
-| RearPort          | `device`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`                    |
-| Region            | `parent`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`                       |
-| Tenant            | `tenant_group`         | Enhanced to support primary key UUIDs in addition to slugs | `/tenancy/tenants/?tenant_group=<uuid/slug>`              |
-| VirtualChassis    | `master`               | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`               |
-|                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                 |
-|                   | `tenant`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`               |
-| VLAN              | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
+| Model                  | Enhanced Filter Field     | Changes                                                    | UI and Rest API endpoints Available in v2.X                  |
+|------------------------|---------------------------|------------------------------------------------------------|--------------------------------------------------------------|
+| (all)                  | `created[__(gte/lte)]`    | Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`                        |
+| Cable                  | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/cabels/?tenant=<uuid/name>`                           |
+| Circuit                | `circuit_type`            | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?circuit_type=<uuid/name>`               |
+|                        | `provider`                | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?provider=<uuid/name>`                   |
+|                        | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                       |
+| ConsolePort            | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`                    |
+| ConsoleServerPort      | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`             |
+| Device                 | `cluster_id`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`                         |
+|                        | `device_type_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`                     |
+|                        | `device_redundancy_group` | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?device_redundancy_group=<uuid/name>`         |
+|                        | `manufacturer`            | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?manufacturer=<uuid/name>`                    |
+|                        | `model`                   | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`                           |
+|                        | `platform`                | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?platform=<uuid/name>`                        |
+|                        | `role`                    | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?role=<uuid/name>`                            |
+|                        | `rack_id`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`                            |
+|                        | `rack_group_id`           | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`                      |
+|                        | `serial`                  | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`            |
+|                        | `secrets_group`           | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?secrets_group=<uuid/name>`                   |
+|                        | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`                            |
+|                        | `virtual_chassis_id`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`                 |
+| DeviceBay              | `cable`                   | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`                          |
+|                        | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`                      |
+| DeviceType             | `manufacturer`            | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-types/?manufacturer=<uuid/name>`               |
+| DeviceRedundancyGroup  | `secrets_group`           | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-redundancy-groups/?secrets_group=<uuid/name>`  |
+| FrontPort              | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/front-ports/?device=<uuid/name>`                      |
+| Interface              | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/interfaces/?device=<uuid/name>`                       |
+| InventoryItem          | `device`                  | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`                  |
+|                        | `manufacturer`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`            |
+|                        | `serial`                  | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...`    |
+|                        | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`                    |
+| Manufacturer           | `platforms`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/manufacturers/?platforms=<uuid/name>`                 |
+| Platform               | `manufacturer`            | Enhanced to support primary key UUIDs in addition to names | `/dcim/platforms/?manufacturer=<uuid/name>`                  |
+| PowerFeed              | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`                        |
+| PowerOutlet            | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`                    |
+| PowerPort              | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-ports/?device=<uuid/name>`                      |
+| Provider               | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/providers/?site=<uuid/slug>`                      |
+| ProviderNetwork        | `provider`                | Enhanced to support primary key UUIDs in addition to names | `/circuits/provider-networks/?provider=<uuid/name>`          |
+| Rack                   | `role`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/racks/?role=<uuid/slug>`                              |
+|                        | `serial`                  | Enhanced to permit filtering on multiple values            | `/dcim/racks/?serial=<value>&serial=<value>...`              |
+| RackGroup              | `parent`                  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-groups/?parent=<uuid/slug>`                      |
+| RackReservation        | `user`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-reservations/?user=<uuid/slug>`                  |
+| RearPort               | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`                       |
+| Region                 | `parent`                  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`                          |
+| Tenant                 | `tenant_group`            | Enhanced to support primary key UUIDs in addition to slugs | `/tenancy/tenants/?tenant_group=<uuid/slug>`                 |
+| VirtualChassis         | `master`                  | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`                  |
+|                        | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                    |
+|                        | `tenant`                  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`                  |
+| VLAN                   | `vlan_group`              | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                        |
 
 ### Corrected Filter Fields
 
@@ -469,11 +516,14 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `region`              |                                                                                               |
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
+| CircuitType             | `slug`                |                                                                                               |
 | Cluster                 | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
 |                         | `tenant_group_id`     |                                                                                               |
+| ClusterGroup            | `slug`                |                                                                                               |
+| ClusterType             | `slug`                |                                                                                               |
 | ConfigContext           | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `role_id`             |                                                                                               |
@@ -490,6 +540,7 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
 | CustomFieldChoice       | `field_id`            | instead of `/extras/custom-field-choices/?field_id=<uuid>`, use `custom_field=<uuid>`         |
+| CustomLink              | `slug`                |                                                                                               |
 | Device                  | `manufacturer_id`     |                                                                                               |
 |                         | `model`               | instead of `/dcim/devices/?model=<uuid>`, use `device_type=<uuid>`                            |
 |                         | `pass_through_ports`  | instead of `/dcim/devices/?pass_through_ports=<bool>`, use `has_front_ports`/`has_rear_ports` |
@@ -507,11 +558,14 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
 | DeviceType              | `manufacturer_id`     |                                                                                               |
+| DeviceRedundancyGroup   | `slug`                |                                                                                               |
+| DynamicGroup            | `slug`                |                                                                                               |
 | FrontPort               | `device_id`           |                                                                                               |
 |                         | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
+| GraphQLQuery            | `slug`                |                                                                                               |
 | Interface               | `bridge_id`           |                                                                                               |
 |                         | `device_id`           |                                                                                               |
 |                         | `lag_id`              |                                                                                               |
@@ -528,42 +582,21 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
 | IPAddress               | `tenant_group_id`     |                                                                                               |
+| JobHook                 | `slug`                |                                                                                               |
 | Location                | `tenant_group_id`     |                                                                                               |
 |                         | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
-| Provider                | `region`              |                                                                                               |
+| Manufacturer            | `slug`                |                                                                                               |
 | ObjectPermission        | `user_id`             | instead of `/users/permissions/?user_id=<uuid>`, use `users=<uuid>`                           |
 |                         | `region_id`           |                                                                                               |
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
+| Platform                | `slug`                |                                                                                               |
+| Provider                | `region`              |                                                                                               |
+|                         | `slug`                |                                                                                               |
 | ProviderNetwork         | `provider_id`         |                                                                                               |
-| Rack                    | `group_id`            |                                                                                               |
-|                         | `region`              |                                                                                               |
-|                         | `region_id`           |                                                                                               |
-|                         | `role_id`             |                                                                                               |
-|                         | `site`                |                                                                                               |
-|                         | `site_id`             |                                                                                               |
-|                         | `tenant_group_id`     |                                                                                               |
-| RackGroup               | `parent_id`           |                                                                                               |
-|                         | `region`              |                                                                                               |
-|                         | `region_id`           |                                                                                               |
-|                         | `site`                |                                                                                               |
-|                         | `site_id`             |                                                                                               |
-| RackReservation         | `group_id`            |                                                                                               |
-|                         | `rack_id`             |                                                                                               |
-|                         | `site`                |                                                                                               |
-|                         | `site_id`             |                                                                                               |
-|                         | `tenant_group_id`     |                                                                                               |
-|                         | `user_id`             |                                                                                               |
-| RearPort                | `device_id`           |                                                                                               |
-|                         | `region`              |                                                                                               |
-|                         | `region_id`           |                                                                                               |
-|                         | `site`                |                                                                                               |
-|                         | `site_id`             |                                                                                               |
-| Region                  | `parent_id`           |                                                                                               |
-| RouteTarget             | `tenant_group_id`     |                                                                                               |
 | Platform                | `manufacturer_id`     |                                                                                               |
 | PowerOutlet             | `device_id`           |                                                                                               |
 |                         | `region`              |                                                                                               |
@@ -591,7 +624,40 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `site`                |                                                                                               |
 |                         | `site_id`             |                                                                                               |
 |                         | `tenant_group_id`     |                                                                                               |
+| Rack                    | `group_id`            |                                                                                               |
+|                         | `region`              |                                                                                               |
+|                         | `region_id`           |                                                                                               |
+|                         | `role_id`             |                                                                                               |
+|                         | `site`                |                                                                                               |
+|                         | `site_id`             |                                                                                               |
+|                         | `tenant_group_id`     |                                                                                               |
+| RackGroup               | `parent_id`           |                                                                                               |
+|                         | `region`              |                                                                                               |
+|                         | `region_id`           |                                                                                               |
+|                         | `site`                |                                                                                               |
+|                         | `site_id`             |                                                                                               |
+| RackReservation         | `group_id`            |                                                                                               |
+|                         | `rack_id`             |                                                                                               |
+|                         | `site`                |                                                                                               |
+|                         | `site_id`             |                                                                                               |
+|                         | `tenant_group_id`     |                                                                                               |
+|                         | `user_id`             |                                                                                               |
+| RearPort                | `device_id`           |                                                                                               |
+|                         | `region`              |                                                                                               |
+|                         | `region_id`           |                                                                                               |
+|                         | `site`                |                                                                                               |
+|                         | `site_id`             |                                                                                               |
+| Region                  | `parent_id`           |                                                                                               |
+| RelationshipAssociation | `slug`                |                                                                                               |
+| RIR                     | `slug`                |                                                                                               |
+| RouteTarget             | `slug`                |                                                                                               |
+| RouteTarget             | `tenant_group_id`     |                                                                                               |
+| Role                    | `slug`                |                                                                                               |
+| Secret                  | `slug`                |                                                                                               |
+| SecretsGroup            | `slug`                |                                                                                               |
 | SecretsGroupAssociation | `group_id`            | instead of `/extras/secrets-groups-associations/?group_id=<uuid>`, use `secrets_group=<uuid>` |
+|                         | `slug`                |                                                                                               |
+| Status                  | `slug`                |                                                                                               |
 | Site                    | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
 |                         | `tenant_group_id`     |                                                                                               |
@@ -600,7 +666,9 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 |                         | `has_aggregates`      |                                                                                               |
 |                         | `has_sites`           |                                                                                               |
 |                         | `sites`               |                                                                                               |
+|                         | `slug`                |                                                                                               |
 | TenantGroup             | `parent_id`           |                                                                                               |
+|                         | `slug`                |                                                                                               |
 | VirtualChassis          | `master_id`           |                                                                                               |
 |                         | `region`              |                                                                                               |
 |                         | `region_id`           |                                                                                               |
@@ -622,6 +690,7 @@ Their filters are also being replaced by `?location=<uuid/slug>`. For example `/
 | VMInterface             | `bridge_id`           |                                                                                               |
 |                         | `parent_interface_id` |                                                                                               |
 | VRF                     | `tenant_group_id`     |                                                                                               |
+| Webhook                 | `slug`                |                                                                                               |
 
 ## Python Code Location Changes
 

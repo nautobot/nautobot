@@ -353,9 +353,7 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
         def check_expected_slug(self, obj):
-            # slug field has been removed from alot of models,
-            # causing this test to fail for such models
-            if hasattr(obj, "slug"):
+            if hasattr(self, "slug_source"):
                 slug_source = self.slug_source if isinstance(self.slug_source, (list, tuple)) else [self.slug_source]
                 expected_slug = ""
                 for source_item in slug_source:

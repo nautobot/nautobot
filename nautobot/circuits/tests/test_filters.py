@@ -163,7 +163,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         Cable.objects.create(
             termination_a=circuit_terminations[0],

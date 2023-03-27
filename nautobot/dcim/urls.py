@@ -573,7 +573,7 @@ urlpatterns = [
         kwargs={"model": Platform},
     ),
     path(
-        "platforms/<uuid:pk>>/notes/",
+        "platforms/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="platform_notes",
         kwargs={"model": Platform},

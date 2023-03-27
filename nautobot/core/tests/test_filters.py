@@ -782,12 +782,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        manufacturers = (
-            dcim_models.Manufacturer(name="Manufacturer 1"),
-            dcim_models.Manufacturer(name="Manufacturer 2"),
-            dcim_models.Manufacturer(name="Manufacturer 3"),
-        )
-        dcim_models.Manufacturer.objects.bulk_create(manufacturers)
+        manufacturers = dcim_models.Manufacturer.objects.all()[:3]
 
         device_types = (
             dcim_models.DeviceType(
@@ -815,12 +810,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
         device_statuses = extras_models.Status.objects.get_for_model(dcim_models.Device)
 
-        platforms = (
-            dcim_models.Platform(name="Platform 1"),
-            dcim_models.Platform(name="Platform 2"),
-            dcim_models.Platform(name="Platform 3"),
-        )
-        dcim_models.Platform.objects.bulk_create(platforms)
+        platforms = dcim_models.Platform.objects.all()[:3]
         cls.location_type = dcim_models.LocationType.objects.filter(parent__isnull=False).first()
         cls.location_type.content_types.add(
             ContentType.objects.get_for_model(dcim_models.Rack), ContentType.objects.get_for_model(dcim_models.Device)

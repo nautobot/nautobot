@@ -2200,7 +2200,7 @@ class CableTestCase(
             ),
         ]
 
-        status = Status.objects.get_for_model(Cable).first()
+        status = Status.objects.get_for_model(Cable).get(name="Connected")
         cables = [
             Cable.objects.create(termination_a=circuit_terminations[0], termination_b=interfaces[0], status=status),
             Cable.objects.create(termination_a=circuit_terminations[1], termination_b=interfaces[1], status=status),
@@ -2274,16 +2274,11 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             ConsolePort.objects.create(device=device_1, name="Console Port 2"),
             ConsolePort.objects.create(device=device_1, name="Console Port 3"),
         )
+        status_connected = Status.objects.get(name="Connected")
 
-        Cable.objects.create(
-            termination_a=consoleports[0], termination_b=serverports[0], status=Status.objects.get(name="Connected")
-        )
-        Cable.objects.create(
-            termination_a=consoleports[1], termination_b=serverports[1], status=Status.objects.get(name="Connected")
-        )
-        Cable.objects.create(
-            termination_a=consoleports[2], termination_b=rearport, status=Status.objects.get(name="Connected")
-        )
+        Cable.objects.create(termination_a=consoleports[0], termination_b=serverports[0], status=status_connected)
+        Cable.objects.create(termination_a=consoleports[1], termination_b=serverports[1], status=status_connected)
+        Cable.objects.create(termination_a=consoleports[2], termination_b=rearport, status=status_connected)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
@@ -2339,16 +2334,12 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         powerpanel = PowerPanel.objects.create(location=location, name="Power Panel 1")
         powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1")
 
-        Cable.objects.create(
-            termination_a=powerports[2], termination_b=powerfeed, status=Status.objects.get(name="Connected")
-        )
+        status_connected = Status.objects.get(name="Connected")
+
+        Cable.objects.create(termination_a=powerports[2], termination_b=powerfeed, status=status_connected)
         # Creating a PowerOutlet with a PowerPort via the ORM does *not* automatically cable the two together. Bug?
-        Cable.objects.create(
-            termination_a=powerports[0], termination_b=poweroutlets[0], status=Status.objects.get(name="Connected")
-        )
-        Cable.objects.create(
-            termination_a=powerports[1], termination_b=poweroutlets[1], status=Status.objects.get(name="Connected")
-        )
+        Cable.objects.create(termination_a=powerports[0], termination_b=poweroutlets[0], status=status_connected)
+        Cable.objects.create(termination_a=powerports[1], termination_b=poweroutlets[1], status=status_connected)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):

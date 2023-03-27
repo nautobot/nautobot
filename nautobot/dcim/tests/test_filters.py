@@ -1682,7 +1682,7 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(
@@ -2139,7 +2139,7 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         front_ports[1].tags.set(Tag.objects.get_for_model(FrontPort)[:3])
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(
@@ -2206,7 +2206,7 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         rear_ports[1].tags.set(Tag.objects.get_for_model(RearPort)[:3])
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses[0]
+        status_connected = cable_statuses.get(name="Connected")
 
         # Cables
         Cable.objects.create(

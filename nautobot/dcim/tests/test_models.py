@@ -174,7 +174,7 @@ class InterfaceTemplateTestCase(TestCase):
             location=location,
         )
 
-        status = Status.objects.get_for_model(Interface).first()
+        status = Status.objects.get_for_model(Interface).get(name="Active")
         self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, status)
 
         # Assert that a different status is picked if active status is not found for interface

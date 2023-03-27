@@ -95,8 +95,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
-    slug_source = "name"
-
     def get_deletable_object(self):
         return RIR.objects.create(name="DELETE ME")
 

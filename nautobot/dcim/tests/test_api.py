@@ -190,7 +190,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        cls.status = Status.objects.get_for_model(Location).first()
+        cls.location_statuses = Status.objects.get_for_model(Location).first()
         tenant = Tenant.objects.first()
 
         cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status)
@@ -206,35 +206,33 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Downtown Durham",
                 "location_type": cls.lt1.pk,
-                "status": cls.status.pk,
+                "status": cls.location_statuses[0].pk,
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
                 "location_type": cls.lt2.pk,
                 "parent": cls.loc1.pk,
-                "status": cls.status.pk,
+                "status": cls.location_statuses[0].pk,
             },
             {
                 "name": "RTP4E-2",
                 "location_type": cls.lt3.pk,
                 "parent": cls.loc2.pk,
-                "status": cls.status.pk,
+                "status": cls.location_statuses[0].pk,
                 "description": "Second floor of RTP4E",
                 "tenant": tenant.pk,
             },
         ]
 
-        location_status = Status.objects.get_for_model(Location)[1]
-
         # Changing location_type of an existing instance is not permitted
         cls.update_data = {
             "name": "A revised location",
             "slug": "a-different-slug",
-            "status": location_status.pk,
+            "status": cls.location_statuses[1].pk,
         }
         cls.bulk_update_data = {
-            "status": location_status.pk,
+            "status": cls.location_statuses[1].pk,
         }
 
     def test_time_zone_field_post_null(self):
@@ -247,7 +245,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -268,7 +266,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -290,7 +288,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -312,7 +310,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -667,7 +665,6 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -1036,7 +1033,6 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):

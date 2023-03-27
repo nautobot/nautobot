@@ -152,20 +152,21 @@ class FilterTestCases:
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
             self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
-    class NameSlugFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name and by slug."""
+    class NameOnlyFilterTestCase(FilterTestCase):
+        """Add simple tests for filtering by name."""
 
         def test_name(self):
             """Verify that the filterset supports filtering by name."""
             params = {"name": self.queryset.values_list("name", flat=True)[:2]}
             filterset = self.filterset(params, self.queryset)
             self.assertTrue(filterset.is_valid())
-            self.assertEqual(filterset.qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(filterset.qs, self.queryset.filter(name__in=params["name"]))
+
+    class NameSlugFilterTestCase(NameOnlyFilterTestCase):
+        """Add simple tests for filtering by name and by slug."""
 
         def test_slug(self):
             """Verify that the filterset supports filtering by slug."""
-            # slug field has been removed from alot of models,
-            # causing this test to fail for such models
             if hasattr(self.queryset, "slug"):
                 params = {"slug": self.queryset.values_list("slug", flat=True)[:2]}
                 filterset = self.filterset(params, self.queryset)

@@ -954,7 +954,7 @@ GraphQL utility functions:
 1. `execute_query()`: Runs string as a query against GraphQL.
 2. `execute_saved_query()`: Execute a saved query from Nautobot database.
 
-Both functions have the same arguments other than `execute_saved_query()` which requires a slug to identify the saved query rather than a string holding a query.
+Both functions have the same arguments other than `execute_saved_query()` which requires a name to identify the saved query rather than a string holding a query.
 
 For authentication either a request object or user object needs to be passed in. If there is none, the function will error out.
 
@@ -966,7 +966,7 @@ Arguments:
     * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
     * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 * `execute_saved_query()`:
-    * `saved_query_slug` (str): Slug of a saved GraphQL query.
+    * `saved_query_name` (str): Name of a saved GraphQL query.
     * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
     * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
     * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
