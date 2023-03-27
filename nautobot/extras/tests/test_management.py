@@ -21,10 +21,6 @@ class StatusManagementTestCase(TestCase):
 
         # Should be safe to re-run when default statuses have been modified,
         # and so long as their slugs are unchanged, no new statuses should be created
-        # TODO(timizuo): I dont think this is important anymore
-        # status = Status.objects.get(name="Active")
-        # status.name = "Really Active"
-        # status.validated_save()
 
         status = Status.objects.get(name="Planned")
         status.color = "12ab34"
@@ -41,7 +37,6 @@ class StatusManagementTestCase(TestCase):
         """
         Verify that populate_status_choices() handles Status slug change when its name still matches a default Status.
         """
-        # TODO(timizuo): Find a different approach to assert error handing here
         initial_statuses_count = Status.objects.count()
         status = Status.objects.get(name="Active")
         status.slug = "active2"

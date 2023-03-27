@@ -634,9 +634,7 @@ class DynamicGroupTestMixin:
             Location.objects.create(name="Location 3", slug="location-3", location_type=location_type),
         )
 
-        manufacturer = Manufacturer.objects.create(
-            name="Manufacturer 1",
-        )
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",

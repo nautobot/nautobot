@@ -87,9 +87,6 @@ class DynamicGroup(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def natural_key(self):
-        return (self.name,)
-
     @property
     def model(self):
         """

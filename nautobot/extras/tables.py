@@ -896,7 +896,7 @@ class RoleTable(BaseTable):
     """Table for list view of `Role` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:role", args=[Accessor("name")])
+    name = tables.Column(linkify=True)
     color = ColorColumn()
     actions = ButtonsColumn(Role, pk_field="pk")
     content_types = ContentTypesColumn(truncate_words=15)

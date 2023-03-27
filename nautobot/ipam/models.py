@@ -194,9 +194,6 @@ class RIR(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def natural_key(self):
-        return (self.name,)
-
     def get_absolute_url(self):
         return reverse("ipam:rir", args=[self.pk])
 

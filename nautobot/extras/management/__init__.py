@@ -246,7 +246,6 @@ def clear_status_choices(
             # Clear all statuses for this model
             slugs = Status.objects.filter(content_types=content_type).values_list("slug", flat=True)
 
-        # TODO(timizuo): Re-Check this; I think this should also be changed to name
         for slug in slugs:
             try:
                 obj = Status.objects.get(slug=slug)

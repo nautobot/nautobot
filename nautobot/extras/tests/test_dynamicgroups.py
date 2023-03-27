@@ -55,11 +55,7 @@ class DynamicGroupTestBase(TestCase):
         ]
 
         cls.manufacturer = Manufacturer.objects.first()
-        cls.device_type = DeviceType.objects.create(
-            manufacturer=cls.manufacturer,
-            model="device Type 1",
-            slug="device-type-1",
-        )
+        cls.device_type = DeviceType.objects.first()
         cls.device_role = Role.objects.get_for_model(Device).first()
         statuses = Status.objects.get_for_model(Device)
         cls.status_1 = statuses[0]

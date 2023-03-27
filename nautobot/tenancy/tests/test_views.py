@@ -20,7 +20,6 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Tenant Group 6,Sixth tenant group",
             "Tenant Group 7,Seventh tenant group",
         )
-        cls.treenode_filter_by_field_name = "name"
 
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
