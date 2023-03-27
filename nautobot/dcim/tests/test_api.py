@@ -190,14 +190,18 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        cls.location_statuses = Status.objects.get_for_model(Location).first()
+        cls.location_statuses = Status.objects.get_for_model(Location)
         tenant = Tenant.objects.first()
 
-        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status)
-        cls.loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=cls.status, parent=cls.loc1)
-        cls.loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=cls.status, parent=cls.loc2)
+        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.location_statuses[0])
+        cls.loc2 = Location.objects.create(
+            name="RTP4E", location_type=cls.lt2, status=cls.location_statuses[0], parent=cls.loc1
+        )
+        cls.loc3 = Location.objects.create(
+            name="RTP4E-3", location_type=cls.lt3, status=cls.location_statuses[0], parent=cls.loc2
+        )
         cls.loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.status, parent=cls.loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.location_statuses[1], parent=cls.loc3, tenant=tenant
         )
         for loc in [cls.loc1, cls.loc2, cls.loc3, cls.loc4]:
             loc.validated_save()

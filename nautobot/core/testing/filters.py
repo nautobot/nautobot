@@ -157,10 +157,12 @@ class FilterTestCases:
 
         def test_name(self):
             """Verify that the filterset supports filtering by name."""
-            params = {"name": self.queryset.values_list("name", flat=True)[:2]}
+            params = {"name": list(self.queryset.values_list("name", flat=True)[:2])}
             filterset = self.filterset(params, self.queryset)
             self.assertTrue(filterset.is_valid())
-            self.assertQuerysetEqualAndNotEmpty(filterset.qs, self.queryset.filter(name__in=params["name"]))
+            self.assertQuerysetEqualAndNotEmpty(
+                filterset.qs.order_by("name"), self.queryset.filter(name__in=params["name"]).order_by("name")
+            )
 
     class NameSlugFilterTestCase(NameOnlyFilterTestCase):
         """Add simple tests for filtering by name and by slug."""
