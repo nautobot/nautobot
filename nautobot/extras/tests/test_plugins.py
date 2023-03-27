@@ -243,12 +243,15 @@ class PluginTest(TestCase):
         class ExampleConfigWithDefaultSettings(example_config):
             default_settings = {
                 "bar": 123,
+                "SAMPLE_VARIABLE": "Testing",
             }
 
         # Populate the default value if setting has not been specified
         user_config = {}
         ExampleConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config["bar"], 123)
+        # Don't overwrite constance_config Keys.
+        self.assertNotIn("SAMPLE_VARIABLE", user_config)
 
         # Don't overwrite specified values
         user_config = {"bar": 456}

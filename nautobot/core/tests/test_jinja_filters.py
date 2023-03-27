@@ -42,6 +42,7 @@ class NautobotJinjaFilterTest(TestCase):
             "as_range",
             "meters_to_feet",
             "get_item",
+            "settings_or_config",
         ]
 
         # For each helper, try to render a jinja template with render_jinja2 and fail if TemplateAssertionError is raised
