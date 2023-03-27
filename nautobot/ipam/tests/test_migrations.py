@@ -7,7 +7,6 @@ from taggit.managers import TaggableManager
 
 from nautobot.core.models.utils import serialize_object
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.extras.management import populate_status_choices
 from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
