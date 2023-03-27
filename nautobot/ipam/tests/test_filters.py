@@ -150,7 +150,7 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Tenanc
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class RIRTestCase(FilterTestCases.NameSlugFilterTestCase):
+class RIRTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = RIR.objects.all()
     filterset = RIRFilterSet
 

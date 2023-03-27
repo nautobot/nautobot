@@ -15,7 +15,7 @@ from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
 from nautobot.extras.models import Role, Status, Tag
 
 
-class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 
@@ -60,7 +60,7 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
-class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
+class CircuitTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = CircuitType.objects.all()
     filterset = CircuitTypeFilterSet
 

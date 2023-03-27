@@ -23,7 +23,7 @@ from nautobot.virtualization.models import (
 )
 
 
-class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ClusterTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = ClusterType.objects.all()
     filterset = ClusterTypeFilterSet
 
@@ -57,7 +57,7 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ClusterGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = ClusterGroup.objects.all()
     filterset = ClusterGroupFilterSet
 

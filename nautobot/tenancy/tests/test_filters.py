@@ -20,7 +20,7 @@ from nautobot.virtualization.factory import (
 )
 
 
-class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
+class TenantGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = TenantGroup.objects.all()
     filterset = TenantGroupFilterSet
 
@@ -88,7 +88,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
 
-class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
+class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Tenant.objects.all()
     filterset = TenantFilterSet
 

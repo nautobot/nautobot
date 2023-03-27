@@ -1492,7 +1492,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
 
 
-class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
+class SecretTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Secret.objects.all()
     filterset = SecretFilterSet
 
@@ -1530,7 +1530,7 @@ class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class SecretsGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
+class SecretsGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = SecretsGroup.objects.all()
     filterset = SecretsGroupFilterSet
 
@@ -1619,7 +1619,7 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
+class StatusTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
 
@@ -1743,7 +1743,7 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
+class RoleTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Role.objects.all()
     filterset = RoleFilterSet
 

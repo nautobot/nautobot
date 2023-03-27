@@ -841,7 +841,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Manufacturer.objects.all()
     filterset = ManufacturerFilterSet
     generic_filter_tests = [
@@ -1221,7 +1221,7 @@ class DeviceBayTemplateTestCase(Mixins.ComponentTemplateMixin):
     filterset = DeviceBayTemplateFilterSet
 
 
-class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
+class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Platform.objects.all()
     filterset = PlatformFilterSet
     generic_filter_tests = [
