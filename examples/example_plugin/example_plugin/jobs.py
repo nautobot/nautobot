@@ -1,4 +1,3 @@
-import pprint
 import time
 
 from celery.utils.log import get_task_logger
@@ -6,27 +5,11 @@ from django.conf import settings
 
 from nautobot.core.celery import register_jobs
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import BooleanVar, IntegerVar, Job, JobHookReceiver
+from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver
 
 
 logger = get_task_logger(__name__)
 name = "ExamplePlugin jobs"
-
-
-class MultiplyJob(Job):
-    x = IntegerVar()
-    y = IntegerVar()
-    dryrun = BooleanVar()
-
-    class Meta:
-        has_sensitive_variables = False
-
-    def run(self, x, y, dryrun):
-        result = x * y
-        logger.info(f"TASK REQUEST: {pprint.pformat(self.request)}")
-        logger.info(f"TASK DRYRUN: {dryrun}")
-        logger.info(f"{x} * {y} = {result}")
-        return result
 
 
 class ExampleJob(Job):
@@ -104,5 +87,5 @@ class ExampleJobHookReceiver(JobHookReceiver):
         return False
 
 
-jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleJobHookReceiver, MultiplyJob)
-register_jobs(jobs)
+jobs = (ExampleJob, ExampleHiddenJob, ExampleLoggingJob, ExampleJobHookReceiver)
+register_jobs(*jobs)
