@@ -810,7 +810,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         return query
 
     def get_child_ips(self):
-        """Return all IPAddresses within this Prefix and Namespace."""
+        """Return all IPAddresses directly contained within this Prefix and Namespace."""
         return self.ip_addresses.all()
 
     def get_available_prefixes(self):

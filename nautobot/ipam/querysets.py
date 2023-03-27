@@ -316,12 +316,16 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             return super().delete(*args, **kwargs)
 
     def _validate_cidr(self, value):
-        """Validate whether ``value`` is a validr IPv4/IPv6 CIDR."""
+        """
+        Validate whether `value` is a validr IPv4/IPv6 CIDR.
+
+        Args:
+            value (str): IP address
+        """
         try:
-            cidr = netaddr.IPNetwork(str(value))
-        except netaddr.AddrFormatError:
-            raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."})
-        return cidr
+            return netaddr.IPNetwork(str(value))
+        except netaddr.AddrFormatError as err:
+            raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
 
     def get_closest_parent(self, cidr, namespace, prefix_length=0):
         """
