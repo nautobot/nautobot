@@ -43,8 +43,6 @@ class NautobotCelery(Celery):
         return super().register_task(task, **options)
 
 
-# TODO(gary): local jobs are not being loaded on the worker. may need to append JOBS_ROOT to sys.path?
-
 app = NautobotCelery("nautobot")
 
 # Using a string here means the worker doesn't have to serialize
@@ -182,5 +180,6 @@ nautobot_task = shared_task
 
 
 def register_jobs(*jobs):
+    """Helper method to register multiple jobs."""
     for job in jobs:
         app.register_task(job)

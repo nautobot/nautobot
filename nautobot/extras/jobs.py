@@ -164,7 +164,7 @@ class BaseJob(Task):
         """
 
     def get_job_model(self):
-        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__class__.__name__)
+        return self.get_job_result().job_model
 
     def get_job_result(self):
         from nautobot.extras.models.jobs import JobResult  # avoid circular import
@@ -191,7 +191,7 @@ class BaseJob(Task):
         except TypeError:
             raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}")
 
-        job_model = self.get_job_model()
+        job_model = self.job_result.job_model
         if not job_model.enabled:
             self.log_failure(
                 message=f"Job {job_model} is not enabled to be run!",

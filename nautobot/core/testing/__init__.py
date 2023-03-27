@@ -43,7 +43,7 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, data=None, commit=True, username="test-user", request=None):
+def run_job_for_testing(job, kwargs=None, username="test-user"):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
@@ -51,17 +51,15 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
 
     Args:
       job (Job): Job model instance (not Job class) to run
-      data (dict): Input data values for any Job variables.
-      commit (bool): Whether to commit changes to the database or rollback when done.
+      kwargs (dict): Input keyword arguments for Job run method.
       username (str): Username of existing or to-be-created User account to own the JobResult. Ignored if `request.user`
         exists.
-      request (HttpRequest): Existing request (if any) to own the JobResult.
 
     Returns:
       JobResult: representing the executed job
     """
-    if data is None:
-        data = {}
+    if kwargs is None:
+        kwargs = {}
 
     # Enable the job if it wasn't enabled before
     if not job.enabled:
@@ -69,36 +67,21 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         job.validated_save()
 
     # If the request has a user, ignore the username argument and use that user.
-    if request and request.user:
-        user_instance = request.user
-    else:
-        user_instance, _ = User.objects.get_or_create(
-            username=username, defaults={"is_superuser": True, "password": "password"}
-        )
+    user_instance, _ = User.objects.get_or_create(
+        username=username, defaults={"is_superuser": True, "password": "password"}
+    )
     job_result = JobResult.objects.create(
         name=job.class_path,
-        task_kwargs={"data": data, "commit": commit},
+        task_kwargs=kwargs,
         obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,
         task_id=uuid.uuid4(),
     )
 
-    if request is None:
-        factory = RequestFactory()
-        request = factory.request()
-        request.user = user_instance
-
-    # Instead of a context manager, we're just explicitly creating a `NautobotFakeRequest`.
-    wrapped_request = copy_safe_request(request)
-
     # This runs the job synchronously in the current thread as if it were being executed by a
     # worker, therefore resulting in updating the `JobResult` as expected.
-    celery_result = job.job_task.apply(
-        kwargs=dict(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk),
-        task_id=job_result.task_id,
-    )
-    job_result.celery_result = celery_result
+    job.job_task.apply(kwargs=kwargs, task_id=job_result.task_id)
     job_result.refresh_from_db()
     return job_result
 
