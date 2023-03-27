@@ -736,19 +736,13 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
-        func: The callable object to be enqueued for execution
-        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute,
-            if obj_type is extras.Job; for other funcs and obj_types it may differ.
-        obj_type: ContentType to link to the JobResult instance obj_type
+        job_model: The Job to be enqueued for execution
         user: User object to link to the JobResult instance
         celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
-        args: additional args passed to the callable
         schedule: Optional ScheduledJob instance to link to the JobResult
-        kwargs: additional kwargs passed to the callable
+        args: args passed to the job task
+        kwargs: kwargs passed to the job task
         """
-        # Discard "request" parameter from the kwargs that we save in the job_result, as it's not relevant to re-runs,
-        # and will likely go away in the future.
-        job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
         job_result = cls.objects.create(
             name=job_model.class_path,
             obj_type=ContentType.objects.get_for_model(job_model),
@@ -765,17 +759,17 @@ class JobResult(BaseModel, CustomFieldModel):
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:
             celery_kwargs["time_limit"] = job_model.time_limit
-        if not job_model.has_sensitive_variables:
-            job_result.task_kwargs = job_result_kwargs
         job_result.job_model = job_model
         job_result.save()
 
+        # Set argsrepr and kwargsrepr to sanitize sensitive variables
+        job_signature = {"args": args, "kwargs": kwargs, "task_id": str(job_result.task_id)}
+        job_signature.update(celery_kwargs)
+        if job_model.has_sensitive_variables:
+            job_signature.update({"argsrepr": [], "kwargsrepr": {}})
+
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-        transaction.on_commit(
-            lambda: job_model.job_task.apply_async(
-                args=args, kwargs=kwargs, task_id=str(job_result.task_id), **celery_kwargs
-            )
-        )
+        transaction.on_commit(lambda: job_model.job_task.apply_async(**job_signature))
 
         return job_result
 
