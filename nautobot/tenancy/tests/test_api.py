@@ -19,7 +19,6 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
