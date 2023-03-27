@@ -37,6 +37,7 @@ from nautobot.extras.filters import (
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
     JobFilterSet,
+    JobButtonFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
@@ -62,6 +63,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -170,7 +172,6 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
 
         device_roles = Role.objects.get_for_model(Device)
@@ -365,7 +366,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["value"],
-        ["custom_field", "custom_field__name"],
+        ["custom_field", "custom_field__key"],
         ["weight"],
     )
 
@@ -373,7 +374,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Device)
         cfs = [
-            CustomField.objects.create(name=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
+            CustomField.objects.create(label=f"Custom Field {num}", type=CustomFieldTypeChoices.TYPE_TEXT)
             for num in range(3)
         ]
         for cf in cfs:
@@ -444,7 +445,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         content_type = ContentType.objects.get_for_model(Location)
         fields = [
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=f"field {num}", required=False)
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=f"field {num}", required=False)
             for num in range(3)
         ]
         cls.fields = fields
@@ -457,7 +458,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def test_field(self):
         fields = list(self.fields[:2])
         filter_params = [
-            {"custom_field": [fields[0].name, fields[1].pk]},
+            {"custom_field": [fields[0].key, fields[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -471,7 +472,6 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         content_types = ContentType.objects.filter(model__in=["location", "rack", "device"])
 
         ExportTemplate.objects.create(
@@ -551,6 +551,8 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
         )
         for repo in repos:
             repo.save(trigger_resync=False)
+        repos[0].tags.set(Tag.objects.get_for_model(GitRepository))
+        repos[1].tags.set(Tag.objects.get_for_model(GitRepository)[:3])
 
     def test_id(self):
         params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
@@ -713,7 +715,6 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
@@ -776,6 +777,11 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Job.objects.all()
     filterset = JobFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        Job.objects.first().tags.set(Tag.objects.get_for_model(Job))
+        Job.objects.last().tags.set(Tag.objects.get_for_model(Job)[:3])
 
     def test_grouping(self):
         params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
@@ -918,6 +924,72 @@ class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         params = {"q": "hook1"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+
+class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
+    queryset = JobButton.objects.all()
+    filterset = JobButtonFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        job_buttons = (
+            JobButton.objects.create(
+                name="JobButton1",
+                text="JobButton1",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=True,
+                weight=30,
+            ),
+            JobButton.objects.create(
+                name="JobButton2",
+                text="JobButton2",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=False,
+                weight=40,
+            ),
+            JobButton.objects.create(
+                name="JobButton3",
+                text="JobButton3",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                confirmation=True,
+                weight=50,
+            ),
+        )
+
+        location_ct = ContentType.objects.get_for_model(Location)
+        for jb in job_buttons:
+            jb.content_types.set([location_ct])
+
+    def test_name(self):
+        params = {"name": ["JobButton1", "JobButton2"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=["JobButton1", "JobButton2"])
+        )
+
+    def test_job(self):
+        job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        params = {"job": [job.pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(job__pk=job.pk)
+        )
+
+        params = {"job": [job.slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(job__slug=job.slug)
+        )
+
+    def test_weight(self):
+        params = {"weight": [30, 50]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(weight__in=[30, 50])
+        )
+
+    def test_search(self):
+        params = {"q": "JobButton"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(name__in=["JobButton1", "JobButton2", "JobButton3"]),
+        )
 
 
 class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
@@ -1457,6 +1529,8 @@ class SecretTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         for secret in secrets:
             secret.validated_save()
+        secrets[0].tags.set(Tag.objects.get_for_model(Secret))
+        secrets[1].tags.set(Tag.objects.get_for_model(Secret)[:3])
 
     def test_provider(self):
         params = {"provider": ["environment-variable"]}

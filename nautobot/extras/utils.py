@@ -4,11 +4,13 @@ import hmac
 import inspect
 import logging
 import pkgutil
+import re
 import sys
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.db.models import Q
 from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
@@ -376,7 +378,10 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
-    from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
+    from nautobot.extras.jobs import (
+        JobHookReceiver,
+        JobButtonReceiver,
+    )  # imported here to prevent circular import problem
 
     # Unrecoverable errors
     if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
@@ -398,6 +403,12 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             'Unable to represent Job class "%s" as a Job model because the class name exceeds %d characters in length!',
             job_class.__name__,
             JOB_MAX_NAME_LENGTH,
+        )
+        return (None, False)
+    if issubclass(job_class, JobHookReceiver) and issubclass(job_class, JobButtonReceiver):
+        logger.error(
+            'Job class "%s" must not sub-class from both JobHookReceiver and JobButtonReceiver!',
+            job_class.__name__,
         )
         return (None, False)
 
@@ -454,6 +465,7 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
             "name": job_name,
             "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
+            "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
             "installed": True,
             "enabled": False,
         },
@@ -485,6 +497,29 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )
 
     return (job_model, created)
+
+
+def remove_prefix_from_cf_key(field_name):
+    """
+    field_name (str): f"cf_{cf.key}"
+
+    Helper method to remove the "cf_" prefix
+    """
+    return field_name[3:]
+
+
+def check_if_key_is_graphql_safe(model_name, key):
+    """
+    Helper method to check if a key field is Python/GraphQL safe.
+    Used in CustomField for now, should be used in ComputedField and Relationship as well.
+    """
+    graphql_safe_pattern = re.compile("[_A-Za-z][_0-9A-Za-z]*")
+    if not graphql_safe_pattern.fullmatch(key):
+        raise ValidationError(
+            {
+                "key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
+            }
+        )
 
 
 def migrate_role_data(

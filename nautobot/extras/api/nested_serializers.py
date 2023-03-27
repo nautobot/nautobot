@@ -69,7 +69,7 @@ class NestedCustomFieldSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.CustomField
-        fields = ["id", "url", "name"]
+        fields = ["id", "url", "key"]
 
 
 class NestedCustomFieldChoiceSerializer(WritableNestedSerializer):
@@ -157,6 +157,14 @@ class NestedJobHookSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.JobHook
+        fields = ["id", "url", "name"]
+
+
+class NestedJobButtonSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
+
+    class Meta:
+        model = models.JobButton
         fields = ["id", "url", "name"]
 
 
@@ -285,7 +293,6 @@ class NestedScheduledJobCreationSerializer(BaseModelSerializer):
                 )
 
             if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
-
                 if data.get("crontab") is None:
                     raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
                 try:

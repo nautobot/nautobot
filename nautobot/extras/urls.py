@@ -14,8 +14,8 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
-    Note,
     JobHook,
+    Note,
     Relationship,
     Secret,
     SecretsGroup,
@@ -24,10 +24,10 @@ from nautobot.extras.models import (
     Webhook,
 )
 
-
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 
 urlpatterns = [
@@ -174,25 +174,25 @@ urlpatterns = [
         views.CustomFieldBulkDeleteView.as_view(),
         name="customfield_bulk_delete",
     ),
-    path("custom-fields/<slug:slug>/", views.CustomFieldView.as_view(), name="customfield"),
+    path("custom-fields/<uuid:pk>/", views.CustomFieldView.as_view(), name="customfield"),
     path(
-        "custom-fields/<slug:slug>/edit/",
+        "custom-fields/<uuid:pk>/edit/",
         views.CustomFieldEditView.as_view(),
         name="customfield_edit",
     ),
     path(
-        "custom-fields/<slug:slug>/delete/",
+        "custom-fields/<uuid:pk>/delete/",
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
     ),
     path(
-        "custom-fields/<slug:slug>/changelog/",
+        "custom-fields/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="customfield_changelog",
         kwargs={"model": CustomField},
     ),
     path(
-        "custom-fields/<str:name>/notes/",
+        "custom-fields/<uuid:pk>/notes/",
         views.ObjectNotesView.as_view(),
         name="customfield_notes",
         kwargs={"model": CustomField},
@@ -487,6 +487,8 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
+    # Job Button Run
+    path("job-button/<uuid:pk>/run/", views.JobButtonRunView.as_view(), name="jobbutton_run"),
     # Notes
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
     path("notes/<slug:slug>/", views.NoteView.as_view(), name="note"),

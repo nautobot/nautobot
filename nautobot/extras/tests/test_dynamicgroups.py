@@ -42,7 +42,6 @@ from nautobot.ipam.models import Prefix
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
-
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
         cls.lt = LocationType.objects.get(name="Campus")
@@ -197,7 +196,7 @@ class DynamicGroupTestBase(TestCase):
         )
 
 
-class DynamicGroupModelTest(DynamicGroupTestBase):
+class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroup model tests."""
 
     def test_content_type_is_immutable(self):
@@ -887,7 +886,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device = self.devices[0]
 
         cf = CustomField.objects.create(
-            name="favorite_food",
+            label="Favorite Food",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
         )
@@ -940,7 +939,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
 
-class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
+class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroupMembership model tests."""
 
     def test_clean_content_type(self):

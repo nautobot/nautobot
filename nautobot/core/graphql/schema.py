@@ -228,18 +228,11 @@ def extend_schema_type_custom_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
     for field in cfs:
-        # 2.0 TODO: #824 replace field.name with field.slug
-        field_name = f"{prefix}{str_to_var_name(field.name)}"
-        if str_to_var_name(field.name) != field.name:
-            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
-            # In 2.0 we should simply omit fields whose names/slugs are invalid in GraphQL, instead of mapping them.
-            warnings.warn(
-                f'Custom field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe name '
-                f'("{field.name}"); for now it will be mapped to the GraphQL name "{field_name}", '
-                "but in a future release this field may fail to appear in GraphQL.",
-                FutureWarning,
-            )
-        resolver_name = f"resolve_{field_name}"
+        # Since we guaranteed cf.key's uniqueness in CustomField data migration
+        # We can safely field_key this in our GraphQL without duplication
+        # For new CustomField instances, we also make sure that duplicate key does not exist.
+        field_key = f"{prefix}{field.key}"
+        resolver_name = f"resolve_{field_key}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
@@ -247,21 +240,20 @@ def extend_schema_type_custom_field(schema_type, model):
                 'because there is already an attribute mapped to the same name ("%s")',
                 field,
                 schema_type._meta.name,
-                field_name,
+                field_key,
             )
             continue
 
         setattr(
             schema_type,
             resolver_name,
-            # 2.0 TODO: #824 field.slug
-            generate_custom_field_resolver(field.name, resolver_name),
+            generate_custom_field_resolver(field.key, resolver_name),
         )
 
         if field.type in CUSTOM_FIELD_MAPPING:
-            schema_type._meta.fields[field_name] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
         else:
-            schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(graphene.String())
 
     return schema_type
 
@@ -288,6 +280,8 @@ def extend_schema_type_computed_field(schema_type, model):
         if str_to_var_name(field.slug) != field.slug:
             # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
             # In 2.0 we should simply omit fields whose slugs are invalid in GraphQL, instead of mapping them.
+            # We need to make sure that slug/key is unique in a data migration before we remove the warning
+            # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
             warnings.warn(
                 f'Computed field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
                 f'("{field.slug}"); for now it will be mapped to the GraphQL name "{field_name}", '
@@ -392,6 +386,8 @@ def extend_schema_type_relationships(schema_type, model):
             if str_to_var_name(relationship.slug) != relationship.slug:
                 # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
                 # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
+                # We need to make sure that slug/key is unique in a data migration before we remove the warning
+                # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
                 warnings.warn(
                     f'Relationship "{relationship}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
                     f'("{relationship.slug}"); for now it will be mapped to the GraphQL name "{rel_name}", '
@@ -481,7 +477,6 @@ def generate_query_mixin():
     registered_models = registry.get("model_features", {}).get("graphql", {})
     for app_name, models in registered_models.items():
         for model_name in models:
-
             try:
                 # Find the model class based on the content type
                 ct = ContentType.objects.get(app_label=app_name, model=model_name)
@@ -523,7 +518,6 @@ def generate_query_mixin():
 
     logger.debug("Extending all registered schema types with dynamic attributes")
     for schema_type in registry["graphql_types"].values():
-
         if already_present(schema_type._meta.model):
             continue
 

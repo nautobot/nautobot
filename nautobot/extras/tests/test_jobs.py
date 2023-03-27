@@ -629,7 +629,6 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.request.user = self.user
 
     def test_run(self):
-
         module = "test_location_with_custom_field"
         name = "TestCreateLocationWithCustomField"
         job_result = create_job_result_and_run_job(module, name, request=self.request, commit=True)
@@ -640,13 +639,70 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         # Test location with a value for custom_field
         location_1 = Location.objects.filter(slug="test-location-one")
         self.assertEqual(location_1.count(), 1)
-        self.assertEqual(CustomField.objects.filter(name="cf1").count(), 1)
+        self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
         self.assertEqual(location_1[0].cf["cf1"], "some-value")
 
         # Test location with default value for custom field
         location_2 = Location.objects.filter(slug="test-location-two")
         self.assertEqual(location_2.count(), 1)
         self.assertEqual(location_2[0].cf["cf1"], "-")
+
+
+class JobButtonReceiverTest(TransactionTestCase):
+    """
+    Test job button receiver.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Initialize fake request that will be required to run jobs
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        self.location_type = LocationType.objects.create(name="Test Root Type 2")
+        self.location = Location.objects.create(name="Test Job Button Location 1", location_type=self.location_type)
+        content_type = ContentType.objects.get_for_model(Location)
+        self.data = {
+            "object_pk": self.location.pk,
+            "object_model_name": f"{content_type.app_label}.{content_type.model}",
+        }
+
+    def test_form_field(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        job_class, _job_model = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit"])
+
+    def test_hidden(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        _job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_model.hidden)
+
+    def test_is_job_button(self):
+
+        with self.subTest(expected=False):
+            module = "test_pass"
+            name = "TestPass"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertFalse(job_model.is_job_button_receiver)
+
+        with self.subTest(expected=True):
+            module = "test_job_button_receiver"
+            name = "TestJobButtonReceiverSimple"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertTrue(job_model.is_job_button_receiver)
+
+    def test_missing_receive_job_button_method(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverFail"
+        logging.disable(logging.ERROR)
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        logging.disable(logging.NOTSET)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
 class JobHookReceiverTest(TransactionTestCase):
@@ -685,7 +741,6 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
-
         with self.subTest(expected=False):
             module = "test_pass"
             name = "TestPass"
@@ -716,7 +771,7 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
-class JobHookTest(TransactionTestCase):
+class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Test job hooks.
     """
@@ -739,7 +794,6 @@ class JobHookTest(TransactionTestCase):
 
     def test_enqueue_job_hook(self):
         with web_request_context(user=self.user):
-
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type)
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [

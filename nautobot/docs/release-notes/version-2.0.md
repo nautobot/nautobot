@@ -18,6 +18,26 @@ DeviceRole, RackRole, IPAM Role, and IPAddressRoleChoices have all been merged i
 
 Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
 
+#### Natural Key Support Across Nautobot Models ([#2900](https://github.com/nautobot/nautobot/issues/2900))
+
+Nautobot's `BaseModel` base class and related classes now implement automatic support for Django [natural keys](https://docs.djangoproject.com/en/3.2/topics/serialization/#natural-keys) for lookup and referencing, as well as supporting a `natural_key_slug` concept similar to that introduced by `django-natural-keys`. (Nautobot does not depend on `django-natural-keys` but its implementation is heavily inspired by that project.) For example:
+
+```python
+>>> DeviceType.objects.first().natural_key()
+['MegaCorp', 'Model 9000']
+
+>>> DeviceType.objects.get_by_natural_key("MegaCorp", "Model 9000")
+<DeviceType: Model 9000>
+
+>>> DeviceType.objects.first().natural_key_slug
+'MegaCorp&Model+9000'
+
+>>> DeviceType.objects.get(natural_key_slug="MegaCorp&Model+9000")
+<DeviceType: Model 9000>
+```
+
+Developers can refer to the [documentation on natural keys](../development/natural-keys.md) for details on how to support and use this feature.
+
 ### Changed
 
 #### Aggregate model Migrated to Prefix ([#3302](https://github.com/nautobot/nautobot/issues/3302))

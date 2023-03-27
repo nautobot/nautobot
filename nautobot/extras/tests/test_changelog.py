@@ -23,17 +23,16 @@ class ChangeLogViewTest(ModelViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Create a custom field on the Location model
         ct = ContentType.objects.get_for_model(Location)
-        cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="my_field", required=False)
+        cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="My Field", required=False)
         cf.validated_save()
         cf.content_types.set([ct])
 
         # Create a select custom field on the Location model
-        cf_select = CustomField(
+        cf_select = CustomField.objects.create(
             type=CustomFieldTypeChoices.TYPE_SELECT,
-            name="my_field_select",
+            label="My Field Select",
             required=False,
         )
         cf_select.validated_save()
@@ -239,14 +238,14 @@ class ChangeLogAPITest(APITestCase):
 
         # Create a custom field on the Location model
         ct = ContentType.objects.get_for_model(Location)
-        cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="my_field", required=False)
+        cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="My Field", required=False)
         cf.save()
         cf.content_types.set([ct])
 
         # Create a select custom field on the Location model
         cf_select = CustomField(
             type=CustomFieldTypeChoices.TYPE_SELECT,
-            name="my_field_select",
+            label="My Field Select",
             required=False,
         )
         cf_select.save()
@@ -513,7 +512,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertSequenceEqual(list(vm_interface.tagged_vlans.all()), [tagged_vlan])
 
 
-class ObjectChangeModelTest(TestCase):
+class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once we have an ObjectChangeFactory
     @classmethod
     def setUpTestData(cls):
         cls.location_status = Status.objects.get_for_model(Location).first()

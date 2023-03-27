@@ -162,15 +162,16 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
 | `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
+| `constance_config` | `{}` | [Django Constance](#adding-database-backed-config) configuration parameters for settings. |
 
 +++ 2.0.0
-    Support for the `searchable_models` attribute was added.
+    Support for the `searchable_models` and `constance_config` attributes were added.
 
 !!! note
     All `required_settings` must be configured in `PLUGINS_CONFIG` in `nautobot_config.py` before the app can be used.
 
 !!! warning
-    If a configuration parameter is listed in both `required_settings` and `default_settings`, the default setting will be ignored.
+    If a configuration parameter is listed in either of `required_settings` or `constance_config`, and also in `default_settings`, the default setting will be ignored.
 
 #### NautobotAppConfig Code Location Attributes
 
@@ -441,6 +442,32 @@ config = AnimalSoundsConfig
 and now the "Configuration" button that appears in the Installed Plugins table next to "Animal Sounds" will be a link to your configuration view.
 
 Similarly, if your app provides an "app home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `NautobotAppConfig` class. This can also be done for documentation by defining `docs_view_name` on your `NautobotAppConfig` class.
+
+### Adding Database Backed Config
+
++++ 2.0.0
+
+Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A
+Constance Fieldset will automatically be created for your plugin. We have added the `ConstanceConfigItem`
+namedtuple to assist in the configurations.
+
+```python
+# __init__.py
+from nautobot.apps import ConstanceConfigItem, NautobotAppConfig
+
+class AnimalSoundsConfig(NautobotAppConfig):
+    # ...
+    constance_config = {
+        'DOG': ConstanceConfigItem(default='woof', help_text='Dog sound'),
+        'CAT': ConstanceConfigItem(default='meow', help_text='Cat sound'),
+        'FOX': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
+    }
+```
+
+![Nautobot app in the admin config](../media/plugins/plugin_admin_config.png)
+
+!!! warning
+    Do not store secrets in the constance_config, instead use Nautobot [Secrets](../models/extras/secret.md).
 
 ## Extending Existing Functionality
 
@@ -778,6 +805,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | Feature | `django.db.models.Model` | `BaseModel` | `OrganizationalModel` | `PrimaryModel` |
 | ------- | --------------------- | ----------- | --------------------- | -------------- |
 | UUID primary key | ❌ | ✅ | ✅ | ✅ |
+| [Natural keys](../development/natural-keys.md) | ❌ | ✅ | ✅ | ✅ |
 | [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
@@ -803,6 +831,9 @@ class Animal(BaseModel):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        unique_together = [["name", "sound"]]
 ```
 
 Once you have defined the model(s) for your app, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.
@@ -1383,6 +1414,32 @@ try:
     )
 except ImportError:
     pass
+```
+
+## Prometheus Metrics
+
++++ 1.5.13
+
+It is possible for Nautobot apps to provide their own [Prometheus metrics](../additional-features/prometheus-metrics.md). There are two general ways to achieve this:
+
+1. Use the `prometheus_client` library directly in your app code. Depending on whether that code runs in the web server or the worker context, the metric will show up in the respective `/metrics` endpoint(s) (i.e. metrics generated in the worker context show up in the worker's endpoint and those generated in the web application's context show up in the web application's endpoint).
+2. If the metric cannot be generated alongside existing code, apps can implement individual metric generator functions and register them into a list called `metrics` in a file named `metrics.py` at the root of the app. Nautobot will automatically read these and expose them via its `/metrics` endpoint. The following code snippet shows an example metric defined this way:
+
+```python
+# metrics.py
+from prometheus_client.metrics_core import GaugeMetricFamily
+
+from nautobot_animal_sounds.models import Animal
+
+
+def metric_animals():
+    gauges = GaugeMetricFamily("nautobot_noisy_animals_count", "Nautobot Noisy Animals Count", labels=[])
+    screaming_animal_count = Animal.objects.filter(loudness="noisy").count()
+    gauges.add_metric(labels=[], value=screaming_animal_count)
+    yield gauges
+
+
+metrics = [metric_example]
 ```
 
 ## Testing Apps

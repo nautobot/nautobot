@@ -35,6 +35,7 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
+    JobButton,
     JobResult,
     Note,
     ObjectChange,
@@ -145,7 +146,6 @@ class ConfigContextTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         # Create three ConfigContexts
@@ -269,7 +269,6 @@ class ConfigContextSchemaTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
@@ -367,7 +366,6 @@ class CustomFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
@@ -377,26 +375,23 @@ class CustomFieldTestCase(
         custom_fields = [
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-                name="Custom Field Boolean",
-                label="Custom Field Boolean",
+                label="Custom Field Boolean Type",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
-                name="Custom Field Text",
                 label="Custom Field Text",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_INTEGER,
-                name="Custom Field Integer",
                 label="Custom Field Integer",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 # https://github.com/nautobot/nautobot/issues/1962
-                name="Custom field? With special / unusual characters!",
+                label="Custom field? With special / unusual characters!",
                 default="",
             ),
         ]
@@ -410,7 +405,7 @@ class CustomFieldTestCase(
         cls.form_data = {
             "content_types": [obj_type.pk],
             "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
-            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
+            "key": "custom_field_boolean_type",  # key is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -425,23 +420,19 @@ class CustomFieldTestCase(
     def test_create_object_without_permission(self):
         # Can't have two CustomFields with the same "slug"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
         # Can't have two CustomFields with the same "slug"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
-        instance = self._get_queryset().get(slug="custom_field_boolean_2")
-        # 2.0 TODO: #824 removal of `name` field altogether
-        # Assure that `name` was auto-populated from the given slug
-        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
         # Can't have two CustomFields with the same "slug"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 
@@ -483,7 +474,6 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
@@ -635,7 +625,6 @@ class NoteTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Location)
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         user = User.objects.first()
@@ -1479,8 +1468,10 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden Jobs, non-installed Jobs or JobHookReceivers as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False, is_job_hook_receiver=False)
+        """Don't include hidden Jobs, non-installed Jobs, JobHookReceivers or JobButtonReceivers as they won't appear in the UI by default."""
+        return self.model.objects.filter(
+            installed=True, hidden=False, is_job_hook_receiver=False, is_job_button_receiver=False
+        )
 
     @classmethod
     def setUpTestData(cls):
@@ -1910,6 +1901,55 @@ class JobTestCase(
         self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
 
 
+class JobButtonTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = JobButton
+
+    @classmethod
+    def setUpTestData(cls):
+        job_buttons = (
+            JobButton.objects.create(
+                name="JobButton1",
+                text="JobButton1",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=True,
+            ),
+            JobButton.objects.create(
+                name="JobButton2",
+                text="JobButton2",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=False,
+            ),
+            JobButton.objects.create(
+                name="JobButton3",
+                text="JobButton3",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                confirmation=True,
+                weight=50,
+            ),
+        )
+
+        location_ct = ContentType.objects.get_for_model(Location)
+        for jb in job_buttons:
+            jb.content_types.set([location_ct])
+
+        cls.form_data = {
+            "content_types": [location_ct.pk],
+            "name": "jobbutton-4",
+            "text": "jobbutton text 4",
+            "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            "weight": 100,
+            "button_class": "default",
+            "confirmation": False,
+        }
+
+
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
     user_permissions = ("extras.view_objectchange",)
@@ -1929,7 +1969,6 @@ class ObjectChangeTestCase(TestCase):
             oc.save()
 
     def test_objectchange_list(self):
-
         url = reverse("extras:objectchange_list")
         params = {
             "user": User.objects.first().pk,
@@ -1939,7 +1978,6 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -2148,7 +2186,6 @@ class StatusTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 
@@ -2322,7 +2359,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 

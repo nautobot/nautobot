@@ -3,12 +3,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django.utils.functional import classproperty
 
 from timezone_field import TimeZoneField
 
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
+from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
@@ -120,6 +121,10 @@ class LocationQuerySet(TreeQuerySet):
         return self.filter(location_type__content_types=content_type)
 
 
+class LocationManager(TreeManager.from_queryset(LocationQuerySet)):
+    pass
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -203,7 +208,7 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = LocationQuerySet.as_manager(with_tree_fields=True)
+    objects = LocationManager()
 
     csv_headers = [
         "name",
@@ -250,6 +255,34 @@ class Location(TreeModel, StatusModel, PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        Due to the recursive nature of Location's natural key, we need a custom implementation of this property.
+
+        This returns a set of natural key lookups based on the current maximum depth of the Location tree.
+        For example if the tree is 2 layers deep, it will return ["name", "parent__name", "parent__parent__name"].
+
+        Without this custom implementation, the generic `natural_key_field_lookups` would recurse infinitely.
+        """
+        lookups = []
+        name = "name"
+        for _ in range(cls.objects.max_tree_depth() + 1):
+            lookups.append(name)
+            name = f"parent__{name}"
+        return lookups
+
+    @classmethod
+    def natural_key_args_to_kwargs(cls, args):
+        """Handle the possibility that more recursive "parent" lookups were specified than we initially expected."""
+        args = list(args)
+        natural_key_field_lookups = list(cls.natural_key_field_lookups)
+        while len(args) < len(natural_key_field_lookups):
+            args.append(None)
+        while len(args) > len(natural_key_field_lookups):
+            natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
+        return dict(zip(natural_key_field_lookups, args))
 
     def get_absolute_url(self):
         return reverse("dcim:location", args=[self.slug])

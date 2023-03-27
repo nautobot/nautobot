@@ -57,6 +57,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobResult,
     Note,
@@ -119,6 +120,9 @@ __all__ = (
     "GraphQLQueryFilterForm",
     "ImageAttachmentForm",
     "JobForm",
+    "JobButtonForm",
+    "JobButtonBulkEditForm",
+    "JobButtonFilterForm",
     "JobEditForm",
     "JobFilterForm",
     "JobHookForm",
@@ -163,7 +167,6 @@ __all__ = (
 
 
 class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
-
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=True,
@@ -363,7 +366,8 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
-    slug = SlugField(
+    key = SlugField(
+        label="Key",
         max_length=50,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
@@ -383,7 +387,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         fields = (
             "label",
             "grouping",
-            "slug",
+            "key",
             "type",
             "weight",
             "description",
@@ -402,10 +406,9 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
     """Base class for CSV export of models that support custom fields."""
 
     def _append_customfield_fields(self):
-
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = f"cf_{cf.slug}"
+            field_name = cf.add_prefix_to_cf_key()
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -582,7 +585,6 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
 
 
 class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
-
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
     remote_url = forms.URLField(
@@ -810,6 +812,11 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    is_job_button_receiver = forms.NullBooleanField(
+        initial=False,
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tag = TagFilterField(model)
 
 
@@ -972,6 +979,63 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
 
 
 #
+# Job Button
+#
+
+
+class JobButtonForm(BootstrapMixin, forms.ModelForm):
+    content_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        label="Object Types",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+    )
+
+    class Meta:
+        model = JobButton
+        fields = (
+            "content_types",
+            "name",
+            "text",
+            "job",
+            "weight",
+            "group_name",
+            "button_class",
+            "confirmation",
+        )
+
+
+class JobButtonBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit form for `JobButton` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=JobButton.objects.all(), widget=forms.MultipleHiddenInput)
+    content_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        label="Object Types",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+        required=False,
+    )
+    weight = forms.IntegerField(required=False)
+    group_name = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = ["group_name"]
+
+
+class JobButtonFilterForm(BootstrapMixin, forms.Form):
+    model = JobButton
+    q = forms.CharField(required=False, label="Search")
+    content_types = CSVContentTypeField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        label="Object Types",
+    )
+
+
+#
 # Notes
 #
 
@@ -1063,7 +1127,6 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
-
     slug = SlugField(help_text="Internal name of this relationship. Please use underscores rather than dashes.")
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
@@ -1104,7 +1167,6 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
         ]
 
     def save(self, commit=True):
-
         # TODO add support for owner when a CR is created in the UI
         obj = super().save(commit)
 

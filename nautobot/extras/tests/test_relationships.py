@@ -146,7 +146,7 @@ class RelationshipBaseTest(TestCase):
         ]
 
 
-class RelationshipTest(RelationshipBaseTest):
+class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_filter_not_dict(self):
         m2m = Relationship(
             name="Another Vlan to Rack",
@@ -376,7 +376,7 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertEqual(field.label, "rack")
 
 
-class RelationshipAssociationTest(RelationshipBaseTest):
+class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def setUp(self):
         super().setUp()
 

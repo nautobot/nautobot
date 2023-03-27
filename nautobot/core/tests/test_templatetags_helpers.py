@@ -1,8 +1,9 @@
 from unittest import skipIf
 
+from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
 from nautobot.core.templatetags import helpers
@@ -206,3 +207,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         )
         # Assert when obj is None
         self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), "—")
+
+    @override_settings(BANNER_TOP="¡Hola, mundo!")
+    @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
+    def test_settings_or_config(self):
+        self.assertEqual(helpers.settings_or_config("BANNER_TOP"), "¡Hola, mundo!")
+        self.assertEqual(helpers.settings_or_config("SAMPLE_VARIABLE", "example_plugin"), "Testing")

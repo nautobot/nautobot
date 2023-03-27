@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
@@ -110,9 +111,9 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 1", default="value_1"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 2", default="value_2"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 3", default="value_3"),
         ]
         for custom_field in custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Interface)])
@@ -191,7 +192,9 @@ class InterfaceTemplateTestCase(TestCase):
         self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
 
 
-class RackGroupTestCase(TestCase):
+class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
+    model = RackGroup
+
     def setUp(self):
         """
         Location A
@@ -274,7 +277,9 @@ class RackGroupTestCase(TestCase):
         self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, self.location_a)
 
 
-class RackTestCase(TestCase):
+class RackTestCase(ModelTestCases.BaseModelTestCase):
+    model = Rack
+
     def setUp(self):
 
         self.status = Status.objects.get_for_model(Rack).first()
@@ -510,7 +515,9 @@ class LocationTypeTestCase(TestCase):
         child.validated_save()
 
 
-class LocationTestCase(TestCase):
+class LocationTestCase(ModelTestCases.BaseModelTestCase):
+    model = Location
+
     def setUp(self):
         self.root_type = LocationType.objects.get(name="Campus")
         self.intermediate_type = LocationType.objects.get(name="Building")
@@ -522,6 +529,45 @@ class LocationTestCase(TestCase):
         )
 
         self.status = Status.objects.get(slug="active")
+
+    def test_custom_natural_key_field_lookups(self):
+        """Test that the custom implementation of Location.natural_key_field_lookups works as intended."""
+        # We know that with current test data, the maximum tree depth is 5:
+        # Campus-00 -> Campus-07 -> Building-29 -> Floor-32 -> Room-39
+        # but let's try to make this a *bit* more robust!
+        expected = [
+            "name",
+            "parent__name",
+            "parent__parent__name",
+            "parent__parent__parent__name",
+            "parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__parent__parent__name",
+        ][: Location.objects.max_tree_depth() + 1]
+        self.assertEqual(
+            len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
+        )
+        self.assertEqual(expected, Location.natural_key_field_lookups)
+
+    def test_custom_natural_key_args_to_kwargs(self):
+        """Test that the custom implementation of Location.natural_key_args_to_kwargs works as intended."""
+        natural_key_field_lookups = Location.natural_key_field_lookups
+        for args in [
+            # fewer args than natural_key_field_lookups
+            ("me",),
+            ("me", "my_parent", "my_grandparent"),
+            # more args than natural_key_field_lookups
+            ("me", "my_parent", "my_grandparent", "my_g_gp", "my_g2_gp", "my_g3_gp", "my_g4_gp", "my_g5_gp"),
+        ]:
+            kwargs = Location.natural_key_args_to_kwargs(args)
+            self.assertEqual(len(kwargs), max(len(args), len(natural_key_field_lookups)))
+            for i, value in enumerate(kwargs.values()):
+                if i < len(args):
+                    self.assertEqual(args[i], value)
+                else:
+                    # not-specified args get set as None
+                    self.assertIsNone(value)
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
@@ -612,7 +658,9 @@ class LocationTestCase(TestCase):
         )
 
 
-class DeviceTestCase(TestCase):
+class DeviceTestCase(ModelTestCases.BaseModelTestCase):
+    model = Device
+
     def setUp(self):
 
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
@@ -686,49 +734,50 @@ class DeviceTestCase(TestCase):
 
         DeviceBayTemplate(device_type=self.device_type, name="Device Bay 1").save()
 
+        self.device = Device(
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            name="Test Device 1",
+        )
+        self.device.validated_save()
+
     def test_device_creation(self):
         """
         Ensure that all Device components are copied automatically from the DeviceType.
         """
-        d = Device(
-            location=self.location_3,
-            device_type=self.device_type,
-            role=self.device_role,
-            name="Test Device 1",
-        )
-        d.save()
+        ConsolePort.objects.get(device=self.device, name="Console Port 1")
 
-        ConsolePort.objects.get(device=d, name="Console Port 1")
+        ConsoleServerPort.objects.get(device=self.device, name="Console Server Port 1")
 
-        ConsoleServerPort.objects.get(device=d, name="Console Server Port 1")
-
-        pp = PowerPort.objects.get(device=d, name="Power Port 1", maximum_draw=1000, allocated_draw=500)
+        pp = PowerPort.objects.get(device=self.device, name="Power Port 1", maximum_draw=1000, allocated_draw=500)
 
         PowerOutlet.objects.get(
-            device=d,
+            device=self.device,
             name="Power Outlet 1",
             power_port=pp,
             feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
         )
 
         Interface.objects.get(
-            device=d,
+            device=self.device,
             name="Interface 1",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             mgmt_only=True,
         )
 
-        rp = RearPort.objects.get(device=d, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C, positions=8)
+        rp = RearPort.objects.get(device=self.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C, positions=8)
 
         FrontPort.objects.get(
-            device=d,
+            device=self.device,
             name="Front Port 1",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rp,
             rear_port_position=2,
         )
 
-        DeviceBay.objects.get(device=d, name="Device Bay 1")
+        DeviceBay.objects.get(device=self.device, name="Device Bay 1")
 
     def test_multiple_unnamed_devices(self):
 
@@ -755,21 +804,12 @@ class DeviceTestCase(TestCase):
 
     def test_device_duplicate_names(self):
 
-        device1 = Device(
-            location=self.location_3,
-            device_type=self.device_type,
-            role=self.device_role,
-            status=self.device_status,
-            name="Test Device 1",
-        )
-        device1.save()
-
         device2 = Device(
-            location=device1.location,
-            device_type=device1.device_type,
-            role=device1.role,
+            location=self.device.location,
+            device_type=self.device.device_type,
+            role=self.device.role,
             status=self.device_status,
-            name=device1.name,
+            name=self.device.name,
         )
 
         # Two devices assigned to the same Location and no Tenant should fail validation
@@ -777,8 +817,8 @@ class DeviceTestCase(TestCase):
             device2.full_clean()
 
         tenant = Tenant.objects.create(name="Test Tenant 1", slug="test-tenant-1")
-        device1.tenant = tenant
-        device1.save()
+        self.device.tenant = tenant
+        self.device.save()
         device2.tenant = tenant
 
         # Two devices assigned to the same Location and the same Tenant should fail validation
@@ -806,15 +846,6 @@ class DeviceTestCase(TestCase):
         )
 
     def test_device_redundancy_group_validation(self):
-        d1 = Device(
-            name="Test Device 1",
-            device_type=self.device_type,
-            role=self.device_role,
-            status=self.device_status,
-            location=self.location_3,
-        )
-        d1.validated_save()
-
         d2 = Device(
             name="Test Device 2",
             device_type=self.device_type,
@@ -825,16 +856,16 @@ class DeviceTestCase(TestCase):
         d2.validated_save()
 
         # Validate we can set a redundancy group without any priority set
-        d1.device_redundancy_group = self.device_redundancy_group
-        d1.validated_save()
+        self.device.device_redundancy_group = self.device_redundancy_group
+        self.device.validated_save()
 
         # Validate two devices can be a part of the same redundancy group without any priority set
         d2.device_redundancy_group = self.device_redundancy_group
         d2.validated_save()
 
         # Validate we can assign a priority to at least one device in the group
-        d1.device_redundancy_group_priority = 1
-        d1.validated_save()
+        self.device.device_redundancy_group_priority = 1
+        self.device.validated_save()
 
         # Validate both devices in the same group can have the same priority
         d2.device_redundancy_group_priority = 1
@@ -845,14 +876,16 @@ class DeviceTestCase(TestCase):
         d2.validated_save()
 
         # Validate devices cannot have an assigned priority without an assigned group
-        d1.device_redundancy_group = None
+        self.device.device_redundancy_group = None
         with self.assertRaisesMessage(
             ValidationError, "Must assign a redundancy group when defining a redundancy group priority."
         ):
-            d1.validated_save()
+            self.device.validated_save()
 
 
-class CableTestCase(TestCase):
+class CableTestCase(ModelTestCases.BaseModelTestCase):
+    model = Cable
+
     def setUp(self):
 
         location = Location.objects.first()
@@ -1116,7 +1149,7 @@ class CableTestCase(TestCase):
         self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
 
 
-class PowerPanelTestCase(TestCase):
+class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
         active = Status.objects.get(name="Active")
         location_type_1 = LocationType.objects.create(name="Location Type 1")
@@ -1140,7 +1173,7 @@ class PowerPanelTestCase(TestCase):
         )
 
 
-class InterfaceTestCase(TestCase):
+class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
     def setUp(self):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")

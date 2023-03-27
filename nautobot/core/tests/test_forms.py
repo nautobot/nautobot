@@ -457,33 +457,48 @@ class CSVDataFieldTest(TestCase):
             self.field.clean(input_)
 
 
+class DynamicModelChoiceFieldTest(TestCase):
+    """Tests for DynamicModelChoiceField."""
+
+    def setUp(self):
+        self.field = forms.DynamicModelChoiceField(queryset=ipam_models.IPAddress.objects.all())
+        self.field_with_to_field_name = forms.DynamicModelChoiceField(
+            queryset=ipam_models.IPAddress.objects.all(), to_field_name="address"
+        )
+
+    def test_prepare_value_invalid_uuid(self):
+        """A nonexistent UUID PK value should be handled gracefully."""
+        value = "c671a001-4c17-4ca1-80fd-fe1609bcadec"
+        self.assertEqual(self.field.prepare_value(value), value)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(value), value)
+
+    def test_prepare_value_valid_uuid(self):
+        """A UUID PK referring to an actual object should be handled correctly."""
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
+        self.assertEqual(self.field.prepare_value(address.pk), address.pk)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(address.pk), address.address)
+
+    def test_prepare_value_valid_object(self):
+        """An object reference should be handled correctly."""
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
+        self.assertEqual(self.field.prepare_value(address), address.pk)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
+
+
 class DynamicModelMultipleChoiceFieldTest(TestCase):
     """Tests for DynamicModelMultipleChoiceField."""
 
     def setUp(self):
         self.field = forms.DynamicModelMultipleChoiceField(queryset=ipam_models.IPAddress.objects.all())
-
-    def test_prepare_value_single_str(self):
-        """A single string (UUID) value should be treated as a single-entry list."""
-        self.assertEqual(
-            self.field.prepare_value("c671a001-4c17-4ca1-80fd-fe1609bcadec"),
-            ["c671a001-4c17-4ca1-80fd-fe1609bcadec"],
+        self.field_with_to_field_name = forms.DynamicModelMultipleChoiceField(
+            queryset=ipam_models.IPAddress.objects.all(), to_field_name="address"
         )
 
     def test_prepare_value_multiple_str(self):
         """A list of string (UUID) values should be handled as-is."""
-        self.assertEqual(
-            self.field.prepare_value(["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]),
-            ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"],
-        )
-
-    def test_prepare_value_single_object(self):
-        """A single object value should be translated to its corresponding PK."""
-        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
-        self.assertEqual(
-            self.field.prepare_value(address),
-            address.pk,
-        )
+        values = ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]
+        self.assertEqual(self.field.prepare_value(values), values)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(values), values)
 
     def test_prepare_value_multiple_object(self):
         """A list of object values should be translated to a list of PKs."""
@@ -492,6 +507,10 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
         self.assertEqual(
             self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
+        )
+        self.assertEqual(
+            self.field_with_to_field_name.prepare_value([address_1, address_2]),
+            [address_1.address, address_2.address],
         )
 
 
@@ -610,7 +629,7 @@ class JSONFieldTest(testing.TestCase):
         test_views.create_test_device("Foo Device")
         custom_field = extras_models.CustomField(
             type="json",
-            name="json-field",
+            label="JSON Field",
             required=False,
         )
         custom_field.save()
@@ -804,7 +823,7 @@ class DynamicFilterFormTest(TestCase):
         request_querydict.setlistdefault("slug", ["location-1"])
         request_querydict.setlistdefault("status", ["active"])
         request_querydict.setlistdefault("has_vlans", ["True"])
-        request_querydict.setdefault("created__gte", "2022-09-05 11:22:33")
+        request_querydict.setlistdefault("created__gte", ["2022-09-05 11:22:33"])
         request_querydict.setlistdefault("asn", ["4"])
 
         with self.subTest("Test for lookup_value with a CharField"):
@@ -849,9 +868,9 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
 
-        with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
-            # If `lookup_field` value is a ChoiceField and `lookup_type` lookup expr is `exact` or `in` then,
-            # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
+        with self.subTest("Test for lookup_value with a NullBooleanField and StaticSelect2 widget"):
+            # If `lookup_field` value is a boolean filter and `lookup_type` lookup expr is `exact`, then
+            # `lookup_value` field should be a NullBooleanField with StaticSelect2 widget
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
@@ -863,13 +882,13 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertIsInstance(form.fields["lookup_value"], django_forms.ChoiceField)
+            self.assertIsInstance(form.fields["lookup_value"], django_forms.NullBooleanField)
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},
             )
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.StaticSelect2)
-            self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
+            self.assertEqual(form.fields["lookup_value"].widget.choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateTimeField"):
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-4")

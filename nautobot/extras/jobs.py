@@ -29,6 +29,7 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -460,6 +461,15 @@ class BaseJob(Task):
     def registered_name(cls):
         return f"{cls.__module__}.{cls.__name__}"
 
+    def as_form_class(self):
+        """
+        Dynamically generate a Django form class corresponding to the variables in this Job.
+
+        In most cases you should use `.as_form()` instead of calling this method directly.
+        """
+        fields = {name: var.as_field() for name, var in self._get_vars().items()}
+        return type("JobForm", (JobForm,), fields)
+
     def as_form(self, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
@@ -467,10 +477,8 @@ class BaseJob(Task):
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
         """
-        fields = {name: var.as_field() for name, var in self._get_vars().items()}
-        FormClass = type("JobForm", (JobForm,), fields)
 
-        form = FormClass(data, files, initial=initial)
+        form = self.as_form_class()(data, files, initial=initial)
 
         job_model = JobModel.objects.get_for_class_path(self.class_path)
         # read_only = job_model.read_only if job_model.read_only_override else self.read_only
@@ -1022,6 +1030,34 @@ class JobHookReceiver(Job):
         raise NotImplementedError
 
 
+class JobButtonReceiver(Job):
+    """
+    Base class for job button receivers. Job button receivers are jobs that are initiated
+    from UI buttons and are not intended to be run from the job form UI or API like standard jobs.
+    """
+
+    object_pk = StringVar()
+    object_model_name = StringVar()
+
+    def run(self, data, commit):
+        """JobButtonReceiver subclasses generally shouldn't need to override this method."""
+        object_pk = data["object_pk"]
+        object_model_name = data["object_model_name"]
+
+        model = get_model_from_name(object_model_name)
+        obj = model.objects.get(pk=object_pk)
+
+        self.receive_job_button(obj=obj)
+
+    def receive_job_button(self, obj):
+        """
+        Method to be implemented by concrete JobButtonReceiver subclasses.
+
+        :param obj: an instance of the object
+        """
+        raise NotImplementedError
+
+
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
@@ -1030,7 +1066,7 @@ def is_job(obj):
     from .reports import Report
 
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]
+        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver, JobButtonReceiver]
     except TypeError:
         return False
 
