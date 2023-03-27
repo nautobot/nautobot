@@ -433,10 +433,10 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 |                         | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                         |
 |                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?tenant=<uuid/name>`                       |
 |                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?tenant_group=<uuid/name>`                 |
-| Cluster                 | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/vitualization/clusters/?cluster_group=<uuid/name>`           |
-|                         | `cluster_type`            | Enhanced to support primary key UUIDs in addition to names | `/vitualization/clusters/?cluster_type=<uuid/name>`            |
-|                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/vitualization/clusters/?tenant=<uuid/name>`                  |
-|                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/vitualization/clusters/?tenant_group=<uuid/name>`            |
+| Cluster                 | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/virtualization/clusters/?cluster_group=<uuid/name>`          |
+|                         | `cluster_type`            | Enhanced to support primary key UUIDs in addition to names | `/virtualization/clusters/?cluster_type=<uuid/name>`           |
+|                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/virtualization/clusters/?tenant=<uuid/name>`                 |
+|                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/virtualization/clusters/?tenant_group=<uuid/name>`           |
 | ConfigContext           | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/extras/config-contexts/?cluster_group=<uuid/name>`           |
 |                         | `device_redundancy_group` | Enhanced to support primary key UUIDs in addition to names | `/extras/config-contexts/?device_redundancy_group=<uuid/name>` |
 |                         | `platform`                | Enhanced to support primary key UUIDs in addition to names | `/extras/config-contexts/?platform=<uuid/name>`                |
