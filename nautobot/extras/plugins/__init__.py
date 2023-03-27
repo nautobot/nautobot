@@ -38,6 +38,7 @@ registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
 registry["app_metrics"] = []
+registry["plugin_validations"] = collections.defaultdict(list)
 
 
 #
@@ -101,6 +102,7 @@ class NautobotAppConfig(NautobotConfig):
     secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
     override_views = "views.override_views"
+    validations = "validations.validations"
 
     def ready(self):
         """Callback after plugin app is loaded."""
@@ -176,6 +178,12 @@ class NautobotAppConfig(NautobotConfig):
         if template_extensions is not None:
             register_template_extensions(template_extensions)
             self.features["template_extensions"] = sorted(set(extension.model for extension in template_extensions))
+
+        #Register data validation classes (if defined)
+        validations = import_object(f"{self.__module__}.{self.validations}")
+        if validations is not None:
+            register_validations(validations)
+            self.features["validations"] = sorted(set(validation.model for validation in validations))
 
         # Register custom jinja filters
         try:
@@ -418,6 +426,21 @@ def register_graphql_types(class_list):
 
         registry["plugin_graphql_types"].append(item)
 
+
+def register_validations(class_list):
+    """
+    Register a list of ValidationSet classes.
+    """
+    from nautobot.extras.validation_engine.validations import ValidationSet
+    for validation in class_list:
+        if not inspect.isclass(validation):
+            raise TypeError(f"ValidationSet class {validation} was passed as an instance!")
+        if not issubclass(validation, ValidationSet):
+            raise TypeError(f"{validation} is not a subclass of validation_engine.validations.ValidationSet!")
+        if validation.model is None:
+            raise TypeError(f"ValidationSet class {validation} does not declare a valid model!")
+        registry["plugin_validations"][validation.model].append(validation)
+        
 
 def register_jobs(class_list):
     """

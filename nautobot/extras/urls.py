@@ -23,6 +23,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.validation_engine import views as validation_views
 
 app_name = "extras"
 
@@ -647,6 +648,8 @@ urlpatterns = [
         name="tag_notes",
         kwargs={"model": Tag},
     ),
+    # Validation Engine
+    path("validation_engine/", validation_views.AllValidationsListView.as_view({"get": "list"}), name="validation_result_list"),
     # Webhook
     path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
     path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),
