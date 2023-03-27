@@ -732,7 +732,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def enqueue_job(cls, job_model, user, *args, celery_kwargs=None, schedule=None, **kwargs):
+    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, schedule=None, **job_kwargs):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
@@ -740,8 +740,8 @@ class JobResult(BaseModel, CustomFieldModel):
         user: User object to link to the JobResult instance
         celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
         schedule: Optional ScheduledJob instance to link to the JobResult
-        args: args passed to the job task
-        kwargs: kwargs passed to the job task
+        job_args: args passed to the job task
+        job_kwargs: kwargs passed to the job task
         """
         job_result = cls.objects.create(
             name=job_model.class_path,
@@ -751,7 +751,6 @@ class JobResult(BaseModel, CustomFieldModel):
             scheduled_job=schedule,
         )
 
-        # Prepare kwargs that will be sent to Celery
         if celery_kwargs is None:
             celery_kwargs = {}
 
@@ -763,13 +762,15 @@ class JobResult(BaseModel, CustomFieldModel):
         job_result.save()
 
         # Set argsrepr and kwargsrepr to sanitize sensitive variables
-        job_signature = {"args": args, "kwargs": kwargs, "task_id": str(job_result.task_id)}
-        job_signature.update(celery_kwargs)
         if job_model.has_sensitive_variables:
-            job_signature.update({"argsrepr": [], "kwargsrepr": {}})
+            celery_kwargs.update({"argsrepr": [], "kwargsrepr": {}})
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-        transaction.on_commit(lambda: job_model.job_task.apply_async(**job_signature))
+        transaction.on_commit(
+            lambda: job_model.job_task.apply_async(
+                args=job_args, kwargs=job_kwargs, task_id=str(job_result.task_id), **celery_kwargs
+            )
+        )
 
         return job_result
 
