@@ -13,11 +13,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="prefix",
-            name="ip_version",
-            field=models.IntegerField(db_index=True, editable=False, null=True),
-        ),
-        migrations.AddField(
-            model_name="prefix",
             name="parent",
             field=models.ForeignKey(
                 blank=True,
@@ -30,8 +25,8 @@ class Migration(migrations.Migration):
         migrations.AlterIndexTogether(
             name="prefix",
             index_together={
-                ("network", "broadcast", "prefix_length"),
-                ("namespace", "network", "broadcast", "prefix_length"),
+                ("ip_version", "network", "broadcast", "prefix_length"),
+                ("namespace", "ip_version", "network", "broadcast", "prefix_length"),
             },
         ),
     ]

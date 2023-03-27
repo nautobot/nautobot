@@ -506,14 +506,15 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     class Meta:
         ordering = (
             "namespace",
+            "ip_version",
             "network",
             "prefix_length",
         )
         index_together = [
-            ["network", "broadcast", "prefix_length"],
-            ["namespace", "network", "broadcast", "prefix_length"],
+            ["ip_version", "network", "broadcast", "prefix_length"],
+            ["namespace", "ip_version", "network", "broadcast", "prefix_length"],
         ]
-        unique_together = ["namespace", "network", "prefix_length"]
+        unique_together = ["namespace", "ip_version", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
 
     def validate_unique(self, exclude=None):

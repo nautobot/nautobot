@@ -18,9 +18,17 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AddField(
+            model_name="prefix",
+            name="ip_version",
+            field=models.IntegerField(db_index=True, editable=False, null=True),
+        ),
         migrations.AlterModelOptions(
             name="prefix",
-            options={"ordering": ("namespace", "network", "prefix_length"), "verbose_name_plural": "prefixes"},
+            options={
+                "ordering": ("namespace", "ip_version", "network", "prefix_length"),
+                "verbose_name_plural": "prefixes",
+            },
         ),
         migrations.AlterModelOptions(
             name="vrf",
@@ -157,7 +165,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name="prefix",
-            unique_together={("namespace", "network", "prefix_length")},
+            unique_together={("namespace", "ip_version", "network", "prefix_length")},
         ),
         migrations.AlterUniqueTogether(
             name="vrf",

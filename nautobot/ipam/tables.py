@@ -278,15 +278,14 @@ class VRFDeviceAssignmentTable(BaseTable):
 class VRFPrefixAssignmentTable(BaseTable):
     """Table for displaying VRF Prefix Assignments."""
 
-    vrf = tables.LinkColumn(verbose_name="VRF")
-    prefix = tables.LinkColumn()
-    name = tables.Column(accessor="vrf.name")
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    prefix = tables.Column(linkify=True)
     rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFPrefixAssignment
-        fields = ("vrf", "prefix", "name", "rd", "tenant")
+        fields = ("vrf", "prefix", "rd", "tenant")
 
 
 #
@@ -356,6 +355,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
+    namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
     children = tables.Column(accessor="descendants_count")
@@ -363,6 +363,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Prefix
+        orderable = False
         fields = (
             "pk",
             "prefix",
@@ -405,13 +406,13 @@ class PrefixDetailTable(PrefixTable):
     class Meta(PrefixTable.Meta):
         fields = (
             "pk",
+            "namespace",
             "prefix",
             "type",
             "status",
             "children",
             # "vrf",
             "utilization",
-            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -421,13 +422,13 @@ class PrefixDetailTable(PrefixTable):
         )
         default_columns = (
             "pk",
+            "namespace",
             "prefix",
             "type",
             "status",
             "children",
             # "vrf",
             "utilization",
-            "namespace",
             "tenant",
             "location",
             "vlan",

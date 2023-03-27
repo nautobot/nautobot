@@ -54,11 +54,13 @@ class NamespaceUIViewSet(
         if self.action == "retrieve":
             vrfs = instance.vrfs.restrict(request.user, "view")
             vrf_table = tables.VRFTable(vrfs, orderable=False)
+            vrf_table.columns.hide("namespace")
             context["vrf_table"] = vrf_table
 
             prefixes = instance.prefixes.restrict(request.user, "view")
             prefix_count = prefixes.count()
-            prefix_table = tables.PrefixTable(prefixes, orderable=False)
+            prefix_table = tables.PrefixTable(prefixes)
+            prefix_table.columns.hide("namespace")
             context["prefix_count"] = prefix_count
             context["prefix_table"] = prefix_table
 
@@ -85,7 +87,7 @@ class VRFView(generic.ObjectView):
 
         prefixes = instance.prefixes.restrict(request.user, "view")
         prefix_count = prefixes.count()
-        prefix_table = tables.PrefixTable(prefixes.select_related("namespace"), orderable=False)
+        prefix_table = tables.PrefixTable(prefixes.select_related("namespace"))
 
         # devices = instance.devices.restrict(request.user, "view")
         # device_count = devices.count()
@@ -292,12 +294,12 @@ class PrefixView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Parent prefixes table
         parent_prefixes = instance.ancestors().restrict(request.user, "view")
-        parent_prefix_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
+        parent_prefix_table = tables.PrefixTable(list(parent_prefixes))
 
         # TODO(jathan): Make duplicate prefixes go away entirely.
         # Duplicate prefixes table
         duplicate_prefixes = Prefix.objects.none()
-        duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes), orderable=False)
+        duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes))
 
         vrfs = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
@@ -458,7 +460,7 @@ class IPAddressView(generic.ObjectView):
             # .filter(vrf=instance.vrf)
             .select_related("location", "status", "role")
         )
-        parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
+        parent_prefixes_table = tables.PrefixTable(list(parent_prefixes))
         # parent_prefixes_table.exclude = ("vrf",)
 
         # Duplicate IPs table
@@ -733,7 +735,7 @@ class VLANView(generic.ObjectView):
                 "namespace",
             )
         )
-        prefix_table = tables.PrefixTable(list(prefixes), orderable=False)
+        prefix_table = tables.PrefixTable(list(prefixes))
         prefix_table.exclude = ("vlan",)
 
         return {
