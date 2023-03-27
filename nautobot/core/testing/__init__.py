@@ -1,7 +1,7 @@
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TransactionTestCase as _TransactionTestCase
+from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
@@ -16,7 +16,6 @@ from nautobot.core.testing.utils import (
     post_data,
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
-from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
 
