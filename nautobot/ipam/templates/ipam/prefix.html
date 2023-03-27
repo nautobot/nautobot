@@ -25,7 +25,7 @@
             </a>
         {% endif %}
         {% if perms.ipam.add_ipaddress and active_tab == 'ip-addresses' and first_available_ip %}
-            <a href="{% url 'ipam:ipaddress_add' %}?address={{ first_available_ip }}&vrf={{ object.vrf.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
+            <a href="{% url 'ipam:ipaddress_add' %}?address={{ first_available_ip }}&namespace={{ object.namespace.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                 Add an IP Address
             </a>

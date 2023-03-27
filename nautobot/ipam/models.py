@@ -1062,7 +1062,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
                     )
 
         # Validate IP status selection
-        if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
+        if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
 
         # Force dns_name to lowercase
@@ -1111,11 +1111,38 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     def address(self, address):
         self._deconstruct_address(address)
 
-    @property
-    def family(self):
-        if self.address:
-            return self.address.version
-        return None
+    def ancestors(self, ascending=False):
+        """
+        Return my ancestors descending from larger to smaller prefix lengths.
+
+        Args:
+            ascending (bool): If set, reverses the return order.
+        """
+        return self.parent.ancestors(include_self=True, ascending=ascending)
+
+    @cached_property
+    def ancestors_count(self):
+        """Display count of ancestors."""
+        return self.ancestors().count()
+
+    def root(self):
+        """
+        Returns the root node (the parent of all of my ancestors).
+        """
+        return self.ancestors().first()
+
+    def siblings(self, include_self=False):
+        """
+        Return my siblings that share the same parent Prefix.
+
+        Args:
+            include_self (bool): Whether to include this IPAddress in the list of siblings.
+        """
+        query = IPAddress.objects.filter(parent=self.parent)
+        if not include_self:
+            query = query.exclude(id=self.id)
+
+        return query
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):

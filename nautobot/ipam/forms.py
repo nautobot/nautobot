@@ -541,11 +541,13 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "vrf_id": "$nat_vrf",
         },
     )
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
 
     class Meta:
         model = IPAddress
         fields = [
             "address",
+            "namespace",
             "vrf",
             "status",
             "role",
@@ -561,6 +563,17 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "tenant",
             "tags",
         ]
+
+    def clean_namespace(self):
+        """
+        Explicitly set the Namespace on the instance so it will be used on save.
+
+        While the model does this itself on create, the model form is creating a bare instance first
+        and setting attributes individually based on the form field values. Since namespace isn't an
+        actual model field, it gets ignored by default.
+        """
+        namespace = self.cleaned_data.pop("namespace")
+        setattr(self.instance, "_namespace", namespace)
 
     def __init__(self, *args, **kwargs):
 
@@ -582,6 +595,11 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
+
+            # Always populate the namespace from the parent.
+            if instance.present_in_database:
+                initial["namespace"] = instance.parent.namespace
+
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
@@ -686,7 +704,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
     field_order = [
         "q",
         "parent",
-        "family",
+        "ip_version",
         "mask_length",
         "vrf_id",
         "present_in_vrf_id",
@@ -705,10 +723,10 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         ),
         label="Parent Prefix",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressVersionChoices),
-        label="Address family",
+        label="IP version",
         widget=StaticSelect2(),
     )
     mask_length = forms.ChoiceField(

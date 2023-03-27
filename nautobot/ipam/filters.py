@@ -398,11 +398,17 @@ class IPAddressFilterSet(
         to_field_name="name",
         label="VM interfaces (ID or name)",
     )
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        field_name="parent__namespace",
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
     tag = TagFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name"]
+        fields = ["id", "ip_version", "dns_name"]
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
