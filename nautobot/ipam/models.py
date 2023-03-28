@@ -69,6 +69,9 @@ class Namespace(PrimaryModel):
         null=True,
     )
 
+    class Meta:
+        ordering = ("name",)
+
     def __str__(self):
         return self.name
 
@@ -394,7 +397,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     Prefixes can optionally be assigned to Locations and VRFs.
     A Prefix must be assigned a status and may optionally be assigned a user-defined Role.
     A Prefix can also be assigned to a VLAN where appropriate.
-    Prefixes are always ordered by `network` and `prefix_length`.
+    Prefixes are always ordered by `namespace` and `ip_version`, then by `network` and `prefix_length`.
     """
 
     network = VarbinaryIPField(
@@ -472,8 +475,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     csv_headers = [
         "prefix",
+        "namespace",
         "type",
-        # "vrf",
         "tenant",
         "location",
         "vlan_group",
@@ -495,7 +498,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         "tenant",
         "type",
         "vlan",
-        # "vrf",
     ]
     """
     dynamic_group_filter_fields = {
@@ -511,10 +513,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             "prefix_length",
         )
         index_together = [
-            ["ip_version", "network", "broadcast", "prefix_length"],
-            ["namespace", "ip_version", "network", "broadcast", "prefix_length"],
+            ["network", "broadcast", "prefix_length"],
+            ["namespace", "network", "broadcast", "prefix_length"],
         ]
-        unique_together = ["namespace", "ip_version", "network", "prefix_length"]
+        unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
 
     def validate_unique(self, exclude=None):
@@ -556,8 +558,9 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
+    # TODO: this function is completely unused at present - remove?
     def get_duplicates(self):
-        return Prefix.objects.net_equals(self.prefix).filter(vrf=self.vrf).exclude(pk=self.pk)
+        return Prefix.objects.net_equals(self.prefix).filter(namespace=self.namespace).exclude(pk=self.pk)
 
     def clean(self):
         super().clean()
@@ -609,8 +612,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def to_csv(self):
         return (
             self.prefix,
+            self.namespace.name if self.namespace else None,
             self.get_type_display(),
-            # self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.location.name if self.location else None,
             self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,

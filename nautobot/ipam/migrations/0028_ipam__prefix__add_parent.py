@@ -25,8 +25,8 @@ class Migration(migrations.Migration):
         migrations.AlterIndexTogether(
             name="prefix",
             index_together={
-                ("ip_version", "network", "broadcast", "prefix_length"),
-                ("namespace", "ip_version", "network", "broadcast", "prefix_length"),
+                ("network", "broadcast", "prefix_length"),
+                ("namespace", "network", "broadcast", "prefix_length"),
             },
         ),
     ]
