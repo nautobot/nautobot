@@ -27,6 +27,14 @@ class Migration(migrations.Migration):
                 to="ipam.prefix",
             ),
         ),
+        migrations.AlterModelOptions(
+            name="ipaddress",
+            options={
+                "ordering": ("ip_version", "host", "prefix_length"),
+                "verbose_name": "IP address",
+                "verbose_name_plural": "IP addresses",
+            },
+        ),
         migrations.AlterUniqueTogether(
             name="ipaddress",
             unique_together={("parent", "host")},

@@ -984,7 +984,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
     class Meta:
-        ordering = ("host", "prefix_length")  # address may be non-unique
+        ordering = ("ip_version", "host", "prefix_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]

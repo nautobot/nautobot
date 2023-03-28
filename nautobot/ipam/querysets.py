@@ -377,7 +377,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         try:
             return possible_ancestors[0]
         except IndexError:
-            raise self.model.DoesNotExist("Prefix matching query does not exist.")
+            raise self.model.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):
