@@ -103,7 +103,7 @@ class VRFView(generic.ObjectView):
         # TODO(jathan): This table might need to live on Device and on VRFs
         # (possibly replacing `device_table` above.
         vrfs = instance.device_assignments.restrict(request.user, "view")
-        vrf_table = tables.VRFDeviceAssignmentTable(vrfs, orderable=False)
+        vrf_table = tables.VRFDeviceAssignmentTable(vrfs)
         vrf_table.exclude = ("vrf",)
         # context["vrf_table"] = vrf_table
 

@@ -29,7 +29,7 @@ from nautobot.core.views.utils import csv_format
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
+from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
 from .api import serializers
@@ -1132,9 +1132,15 @@ class DeviceView(generic.ObjectView):
         # Services
         services = Service.objects.restrict(request.user, "view").filter(device=instance)
 
+        # VRF assignments
+        vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
+        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
+        vrf_table.exclude = ("device",)
+
         return {
             "services": services,
             "vc_members": vc_members,
+            "vrf_table": vrf_table,
             "active_tab": "device",
         }
 
