@@ -94,6 +94,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         """
         from nautobot.extras.models import ConfigContext
 
+        if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
+            return self
+
         return self.annotate(
             config_context_data=Subquery(
                 ConfigContext.objects.filter(self._get_config_context_filters())
