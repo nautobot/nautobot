@@ -224,7 +224,6 @@ class ModelViewSetMixin:
         return obj
 
     def get_serializer(self, *args, **kwargs):
-
         # If a list of objects has been provided, initialize the serializer with many=True
         if isinstance(kwargs.get("data", {}), list):
             kwargs["many"] = True
@@ -232,7 +231,6 @@ class ModelViewSetMixin:
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
-
         # If using 'brief' mode, find and return the nested serializer for this model, if one exists
         if self.brief:
             self.logger.debug("Request is for 'brief' format; initializing nested serializer")
@@ -246,6 +244,18 @@ class ModelViewSetMixin:
         # Fall back to the hard-coded serializer class
         return self.serializer_class
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        depth = 0
+        try:
+            depth = int(self.request.query_params.get("depth", 0))
+        except ValueError:
+            pass
+
+        context["depth"] = depth
+
+        return context
+
     def get_queryset(self):
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:
@@ -254,12 +264,11 @@ class ModelViewSetMixin:
 
         return super().get_queryset()
 
-    def initialize_request(self, request, *args, **kwargs):
-        # Check if brief=True has been passed
-        if request.method == "GET" and request.GET.get("brief"):
-            self.brief = True
-
-        return super().initialize_request(request, *args, **kwargs)
+    # def initialize_request(self, request, *args, **kwargs):
+    #     # Check if brief=True has been passed
+    #     if request.method == "GET" and request.GET.get("brief"):
+    #         self.brief = True
+    #     return super().initialize_request(request, *args, **kwargs)
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -383,7 +392,6 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-
         return Response(
             OrderedDict(
                 (

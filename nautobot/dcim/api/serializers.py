@@ -213,7 +213,6 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
 
 class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
-    parent = NestedLocationTypeSerializer(required=False, allow_null=True, default=None)
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()),
         required=False,
@@ -222,25 +221,13 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 
     class Meta:
         model = LocationType
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "parent",
-            "nestable",
-            "content_types",
-            "description",
-            "tree_depth",
-        ]
-
+        fields = "__all__"
+        extra_fields = ["url"]
 
 class LocationSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, TreeModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
-    location_type = NestedLocationTypeSerializer()
-    parent = NestedLocationSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
@@ -251,28 +238,9 @@ class LocationSerializer(
 
     class Meta:
         model = Location
-        fields = [
+        fields = "__all__"
+        extra_fields = [
             "url",
-            "name",
-            "slug",
-            "status",
-            "location_type",
-            "parent",
-            "tenant",
-            "description",
-            "tree_depth",
-            "facility",
-            "asn",
-            "time_zone",
-            "description",
-            "physical_address",
-            "shipping_address",
-            "latitude",
-            "longitude",
-            "contact_name",
-            "contact_phone",
-            "contact_email",
-            "comments",
             "circuit_count",
             "device_count",
             "prefix_count",
@@ -731,7 +699,6 @@ class DeviceSerializer(
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
         if data.get("rack") and data.get("position") and data.get("face"):
             validator = UniqueTogetherValidator(
@@ -897,7 +864,6 @@ class PowerPortSerializer(
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     def validate(self, data):
-
         # Validate many-to-many VLAN assignments
         mode = data.get("mode", getattr(self.instance, "mode", None))
 

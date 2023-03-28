@@ -95,6 +95,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.Meta.depth = self.context.get("depth", 0)
+
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
         """
@@ -138,6 +142,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 self.extend_field_names(fields, "created")
             if hasattr(self.Meta.model, "last_updated"):
                 self.extend_field_names(fields, "last_updated")
+        # append non-default model api fields to display in Nautobot API
+        # e.g. `url`, `circuit_count` and etc.
+        if getattr(self.Meta, "extra_fields", None):
+            return fields + self.Meta.extra_fields
         return fields
 
 
@@ -159,7 +167,6 @@ class ValidatedModelSerializer(BaseModelSerializer):
     """
 
     def validate(self, data):
-
         # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
         attrs.pop("custom_fields", None)
@@ -207,7 +214,6 @@ class WritableNestedSerializer(BaseModelSerializer):
         return self.Meta.model.objects
 
     def to_internal_value(self, data):
-
         if data is None:
             return None
 

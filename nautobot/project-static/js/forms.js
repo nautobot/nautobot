@@ -202,8 +202,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     }
 
 
-                    // Allow for controlling the brief setting from within APISelect
-                    parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                    // Allow for controlling the depth setting from within APISelect
+                    parameters.depth = ( $(element).is('[data-full]') ? undefined : 0 );
 
                     // Attach any extra query parameters
                     $.each(element.attributes, function(index, attr){
@@ -372,7 +372,7 @@ function initializeTags(context, dropdownParent=null){
                 var offset = (params.page - 1) * 50 || 0;
                 var parameters = {
                     q: params.term,
-                    brief: 1,
+                    depth: 0,
                     limit: 50,
                     offset: offset,
                 };
