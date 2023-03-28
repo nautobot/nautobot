@@ -1,5 +1,6 @@
 from django.conf import settings
 
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar
 from nautobot.extras.models import Role
 
@@ -15,10 +16,13 @@ class APITestJob(Job):
     var3 = BooleanVar()
     var4 = ObjectVar(model=Role)
 
-    def run(self, data, commit=True):
-        self.log_debug(message=data["var1"])
-        self.log_info(message=data["var2"])
-        self.log_success(message=data["var3"])
-        self.log_warning(message=data["var4"])
+    def run(self, var1, var2, var3, var4):
+        self.log_debug(message=var1)
+        self.log_info(message=var2)
+        self.log_success(message=var3)
+        self.log_warning(message=var4)
 
         return "Job complete"
+
+
+register_jobs(APITestJob)

@@ -119,10 +119,11 @@ class BaseJob(Task):
         # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
         # or it might be bad input from an API request, or manual execution.
         try:
-            deserialized_kwargs = self.__class__.deserialize_data(kwargs)
+            deserialized_kwargs = self.deserialize_data(kwargs)
         except Exception:
             stacktrace = traceback.format_exc()
             self.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
+        self.active_test = "run"
         return self.run(*args, **deserialized_kwargs)
 
     def __str__(self):
@@ -209,7 +210,6 @@ class BaseJob(Task):
             )
 
         self.log_info("Running job")
-        self.active_test = "run"
 
     def run(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """

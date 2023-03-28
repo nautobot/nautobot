@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import JobHookReceiver
 from nautobot.dcim.models import Location, LocationType
 
@@ -18,3 +19,6 @@ class TestJobHookReceiverChange(JobHookReceiver):
 
 class TestJobHookReceiverFail(JobHookReceiver):
     pass
+
+
+register_jobs(TestJobHookReceiverChange, TestJobHookReceiverFail, TestJobHookReceiverLog)

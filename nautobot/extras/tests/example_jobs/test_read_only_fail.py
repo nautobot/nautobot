@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.jobs import Job
 
@@ -12,7 +13,7 @@ class TestReadOnlyFail(Job):
     class Meta:
         read_only = True
 
-    def run(self, data, commit):
+    def run(self):
         """
         Job function.
         """
@@ -22,3 +23,6 @@ class TestReadOnlyFail(Job):
 
         self.log_success(obj=location)
         raise Exception("Test failure")
+
+
+register_jobs(TestReadOnlyFail)

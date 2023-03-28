@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 
 
@@ -8,9 +9,12 @@ class TestFail(Job):
 
     description = "Validate job import"
 
-    def test_fail(self):
+    def run(self):
         """
         Job function.
         """
         self.log_success(obj=None)
         raise Exception("Test failure")
+
+
+register_jobs(TestFail)

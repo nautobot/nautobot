@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.jobs import Job
@@ -11,7 +12,7 @@ class TestCreateLocationWithCustomField(Job):
         name = "Location and Custom Field Creation"
         description = "Location with a custom field"
 
-    def run(self, data, commit):
+    def run(self):
         obj_type = ContentType.objects.get_for_model(Location)
         cf = CustomField(label="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="-")
         cf.validated_save()
@@ -33,3 +34,6 @@ class TestCreateLocationWithCustomField(Job):
         self.log_success(obj=location_2, message="Created another new location")
 
         return "Job completed."
+
+
+register_jobs(TestCreateLocationWithCustomField)

@@ -1362,7 +1362,6 @@ class JobTest(
 
         data = {
             "data": job_data,
-            "commit": True,
         }
 
         url = self.get_run_url()
@@ -1388,7 +1387,6 @@ class JobTest(
 
         data = {
             "data": job_data,
-            "commit": True,
             "schedule": {
                 "name": "test",
                 "interval": "future",
@@ -1440,7 +1438,6 @@ class JobTest(
 
         data = {
             "data": job_data,
-            "commit": True,
             # schedule is omitted
         }
 
@@ -1523,7 +1520,6 @@ class JobTest(
             "var2": "Ground control to Major Tom",
             "var23": "Commencing countdown, engines on",
             "var1": test_file,
-            "_commit": True,
         }
 
         url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
@@ -1572,7 +1568,6 @@ class JobTest(
             "var2": "Ground control to Major Tom",
             "var23": "Commencing countdown, engines on",
             "var1": test_file,
-            "_commit": True,
             "_schedule_start_time": str(datetime.now() + timedelta(minutes=1)),
             "_schedule_interval": "future",
             "_schedule_name": "test",
@@ -1591,7 +1586,6 @@ class JobTest(
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "future",
@@ -1604,8 +1598,6 @@ class JobTest(
         self.assertHttpStatus(response, self.run_success_response_status)
 
         schedule = ScheduledJob.objects.last()
-        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
-
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
@@ -1631,7 +1623,6 @@ class JobTest(
         url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
         data = {
             "data": {},
-            "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "future",
@@ -1662,7 +1653,6 @@ class JobTest(
         url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
         data = {
             "data": {},
-            "commit": True,
             "schedule": {
                 "interval": "immediately",
                 "name": "test",
@@ -1686,7 +1676,6 @@ class JobTest(
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
             "schedule": {
                 "interval": "immediately",
                 "name": "test",
@@ -1712,7 +1701,6 @@ class JobTest(
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() - timedelta(minutes=1)),
                 "interval": "future",
@@ -1732,7 +1720,6 @@ class JobTest(
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
             "schedule": {
                 "start_time": str(datetime.now() + timedelta(minutes=1)),
                 "interval": "hourly",
@@ -1764,7 +1751,6 @@ class JobTest(
 
         data = {
             "data": "invalid",
-            "commit": True,
         }
 
         url = self.get_run_url()
@@ -1784,7 +1770,6 @@ class JobTest(
 
         data = {
             "data": job_data,
-            "commit": True,
         }
 
         url = self.get_run_url()
@@ -1803,7 +1788,6 @@ class JobTest(
 
         data = {
             "data": job_data,
-            "commit": True,
         }
 
         url = self.get_run_url()
@@ -1819,7 +1803,6 @@ class JobTest(
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
             "task_queue": "invalid",
         }
 
@@ -1838,7 +1821,6 @@ class JobTest(
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
-            "commit": True,
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 
@@ -1851,7 +1833,6 @@ class JobTest(
     def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
         self.add_permissions("extras.run_job")
         data = {
-            "commit": True,
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 

@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.jobs import Job
 
@@ -12,7 +13,7 @@ class TestReadOnlyPass(Job):
     class Meta:
         read_only = True
 
-    def run(self, data, commit):
+    def run(self):
         """
         Job function.
         """
@@ -20,3 +21,6 @@ class TestReadOnlyPass(Job):
         location = Location.objects.create(name="New Location", location_type=location_type)
 
         self.log_success(obj=location)
+
+
+register_jobs(TestReadOnlyPass)

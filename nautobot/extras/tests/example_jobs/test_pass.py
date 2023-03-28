@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 
 
@@ -11,9 +12,12 @@ class TestPass(Job):
     class Meta:
         has_sensitive_variables = False
 
-    def test_pass(self):
+    def run(self):
         """
         Job function.
         """
         self.log_success(obj=None)
         self.status = "complete"
+
+
+register_jobs(TestPass)

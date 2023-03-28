@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, FileVar, StringVar
 
 
@@ -14,3 +15,6 @@ class TestFieldOrder(Job):
         """Metaclass attrs."""
 
         field_order = ["var1", "var2", "var23"]
+
+
+register_jobs(TestFieldOrder)

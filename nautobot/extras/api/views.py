@@ -398,7 +398,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job_model, request, celery_kwargs=dict, task_queue=None):
+def _create_schedule(serializer, data, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -408,7 +408,6 @@ def _create_schedule(serializer, data, commit, job_model, request, celery_kwargs
         "data": data,
         "request": copy_safe_request(request),
         "user": request.user.pk,
-        "commit": commit,
         "name": job_model.class_path,
         "celery_kwargs": celery_kwargs,
         "task_queue": task_queue,
@@ -495,7 +494,6 @@ def _run_job(request, job_model):
     # We must extract from the request:
     # - Job Form data (for submission to the job itself)
     # - Schedule data
-    # - Commit flag state
     # - Desired task queue
     # Depending on request content type (largely for backwards compatibility) the keys at which these are found are different
     if "multipart/form-data" in request.content_type:
@@ -506,10 +504,9 @@ def _run_job(request, job_model):
         input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
         input_serializer.is_valid(raise_exception=True)
 
-        commit = input_serializer.validated_data.get("_commit", None)
         task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
 
-        # JobMultiPartInputSerializer only has keys for executing job (commit, task_queue, etc),
+        # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
         # everything else is a candidate for the job form's data.
         # job_class.validate_data will throw an error for any unexpected key/value pairs.
         non_job_keys = input_serializer.validated_data.keys()
@@ -534,19 +531,15 @@ def _run_job(request, job_model):
         input_serializer.is_valid(raise_exception=True)
 
         data = input_serializer.validated_data.get("data", {})
-        commit = input_serializer.validated_data.get("commit", None)
         task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
         schedule_data = input_serializer.validated_data.get("schedule", None)
-
-    if commit is None:
-        commit = job_model.commit_default
 
     if task_queue not in valid_queues:
         raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     cleaned_data = None
     try:
-        cleaned_data = job_class.validate_data(data, files=files)
+        cleaned_data = job_class().validate_data(data, files=files)
         for key in list(cleaned_data.keys()):
             attr = getattr(job_model.job_class, key, None)
             if not isinstance(attr, ScriptVariable):
@@ -582,7 +575,6 @@ def _run_job(request, job_model):
         schedule = _create_schedule(
             schedule_data,
             job_class.serialize_data(cleaned_data),
-            commit,
             job_model,
             request,
             celery_kwargs={"queue": task_queue},
