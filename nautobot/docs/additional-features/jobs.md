@@ -11,8 +11,11 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
++/- 2.0.0
+    Backwards compatibility with Netbox scripts and reports has been removed.
+
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
 
 ## Writing Jobs
 

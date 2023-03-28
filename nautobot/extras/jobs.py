@@ -72,7 +72,7 @@ class RunJobTaskFailed(Exception):
 
 
 class BaseJob(Task):
-    """Base model for jobs (reports, scripts).
+    """Base model for jobs.
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
     with shared functionality; if no such sharing is required, use Job class instead.
@@ -210,6 +210,11 @@ class BaseJob(Task):
 
         self.log_info("Running job")
         self.active_test = "run"
+
+    def run(self, *args, **kwargs):  # pylint: disable=arguments-differ
+        """
+        Method invoked when this Job is run.
+        """
 
     def on_success(self, retval, task_id, args, kwargs):
         """Success handler.
@@ -407,6 +412,10 @@ class BaseJob(Task):
             "task_queues": cls.task_queues,
         }
 
+    @classproperty
+    def registered_name(cls):  # pylint: disable=no-self-argument
+        return f"{cls.__module__}.{cls.__name__}"
+
     @classmethod
     def _get_vars(cls):
         """
@@ -456,10 +465,6 @@ class BaseJob(Task):
         }
         """
         return self.job_result.data if self.job_result else None
-
-    @classproperty
-    def registered_name(cls):
-        return f"{cls.__module__}.{cls.__name__}"
 
     def as_form_class(self):
         """
@@ -661,11 +666,6 @@ class BaseJob(Task):
             num += 1
         logger.debug(f"Deleted {num} file proxies")
         return num
-
-    def run(self, *args, **kwargs):
-        """
-        Method invoked when this Job is run.
-        """
 
     # Logging
 
@@ -1059,11 +1059,8 @@ def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
     """
-    from .scripts import Script, BaseScript
-    from .reports import Report
-
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver, JobButtonReceiver]
+        return issubclass(obj, Job) and obj not in [Job, JobHookReceiver, JobButtonReceiver]
     except TypeError:
         return False
 
