@@ -7,7 +7,7 @@ from django.contrib.messages import constants as messages
 import django.forms
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, ConstanceConfigItem  # noqa: F401
 
 #
 # Environment setup
@@ -521,74 +521,78 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 
 CONSTANCE_CONFIG = {
-    "BANNER_BOTTOM": [
-        "",
-        "Custom HTML to display in a banner at the bottom of all pages.",
-    ],
-    "BANNER_LOGIN": [
-        "",
-        "Custom HTML to display in a banner at the top of the login page.",
-    ],
-    "BANNER_TOP": [
-        "",
-        "Custom HTML to display in a banner at the top of all pages.",
-    ],
-    "CHANGELOG_RETENTION": [
-        90,
-        "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
-    ],
-    "DISABLE_PREFIX_LIST_HIERARCHY": [
-        False,
-        "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
-    ],
-    "HIDE_RESTRICTED_UI": [
-        False,
-        "If set to True, users with limited permissions will not be shown menu items and home-page elements that "
+    "BANNER_BOTTOM": ConstanceConfigItem(
+        default="",
+        help_text="Custom HTML to display in a banner at the bottom of all pages.",
+    ),
+    "BANNER_LOGIN": ConstanceConfigItem(
+        default="",
+        help_text="Custom HTML to display in a banner at the top of the login page.",
+    ),
+    "BANNER_TOP": ConstanceConfigItem(
+        default="",
+        help_text="Custom HTML to display in a banner at the top of all pages.",
+    ),
+    "CHANGELOG_RETENTION": ConstanceConfigItem(
+        default=90,
+        help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
+        field_type=int,
+    ),
+    "DISABLE_PREFIX_LIST_HIERARCHY": ConstanceConfigItem(
+        default=False,
+        help_text="Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
+        field_type=bool,
+    ),
+    "HIDE_RESTRICTED_UI": ConstanceConfigItem(
+        default=False,
+        help_text="If set to True, users with limited permissions will not be shown menu items and home-page elements that "
         "they do not have permission to access.",
-    ],
-    "MAX_PAGE_SIZE": [
-        1000,
-        "Maximum number of objects that a user can list in one UI page or one API call.\n"
+        field_type=bool,
+    ),
+    "MAX_PAGE_SIZE": ConstanceConfigItem(
+        default=1000,
+        help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
-    ],
-    "PAGINATE_COUNT": [
-        50,
-        "Default number of objects to display per page when listing objects in the UI and/or REST API.",
-    ],
-    "PER_PAGE_DEFAULTS": [
-        [25, 50, 100, 250, 500, 1000],
-        "Pagination options to present to the user to choose amongst.\n"
+        field_type=int,
+    ),
+    "PAGINATE_COUNT": ConstanceConfigItem(
+        default=50,
+        help_text="Default number of objects to display per page when listing objects in the UI and/or REST API.",
+        field_type=int,
+    ),
+    "PER_PAGE_DEFAULTS": ConstanceConfigItem(
+        default=[25, 50, 100, 250, 500, 1000],
+        help_text="Pagination options to present to the user to choose amongst.\n"
         "For proper user experience, this list should include the PAGINATE_COUNT and MAX_PAGE_SIZE values as options.",
         # Use custom field type defined above
-        "per_page_defaults_field",
-    ],
-    "PREFER_IPV4": [
-        False,
-        "Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
-    ],
-    "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": [
-        22,
-        "Default height (in pixels) of a rack unit in a rack elevation diagram",
-    ],
-    "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": [
-        230,
-        "Default width (in pixels) of a rack unit in a rack elevation diagram",
-    ],
-    "RELEASE_CHECK_TIMEOUT": [
-        24 * 3600,
-        "Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
+        field_type="per_page_defaults_field",
+    ),
+    "PREFER_IPV4": ConstanceConfigItem(
+        default=False,
+        help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
+        field_type=bool,
+    ),
+    "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": ConstanceConfigItem(
+        default=22, help_text="Default height (in pixels) of a rack unit in a rack elevation diagram", field_type=int
+    ),
+    "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": ConstanceConfigItem(
+        default=230, help_text="Default width (in pixels) of a rack unit in a rack elevation diagram", field_type=int
+    ),
+    "RELEASE_CHECK_TIMEOUT": ConstanceConfigItem(
+        default=24 * 3600,
+        help_text="Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
         "before checking again for a new release.",
         # Use custom field type defined above
-        "release_check_timeout_field",
-    ],
-    "RELEASE_CHECK_URL": [
-        "",
-        "URL of GitHub repository REST API endpoint to poll periodically for availability of new Nautobot releases.\n"
+        field_type="release_check_timeout_field",
+    ),
+    "RELEASE_CHECK_URL": ConstanceConfigItem(
+        default="",
+        help_text="URL of GitHub repository REST API endpoint to poll periodically for availability of new Nautobot releases.\n"
         'This can be set to the official repository "https://api.github.com/repos/nautobot/nautobot/releases" or '
         "a custom fork.\nSet this to an empty string to disable automatic update checks.",
         # Use custom field type defined above
-        "release_check_url_field",
-    ],
+        field_type="release_check_url_field",
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {

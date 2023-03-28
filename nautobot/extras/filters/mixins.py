@@ -7,7 +7,10 @@ from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.core.filters import (
+    MultiValueDateTimeFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
+)
 from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -69,15 +72,13 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
-            # Determine filter class for this CustomField type, default to CustomFieldBaseFilter
-            # 2.0 TODO: #824 use cf.slug instead
-            new_filter_name = f"cf_{cf.name}"
+            # Determine filter class for this CustomField type, default to CustomFieldCharFilter
+            new_filter_name = cf.add_prefix_to_cf_key()
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
-            new_filter_field = filter_class(field_name=cf.name, custom_field=cf)
-            new_filter_field.label = f"{cf.label}"
-
+            new_filter = filter_class(field_name=cf.key, custom_field=cf)
+            new_filter.label = f"{cf.label}"
             # Create base filter (cf_customfieldname)
-            self.filters[new_filter_name] = new_filter_field
+            self.filters[new_filter_name] = new_filter
 
             # Create extra lookup expression filters (cf_customfieldname__lookup_expr)
             self.filters.update(
@@ -124,7 +125,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = f"{filter_name}__{lookup_name}"
             new_filter = filter_type(
-                field_name=custom_field.name,
+                field_name=custom_field.key,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
                 label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",
@@ -137,12 +138,8 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
 
 class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
-    created = django_filters.DateTimeFilter()
-    created__gte = django_filters.DateTimeFilter(field_name="created", lookup_expr="gte")
-    created__lte = django_filters.DateTimeFilter(field_name="created", lookup_expr="lte")
-    last_updated = django_filters.DateTimeFilter()
-    last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
-    last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
+    created = MultiValueDateTimeFilter()
+    last_updated = MultiValueDateTimeFilter()
 
 
 class LocalContextModelFilterSetMixin(django_filters.FilterSet):
@@ -293,7 +290,6 @@ class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """Limit role choices to the available role choices for self.model"""
 
     def __init__(self, *args, **kwargs):
-
         kwargs.setdefault("field_name", "role")
         kwargs.setdefault("queryset", Role.objects.all())
         kwargs.setdefault("to_field_name", "name")

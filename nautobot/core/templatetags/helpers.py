@@ -13,6 +13,7 @@ from django_jinja import library
 from markdown import markdown
 import yaml
 
+from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
 
@@ -483,7 +484,7 @@ def get_item(d, key):
         [any]: Value of the item in the dictionary provided
 
     Example:
-        >>> get_items(data, key)
+        >>> get_item(data, key)
         "value"
     """
     return d.get(key)
@@ -491,8 +492,10 @@ def get_item(d, key):
 
 @library.filter()
 @register.filter()
-def settings_or_config(key):
+def settings_or_config(key, app_name=None):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
+    if app_name:
+        return get_app_settings_or_config(app_name, key)
     return config.get_settings_or_config(key)
 
 

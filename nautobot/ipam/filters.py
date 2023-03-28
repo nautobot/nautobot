@@ -433,7 +433,7 @@ class VLANFilterSet(
             },
         },
     )
-    available_on_device = django_filters.UUIDFilter(
+    available_on_device = MultiValueUUIDFilter(
         method="get_for_device",
         label="Device (ID)",
         field_name="pk",
@@ -451,11 +451,11 @@ class VLANFilterSet(
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
         # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
-        try:
-            device = Device.objects.get(id=value)
-            return queryset.filter(Q(location__isnull=True) | Q(location=device.location))
-        except Device.DoesNotExist:
+        devices = Device.objects.select_related("location").filter(**{f"{name}__in": value})
+        if not devices.exists():
             return queryset.none()
+        location_ids = list(devices.values_list("location__id", flat=True))
+        return queryset.filter(Q(location__isnull=True) | Q(location__in=location_ids))
 
 
 class ServiceFilterSet(NautobotFilterSet):

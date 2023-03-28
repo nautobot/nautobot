@@ -371,7 +371,10 @@ class APIViewTestCases:
                         expected_slug += self.slugify_function(val)
 
                 self.assertNotEqual(expected_slug, "")
-                self.assertEqual(obj.slug, expected_slug)
+                if hasattr(obj, "slug"):
+                    self.assertEqual(obj.slug, expected_slug)
+                else:
+                    self.assertEqual(obj.key, expected_slug)
 
         def test_create_object(self):
             """

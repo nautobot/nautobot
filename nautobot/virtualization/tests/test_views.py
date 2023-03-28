@@ -290,7 +290,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         )
 
         obj_type = ContentType.objects.get_for_model(VMInterface)
-        cf = CustomField.objects.create(name="custom_field_1", type="text")
+        cf = CustomField.objects.create(label="Custom Field 1", type="text")
         cf.save()
         cf.content_types.set([obj_type])
 

@@ -483,19 +483,19 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     """Tests for the CustomField REST API."""
 
     model = CustomField
-    brief_fields = ["display", "id", "name", "url"]
+    brief_fields = ["display", "id", "key", "url"]
     create_data = [
         {
             "content_types": ["dcim.location"],
             "label": "Custom Field 4",
-            "slug": "cf4",
+            "key": "custom_field_4",
             "type": "date",
             "weight": 100,
         },
         {
             "content_types": ["dcim.location", "dcim.device"],
             "label": "Custom Field 5",
-            "slug": "cf5",
+            "key": "custom_field_5",
             "type": "url",
             "default": "http://example.com",
             "weight": 200,
@@ -503,7 +503,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         {
             "content_types": ["dcim.location"],
             "label": "Custom Field 6",
-            "slug": "cf6",
+            "key": "custom_field_6",
             "type": "select",
             "description": "A select custom field",
             "weight": 300,
@@ -526,24 +526,16 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         location_ct = ContentType.objects.get_for_model(Location)
 
         custom_fields = (
-            CustomField(slug="cf1", label="Custom Field 1", type="text"),
-            CustomField(slug="cf2", label="Custom Field 2", type="integer"),
-            CustomField(slug="cf3", label="Custom Field 3", type="boolean"),
+            CustomField(key="cf1", label="Custom Field 1", type="text"),
+            CustomField(key="cf2", label="Custom Field 2", type="integer"),
+            CustomField(key="cf3", label="Custom Field 3", type="boolean"),
         )
         for cf in custom_fields:
             cf.validated_save()
             cf.content_types.add(location_ct)
 
-    def test_create_object(self):
-        super().test_create_object()
-        # 2.0 TODO: #824 remove name entirely
-        # For now, check that name is correctly populated in the model even though it's not an API field.
-        for create_data in self.create_data:
-            instance = self._get_queryset().get(slug=create_data["slug"])
-            self.assertEqual(instance.name, instance.slug)
-
     def test_create_object_required_fields(self):
-        """For this API version, `label` and `slug` are required fields."""
+        """For this API version, `label` and `key` are required fields."""
         self.add_permissions("extras.add_customfield")
 
         incomplete_data = {
@@ -556,7 +548,9 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         self.maxDiff = None
         self.assertEqual(
             response.data,
-            {"slug": ["This field is required."], "label": ["This field is required."]},
+            # Since we are setting blank=True on the key field, we only need to check
+            # error messages from the label field.
+            {"label": ["This field is required."]},
         )
 
 
@@ -1854,7 +1848,6 @@ class JobTest(
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
-
     model = JobHook
     brief_fields = ["display", "id", "name", "url"]
     choices_fields = []

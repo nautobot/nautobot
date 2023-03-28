@@ -362,7 +362,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["value"],
-        ["custom_field", "custom_field__name"],
+        ["custom_field", "custom_field__key"],
         ["weight"],
     )
 
@@ -370,7 +370,7 @@ class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         obj_type = ContentType.objects.get_for_model(Device)
         cfs = [
-            CustomField.objects.create(name=f"custom_field_{num}", type=CustomFieldTypeChoices.TYPE_TEXT)
+            CustomField.objects.create(label=f"Custom Field {num}", type=CustomFieldTypeChoices.TYPE_TEXT)
             for num in range(3)
         ]
         for cf in cfs:
@@ -441,7 +441,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         content_type = ContentType.objects.get_for_model(Location)
         fields = [
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=f"field {num}", required=False)
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=f"field {num}", required=False)
             for num in range(3)
         ]
         cls.fields = fields
@@ -454,7 +454,7 @@ class CustomFieldChoiceTestCase(FilterTestCases.FilterTestCase):
     def test_field(self):
         fields = list(self.fields[:2])
         filter_params = [
-            {"custom_field": [fields[0].name, fields[1].pk]},
+            {"custom_field": [fields[0].key, fields[1].pk]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(

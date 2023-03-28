@@ -28,7 +28,6 @@ class DictToFilterParamsTest(TestCase):
     """
 
     def test_dict_to_filter_params(self):
-
         input_ = {
             "a": True,
             "foo": {
@@ -70,7 +69,6 @@ class DeepMergeTest(TestCase):
     """
 
     def test_deepmerge(self):
-
         dict1 = {
             "active": True,
             "foo": 123,
@@ -367,23 +365,28 @@ class SlugifyFunctionsTest(TestCase):
         for content, expected in (
             ("Locations / Regions", "locations_regions"),
             ("alpha-beta_gamma delta", "alpha_beta_gamma_delta"),
+            ("123 main st", "a123_main_st"),
+            (" 123 main st", "a_123_main_st"),
         ):
             self.assertEqual(core_fields.slugify_dashes_to_underscores(content), expected)
 
 
 class LookupRelatedFunctionTest(TestCase):
     def test_is_single_choice_field(self):
-        # Assert function returns True for any field starting with create or has_
-        # Cause these fields are either boolean fields or date time fields which one accepts single values
+        """
+        Assert that is_single_choice_field() correctly distinguishes between single-value and multi-value filter fields.
+        """
         filterset_class = dcim_filters.LocationFilterSet
 
-        single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters", "q")
+        single_choice_fields = ("has_vlans", "has_clusters")
         for field in single_choice_fields:
-            self.assertTrue(requests.is_single_choice_field(filterset_class, field))
+            with self.subTest(f"Single choice field: {field}"):
+                self.assertTrue(requests.is_single_choice_field(filterset_class, field))
 
-        multi_choice_fields = ("status", "tenant", "tags")
+        multi_choice_fields = ("created", "status", "tenant", "tags")
         for field in multi_choice_fields:
-            self.assertFalse(requests.is_single_choice_field(filterset_class, field))
+            with self.subTest(f"Multi choice field: {field}"):
+                self.assertFalse(requests.is_single_choice_field(filterset_class, field))
 
     def test_build_lookup_label(self):
         with self.subTest():
@@ -460,16 +463,20 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
-        with self.subTest("Test ChoiceField"):
+        with self.subTest("Test NullBooleanField"):
             location_fields = ["has_circuit_terminations", "has_devices"]
             for field_name in location_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                self.assertIsInstance(form_field, django_forms.ChoiceField)
+                self.assertIsInstance(form_field, django_forms.NullBooleanField)
 
-            device_fields = ["has_console_ports", "has_interfaces", "face"]
+            device_fields = ["has_console_ports", "has_interfaces"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIsInstance(form_field, django_forms.ChoiceField)
+                self.assertIsInstance(form_field, django_forms.NullBooleanField)
+
+        with self.subTest("Test ChoiceField"):
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "face")
+            self.assertIsInstance(form_field, django_forms.ChoiceField)
 
         with self.subTest("Test DateTimePicker"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "last_updated")

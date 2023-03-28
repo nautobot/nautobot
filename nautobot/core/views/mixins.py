@@ -44,7 +44,7 @@ from nautobot.core.views.utils import csv_format, handle_protectederror, prepare
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
-
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -138,7 +138,6 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         # Check that the user has been granted the required permission(s).
         if user.has_perms((permission_required, *self.additional_permissions)):
-
             # Update the view's QuerySet to filter only the permitted objects
             action = permissions.resolve_permission(permission_required)[1]
             self.queryset = self.queryset.restrict(user, action)
@@ -148,7 +147,6 @@ class ObjectPermissionRequiredMixin(AccessMixin):
         return False
 
     def dispatch(self, request, *args, **kwargs):
-
         if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
                 (
@@ -171,7 +169,6 @@ class GetReturnURLMixin:
     default_return_url = None
 
     def get_return_url(self, request, obj=None):
-
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
         query_param = request.GET.get("return_url") or request.POST.get("return_url")
@@ -656,8 +653,8 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         # Add custom field headers, if any
         if hasattr(queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(queryset.model):
-                headers.append("cf_" + custom_field.slug)
-                custom_fields.append(custom_field.name)
+                headers.append(custom_field.add_prefix_to_cf_key())
+                custom_fields.append(custom_field.key)
 
         csv_data.append(",".join(headers))
 
@@ -985,7 +982,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
-        form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
         with transaction.atomic():
             updated_objects = []
             for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
@@ -1013,9 +1009,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 # Update custom fields
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
-                        obj.cf[form_cf_to_key[field_name]] = None
+                        obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
-                        obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
+                        obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
 
                 obj.validated_save()
                 updated_objects.append(obj)

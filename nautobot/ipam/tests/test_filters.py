@@ -823,7 +823,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         location = self.locations[0]
         devicerole = Role.objects.get_for_model(Device).first()
         device = Device.objects.create(device_type=devicetype, role=devicerole, name="Device 1", location=location)
-        params = {"available_on_device": device.pk}
+        params = {"available_on_device": [device.pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(location=device.location) | Q(location__isnull=True)),

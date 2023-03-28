@@ -87,6 +87,11 @@ function initializeCheckboxes(context){
 function initializeSlugField(context){
     this_context = $(context);
     var slug_field = this_context.find('#id_slug');
+    // If id_slug field is not to be found
+    // check if it is rename to key field like what we did for CustomField
+    if (slug_field.length == 0) {
+        slug_field = this_context.find('#id_key');
+    }
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
@@ -463,6 +468,61 @@ function initializeMultiValueChar(context, dropdownParent=null){
 
 function initializeDynamicFilterForm(context){
     this_context = $(context);
+
+    function initializeDynamicFilterSelect(element) {
+        // On change of a select field in default filter form
+        // Replicate that change into dynamic filter form and vice-versa
+        $(element).on("change", function (e){
+            let field_name = $(this).attr("name");
+            let field_values = $(this).select2('data');
+            let form_id = $(this).parents("form").attr("id");
+
+            let default_filters_field_dom = $(`#default-filter form select[name=${field_name}]`);
+            let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td select[name=${field_name}]`);
+
+            // Only apply logic if fields with same name attr are on both advanced and default filter form
+            if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+                let default_filters_field_ids = default_filters_field_dom.select2('data').map(data => data["id"]);
+                let advanced_filters_field_ids = advanced_filters_field_dom.select2('data').map(data => data["id"]);
+
+                // Only change field value if both fields do not have equal values
+                if (JSON.stringify(advanced_filters_field_ids) !== JSON.stringify(default_filters_field_ids)){
+                    if(form_id === "dynamic-filter-form"){
+                        changeSelect2FieldValue(default_filters_field_dom, field_values);
+                    }
+                    else {
+                        changeSelect2FieldValue(advanced_filters_field_dom, field_values);
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeDynamicFilterInput(element) {
+        // On change of input field in default filter form
+        // Replicate that change into dynamic filter form and vice-versa
+        $(element).on("change", function (e){
+            let field_name = $(this).attr("name");
+            let field_value = $(this).val();
+            let form_id = $(this).parents("form").attr("id");
+            let default_filters_field_dom = $(`#default-filter form input[name=${field_name}]`);
+            let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td input[name=${field_name}]`);
+
+            // Only apply logic if fields with same name attr are on both advanced and default filter form
+            if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+                // Only change field value if both fields do not have equal values
+                if (default_filters_field_dom.val() !== advanced_filters_field_dom.val()){
+                    if(form_id === "dynamic-filter-form"){
+                        default_filters_field_dom.val(field_value);
+                    }
+                    else {
+                        advanced_filters_field_dom.val(field_value);
+                    }
+                }
+            }
+        })
+    }
+
     // Dynamic filter form
     this_context.find(".lookup_type-select").bind("change", function(){
         let parent_element = $(this).parents("tr")
@@ -482,6 +542,11 @@ function initializeDynamicFilterForm(context){
                 newEl = $(response.dom_element)
                 newEl.addClass("lookup_value-input")
                 replaceEl(lookup_value_element, newEl)
+                if (newEl.prop("tagName") == "SELECT") {
+                    initializeDynamicFilterSelect(newEl);
+                } else {
+                    initializeDynamicFilterInput(newEl);
+                }
             }).fail(function (xhr, status, error) {
                 // Default to Input:text field if error occurs
                 createInput(lookup_value_element)
@@ -503,6 +568,89 @@ function initializeDynamicFilterForm(context){
         lookup_value_element.val(null).trigger('change')
 
     })
+
+    // By default on lookup_value field names are form-\d-lookup_value, thats why
+    // on page load we change all `lookup_value` name to its relevant `lookup_type` value
+    this_context.find(".dynamic-filterform").each(function(){
+        lookup_type_value = $(this).find(".lookup_type-select").val();
+        lookup_value = $(this).find(".lookup_value-input");
+        lookup_value.attr("name", lookup_type_value);
+    })
+
+    // Remove applied filters
+    this_context.find(".remove-filter-param").on("click", function(){
+        let query_params = location.search;
+        let type = $(this).attr("data-field-type");
+        let field_value = $(this).attr("data-field-value");
+        let query_string = location.search.substr(1).split("&");
+
+        if (type === "parent") {
+            query_string = query_string.filter(item => item.search(field_value) < 0);
+        } else {
+            let parent = $(this).attr("data-field-parent");
+            query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+        }
+        location.replace("?" + query_string.join("&"))
+    })
+
+    // On submit of filter form
+    this_context.find("#dynamic-filter-form, #default-filter form").on("submit", function(e){
+        e.preventDefault()
+        let dynamic_form = $("#dynamic-filter-form");
+        dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        // Append q form field to dynamic filter form via hidden input
+        let q_field = $('#id_q')
+        let q_field_phantom = $('<input type="hidden" name="q" />')
+        q_field_phantom.val(q_field.val())
+        dynamic_form.append(q_field_phantom);
+
+        let search_query = $("#dynamic-filter-form, #default-filter form").serialize()
+        // Remove duplicates generated by filter merging on both dynamic and default filter forms.
+        search_query = "&" + search_query.replace(/([^&]+=[^&]+&)(?=.*\1)/g, "")
+        location.replace("?" + search_query)
+    })
+
+    // On submit of filter search form
+    this_context.find("#search-form").on("submit", function(e){
+        // Since the Dynamic Filter Form will already grab my q field, just have it do a majority of the work.
+        e.preventDefault()
+        $("#dynamic-filter-form").submit()
+    })
+
+    // Clear new row values upon creation
+    this_context.find(".dynamic-filterform-add .add-row").click(function(){
+        let new_fields_parent_element = $(".dynamic-filterform").last()
+        let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"];
+        lookup_field_classes.forEach(field_class => {
+            let element = new_fields_parent_element.find(field_class);
+            element.val(null).trigger('change')
+        })
+        // reinitialize jsify_form
+        initializeDynamicFilterForm($(document));
+    })
+
+    function changeSelect2FieldValue(dom_element, values){
+        dom_element.val(null)
+        values.forEach(function (value){
+            // Does an element already exist?
+            if (!dom_element.find("option[value='" + value.id + "']").length) {
+                let new_option = new Option(value.text, value.id, true, true);
+                dom_element.append(new_option);
+            }
+        })
+        dom_element.val(values.map(data => data["id"]));
+        dom_element.trigger('change');
+    }
+
+    this_context.find("#default-filter form select, #advanced-filter select").each(function() {
+        initializeDynamicFilterSelect(this);
+    });
+
+    // On change of input field in default filter form
+    // Replicate that change into dynamic filter form and vice-versa
+    this_context.find("#default-filter form input, #advanced-filter input").each(function() {
+        initializeDynamicFilterInput(this);
+    });
 }
 
 function initializeSortableList(context){
