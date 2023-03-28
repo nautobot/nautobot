@@ -224,6 +224,7 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
         fields = "__all__"
         extra_fields = ["url"]
 
+
 class LocationSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, TreeModelSerializerMixin
 ):
