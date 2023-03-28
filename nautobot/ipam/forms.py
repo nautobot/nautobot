@@ -324,7 +324,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance is not None:
-            self.initial["vrfs"] = self.instance.vrfs.all().values_list("id", flat=True)
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
