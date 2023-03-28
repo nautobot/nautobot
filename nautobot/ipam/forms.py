@@ -271,16 +271,6 @@ class RIRFilterForm(NautobotFilterForm):
 
 
 class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
-    """
-    vrf = DynamicModelChoiceField(
-        empty_label="Global",
-        null_option="Global",
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
-    """
-
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -300,13 +290,21 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+        query_params={
+            "namespace": "$namespace",
+        },
+    )
 
     class Meta:
         model = Prefix
         fields = [
             "prefix",
             "namespace",
-            # "vrf",
+            "vrfs",
             "location",
             "vlan",
             "status",
@@ -322,6 +320,16 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         widgets = {
             "date_allocated": DateTimePicker(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance is not None:
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class PrefixCSVForm(

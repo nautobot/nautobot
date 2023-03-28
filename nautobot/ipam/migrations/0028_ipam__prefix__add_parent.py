@@ -13,11 +13,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="prefix",
-            name="ip_version",
-            field=models.IntegerField(db_index=True, editable=False, null=True),
-        ),
-        migrations.AddField(
-            model_name="prefix",
             name="parent",
             field=models.ForeignKey(
                 blank=True,

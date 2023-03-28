@@ -18,23 +18,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterModelOptions(
-            name="prefix",
-            options={"ordering": ("namespace", "network", "prefix_length"), "verbose_name_plural": "prefixes"},
-        ),
-        migrations.AlterModelOptions(
-            name="vrf",
-            options={"ordering": ("namespace", "name"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
-        ),
-        migrations.RemoveField(
-            model_name="ipaddress",
-            name="vrf",
-        ),
-        migrations.AlterField(
-            model_name="vrf",
-            name="rd",
-            field=models.CharField(blank=True, max_length=21, null=True),
-        ),
         migrations.CreateModel(
             name="VRFPrefixAssignment",
             fields=[
@@ -118,12 +101,18 @@ class Migration(migrations.Migration):
             ],
             options={
                 "abstract": False,
+                "ordering": ("name",),
             },
             bases=(
                 models.Model,
                 nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
             ),
+        ),
+        migrations.AddField(
+            model_name="prefix",
+            name="ip_version",
+            field=models.IntegerField(db_index=True, editable=False, null=True),
         ),
         migrations.AddField(
             model_name="prefix",
@@ -134,6 +123,17 @@ class Migration(migrations.Migration):
                 related_name="prefixes",
                 to="ipam.namespace",
             ),
+        ),
+        migrations.AlterModelOptions(
+            name="prefix",
+            options={
+                "ordering": ("namespace", "ip_version", "network", "prefix_length"),
+                "verbose_name_plural": "prefixes",
+            },
+        ),
+        migrations.AlterUniqueTogether(
+            name="prefix",
+            unique_together={("namespace", "network", "prefix_length")},
         ),
         migrations.AddField(
             model_name="vrf",
@@ -155,13 +155,22 @@ class Migration(migrations.Migration):
             name="prefixes",
             field=models.ManyToManyField(related_name="vrfs", through="ipam.VRFPrefixAssignment", to="ipam.Prefix"),
         ),
-        migrations.AlterUniqueTogether(
-            name="prefix",
-            unique_together={("namespace", "network", "prefix_length")},
+        migrations.AlterField(
+            model_name="vrf",
+            name="rd",
+            field=models.CharField(blank=True, max_length=21, null=True),
+        ),
+        migrations.AlterModelOptions(
+            name="vrf",
+            options={"ordering": ("namespace", "name"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
         ),
         migrations.AlterUniqueTogether(
             name="vrf",
             unique_together={("namespace", "name"), ("namespace", "rd")},
+        ),
+        migrations.RemoveField(
+            model_name="ipaddress",
+            name="vrf",
         ),
         migrations.RemoveField(
             model_name="prefix",
