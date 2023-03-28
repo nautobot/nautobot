@@ -63,7 +63,6 @@ def run_job_for_testing(job, kwargs=None, username="test-user"):
         job.enabled = True
         job.validated_save()
 
-    # If the request has a user, ignore the username argument and use that user.
     user_instance, _ = User.objects.get_or_create(
         username=username, defaults={"is_superuser": True, "password": "password"}
     )
