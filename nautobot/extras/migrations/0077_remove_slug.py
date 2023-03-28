@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
         ("circuits", "0015_remove_circuittype_provider_slug"),
         ("tenancy", "0007_remove_tenant_tenantgroup_slug"),
         ("virtualization", "0020_remove_clustergroup_clustertype_slug"),
-        ("extras", "0073_remove_gitrepository_fields"),
+        ("extras", "0076_remove_name_field_and_make_label_field_non_nullable"),
     ]
 
     operations = [
