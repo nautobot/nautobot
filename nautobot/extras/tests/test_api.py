@@ -2443,8 +2443,8 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         for relationship in cls.relationships:
             relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        cls.location = Location.objects.create(name="Location 1", status=status, location_type=cls.lt)
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location = Location.objects.create(name="Location 1", status=location_status, location_type=cls.lt)
 
     def test_get_all_relationships_on_location(self):
         """Verify that all relationships are accurately represented when requested."""
@@ -2641,15 +2641,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 **self.header,
             )
 
-        status = Status.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
             data=[
-                {"vid": "1", "name": "1", "status": status.pk},
-                {"vid": "2", "name": "2", "status": status.pk},
+                {"vid": "1", "name": "1", "status": device_status.pk},
+                {"vid": "2", "name": "2", "status": device_status.pk},
             ],
         )
         self.assertHttpStatus(response, 400)
@@ -2683,21 +2683,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 vlan1_json_data = {
                     "vid": "1",
                     "name": "1",
-                    "status": status.pk,
+                    "status": device_status.pk,
                 }
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": status.pk,
+                    "status": device_status.pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": status.pk, "id": str(vlan1.id)}
+                vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
 
-                vlan2_json_data = {"status": status.pk, "id": str(vlan2.id)}
+                vlan2_json_data = {"status": device_status.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})

@@ -178,14 +178,14 @@ def create_custom_statuses(
             try:
                 # may fail if a status with a different slug has a name matching this one
                 obj, created = Status.objects.get_or_create(slug=slug, defaults=defaults)
-            except (IntegrityError, FieldError) as err:
+            except (IntegrityError, FieldError) as error:
                 # OK, what if we look up by name instead?
                 defaults = choice_kwargs.copy()
                 name = defaults.pop("name")
                 # FieldError would occur when calling create_custom_statuses after status slug removal
                 # migration has been migrated
                 # e.g nautobot.extras.tests.test_management.StatusManagementTestCase.test_populate_status_choices_idempotent
-                if isinstance(err, FieldError):
+                if isinstance(error, FieldError):
                     defaults.pop("slug")
                 try:
                     obj, created = Status.objects.get_or_create(name=name, defaults=defaults)

@@ -319,10 +319,12 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL)
-        status = Status.objects.get_for_model(Prefix).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
 
         # 5 Prefixes
-        requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": status.pk} for i in range(1, 6)]
+        requests = [
+            {"prefix_length": 30, "description": f"Test Prefix {i}", "status": prefix_status.pk} for i in range(1, 6)
+        ]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
@@ -333,10 +335,10 @@ class ParallelPrefixTest(APITransactionTestCase):
 
     def test_create_multiple_available_ips_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL)
-        status = Status.objects.get_for_model(Prefix).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
 
         # 8 IPs
-        requests = [{"description": f"Test IP {i}", "status": status.pk} for i in range(1, 9)]
+        requests = [{"description": f"Test IP {i}", "status": prefix_status.pk} for i in range(1, 9)]
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
