@@ -95,6 +95,7 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # TODO: There is not enough CircuitTypes without associated Circuits for test_bulk_delete to jus work
         CircuitType.objects.create(name="Circuit Type 1")
         CircuitType.objects.create(name="Circuit Type 2")
         CircuitType.objects.create(name="Circuit Type 3")
