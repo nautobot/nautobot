@@ -185,10 +185,8 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    brief = False
     # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
     # select_related
-    brief_prefetch_fields = []
     logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
@@ -230,20 +228,6 @@ class ModelViewSetMixin:
 
         return super().get_serializer(*args, **kwargs)
 
-    def get_serializer_class(self):
-        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-        if self.brief:
-            self.logger.debug("Request is for 'brief' format; initializing nested serializer")
-            try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                self.logger.debug(f"Using serializer {serializer}")
-                return serializer
-            except SerializerNotFound:
-                self.logger.debug(f"Nested serializer for {self.queryset.model} not found!")
-
-        # Fall back to the hard-coded serializer class
-        return self.serializer_class
-
     def get_serializer_context(self):
         context = super().get_serializer_context()
         depth = 0
@@ -255,20 +239,6 @@ class ModelViewSetMixin:
         context["depth"] = depth
 
         return context
-
-    def get_queryset(self):
-        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-        if self.brief:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
-
-        return super().get_queryset()
-
-    # def initialize_request(self, request, *args, **kwargs):
-    #     # Check if brief=True has been passed
-    #     if request.method == "GET" and request.GET.get("brief"):
-    #         self.brief = True
-    #     return super().initialize_request(request, *args, **kwargs)
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
