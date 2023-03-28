@@ -238,7 +238,6 @@ class VRFTable(BaseTable):
     name = tables.LinkColumn()
     # rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
-    enforce_unique = BooleanColumn(verbose_name="Unique")
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     tags = TagColumn(url_name="ipam:vrf_list")
@@ -251,7 +250,6 @@ class VRFTable(BaseTable):
             # "rd",
             "namespace",
             "tenant",
-            # "enforce_unique",
             "description",
             "import_targets",
             "export_targets",

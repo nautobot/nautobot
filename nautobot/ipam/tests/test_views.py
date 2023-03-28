@@ -36,7 +36,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "VRF X",
             "rd": "65000:999",
             "tenant": tenants[0].pk,
-            "enforce_unique": True,
             "description": "A new VRF",
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
         }
@@ -50,7 +49,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
-            "enforce_unique": False,
             "description": "New description",
         }
 

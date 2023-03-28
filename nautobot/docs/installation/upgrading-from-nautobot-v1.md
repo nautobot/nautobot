@@ -131,35 +131,36 @@
 
 ### Removed Database Fields
 
-| Model              | Removed Field |
-|--------------------|---------------|
-| CircuitTermination | `site`        |
-| Cluster            | `site`        |
-| ConfigContext      | `sites`       |
-|                    | `regions`     |
-| Device             | `site`        |
-| GitRepository      | `_token`      |
-|                    | `username`    |
-| InventoryItem      | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| Location           | `site`        |
-| Rack               | `site`        |
-| RackGroup          | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| PowerFeed          | `site`        |
-| PowerPanel         | `site`        |
-| Prefix             | `is_pool`     |
-|                    | `site`        |
-| Region             | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| TenantGroup        | `lft`         |
-|                    | `rght`        |
-|                    | `tree_id`     |
-| VLAN               | `site`        |
-| VLANGroup          | `site`        |
+| Model              | Removed Field    |
+|--------------------|------------------|
+| CircuitTermination | `site`           |
+| Cluster            | `site`           |
+| ConfigContext      | `sites`          |
+|                    | `regions`        |
+| Device             | `site`           |
+| GitRepository      | `_token`         |
+|                    | `username`       |
+| InventoryItem      | `lft`            |
+|                    | `rght`           |
+|                    | `tree_id`        |
+| Location           | `site`           |
+| Rack               | `site`           |
+| RackGroup          | `lft`            |
+|                    | `rght`           |
+|                    | `tree_id`        |
+| PowerFeed          | `site`           |
+| PowerPanel         | `site`           |
+| Prefix             | `is_pool`        |
+|                    | `site`           |
+| Region             | `lft`            |
+|                    | `rght`           |
+|                    | `tree_id`        |
+| TenantGroup        | `lft`            |
+|                    | `rght`           |
+|                    | `tree_id`        |
+| VLAN               | `site`           |
+| VLANGroup          | `site`           |
+| VRF                | `enforce_unique` |
 
 ### Replaced Models
 
@@ -298,6 +299,7 @@ The following changes have been made to the `Prefix` model.
 | `/ipam/prefixes/`                 | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/ipam/vlans/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/ipam/vlangroups/`               | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/ipam/vrfs/`                     | `enforce_unique`     | VRFs are no longer a boundary of IP uniqueness        |
 
 ### Removed 1.X Version Endpoints and Serializer Representations
 

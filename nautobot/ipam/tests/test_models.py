@@ -505,18 +505,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
         self.assertRaises(ValidationError, duplicate_prefix.full_clean)
 
-    def test_duplicate_vrf(self):
-        vrf = VRF.objects.filter(enforce_unique=False).first()
-        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertIsNone(duplicate_prefix.full_clean())
-
-    def test_duplicate_vrf_unique(self):
-        vrf = VRF.objects.filter(enforce_unique=True).first()
-        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertRaises(ValidationError, duplicate_prefix.clean)
-
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
     model = IPAddress
@@ -538,18 +526,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
     def test_duplicate_global_unique(self):
         IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
         duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertRaises(ValidationError, duplicate_ip.clean)
-
-    def test_duplicate_vrf(self):
-        vrf = VRF.objects.filter(enforce_unique=False).first()
-        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertIsNone(duplicate_ip.clean())
-
-    def test_duplicate_vrf_unique(self):
-        vrf = VRF.objects.filter(enforce_unique=True).first()
-        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         self.assertRaises(ValidationError, duplicate_ip.clean)
 
     def test_duplicate_nonunique_role(self):

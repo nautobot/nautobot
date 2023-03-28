@@ -98,7 +98,6 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
 
     class Meta:
         model = VRF
-        # fields = ["id", "name", "rd", "enforce_unique"]
         fields = ["id", "rd", "name"]
 
 
