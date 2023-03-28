@@ -47,7 +47,7 @@ class ManufacturerTable(BaseTable):
     inventory_item_count = tables.Column(verbose_name="Inventory Items")
     platform_count = tables.Column(verbose_name="Platforms")
     slug = tables.Column()
-    actions = ButtonsColumn(Manufacturer, pk_field="pk")
+    actions = ButtonsColumn(Manufacturer)
 
     class Meta(BaseTable.Meta):
         model = Manufacturer

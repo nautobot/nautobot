@@ -169,11 +169,10 @@ class FilterTestCases:
 
         def test_slug(self):
             """Verify that the filterset supports filtering by slug."""
-            if hasattr(self.queryset, "slug"):
-                params = {"slug": self.queryset.values_list("slug", flat=True)[:2]}
-                filterset = self.filterset(params, self.queryset)
-                self.assertTrue(filterset.is_valid())
-                self.assertEqual(filterset.qs.count(), 2)
+            params = {"slug": self.queryset.values_list("slug", flat=True)[:2]}
+            filterset = self.filterset(params, self.queryset)
+            self.assertTrue(filterset.is_valid())
+            self.assertEqual(filterset.qs.count(), 2)
 
     class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""

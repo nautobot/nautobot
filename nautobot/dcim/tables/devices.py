@@ -90,7 +90,7 @@ class PlatformTable(BaseTable):
         url_params={"platform": "pk"},
         verbose_name="VMs",
     )
-    actions = ButtonsColumn(Platform, pk_field="pk")
+    actions = ButtonsColumn(Platform)
 
     class Meta(BaseTable.Meta):
         model = Platform

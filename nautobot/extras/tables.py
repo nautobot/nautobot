@@ -292,7 +292,7 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="pk")
+    actions = ButtonsColumn(DynamicGroup)
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
@@ -898,7 +898,7 @@ class RoleTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     color = ColorColumn()
-    actions = ButtonsColumn(Role, pk_field="pk")
+    actions = ButtonsColumn(Role)
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
@@ -976,7 +976,7 @@ class StatusTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     color = ColorColumn()
-    actions = ButtonsColumn(Status, pk_field="pk")
+    actions = ButtonsColumn(Status)
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):

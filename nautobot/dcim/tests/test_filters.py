@@ -2866,8 +2866,6 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
         common_test_data(cls)
 
         device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
-        for device_redundancy_group in device_redundancy_groups:
-            device_redundancy_group.tags.set(Tag.objects.get_for_model(DeviceRedundancyGroup))
 
         secrets_groups = list(SecretsGroup.objects.all()[:2])
 

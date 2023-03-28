@@ -54,11 +54,11 @@ def pretty_print_query(query):
     Example:
         >>> print(pretty_print_query(Q))
         (
-          site__slug='ams01' OR site__slug='bkk01' OR (
-            site__slug='can01' AND status__name='Active'
+          location__name='Campus-01' OR location__name='Campus-02' OR (
+            location__name='Room-01' AND status__name='Active'
           ) OR (
-            site__slug='del01' AND (
-              NOT (site__slug='del01' AND status__name='Decommissioning')
+            location__name='Building-01' AND (
+              NOT (location__name='Building-01' AND status__name='Decommissioning')
             )
           )
         )

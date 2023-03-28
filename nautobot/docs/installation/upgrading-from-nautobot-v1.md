@@ -294,7 +294,6 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 | Model/Endpoint                       | Removed Field        | Comments                                              |
 |--------------------------------------|----------------------|-------------------------------------------------------|
 | `/api/status/`                       | `rq-workers-running` | Removed as RQ is no longer supported                  |
-| `/ipam/prefixes/`                    | `is_pool`            | Functionality replaced by `type` field                |
 | `/circuits/circuit-terminations/`    | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/circuits/circuit-types/`           | `slug`               | `slug` field no longer supported                      |
 | `/circuits/providers/`               | `slug`               | `slug` field no longer supported                      |
@@ -319,6 +318,7 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 | `/extras/secrets-groups/`            | `slug`               | `slug` field no longer supported                      |
 | `/extras/statuses/`                  | `slug`               | `slug` field no longer supported                      |
 | `/extras/webhooks/`                  | `slug`               | `slug` field no longer supported                      |
+| `/ipam/prefixes/`                    | `is_pool`            | Functionality replaced by `type` field                |
 | `/ipam/prefixes/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/ipam/rirs/`                        | `slug`               | `slug` field no longer supported                      |
 | `/ipam/route-targets/`               | `slug`               | `slug` field no longer supported                      |

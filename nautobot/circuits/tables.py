@@ -75,7 +75,7 @@ class CircuitTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     circuit_count = tables.Column(verbose_name="Circuits")
-    actions = ButtonsColumn(CircuitType, pk_field="pk")
+    actions = ButtonsColumn(CircuitType)
 
     class Meta(BaseTable.Meta):
         model = CircuitType

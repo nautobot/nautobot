@@ -58,7 +58,7 @@ class TenantGroupTable(BaseTable):
         url_params={"tenant_group": "name"},
         verbose_name="Tenants",
     )
-    actions = ButtonsColumn(TenantGroup, pk_field="pk")
+    actions = ButtonsColumn(TenantGroup)
 
     class Meta(BaseTable.Meta):
         model = TenantGroup

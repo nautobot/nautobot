@@ -82,7 +82,7 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 ```no-highlight
 (
   (
-    site__slug='ams01' OR site__slug='bbk1'
+    location__name='Campus-02' OR location__name='Room-01'
   ) AND (
     status__name='Offline'
   )

@@ -93,11 +93,6 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["circuit_terminations"],
     )
 
-    @classmethod
-    def setUpTestData(cls):
-        instances = Circuit.objects.all()[:3]
-        instances[0].tags.set(Tag.objects.get_for_model(Circuit))
-
     def test_location(self):
         locations = Location.objects.filter(children__isnull=True, parent__isnull=True)[:2]
         factory.CircuitTerminationFactory.create(
@@ -207,8 +202,3 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["provider", "provider__id"],
         ["provider", "provider__name"],
     )
-
-    @classmethod
-    def setUpTestData(cls):
-        instances = ProviderNetwork.objects.all()[:3]
-        instances[0].tags.set(Tag.objects.get_for_model(ProviderNetwork))

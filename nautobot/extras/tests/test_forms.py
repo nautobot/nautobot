@@ -304,8 +304,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
         cls.device_status = Status.objects.get_for_model(Device).first()
         cls.ipaddress_status = Status.objects.get_for_model(ipam_models.IPAddress).first()
-        cls.vlangroup_status = Status.objects.first()
-        cls.vlangroup_status.content_types.add(ContentType.objects.get_for_model(ipam_models.VLANGroup))
+        cls.vlangroup_status = Status.objects.get_for_model(ipam_models.VLANGroup).first()
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             location=cls.location,

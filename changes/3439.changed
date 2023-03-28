@@ -1,0 +1,1 @@
+Changed the GraphQL execute_saved_query function's argument from saved_query_slug to saved_query_name.

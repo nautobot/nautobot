@@ -87,4 +87,4 @@ class TagFactory(OrganizationalModelFactory):
             if extracted:
                 self.content_types.set(extracted)
             else:
-                self.content_types.set(get_random_instances(lambda: TaggableClassesQuery().as_queryset(), minimum=1))
+                self.content_types.set(get_random_instances(lambda: TaggableClassesQuery().as_queryset(), minimum=2))
