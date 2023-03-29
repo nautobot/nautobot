@@ -333,7 +333,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.filter(manufacturer=self.manufacturer).first(),
+            device_type=self.device_type["ff2048"],
             role=self.device_roles[0],
             location=self.location1,
             rack=rack1,
@@ -349,7 +349,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.filter(manufacturer=self.manufacturer).first(),
+            device_type=self.device_type["ff2048"],
             role=self.device_roles[1],
             location=self.location1,
             rack=self.rack,

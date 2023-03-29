@@ -584,7 +584,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
             )
 
 
-class GraphQLTestCase(FilterTestCases.NameSlugFilterTestCase):
+class GraphQLTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = GraphQLQuery.objects.all()
     filterset = GraphQLQueryFilterSet
 
@@ -846,7 +846,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             )
 
 
-class JobHookFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+class JobHookFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = JobHook.objects.all()
     filterset = JobHookFilterSet
 
