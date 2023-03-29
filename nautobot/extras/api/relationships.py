@@ -41,18 +41,15 @@ side_data_schema = {
     {
         # Dictionary, keyed by relationship slug
         "type": "object",
-        "additionalProperties": {
-            "type": "object",
-            "required": ["id", "url", "name", "type"],
-            "properties": {
-                "id": {"type": "string", "format": "uuid", "readOnly": True},
-                "url": {"type": "string", "format": "uri", "readOnly": True},
-                "name": {"type": "string", "readOnly": True},
-                "type": {"type": "string", "readOnly": True, "example": "one-to-many"},
-                "source": {"type": "object", "properties": side_data_schema},
-                "destination": {"type": "object", "properties": side_data_schema},
-                "peer": {"type": "object", "properties": side_data_schema},
-            },
+        "required": ["id", "url", "name", "type"],
+        "properties": {
+            "id": {"type": "string", "format": "uuid", "readOnly": True},
+            "url": {"type": "string", "format": "uri", "readOnly": True},
+            "name": {"type": "string", "readOnly": True},
+            "type": {"type": "string", "readOnly": True, "example": "one-to-many"},
+            "source": {"type": "object", "properties": side_data_schema},
+            "destination": {"type": "object", "properties": side_data_schema},
+            "peer": {"type": "object", "properties": side_data_schema},
         },
     }
 )
