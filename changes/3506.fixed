@@ -1,0 +1,1 @@
+Unnested the OpenAPI/Swagger definition to not have additionalProperties at the top of the RelationshipsDataField schema field override.
