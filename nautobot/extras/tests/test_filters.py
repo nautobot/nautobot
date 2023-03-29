@@ -813,7 +813,15 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "file"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        expected_matches = (
+            Q(name__icontains="file")
+            | Q(slug__icontains="file")
+            | Q(grouping__icontains="file")
+            | Q(description__icontains="file")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

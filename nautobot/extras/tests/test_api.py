@@ -1457,9 +1457,11 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_object_var_lookup(self, mock_get_worker_count):
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_run_job_object_var_lookup(self, mock_enqueue_job, mock_get_worker_count):
         """Job run requests can reference objects by their attributes."""
         mock_get_worker_count.return_value = 1
+        mock_enqueue_job.return_value = None
         self.add_permissions("extras.run_job")
         device_role = Role.objects.get_for_model(Device).first()
         job_data = {
@@ -1482,13 +1484,33 @@ class JobTest(
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.get(name=self.default_job_name)
-        self.assertIn("data", job_result.task_kwargs)
+        # Ensure the enqueue_job args deserialize to the same as originally inputted
+        expected_enqueue_job_args = (self.job_model, self.user)
+        expected_enqueue_job_kwargs = {
+            "celery_kwargs": {"queue": "default"},
+            **get_job(self.default_job_name).serialize_data(deserialized_data),
+        }
+        mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
 
-        # Ensure the stored task_kwargs deserialize to the same as originally inputted
-        self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.task_kwargs["data"]), deserialized_data
-        )
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_response_job_result(self, mock_get_worker_count):
+        """Test job run response contains nested job result."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = Role.objects.get_for_model(Device).first()
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": {"name": device_role.name},
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, {"data": job_data}, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        job_result = JobResult.objects.get(name=self.default_job_name)
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)

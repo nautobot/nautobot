@@ -7,7 +7,7 @@ class TestJobHookReceiverLog(JobHookReceiver):
     def receive_job_hook(self, change, action, changed_object):
         self.log_info(f"change: {change}")
         self.log_info(f"action: {action}")
-        self.log_info(f"request.user: {self.request.user.username}")
+        self.log_info(f"jobresult.user: {self.job_result.user.username}")
         self.log_success(changed_object.name)
 
 

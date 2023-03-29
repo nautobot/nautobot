@@ -755,10 +755,12 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type)
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
+                ("info", "Running job"),
                 ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
                 ("info", "action: create"),
-                ("info", f"request.user: {self.user.username}"),
+                ("info", f"jobresult.user: {self.user.username}"),
                 ("success", "Test Job Hook Location 1"),
+                ("info", "Job completed"),
             ]
             log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
             self.assertSequenceEqual(log_messages, expected_log_messages)
