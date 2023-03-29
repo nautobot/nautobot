@@ -83,7 +83,7 @@ from nautobot.virtualization.api.nested_serializers import (
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
-from .fields import MultipleChoiceJSONField, RoleSerializerField, StatusSerializerField
+from .fields import MultipleChoiceJSONField, RoleSerializerField
 from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
