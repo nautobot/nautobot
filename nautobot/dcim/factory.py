@@ -76,6 +76,15 @@ NAPALM_DRIVERS = {
 }
 
 
+# Retrieve correct rack reservation units
+def get_rack_reservation_units(obj):
+    available_units = obj.rack.units
+    unavailable_units = []
+    for rack in obj.rack.rack_reservations.exclude(id=obj.id):
+        unavailable_units += rack.units
+    return [unit for unit in available_units if unit not in unavailable_units][:1]
+
+
 class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
@@ -416,7 +425,7 @@ class RackReservationFactory(PrimaryModelFactory):
         exclude = ("has_tenant",)
 
     rack = random_instance(Rack, allow_null=False)
-    units = factory.Sequence(lambda n: [n + 1])
+    units = factory.LazyAttribute(get_rack_reservation_units)
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
