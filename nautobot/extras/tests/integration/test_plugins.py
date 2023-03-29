@@ -180,13 +180,13 @@ class PluginTabsTestCase(SeleniumTestCase):
         self.login(self.user.username, self.password)
 
     def test_circuit_detail_tab(self):
-        provider = Provider.objects.create(name="provider 1", asn=12345)
+        provider = Provider.objects.create(name="Test Provider", asn=12345)
         ProviderNetwork.objects.create(
             name="Test Provider Network",
             slug="test-provider-network",
             provider=provider,
         )
-        circuit_type = CircuitType.objects.first()
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type")
         status = Status.objects.get_for_model(Circuit).first()
         circuit = Circuit.objects.create(
             cid="Test Circuit",
