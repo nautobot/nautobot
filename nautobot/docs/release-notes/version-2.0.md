@@ -261,6 +261,106 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
 
 <!-- towncrier release notes start -->
+## v2.0.0-alpha.2 (2023-03-29)
+
+### Added
+
+- [#2900](https://github.com/nautobot/nautobot/issues/2900) - Added natural-key support to most Nautobot models, inspired by the `django-natural-keys` library.
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Added Location constraints for objects (CircuitTermination, Device, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Added Region and Site data migration to Locations for existing ConfigContext instances.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Added `ForeignKeyWithAutoRelatedName` helper class.
+- [#3154](https://github.com/nautobot/nautobot/issues/3154) - Added ability for `tags` filters to filter by UUID as well as by slug.
+- [#3185](https://github.com/nautobot/nautobot/issues/3185) - Added missing user filterset fields.
+- [#3222](https://github.com/nautobot/nautobot/issues/3222) - Added Site and Region data migration for ConfigContext class and ensured that "Site" LocationType allows the correct ContentTypes.
+- [#3255](https://github.com/nautobot/nautobot/issues/3255) - Added `--cache-test-fixtures` command line argument to Nautobot unit and integration tests.
+- [#3256](https://github.com/nautobot/nautobot/issues/3256) - Added Site and Region data migration for ComputedFields, CustomFields, CustomLinks, ExportTemplates, ImageAttachments, JobHooks, Notes, Relationships, Webhooks, Statuses and Tags
+- [#3283](https://github.com/nautobot/nautobot/issues/3283) - Added Site and Region migration to Location for filter data of DynamicGroups.
+- [#3360](https://github.com/nautobot/nautobot/issues/3360) - Added an alternate approach to updating model feature registry without having to decorate a model with `@extras_features`.
+- [#3364](https://github.com/nautobot/nautobot/issues/3364) - Added FK fields migrated_location to Site and Region models before data migration is applied.
+- [#3403](https://github.com/nautobot/nautobot/issues/3403) - Added support for Nautobot Apps to provide Django Constance Fields for the settings.
+- [#3418](https://github.com/nautobot/nautobot/issues/3418) - Added ObjectPermission Data Migration from Region/Site to Location.
+
+### Changed
+
+- [#824](https://github.com/nautobot/nautobot/issues/824) - Renamed `slug` field to `key` on CustomField model class.
+- [#824](https://github.com/nautobot/nautobot/issues/824) - Changed validation of CustomField `key` to enforce that it is valid as a GraphQL identifier.
+- [#951](https://github.com/nautobot/nautobot/issues/951) - The `nautobot-server nbshell` command is now based on `shell_plus` from `django-extensions`.
+- [#1362](https://github.com/nautobot/nautobot/issues/1362) - Added `type` field to `Prefix`, replacing "Container" status and `is_pool` field.
+- [#2076](https://github.com/nautobot/nautobot/issues/2076) - Changed the `created` field of all models from a DateField to a DateTimeField for added granularity. Preexisting records will show as created at midnight UTC on their original creation date.
+- [#2611](https://github.com/nautobot/nautobot/issues/2611) - Changed `Job` model uniqueness constraints and `slug` field.
+- [#2806](https://github.com/nautobot/nautobot/issues/2806) - Enhanced VLAN `available_on_device` filter to permit specifying multiple Devices.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `related_name` values for path endpoints on `CablePath` for consistency and readability (`dcim_interface_related` to `interfaces`, `circuits_circuittermination_related` to `circuit_terminations`, etc.)
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `related_name` values for device components on `Device` for consistency and readability (`consoleports` to `console_ports`, `devicebays` to `device_bays`, etc.)
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `related_name` values for device component templates on `DeviceType` for consistency and readability (`consoleporttemplates` to `console_port_templates`, `devicebaytemplates` to `device_bay_templates`, etc.)
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `DeviceType.instances` to `devices` and renamed the corresponding query filters.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `DeviceRedundancyGroup.members` to `devices`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `FrontPortTemplate.rear_port` to `rear_port_template`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `Location.powerpanels` to `power_panels`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `PowerOutletTemplate.power_port` to `power_port_template`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `PowerPanel.powerfeeds` to `power_feeds`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `PowerPort.poweroutlets` to `power_outlets`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `PowerPortTemplate.poweroutlet_templates` to `power_outlet_templates`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `Rack.powerfeed_set` to `power_feeds`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `Rack.group` and `Rack.reservations` to `rack_group` and `rack_reservations` and renamed the corresponding query filters.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `RackGroup.powerpanel_set` to `power_panels`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `RearPort.frontports` to `front_ports`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `RearPortTemplate.frontport_templates` to `front_port_templates`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `SecretsGroup.device_set` and `SecretsGroup.deviceredundancygroup_set` to `devices` and `device_redundancy_groups`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `Tenant.rackreservations` to `rack_reservations`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `User.rackreservation_set` to `rack_reservations`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed REST API field on `Interface` from `count_ipaddresses` to `ip_address_count`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed REST API fields on `Manufacturer` from `devicetype_count` and `inventoryitem_count` to `device_type_count` and `inventory_item_count`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed REST API field on `Platform` from `virtualmachine_count` to `virtual_machine_count`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed REST API field on `PowerPanel` from `powerfeed_count` to `power_feed_count`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed REST API field on `Rack` from `powerfeed_count` to `power_feed_count`.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Changed `RackReservation` `group` filter to `rack_group`.
+- [#3154](https://github.com/nautobot/nautobot/issues/3154) - Renamed various `tag` filters to `tags` for self-consistency.
+- [#3160](https://github.com/nautobot/nautobot/issues/3160) - Changed logger names to use `__name__` instead of explicit module names.
+- [#3215](https://github.com/nautobot/nautobot/issues/3215) - Changed representation of related Status objects in the REST API to use a NestedStatusSerializer instead of presenting as enums.
+- [#3236](https://github.com/nautobot/nautobot/issues/3236) - Changed `Interface` and `VMInterface` relationship to `IPAddress` to many-to-many instead of one-to-many.
+- [#3262](https://github.com/nautobot/nautobot/issues/3262) - Changed extras FKs and related names.
+- [#3266](https://github.com/nautobot/nautobot/issues/3266) - Changed erroneous attribute "type" to correct "circuit_type" in circuit-related templates.
+- [#3302](https://github.com/nautobot/nautobot/issues/3302) - Migrated `Aggregate` model to `Prefix` with type set to "Container".
+- [#3351](https://github.com/nautobot/nautobot/issues/3351) - Changed extras abstract model ForeignKeys to use ForeignKeyWithAutoRelatedName.
+- [#3354](https://github.com/nautobot/nautobot/issues/3354) - Synced in fixes from 1.5.x LTM branch up through v1.5.11.
+
+### Dependencies
+
+- [#2521](https://github.com/nautobot/nautobot/issues/2521) - Removed dependency on `django-cryptography`.
+- [#2524](https://github.com/nautobot/nautobot/issues/2524) - Removed no-longer-used `drf-yasg` dependency.
+
+### Fixed
+
+- [#633](https://github.com/nautobot/nautobot/issues/633) - Fixed job result not updating when job hard time limit is reached.
+- [#1362](https://github.com/nautobot/nautobot/issues/1362) - Fixed migrations for `Prefix.type`.
+- [#1422](https://github.com/nautobot/nautobot/issues/1422) - Improved OpenAPI schema representation of polymorphic fields such as `cable_peer`, `assigned_object`, etc.
+- [#2806](https://github.com/nautobot/nautobot/issues/2806) - Fixed some issues with initialization and updating of the dynamic ("advanced") filter form.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Fixed incorrect `field_class` when filtering `FloatField` and `DecimalField` model fields.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Fixed inability to provide non-integer values when filtering on `FloatField` and `DecimalField` fields in GraphQL.
+- [#3066](https://github.com/nautobot/nautobot/issues/3066) - Fixed inability to specify partial substrings in the UI when filtering by MAC address.
+- [#3154](https://github.com/nautobot/nautobot/issues/3154) - Fixed incorrect initialization of `TagFilter` when auto-attached to a FilterSet.
+- [#3164](https://github.com/nautobot/nautobot/issues/3164) - Merged `TaskResult` from `django-celery-results` into `JobResult`.
+- [#3291](https://github.com/nautobot/nautobot/issues/3291) - Fixed inheritance and `RoleField` definition on `Role` model mixins.
+- [#3342](https://github.com/nautobot/nautobot/issues/3342) - Fixed BaseFilterSet not using multiple choice filters for CharFields with choices.
+- [#3457](https://github.com/nautobot/nautobot/issues/3457) - Fixed bug preventing scheduled job from running.
+
+### Removed
+
+- [#824](https://github.com/nautobot/nautobot/issues/824) - Removed `name` field from CustomField model class.
+- [#1634](https://github.com/nautobot/nautobot/issues/1634) - Removed unnecessary legacy `manage.py` file from Nautobot repository.
+- [#2521](https://github.com/nautobot/nautobot/issues/2521) - Removed support for storing Git repository credentials (username/token) in the Nautobot database. Use [Secrets](../models/extras/secret.md) instead.
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed Site constraints for model classes (CircuitTermination, Device, Location, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `regions` and `sites` attributes from ConfigContext model class.
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `region` and `site` related fields from Serializers for aforementioned model classes.
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `region` and `site` related fields from Forms for aforementioned model classes.
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `region` and `site` related UI and API Endpoints for aforementioned model classes.
+- [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `region` and `site` columns from Tables for aforementioned model classes.
+- [#2958](https://github.com/nautobot/nautobot/issues/2958) - Removed Region and Site factories, filtersets, forms, factories, models, navigation menu items, serializers, tables, templates, tests and urls.
+- [#3224](https://github.com/nautobot/nautobot/issues/3224) - Removed support for Nautobot "1.x" REST API versions. The minimum supported REST API version is now "2.0".
+- [#3233](https://github.com/nautobot/nautobot/issues/3233) - Removed `CeleryTestCase` and associated calling code as it is no longer needed.
+- [#3302](https://github.com/nautobot/nautobot/issues/3302) - Removed `Aggregate` and migrated all existing instances to `Prefix`.
+
+
 ## v2.0.0-alpha.1 (2023-01-31)
 
 ### Added

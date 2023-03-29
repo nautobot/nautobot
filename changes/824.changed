@@ -1,2 +1,0 @@
-Renamed `slug` field to `key` on CustomField model class.
-Changed validation of CustomField `key` to enforce that it is valid as a GraphQL identifier.
