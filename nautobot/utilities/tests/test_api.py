@@ -146,10 +146,8 @@ class APIDocsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_openapi_schema_relationships(self):
-        headers = {
-            "HTTP_ACCEPT": "application/vnd.oai.openapi",
-        }
         url = reverse("schema")
+        headers = {"HTTP_ACCEPT": "application/json"}
         response = self.client.get(url, **headers)
         resp_data = response.json()
         self.assertNotIn(
