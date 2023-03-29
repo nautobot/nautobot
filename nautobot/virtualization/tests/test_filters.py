@@ -528,7 +528,8 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(platform__in=platforms).distinct()
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(platform__in=[platforms[0], platforms[1]]).distinct(),
             )
 
     def test_mac_address(self):
