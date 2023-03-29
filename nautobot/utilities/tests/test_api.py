@@ -144,3 +144,15 @@ class APIDocsTestCase(TestCase):
         url = reverse("schema")
         response = self.client.get(url, **headers)
         self.assertEqual(response.status_code, 200)
+
+    def test_openapi_schema_relationships(self):
+        headers = {
+            "HTTP_ACCEPT": "application/vnd.oai.openapi",
+        }
+        url = reverse("schema")
+        response = self.client.get(url, **headers)
+        resp_data = response.json()
+        self.assertNotIn(
+            "additionalProperties",
+            resp_data["components"]["schemas"]["BulkWritableAggregateRequest"]["properties"]["relationships"],
+        )
