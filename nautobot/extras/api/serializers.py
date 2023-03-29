@@ -170,9 +170,17 @@ class NautobotModelSerializer(
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()),
+        required=False,
+        many=True,
+    )
+
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
         fields = list(super().get_field_names(declared_fields, info))
+        if self.__class__.__name__ == "NestedSerializer":
+            return fields
         self.extend_field_names(fields, "status")
         return fields
 

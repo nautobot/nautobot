@@ -102,6 +102,8 @@ def get_serializer_for_model(model, prefix=""):
         SerializerNotFound: if the requested serializer cannot be located.
     """
     app_name, model_name = model._meta.label.split(".")
+    if app_name == "contenttypes" and model_name == "ContentType":
+        app_name = "extras"
     # Serializers for Django's auth models are in the users app
     if app_name == "auth":
         app_name = "users"

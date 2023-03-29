@@ -10,9 +10,10 @@ from django.db.models import AutoField, ManyToManyField
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 from nautobot.core.api.fields import ObjectTypeField
-from nautobot.core.api.utils import dict_to_filter_params
+from nautobot.core.api.utils import dict_to_filter_params, get_serializer_for_model
 from nautobot.core.utils.requests import normalize_querydict
 
 
@@ -94,10 +95,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
+    url = serializers.HyperlinkedIdentityField(read_only=True, view_name="")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.Meta.depth = self.context.get("depth", 0)
+        if self.__class__.__name__ != "NestedSerializer":
+            self.Meta.depth = self.context.get("depth", 0)
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -143,10 +146,27 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             if hasattr(self.Meta.model, "last_updated"):
                 self.extend_field_names(fields, "last_updated")
         # append non-default model api fields to display in Nautobot API
-        # e.g. `url`, `circuit_count` and etc.
+        # e.g. for annotated fields `circuit_count`, `device_count` and etc.
         if getattr(self.Meta, "extra_fields", None):
             return fields + self.Meta.extra_fields
         return fields
+
+    def build_nested_field(self, field_name, relation_info, nested_depth):
+        field = get_serializer_for_model(relation_info.related_model)
+
+        class NestedSerializer(field):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+            class Meta:
+                model = relation_info.related_model
+                depth = nested_depth - 1
+                fields = "__all__"
+
+        field_class = NestedSerializer
+        field_kwargs = get_nested_relation_kwargs(relation_info)
+
+        return field_class, field_kwargs
 
 
 class TreeModelSerializerMixin(BaseModelSerializer):

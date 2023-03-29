@@ -23,7 +23,7 @@ class ProviderSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Provider
         fields = "__all__"
-        extra_fields = ["url", "circuit_count"]
+        extra_fields = ["circuit_count"]
 
 
 #
@@ -37,7 +37,6 @@ class ProviderNetworkSerializer(NautobotModelSerializer, TaggedModelSerializerMi
     class Meta:
         model = ProviderNetwork
         fields = "__all__"
-        extra_fields = ["url"]
 
 
 #
@@ -52,7 +51,7 @@ class CircuitTypeSerializer(NautobotModelSerializer):
     class Meta:
         model = CircuitType
         fields = "__all__"
-        extra_fields = ["url", "circuit_count"]
+        extra_fields = ["circuit_count"]
 
 
 class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
@@ -61,7 +60,6 @@ class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, Tag
     class Meta:
         model = Circuit
         fields = "__all__"
-        extra_fields = ["url"]
 
 
 class CircuitTerminationSerializer(
@@ -74,4 +72,3 @@ class CircuitTerminationSerializer(
     class Meta:
         model = CircuitTermination
         fields = "__all__"
-        extra_fields = ["url"]
