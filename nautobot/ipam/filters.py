@@ -12,7 +12,6 @@ from nautobot.core.filters import (
     NumericArrayFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
 )
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
@@ -52,7 +51,6 @@ class NamespaceFilterSet(NautobotFilterSet):
             "name": "icontains",
         },
     )
-    tags = TagFilter()
 
     class Meta:
         model = Namespace
@@ -106,12 +104,11 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Namespace (name or ID)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = VRF
         # fields = ["id", "name", "rd", "enforce_unique"]
-        fields = ["id", "rd", "name"]
+        fields = ["id", "name", "rd", "tags"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -143,11 +140,10 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="rd",
         label="Export VRF (ID or RD)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = RouteTarget
-        fields = ["id", "name"]
+        fields = ["id", "name", "tags"]
 
 
 class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -255,11 +251,10 @@ class PrefixFilterSet(
         to_field_name="name",
         label="Namespace (name or ID)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = Prefix
-        fields = ["date_allocated", "id", "ip_version", "type", "prefix"]
+        fields = ["date_allocated", "id", "ip_version", "prefix", "tags", "type"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -413,11 +408,10 @@ class IPAddressFilterSet(
         to_field_name="name",
         label="Namespace (name or ID)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "ip_version", "dns_name"]
+        fields = ["id", "ip_version", "dns_name", "tags"]
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
@@ -487,7 +481,7 @@ class VLANFilterSet(
             },
         },
     )
-    available_on_device = django_filters.UUIDFilter(
+    available_on_device = MultiValueUUIDFilter(
         method="get_for_device",
         label="Device (ID)",
         field_name="pk",
@@ -497,21 +491,19 @@ class VLANFilterSet(
         label="VLAN Group (slug or ID)",
     )
 
-    tag = TagFilter()
-
     class Meta:
         model = VLAN
-        fields = ["id", "vid", "name"]
+        fields = ["id", "name", "tags", "vid"]
 
     def get_for_device(self, queryset, name, value):
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
         # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
-        try:
-            device = Device.objects.get(id=value)
-            return queryset.filter(Q(location__isnull=True) | Q(location=device.location))
-        except Device.DoesNotExist:
+        devices = Device.objects.select_related("location").filter(**{f"{name}__in": value})
+        if not devices.exists():
             return queryset.none()
+        location_ids = list(devices.values_list("location__id", flat=True))
+        return queryset.filter(Q(location__isnull=True) | Q(location__in=location_ids))
 
 
 class ServiceFilterSet(NautobotFilterSet):
@@ -540,8 +532,7 @@ class ServiceFilterSet(NautobotFilterSet):
         label="Virtual machine (ID or name)",
     )
     port = NumericArrayFilter(field_name="ports", lookup_expr="contains")
-    tag = TagFilter()
 
     class Meta:
         model = Service
-        fields = ["id", "name", "protocol"]
+        fields = ["id", "name", "protocol", "tags"]

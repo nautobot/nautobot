@@ -243,12 +243,15 @@ class PluginTest(TestCase):
         class ExampleConfigWithDefaultSettings(example_config):
             default_settings = {
                 "bar": 123,
+                "SAMPLE_VARIABLE": "Testing",
             }
 
         # Populate the default value if setting has not been specified
         user_config = {}
         ExampleConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config["bar"], 123)
+        # Don't overwrite constance_config Keys.
+        self.assertNotIn("SAMPLE_VARIABLE", user_config)
 
         # Don't overwrite specified values
         user_config = {"bar": 456}
@@ -297,7 +300,7 @@ class PluginTest(TestCase):
         Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
+        cf = CustomField.objects.get(key="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])
@@ -704,7 +707,6 @@ class TestPluginCoreViewOverrides(TestCase):
         self.user.save()
 
     def test_views_are_overridden(self):
-
         response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
         self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
 

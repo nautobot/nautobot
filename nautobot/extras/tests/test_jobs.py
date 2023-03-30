@@ -629,7 +629,6 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.request.user = self.user
 
     def test_run(self):
-
         module = "test_location_with_custom_field"
         name = "TestCreateLocationWithCustomField"
         job_result = create_job_result_and_run_job(module, name, request=self.request, commit=True)
@@ -640,7 +639,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         # Test location with a value for custom_field
         location_1 = Location.objects.filter(slug="test-location-one")
         self.assertEqual(location_1.count(), 1)
-        self.assertEqual(CustomField.objects.filter(name="cf1").count(), 1)
+        self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
         self.assertEqual(location_1[0].cf["cf1"], "some-value")
 
         # Test location with default value for custom field
@@ -742,7 +741,6 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
-
         with self.subTest(expected=False):
             module = "test_pass"
             name = "TestPass"
@@ -796,7 +794,6 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
 
     def test_enqueue_job_hook(self):
         with web_request_context(user=self.user):
-
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type)
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
