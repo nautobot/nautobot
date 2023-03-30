@@ -25,7 +25,7 @@
             </a>
         {% endif %}
         {% if perms.ipam.add_ipaddress and active_tab == 'ip-addresses' and first_available_ip %}
-            <a href="{% url 'ipam:ipaddress_add' %}?address={{ first_available_ip }}&vrf={{ object.vrf.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
+            <a href="{% url 'ipam:ipaddress_add' %}?address={{ first_available_ip }}&namespace={{ object.namespace.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                 Add an IP Address
             </a>
@@ -40,7 +40,7 @@
         <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
             <a href="{% url 'ipam:prefix_prefixes' pk=object.pk %}">Child Prefixes <span class="badge">{{ object.descendants_count }}</span></a>
         </li>
-        {% if perms.ipam.view_ipaddress and object.type != 'container' %}
+        {% if perms.ipam.view_ipaddress %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
                 <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
             </li>

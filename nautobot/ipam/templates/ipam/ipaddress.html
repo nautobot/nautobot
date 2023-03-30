@@ -38,6 +38,10 @@
                     <td>IPv{{ object.family }}</td>
                 </tr>
                 <tr>
+                    <td>Namespace</td>
+                    <td>{{ object.parent.namespace|hyperlinked_object }}</td>
+                </tr>
+                <tr>
                     <td>Status</td>
                     <td>
                         {{ object.status| hyperlinked_object_with_color }}
@@ -131,25 +135,5 @@
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-        {% if duplicate_ips_table.rows %}
-            {# Custom version of panel_table.html #}
-            <div class="panel panel-danger">
-                <div class="panel-heading">
-                    <strong>Duplicate IP Addresses</strong>
-                    {% if more_duplicate_ips %}
-                    <div class="pull-right">
-                        <a type="button" class="btn btn-primary btn-xs"
-                        {% if object.vrf %}
-                        href="{% url 'ipam:ipaddress_list' %}?address={{ object.address.ip }}&vrf_id={{ object.vrf.pk }}"
-                        {% else %}
-                        href="{% url 'ipam:ipaddress_list' %}?address={{ object.address.ip }}&vrf_id=null"
-                        {% endif %}
-                        >Show all</a>
-                    </div>
-                    {% endif %}
-                </div>
-                {% render_table duplicate_ips_table 'inc/table.html' %}
-            </div>
-        {% endif %}
         {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default' %}
 {% endblock content_full_width_page %}

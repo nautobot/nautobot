@@ -1,7 +1,8 @@
 import re
 
 import netaddr
-from django.db.models import F, Q
+from django.core.exceptions import ValidationError
+from django.db.models import F, ProtectedError, Q
 from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
@@ -270,6 +271,113 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
+
+    # TODO(jathan): This was copied from `Prefix.delete()` but this won't work in the same way.
+    # Currently the issue is with `queryset.delete()` on bulk delete view from list view, how do we
+    # reference the "parent" that was deleted here? It's not in context on the `ProtectedError`.
+    # raised. This comment can be deleted after this has been successfully unit-tested.
+    def delete(self, *args, **kwargs):
+        """
+        A Prefix with children will be impossible to delete and raise a `ProtectedError`.
+
+        If a Prefix has children, this catch the error and explicitly update the
+        `protected_objects` from the exception setting their parent to the old parent of this
+        prefix, and then this prefix will be deleted.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except ProtectedError as err:
+            # This will be either IPAddress or Prefix.
+            protected_instance = tuple(err.protected_objects)[0]
+            protected_model = protected_instance._meta.model
+            protected_parent = protected_instance.parent
+            new_parent = protected_parent.parent_id
+
+            # Prepare a queryset for the protected objects.
+            protected_pks = (po.pk for po in err.protected_objects)
+            protected_objects = protected_model.objects.filter(pk__in=protected_pks)
+
+            # IPAddress objects must have a parent.
+            if protected_model._meta.model_name == "ipaddress" and new_parent is None:
+                # If any of the child IPs would have a null parent after this change, raise an
+                # error.
+                raise ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {protected_parent} because it has child IPAddress"
+                        " objects that would no longer have a parent."
+                    ),
+                    protected_objects=err.protected_objects,
+                ) from err
+
+            # Update protected objects to use grand-parent of the parent Prefix and delete the old
+            # parent. This should be equivalent at the row level of saying `parent=self.parent`.
+            protected_objects.update(parent=new_parent)
+            return super().delete(*args, **kwargs)
+
+    def _validate_cidr(self, value):
+        """
+        Validate whether `value` is a validr IPv4/IPv6 CIDR.
+
+        Args:
+            value (str): IP address
+        """
+        try:
+            return netaddr.IPNetwork(str(value))
+        except netaddr.AddrFormatError as err:
+            raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
+
+    def get_closest_parent(self, cidr, namespace, prefix_length=0):
+        """
+        Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
+
+        Args:
+            cidr (str): IPv4/IPv6 CIDR string
+            namespace (Namespace): Namespace instance
+            prefix_length (int): Maximum prefix length depth for closest parent lookup
+        """
+        # Validate that it's a real CIDR
+        cidr = self._validate_cidr(cidr)
+        broadcast = cidr.broadcast or cidr.ip
+        ip_version = cidr.version
+
+        try:
+            prefix_length = int(prefix_length)
+        except ValueError:
+            raise ValidationError({"prefix_length": f"Invalid prefix_length: {prefix_length}."})
+
+        # Walk the supernets backwrds from smallest to largest prefix.
+        try:
+            supernets = cidr.supernet(prefixlen=prefix_length)
+        except ValueError as err:
+            raise ValidationError({"prefix_length": str(err)})
+        else:
+            supernets.reverse()
+
+        # Enumerate all unique networks and prefixes
+        networks = {str(s.network) for s in supernets}
+        prefix_lengths = {s.prefixlen for s in supernets}
+        del supernets  # Free the memory because DevOps.
+
+        # Prepare the queryset filter
+        lookup_kwargs = {
+            "network__in": networks,
+            "prefix_length__in": prefix_lengths,
+            "ip_version": ip_version,
+            "broadcast__gte": str(broadcast),
+        }
+        if namespace is not None:
+            lookup_kwargs["namespace"] = namespace
+
+        # Search for possible ancestors by network/prefix, returning them in reverse order, so that
+        # we can choose the first one.
+        possible_ancestors = self.filter(**lookup_kwargs).order_by("-prefix_length")
+
+        # If we've got any matches, the first one is our closest parent.
+        try:
+            return possible_ancestors[0]
+        except IndexError:
+            raise self.model.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):

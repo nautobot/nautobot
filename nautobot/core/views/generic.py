@@ -514,10 +514,15 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 model_name = obj._meta.verbose_name.title()
                 msg = f"{model_name} with this {models} already exists."
                 form.add_error(None, msg)
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
+            except ObjectDoesNotExist as err:
+                if self.queryset.model._meta.model_name == "ipaddress":
+                    msg = str(err) + "! Does it exist?"
+                    field = "address"
+                else:
+                    msg = "Object save failed due to object-level permissions violation"
+                    field = None
                 logger.debug(msg)
-                form.add_error(None, msg)
+                form.add_error(field, msg)
 
         else:
             logger.debug("Form validation failed")

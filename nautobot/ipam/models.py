@@ -585,9 +585,22 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         try:
             return super().delete(*args, **kwargs)
         except models.ProtectedError as err:
+            # This will be either IPAddress or Prefix.
+            protected_model = tuple(err.protected_objects)[0]._meta.model
+
+            # IPAddress objects must have a parent.
+            if protected_model == IPAddress and self.parent is None:
+                raise models.ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {self} because it has child IPAddress objects that "
+                        "would no longer have a parent."
+                    ),
+                    protected_objects=err.protected_objects,
+                ) from err
+
             # Update protected objects to use the new parent and delete the old parent (self).
             protected_pks = (po.pk for po in err.protected_objects)
-            protected_objects = Prefix.objects.filter(pk__in=protected_pks)
+            protected_objects = protected_model.objects.filter(pk__in=protected_pks)
             protected_objects.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
@@ -608,6 +621,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Determine the subnets and reparent them to this prefix.
         self.reparent_subnets()
+        # Determine the child IPs and reparent them to this prefix.
+        self.reparent_ips()
 
     def to_csv(self):
         return (
@@ -643,7 +658,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     def reparent_subnets(self):
         """
-        Determine the list of child nodes and set the parent to self.
+        Determine the list of child Prefixes and set the parent to self.
 
         This query is similiar performing update from the query returned by `subnets(direct=True)`,
         but explicitly filters for subnets of the parent of this Prefix so they can be reparented.
@@ -656,6 +671,14 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             network__gte=self.network,
             broadcast__lte=self.broadcast,
             namespace=self.namespace,
+        )
+
+        return query.update(parent=self)
+
+    def reparent_ips(self):
+        """Determine the list of child IPAddresses and set the parent to self."""
+        query = IPAddress.objects.select_for_update().filter(
+            parent_id=self.parent_id,
         )
 
         return query.update(parent=self)
@@ -787,11 +810,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         return query
 
     def get_child_ips(self):
-        """
-        Return all IPAddresses within this Prefix and VRF. If this Prefix is a container in the global table, return
-        child IPAddresses belonging to any VRF.
-        """
-        return IPAddress.objects.net_host_contained(self.prefix)
+        """Return all IPAddresses directly contained within this Prefix and Namespace."""
+        return self.ip_addresses.all()
 
     def get_available_prefixes(self):
         """
@@ -903,6 +923,21 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
+    parent = models.ForeignKey(
+        "ipam.Prefix",
+        blank=True,
+        null=True,
+        related_name="ip_addresses",  # `IPAddress` to use `related_name="ip_addresses"`
+        on_delete=models.PROTECT,
+        help_text="The parent Prefix of this IPAddress.",
+    )
+    # ip_version is set internally just like network, broadcast, and prefix_length.
+    ip_version = models.IntegerField(
+        choices=choices.IPAddressVersionChoices,
+        null=True,
+        editable=False,
+        db_index=True,
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -949,12 +984,21 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
     class Meta:
-        ordering = ("host", "prefix_length")  # address may be non-unique
+        ordering = ("ip_version", "host", "prefix_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
+        unique_together = ["parent", "host"]
 
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
+        namespace = kwargs.pop("namespace", None)
+        # We don't want users providing their own parent since it will be derived automatically.
+        parent = kwargs.pop("parent", None)
+        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
+        if namespace is None and parent is not None:
+            namespace = parent.namespace
+        self._namespace = namespace
+
         super().__init__(*args, **kwargs)
         self._deconstruct_address(address)
 
@@ -977,22 +1021,10 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             self.host = str(address.ip)
             self.broadcast = str(broadcast)
             self.prefix_length = address.prefixlen
+            self.ip_version = address.version
 
     def get_absolute_url(self):
         return reverse("ipam:ipaddress", args=[self.pk])
-
-    # TODO: The current IPAddress model has no appropriate natural key available yet.
-    #       However, by default all BaseModel subclasses now have a `natural_key` property;
-    #       but for this model, accessing the natural_key will raise an exception.
-    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
-    class AttributeRemover:
-        def __get__(self, instance, owner):
-            raise AttributeError("IPAddress doesn't yet have a natural key!")
-
-    natural_key = AttributeRemover()
-
-    def get_duplicates(self):
-        return IPAddress.objects.filter(host=self.host).exclude(pk=self.pk)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
@@ -1007,11 +1039,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     def clean(self):
         super().clean()
-
-        if self.address:
-            duplicate_ips = self.get_duplicates()
-            if duplicate_ips:
-                raise ValidationError({"address": f"Duplicate IP address found: {duplicate_ips.first()}"})
 
         # TODO: update to work with interface M2M
         # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
@@ -1035,11 +1062,24 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
                     )
 
         # Validate IP status selection
-        if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
+        if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
+
+    def save(self, *args, **kwargs):
+        if not self.present_in_database:
+            if self._namespace is None:
+                raise ValidationError({"parent": "Namespace could not be determined."})
+            namespace = self._namespace
+        else:
+            namespace = self.parent.namespace
+
+        # Determine the closest parent automatically based on the Namespace.
+        self.parent = Prefix.objects.get_closest_parent(self.host, namespace=namespace)
+
+        super().save(*args, **kwargs)
 
     def to_csv(self):
 
@@ -1071,11 +1111,38 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     def address(self, address):
         self._deconstruct_address(address)
 
-    @property
-    def family(self):
-        if self.address:
-            return self.address.version
-        return None
+    def ancestors(self, ascending=False):
+        """
+        Return my ancestors descending from larger to smaller prefix lengths.
+
+        Args:
+            ascending (bool): If set, reverses the return order.
+        """
+        return self.parent.ancestors(include_self=True, ascending=ascending)
+
+    @cached_property
+    def ancestors_count(self):
+        """Display count of ancestors."""
+        return self.ancestors().count()
+
+    def root(self):
+        """
+        Returns the root node (the parent of all of my ancestors).
+        """
+        return self.ancestors().first()
+
+    def siblings(self, include_self=False):
+        """
+        Return my siblings that share the same parent Prefix.
+
+        Args:
+            include_self (bool): Whether to include this IPAddress in the list of siblings.
+        """
+        query = IPAddress.objects.filter(parent=self.parent)
+        if not include_self:
+            query = query.exclude(id=self.id)
+
+        return query
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
