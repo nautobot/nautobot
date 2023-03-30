@@ -1026,6 +1026,7 @@ class InterfaceSerializerVersion12(
             "name",
             "label",
             "type",
+            "status",
             "enabled",
             "parent_interface",
             "bridge",
