@@ -168,7 +168,7 @@ class ConfigContextQuerySetMixin:
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if self.brief or (request is not None and "config_context" in request.query_params.get("exclude", [])):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
 

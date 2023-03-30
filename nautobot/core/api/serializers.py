@@ -168,6 +168,83 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
         return field_class, field_kwargs
 
+    def is_valid(self, *, raise_exception=False):
+        assert hasattr(self, "initial_data"), (
+            "Cannot call `.is_valid()` as no `data=` keyword argument was "
+            "passed when instantiating the serializer instance."
+        )
+        if not hasattr(self, "_validated_data"):
+            try:
+                self._validated_data = self.run_validation(self.initial_data)
+            except ValidationError as exc:
+                self._validated_data = {}
+                self._errors = exc.detail
+            else:
+                self._errors = {}
+        if self._errors and raise_exception:
+            raise ValidationError(self.errors)
+
+        return not bool(self._errors)
+
+    def get_queryset(self):
+        return self.Meta.model.objects
+
+    def to_internal_value(self, data):
+        if data is None:
+            return None
+
+        # Dictionary of related object attributes
+        if isinstance(data, dict):
+            params = dict_to_filter_params(data)
+
+            # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
+            # data any serializer fields that do not correspond to a specific model field
+            for field_name, field_instance in self.fields.items():
+                if field_name in params and field_instance.source == "*":
+                    logger.debug("Discarding non-database field %s", field_name)
+                    del params[field_name]
+
+            queryset = self.get_queryset()
+            try:
+                return queryset.get(**params)
+            except ObjectDoesNotExist:
+                raise ValidationError(f"Related object not found using the provided attributes: {params}")
+            except MultipleObjectsReturned:
+                raise ValidationError(f"Multiple objects match the provided attributes: {params}")
+            except FieldError as e:
+                raise ValidationError(e)
+
+        queryset = self.get_queryset()
+        pk = None
+
+        if isinstance(self.Meta.model._meta.pk, AutoField):
+            # PK is an int for this model. This is usually the User model
+            try:
+                pk = int(data)
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                    f"unrecognized value: {data}"
+                )
+
+        else:
+            # We assume a type of UUIDField for all other models
+
+            # PK of related object
+            try:
+                # Ensure the pk is a valid UUID
+                pk = uuid.UUID(str(data))
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                    f"unrecognized value: {data}"
+                )
+
+        try:
+            return queryset.get(pk=pk)
+        except ObjectDoesNotExist:
+            raise ValidationError(f"Related object not found using the provided ID: {pk}")
+
 
 class TreeModelSerializerMixin(BaseModelSerializer):
     """Add a `tree_depth` field to model serializers based on django-tree-queries."""

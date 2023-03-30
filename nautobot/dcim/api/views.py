@@ -80,7 +80,6 @@ class DCIMRootView(APIRootView):
 
 
 class PathEndpointMixin:
-
     # TODO: the OpenAPI schema for this endpoint is wrong since it defaults to the same as "retrieve".
     @action(detail=True, url_path="trace")
     def trace(self, request, pk):
@@ -394,7 +393,8 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         elif request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.DeviceSerializer
 
-        return serializers.DeviceWithConfigContextSerializer
+        # return serializers.DeviceWithConfigContextSerializer
+        return serializers.DeviceSerializer
 
     @extend_schema(
         filters=False,
@@ -775,7 +775,6 @@ class ConnectedDeviceViewSet(ViewSet):
         responses={"200": serializers.DeviceSerializer},
     )
     def list(self, request):
-
         peer_device_name = request.query_params.get(self._device_param.name)
         peer_interface_name = request.query_params.get(self._interface_param.name)
 

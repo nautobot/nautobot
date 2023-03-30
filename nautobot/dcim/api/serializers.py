@@ -270,22 +270,12 @@ class LocationSerializer(
 
 class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
-    location = NestedLocationSerializer()
-    parent = NestedRackGroupSerializer(required=False, allow_null=True)
     rack_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RackGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "location",
-            "parent",
-            "description",
-            "rack_count",
-            "tree_depth",
-        ]
+        fields = "__all__"
+        extra_fields = ["rack_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -308,9 +298,6 @@ class RackSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
-    location = NestedLocationSerializer()
-    rack_group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -319,28 +306,8 @@ class RackSerializer(
 
     class Meta:
         model = Rack
-        fields = [
-            "url",
-            "name",
-            "facility_id",
-            "location",
-            "rack_group",
-            "tenant",
-            "status",
-            "role",
-            "serial",
-            "asset_tag",
-            "type",
-            "width",
-            "u_height",
-            "desc_units",
-            "outer_width",
-            "outer_depth",
-            "outer_unit",
-            "comments",
-            "device_count",
-            "power_feed_count",
-        ]
+        fields = "__all__"
+        extra_fields = ["device_count", "power_feed_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
         # This prevents facility_id from being interpreted as a required field.
         validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
@@ -365,26 +332,15 @@ class RackUnitSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField(read_only=True)
     face = ChoiceField(choices=DeviceFaceChoices, read_only=True)
-    device = NestedDeviceSerializer(read_only=True)
     occupied = serializers.BooleanField(read_only=True)
 
 
 class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackreservation-detail")
-    rack = NestedRackSerializer()
-    user = NestedUserSerializer()
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
 
     class Meta:
         model = RackReservation
-        fields = [
-            "url",
-            "rack",
-            "units",
-            "user",
-            "tenant",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class RackElevationDetailFilterSerializer(serializers.Serializer):
@@ -421,11 +377,8 @@ class ManufacturerSerializer(NautobotModelSerializer):
 
     class Meta:
         model = Manufacturer
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
+        fields = "__all__"
+        extra_fields = [
             "device_type_count",
             "inventory_item_count",
             "platform_count",
@@ -434,26 +387,13 @@ class ManufacturerSerializer(NautobotModelSerializer):
 
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicetype-detail")
-    manufacturer = NestedManufacturerSerializer()
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = DeviceType
-        fields = [
-            "url",
-            "manufacturer",
-            "model",
-            "slug",
-            "part_number",
-            "u_height",
-            "is_full_depth",
-            "subdevice_role",
-            "front_image",
-            "rear_image",
-            "comments",
-            "device_count",
-        ]
+        fields = "__all__"
+        extra_fields = ["device_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -474,147 +414,74 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class ConsolePortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleporttemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = ConsolePortTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverporttemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = ConsoleServerPortTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class PowerPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerporttemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = PowerPortTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "maximum_draw",
-            "allocated_draw",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class PowerOutletTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlettemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
-    power_port_template = NestedPowerPortTemplateSerializer(required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
     class Meta:
         model = PowerOutletTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "power_port_template",
-            "feed_leg",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class InterfaceTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfacetemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=InterfaceTypeChoices)
 
     class Meta:
         model = InterfaceTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "mgmt_only",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class RearPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearporttemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
         model = RearPortTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "positions",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class FrontPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontporttemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
     type = ChoiceField(choices=PortTypeChoices)
-    rear_port_template = NestedRearPortTemplateSerializer()
 
     class Meta:
         model = FrontPortTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "type",
-            "rear_port_template",
-            "rear_port_position",
-            "description",
-        ]
+        fields = "__all__"
 
 
 class DeviceBayTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebaytemplate-detail")
-    device_type = NestedDeviceTypeSerializer()
 
     class Meta:
         model = DeviceBayTemplate
-        fields = [
-            "url",
-            "device_type",
-            "name",
-            "label",
-            "description",
-        ]
+        fields = "__all__"
 
 
 #
@@ -624,23 +491,13 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
-    manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
     virtual_machine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Platform
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "manufacturer",
-            "napalm_driver",
-            "napalm_args",
-            "description",
-            "device_count",
-            "virtual_machine_count",
-        ]
+        fields = "__all__"
+        extra_fields = ["device_count", "virtual_machine_count"]
 
 
 class DeviceSerializer(
@@ -650,53 +507,12 @@ class DeviceSerializer(
     RoleRequiredRoleModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
-    device_type = NestedDeviceTypeSerializer()
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    platform = NestedPlatformSerializer(required=False, allow_null=True)
-    location = NestedLocationSerializer()
-    rack = NestedRackSerializer(required=False, allow_null=True)
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
-    primary_ip = NestedIPAddressSerializer(read_only=True)
-    primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
-    primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
     parent_device = serializers.SerializerMethodField()
-    secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
-    cluster = NestedClusterSerializer(required=False, allow_null=True)
-    virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
-    device_redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
-    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Device
-        fields = [
-            "url",
-            "name",
-            "device_type",
-            "role",
-            "tenant",
-            "platform",
-            "serial",
-            "asset_tag",
-            "location",
-            "rack",
-            "position",
-            "face",
-            "parent_device",
-            "status",
-            "primary_ip",
-            "primary_ip4",
-            "primary_ip6",
-            "secrets_group",
-            "cluster",
-            "virtual_chassis",
-            "vc_position",
-            "vc_priority",
-            "device_redundancy_group",
-            "device_redundancy_group_priority",
-            "comments",
-            "local_config_context_schema",
-            "local_config_context_data",
-        ]
+        fields = "__all__"
         validators = []
 
     def validate(self, data):
@@ -726,15 +542,15 @@ class DeviceSerializer(
         return data
 
 
-class DeviceWithConfigContextSerializer(DeviceSerializer):
-    config_context = serializers.SerializerMethodField()
+# class DeviceWithConfigContextSerializer(DeviceSerializer):
+#     config_context = serializers.SerializerMethodField()
 
-    class Meta(DeviceSerializer.Meta):
-        fields = DeviceSerializer.Meta.fields + ["config_context"]
+#     class Meta(DeviceSerializer.Meta):
+#         fields = DeviceSerializer.Meta.fields + ["config_context"]
 
-    @extend_schema_field(serializers.DictField)
-    def get_config_context(self, obj):
-        return obj.get_config_context()
+#     @extend_schema_field(serializers.DictField)
+#     def get_config_context(self, obj):
+#         return obj.get_config_context()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):
