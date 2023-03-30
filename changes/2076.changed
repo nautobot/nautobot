@@ -1,1 +1,0 @@
-Changed the `created` field of all models from a DateField to a DateTimeField for added granularity. Preexisting records will show as created at midnight UTC on their original creation date.

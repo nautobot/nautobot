@@ -1,1 +1,0 @@
-Changed `Job` model uniqueness constraints and `slug` field.
