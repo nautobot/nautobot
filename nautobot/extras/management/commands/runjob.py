@@ -21,6 +21,7 @@ class Command(BaseCommand):
             "-u",
             "--username",
             help="User account to impersonate as the requester of this job",
+            required=True,
         )
         parser.add_argument(
             "-l",
@@ -39,17 +40,11 @@ class Command(BaseCommand):
         if not job_class:
             raise CommandError(f'Job "{options["job"]}" not found')
 
-        user = None
-        if options["commit"] and not options["username"]:
-            # Job execution with commit=True uses change_logging(), which requires a user as the author of any changes
-            raise CommandError("--username is mandatory when --commit is used")
-
-        if options["username"]:
-            User = get_user_model()
-            try:
-                user = User.objects.get(username=options["username"])
-            except User.DoesNotExist as exc:
-                raise CommandError("No such user") from exc
+        User = get_user_model()
+        try:
+            user = User.objects.get(username=options["username"])
+        except User.DoesNotExist as exc:
+            raise CommandError("No such user") from exc
 
         data = {}
         try:

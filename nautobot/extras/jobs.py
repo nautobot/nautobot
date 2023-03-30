@@ -9,6 +9,7 @@ from textwrap import dedent
 import traceback
 import warnings
 
+from celery.utils.log import get_task_logger
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -30,19 +31,27 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
 )
 from nautobot.core.utils.lookup import get_model_from_name
+from nautobot.extras.choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
+from nautobot.extras.datasources.git import ensure_git_repository
+from nautobot.extras.forms import JobForm
+from nautobot.extras.models import (
+    FileProxy,
+    GitRepository,
+    Job as JobModel,
+    JobHook,
+    JobResult,
+    ObjectChange,
+    ScheduledJob,
+)
+from nautobot.extras.registry import registry
+from nautobot.extras.utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
     MinPrefixLengthValidator,
     prefix_validator,
 )
-
-from .choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from .datasources.git import ensure_git_repository
-from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
-from .registry import registry
-from .utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
 
 
 User = get_user_model()
@@ -100,18 +109,11 @@ class BaseJob(Task):
         """
 
     def __init__(self):
-        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.logger = get_task_logger(self.__module__)
 
         self.active_test = "main"
         self.failed = False
         self._job_result = None
-
-        # Compile test methods and initialize results skeleton
-        self.test_methods = []
-
-        for method_name in dir(self):
-            if method_name.startswith("test_") and callable(getattr(self, method_name)):
-                self.test_methods.append(method_name)
 
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
@@ -124,7 +126,10 @@ class BaseJob(Task):
             stacktrace = traceback.format_exc()
             self.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
         self.active_test = "run"
-        return self.run(*args, **deserialized_kwargs)
+        context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
+        change_context = context_class(user=self.job_result.user, context_detail=self.class_path)
+        with change_logging(change_context):
+            return self.run(*args, **deserialized_kwargs)
 
     def __str__(self):
         return str(self.name)
@@ -166,11 +171,11 @@ class BaseJob(Task):
         """
 
     def get_job_model(self):
-        return self.job_result.job_model
+        return self.job_result.job_model or JobModel.objects.get(
+            module_name=self.__module__, job_class_name=self.__name__
+        )
 
     def get_job_result(self):
-        from nautobot.extras.models.jobs import JobResult  # avoid circular import
-
         return JobResult.objects.get(task_id=self.request.id)
 
     def before_start(self, task_id, args, kwargs):
@@ -192,8 +197,10 @@ class BaseJob(Task):
             self.get_job_result()
         except TypeError:
             raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}")
+        except Exception:
+            raise RunJobTaskFailed(f"Unexpected failure in job {self.name}")
 
-        job_model = self.job_result.job_model
+        job_model = self.get_job_model()
         if not job_model.enabled:
             self.log_failure(
                 message=f"Job {job_model} is not enabled to be run!",

@@ -803,10 +803,6 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"hidden": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_read_only(self):
-        params = {"read_only": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
     def test_approval_required(self):
         params = {"approval_required": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)

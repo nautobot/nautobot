@@ -1,6 +1,5 @@
 import time
 
-from celery.utils.log import get_task_logger
 from django.conf import settings
 
 from nautobot.core.celery import register_jobs
@@ -9,7 +8,6 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver, JobButtonReceiver
 
 
-logger = get_task_logger(__name__)
 name = "ExamplePlugin jobs"
 
 

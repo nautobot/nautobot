@@ -6,9 +6,7 @@ import uuid
 from io import StringIO
 from unittest import mock
 
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -161,47 +159,6 @@ class JobTest(TransactionTestCase):
             ["testvar1", "b_testvar2", "a_testvar3", "_task_queue"],
         )
 
-    def test_read_only_job_pass(self):
-        """
-        Job read only test with pass result.
-        """
-        module = "test_read_only_pass"
-        name = "TestReadOnlyPass"
-        job_result = create_job_result_and_run_job(module, name)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
-        self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
-
-    def test_read_only_job_fail(self):
-        """
-        Job read only test with fail result.
-        """
-        module = "test_read_only_fail"
-        name = "TestReadOnlyFail"
-        logging.disable(logging.ERROR)
-        job_result = create_job_result_and_run_job(module, name)
-        logging.disable(logging.NOTSET)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
-        # Also ensure the standard log message about aborting the transaction is *not* present
-        run_log = JobLogEntry.objects.filter(grouping="run")
-        for log in run_log:
-            self.assertNotEqual(log.message, "Database changes have been reverted due to error.")
-
-    def test_read_only_no_commit_field(self):
-        """
-        Job read only test commit field is not shown.
-        """
-        module = "test_read_only_no_commit_field"
-        name = "TestReadOnlyNoCommitField"
-        job_class = get_job(f"local/{module}/{name}")
-
-        form = job_class().as_form()
-
-        self.assertInHTML(
-            "<input id='id__commit' name='_commit' type='hidden' value='False'>",
-            form.as_table(),
-        )
-
     def test_ip_address_vars(self):
         """
         Test that IPAddress variable fields behave as expected.
@@ -323,23 +280,6 @@ class JobTest(TransactionTestCase):
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
         self.assertIn("location is a required field", log_failure.message)
-
-    def test_job_data_as_string(self):
-        """
-        Test that job doesn't error when not a dictionary.
-        """
-        module = "test_object_vars"
-        name = "TestObjectVars"
-        data = "BAD DATA STRING"
-        logging.disable(logging.ERROR)
-        job_result = create_job_result_and_run_job(module, name, kwargs=data)
-        logging.disable(logging.NOTSET)
-        # Assert stuff
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        log_failure = JobLogEntry.objects.filter(
-            grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
-        ).first()
-        self.assertIn("Data should be a dictionary", log_failure.message)
 
     def test_job_latest_result_property(self):
         """
@@ -503,65 +443,31 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--no-color", job_model.class_path)
+        out, err = self.run_command("--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
-        self.assertIn(f"{module}: 1 success, 1 info, 0 warning, 0 failure", out)
+        self.assertIn("run: 1 success, 1 info, 0 warning, 0 failure", out)
         self.assertIn("success: None", out)
-        self.assertIn("info: Database changes have been reverted automatically.", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
-    def test_runjob_db_change_no_commit(self):
-        """A job that changes the DB, when run with commit=False, doesn't modify the database."""
-        with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
-
-        module = "test_modify_db"
-        name = "TestModifyDB"
-        _job_class, job_model = get_job_class_and_model(module, name)
-
-        out, err = self.run_command("--no-color", job_model.class_path)
-        self.assertIn(f"Running {job_model.class_path}...", out)
-        self.assertIn(f"{module}: 1 success, 1 info, 0 warning, 0 failure", out)
-        self.assertIn("success: Test Status: Status created successfully.", out)
-        self.assertIn("info: Database changes have been reverted automatically.", out)
-        self.assertIn(f"{job_model.class_path}: SUCCESS", out)
-        self.assertEqual("", err)
-
-        with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
-
-        info_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_INFO).first()
-        self.assertEqual("Database changes have been reverted automatically.", info_log.message)
-
-    def test_runjob_db_change_commit_no_username(self):
-        """A job that changes the DB, when run with commit=True but no username, is rejected."""
+    def test_runjob_wrong_username(self):
+        """A job when run with a nonexistent username, is rejected."""
         module = "test_modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
-            self.run_command("--commit", job_model.class_path)
+            self.run_command("--username", "nosuchuser", job_model.class_path)
 
-    def test_runjob_db_change_commit_wrong_username(self):
-        """A job that changes the DB, when run with commit=True and a nonexistent username, is rejected."""
-        module = "test_modify_db"
-        name = "TestModifyDB"
-        _job_class, job_model = get_job_class_and_model(module, name)
-        with self.assertRaises(CommandError):
-            self.run_command("--commit", "--username", "nosuchuser", job_model.class_path)
-
-    def test_runjob_db_change_commit_and_username(self):
-        """A job that changes the DB, when run with commit=True and a username, successfully updates the DB."""
-        get_user_model().objects.create(username="test_user")
-
+    def test_runjob_db_change(self):
+        """A job that changes the DB, successfully updates the DB."""
         module = "test_modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--no-color", "--commit", "--username", "test_user", job_model.class_path)
+        out, err = self.run_command("--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
-        self.assertIn(f"{module}: 1 success, 0 info, 0 warning, 0 failure", out)
+        self.assertIn("run: 1 success, 1 info, 0 warning, 0 failure", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
@@ -597,13 +503,17 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         # Test location with a value for custom_field
         location_1 = Location.objects.filter(slug="test-location-one")
         self.assertEqual(location_1.count(), 1)
+        location_1 = location_1.first()
         self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
-        self.assertEqual(location_1[0].cf["cf1"], "some-value")
+        self.assertIn("cf1", location_1.cf)
+        self.assertEqual(location_1.cf["cf1"], "some-value")
 
         # Test location with default value for custom field
         location_2 = Location.objects.filter(slug="test-location-two")
         self.assertEqual(location_2.count(), 1)
-        self.assertEqual(location_2[0].cf["cf1"], "-")
+        location_2 = location_2.first()
+        self.assertIn("cf1", location_2.cf)
+        self.assertEqual(location_2.cf["cf1"], "-")
 
 
 class JobButtonReceiverTest(TransactionTestCase):
@@ -714,11 +624,11 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_object_change_context(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverChange"
-        create_job_result_and_run_job(module, name, kwargs=self.data)
+        job_result = create_job_result_and_run_job(module, name, kwargs=self.data)
         test_location = Location.objects.get(name="test_jhr")
         oc = get_changes_for_model(test_location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
-        self.assertEqual(oc.user_id, self.user.pk)
+        self.assertEqual(oc.user_id, job_result.user.pk)
 
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"

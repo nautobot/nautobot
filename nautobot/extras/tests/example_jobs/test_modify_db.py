@@ -8,7 +8,7 @@ class TestModifyDB(Job):
     Job that modifies the database.
     """
 
-    def test_modify_db(self):
+    def run(self):
         """
         Job function.
         """
