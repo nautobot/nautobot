@@ -1,6 +1,7 @@
 import uuid
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
@@ -76,9 +77,16 @@ def run_job_for_testing(job, kwargs=None, username="test-user"):
     )
 
     # This runs the job synchronously in the current thread as if it were being executed by a
-    # worker, therefore resulting in updating the `JobResult` as expected.
-    job.job_task.apply(kwargs=kwargs, task_id=job_result.task_id)
+    # worker. Celery refuses to update some of the values in the job result so they are
+    # extracted from the returned EagerResult
+    eager_result = job.job_task.apply(kwargs=kwargs, task_id=job_result.task_id)
     job_result.refresh_from_db()
+    job_result.date_done = timezone.now()
+    job_result.status = eager_result.status
+    job_result.result = eager_result.result
+    job_result.traceback = eager_result.traceback
+    job_result.worker = eager_result.worker
+    job_result.save()
     return job_result
 
 
