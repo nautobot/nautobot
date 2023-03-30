@@ -89,6 +89,18 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Export target (ID or name)",
     )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="devices",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (ID or name)",
+    )
+    prefix = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="prefixes",
+        queryset=Prefix.objects.all(),
+        to_field_name="pk",  # TODO(jathan): Make this work with `prefix` "somehow"
+        label="Device (ID or name)",
+    )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
@@ -341,19 +353,16 @@ class IPAddressFilterSet(
         method="filter_mask_length",
         label="Mask length",
     )
-    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
-    # FK, Filtering on the VRF by ID or RD needs to be inherited from the parent prefix, after
-    # Prefix -> IPAddress parenting has been implemented.
-    """
-    vrf_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VRF.objects.all(),
-        label="VRF (ID) - Deprecated (use vrf filter)",
-    )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
+    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
+    # FK, Filtering on the VRF by ID or RD needs to be inherited from the parent prefix, after
+    # Prefix -> IPAddress parenting has been implemented.
+    """
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrf",
         queryset=VRF.objects.all(),

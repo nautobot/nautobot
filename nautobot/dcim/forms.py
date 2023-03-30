@@ -62,7 +62,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -2543,6 +2543,9 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         required=False,
         label="IP Addresses",
         brief_mode=False,
+        query_params={
+            "vrf": "$vrf",
+        },
     )
 
     class Meta:
@@ -2559,6 +2562,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "mac_address",
             "ip_addresses",
             "mtu",
+            "vrf",
             "mgmt_only",
             "description",
             "mode",
@@ -2571,9 +2575,11 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "device": forms.HiddenInput(),
             "type": StaticSelect2(),
             "mode": StaticSelect2(),
+            "vrf": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
+            "vrf": "VRF",
         }
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
@@ -2641,6 +2647,14 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         max_value=INTERFACE_MTU_MAX,
         label="MTU",
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
+    )
     mac_address = forms.CharField(required=False, label="MAC Address")
     mgmt_only = forms.BooleanField(
         required=False,
@@ -2677,6 +2691,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "bridge",
         "lag",
         "mtu",
+        "vrf",
         "mac_address",
         "description",
         "mgmt_only",
@@ -2688,7 +2703,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
 
 
 class InterfaceBulkCreateForm(
-    form_from_model(Interface, ["enabled", "mtu", "mgmt_only", "mode", "tags"]),
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     type = forms.ChoiceField(
@@ -2708,6 +2723,7 @@ class InterfaceBulkCreateForm(
         "type",
         "enabled",
         "mtu",
+        "vrf",
         "mgmt_only",
         "description",
         "mode",

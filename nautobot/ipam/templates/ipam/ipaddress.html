@@ -3,9 +3,7 @@
 {% load render_table from django_tables2 %}
 
 {% block extra_breadcrumbs %}
-                {% if object.vrf %}
-                    <li>{{ object.vrf|hyperlinked_object }}</li>
-                {% endif %}
+                    <li>{{ object.parent.namespace|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 
 {% block masthead %}
@@ -54,12 +52,14 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>VRF</td>
+                    <td>VRFs</td>
                     <td>
-                        {% if object.vrf %}
-                            {{ object.vrf|hyperlinked_object }}
-                        {% else %}
-                            <span>Global</span>
+                        {% if object.parent.vrfs.exists %}
+                        <ul class="list-unstyled">
+                            {% for vrf in object.parent.vrfs.all %}
+                            <li>{{ vrf|hyperlinked_object }}</li>
+                            {% endfor %}
+                        </ul>
                         {% endif %}
                     </td>
                 </tr>
