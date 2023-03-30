@@ -67,9 +67,14 @@ class Command(BaseCommand):
                 job_model=job,
                 task_id=uuid.uuid4(),
             )
-            # TODO(gary): calling task synchronously doesn't update the jobresult status
-            job.job_task.apply(kwargs=data, task_id=str(job_result.task_id))
+            eager_result = job.job_task.apply(kwargs=data, task_id=str(job_result.task_id))
             job_result.refresh_from_db()
+            job_result.date_done = timezone.now()
+            job_result.status = eager_result.status
+            job_result.result = eager_result.result
+            job_result.traceback = eager_result.traceback
+            job_result.worker = eager_result.worker
+            job_result.save()
 
         else:
             job_result = JobResult.enqueue_job(job, user, **data)

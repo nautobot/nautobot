@@ -688,9 +688,6 @@ CELERY_RESULT_EXTENDED = True
 # A value of None or 0 means results will never expire (depending on backend specifications).
 CELERY_RESULT_EXPIRES = None
 
-# If set to True, result messages will be persistent. This means the messages won’t be lost after a broker restart.
-CELERY_RESULT_PERSISTENT = True
-
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
