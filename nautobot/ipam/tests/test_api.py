@@ -437,8 +437,8 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["nat_outside"][0]["address"], "192.0.2.1/24")
-        self.assertEqual(response.data["nat_outside"][1]["address"], "192.0.2.2/24")
+        self.assertEqual(response.data["nat_outside_list"][0]["address"], "192.0.2.1/24")
+        self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.0.2.2/24")
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):

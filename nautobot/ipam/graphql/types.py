@@ -12,6 +12,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     family = graphene.Int()
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
+    # TODO(timizuo): What would i do to this
     nat_outside = graphene.Field(lambda: IPAddressType)
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 

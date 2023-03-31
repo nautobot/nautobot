@@ -495,48 +495,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             role=roles[1],
         )
 
-    def test_multiple_nat_outside(self):
-        """
-        Test suite to test supporing multiple nat_inside related fields.
-
-        Includes tests for legacy getter/setter for nat_outside.
-        """
-
-        # Setup mimicked legacy data model relationships: 1-to-1
-        nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"))
-        nat_outside1 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside)
-        nat_inside.refresh_from_db()
-
-        # Assert legacy getter behaves as expected for backwards compatibility, and that FK relationship works
-        self.assertEqual(nat_inside.nat_outside, nat_outside1)
-        self.assertEqual(nat_inside.nat_outside_list.count(), 1)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside1)
-
-        # Create unassigned IPAddress
-        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"))
-        nat_inside.nat_outside = nat_outside2
-        nat_inside.refresh_from_db()
-
-        # Test legacy setter behaves as expected for backwards compatibility and that previous FK relationship removed
-        self.assertEqual(nat_inside.nat_outside, nat_outside2)
-        self.assertEqual(nat_inside.nat_outside_list.count(), 1)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
-
-        # Create IPAddress with nat_inside assigned, setting up current 1-to-many relationship
-        nat_outside3 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.3/24"), nat_inside=nat_inside)
-        nat_inside.refresh_from_db()
-
-        # Now ensure safeguards are in place when using legacy methods with 1-to-many relationships
-        with self.assertRaises(IPAddress.NATOutsideMultipleObjectsReturned):
-            nat_inside.nat_outside
-        with self.assertRaises(IPAddress.NATOutsideMultipleObjectsReturned):
-            nat_inside.nat_outside = nat_outside1
-
-        # Assert FK relationship behaves as expected
-        self.assertEqual(nat_inside.nat_outside_list.count(), 2)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
-        self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
-
     def test_create_ip_address_without_slaac_status(self):
         IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
