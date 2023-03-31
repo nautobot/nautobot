@@ -11,6 +11,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedLocationSerializer,
 )
+from nautobot.dcim.models import Device
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     RoleModelSerializerMixin,
@@ -83,8 +84,22 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         required=False,
         many=True,
     )
-    ipaddress_count = serializers.IntegerField(read_only=True)
-    prefix_count = serializers.IntegerField(read_only=True)
+    devices = SerializedPKRelatedField(
+        queryset=Device.objects.all(),
+        serializer=NestedDeviceSerializer,
+        required=False,
+        many=True,
+    )
+    prefixes = SerializedPKRelatedField(
+        queryset=Prefix.objects.all(),
+        serializer=NestedPrefixSerializer,
+        required=False,
+        many=True,
+    )
+    namespace = NestedNamespaceSerializer()
+    # FIXME(jathan); These two values come from annotation on `VRFViewSet.queryset`
+    # ipaddress_count = serializers.IntegerField(read_only=True)
+    # prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VRF
@@ -92,12 +107,15 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "url",
             "name",
             "rd",
+            "namespace",
             "tenant",
             "description",
             "import_targets",
             "export_targets",
-            "ipaddress_count",
-            "prefix_count",
+            "devices",
+            "prefixes",
+            # "ipaddress_count",
+            # "prefix_count",
         ]
 
 
@@ -230,10 +248,11 @@ class PrefixSerializer(
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
     location = NestedLocationSerializer(required=False, allow_null=True)
-    # vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
     rir = NestedRIRSerializer(required=False, allow_null=True)
+    namespace = NestedNamespaceSerializer()
+    vrfs = NestedVRFSerializer(required=False, allow_null=True, many=True)
 
     class Meta:
         model = Prefix
@@ -243,7 +262,7 @@ class PrefixSerializer(
             "prefix",
             "type",
             "location",
-            # "vrf",
+            "vrfs",
             "namespace",
             "tenant",
             "vlan",

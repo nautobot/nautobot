@@ -81,6 +81,9 @@ class NautobotAppConfig(NautobotConfig):
         "*": {"ops": "all"},
     }
 
+    # Default constance configuration parameters
+    constance_config = {}
+
     # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure", "plugins:myplugin:docs"
     home_view_name = None
     config_view_name = None
@@ -120,6 +123,7 @@ class NautobotAppConfig(NautobotConfig):
                 (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
                 key=lambda urlp: (urlp.name, str(urlp.pattern)),
             ),
+            "constance_config": self.constance_config,
         }
 
         # Register banner function (if defined)
@@ -262,7 +266,9 @@ class NautobotAppConfig(NautobotConfig):
 
         # Apply default configuration values
         for setting, value in cls.default_settings.items():
-            if setting not in user_config:
+            # user_config and constance_config take precedence
+            # this is to support legacy apps that supply default_settings and constance_config
+            if setting not in user_config and setting not in cls.constance_config:
                 user_config[setting] = value
 
 

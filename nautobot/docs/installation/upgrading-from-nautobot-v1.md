@@ -51,6 +51,7 @@
 |                         | `virtualization_virtualmachine_related` | `virtual_machines`                             |
 | CustomFieldChoice       | `field`                                 | `custom_field`                                 |
 | CustomField             | `choices`                               | `custom_field_choices`                         |
+|                         | `slug`                                  | `key`                                          |
 | Device                  | `consoleports`                          | `console_ports`                                |
 |                         | `consoleserverports`                    | `console_server_ports`                         |
 |                         | `devicebays`                            | `device_bays`                                  |
@@ -137,6 +138,7 @@
 | Cluster            | `site`           |
 | ConfigContext      | `sites`          |
 |                    | `regions`        |
+| CustomField        | `name`           |
 | Device             | `site`           |
 | GitRepository      | `_token`         |
 |                    | `username`       |
@@ -254,6 +256,7 @@ The following changes have been made to the `Prefix` model.
 | ConfigContext           | `schema`               | `config_context_schema`       |
 | Cluster                 | `group`                | `cluster_group`               |
 |                         | `type`                 | `cluster_type`                |
+| CustomField             | `slug`                 | `key`                         |
 | CustomFieldChoice       | `field`                | `custom_field`                |
 | Device                  | `device_role`          | `role`                        |
 |                         | `local_context_data`   | `local_config_context_data`   |
@@ -323,12 +326,13 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 | Model                   | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
 |-------------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
-| Cable                   | `tag`                     | `tags`                           | `/dcim/cables/?tags=<slug>`                                               |
-| Circuit                 | `tag`                     | `tags`                           | `/circuits/circuits/?tags=<slug>`                                         |
+| Cable                   | `tag`                     | `tags`                           | `/dcim/cables/?tags=<uuid/slug>`                                          |
+| Circuit                 | `tag`                     | `tags`                           | `/circuits/circuits/?tags=<uuid/slug>`                                    |
 |                         | `type`                    | `circuit_type`                   | `/circuits/circuits/?circuit_type=<uuid/slug>`                            |
+| Cluster                 | `tag`                     | `tags`                           | `/virtualization/clusters/?tags=<uuid/slug>`                              |
 | ConsolePort             | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
 | ConsoleServerPort       | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
-| CustomFieldChoice       | `field`                   | `custom_field`                   | `/extras/custom-field-choices/?custom_field=<uuid/name>`                  |
+| CustomFieldChoice       | `field`                   | `custom_field`                   | `/extras/custom-field-choices/?custom_field=<uuid/key>`                   |
 | Device                  | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
 |                         | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
 |                         | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
@@ -336,42 +340,48 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 |                         | `local_context_schema`    | `local_config_context_schema`    | `/dcim/devices/?local_config_context_schema=<slug>`                       |
 |                         | `rack_group_id`           | `rack_group`                     | `/dcim/devices/?rack_group=<uuid/slug>`                                   |
 |                         | `rack_id`                 | `rack`                           | `/dcim/devices/?rack=<uuid/slug>`                                         |
-|                         | `tag`                     | `tags`                           | `/dcim/devices/?tags=<slug>`                                              |
+|                         | `tag`                     | `tags`                           | `/dcim/devices/?tags=<uuid/slug>`                                         |
 |                         | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
-| DeviceBay               | `tag`                     | `tags`                           | `/dcim/device-bays/?tags=<slug>`                                          |
-| DeviceRedundancyGroup   | `tag`                     | `tags`                           | `/dcim/device-redundancy-groups/?tag=<slug>`                              |
+| DeviceBay               | `tag`                     | `tags`                           | `/dcim/device-bays/?tags=<uuid/slug>`                                     |
+| DeviceRedundancyGroup   | `tag`                     | `tags`                           | `/dcim/device-redundancy-groups/?tag=<uuid/slug>`                         |
 | DeviceType              | `has_instances`           | `has_devices`                    | `/dcim/device-types/?has_devices=True/False`                              |
 |                         | `instances`               | `devices`                        | `/dcim/device-types/?devices=<uuid>`                                      |
-|                         | `tag`                     | `tags`                           | `/dcim/device-types/?tags=<slug>`                                         |
+|                         | `tag`                     | `tags`                           | `/dcim/device-types/?tags=<uuid/slug>`                                    |
 | FrontPort               | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
-|                         | `tag`                     | `tags`                           | `/dcim/front-ports/?tags=<slug>`                                          |
+|                         | `tag`                     | `tags`                           | `/dcim/front-ports/?tags=<uuid/slug>`                                     |
+| GitRepository           | `tag`                     | `tags`                           | `/extras/git-repositories/?tags=<uuid/slug>`                              |
 | Interface               | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
 | InventoryItem           | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
 |                         | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
-|                         | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<slug>`                                      |
-| Location                | `tag`                     | `tags`                           | `/dcim/locations/?tags=<slug>`                                            |
+|                         | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<uuid/slug>`                                 |
+| IPAddress               | `tag`                     | `tags`                           | `/ipam/ip-addresses/?tags=<uuid/slug>`                                    |
+| Job                     | `tag`                     | `tags`                           | `/extras/jobs/?tags=<uuid/slug>`                                          |
+| Location                | `tag`                     | `tags`                           | `/dcim/locations/?tags=uuid/slug>`                                        |
 | ObjectPermission        | `group`                   | `groups`                         | `/users/permissions/?groups=<slug>`                                       |
 |                         | `group_id`                | `groups_id`                      | `/users/permissions/?groups_id=<id>`                                      |
 |                         | `user`                    | `users`                          | `/users/permissions/?users=<uuid/username>`                               |
 | PowerFeed               | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
-|                         | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<slug>`                                          |
+|                         | `tag`                     | `tags`                           | `/dcim/power-feeds/?tags=<uuid/slug>`                                     |
 | PowerOutlet             | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
-| PowerPanel              | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<slug>`                                         |
+| PowerPanel              | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<uuid/slug>`                                    |
 | PowerPort               | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
 | Prefix                  | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
-| Provider                | `tag`                     | `tags`                           | `/circuits/provider/?tags=<slug>`                                         |
-| ProviderNetwork         | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<slug>`                                |
+|                         | `tag`                     | `tags`                           | `/ipam/prefixes/?tags=<uuid/slug>`                                        |
+| Provider                | `tag`                     | `tags`                           | `/circuits/provider/?tags=<uuid/slug>`                                    |
+| ProviderNetwork         | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<uuid/slug>`                           |
 | Rack                    | `group`                   | `rack_group`                     | `/dcim/racks/?rack_group=<uuid/slug>`                                     |
 |                         | `has_reservations`        | `has_rack_reservations`          | `/dcim/racks/?has_rack_reservations=True/False`                           |
 |                         | `reservations`            | `rack_reservations`              | `/dcim/racks/?rack_reservations=<uuid>`                                   |
-|                         | `tag`                     | `tags`                           | `/dcim/racks/?tags=<slug>`                                                |
+|                         | `tag`                     | `tags`                           | `/dcim/racks/?tags=<uuid/slug>`                                           |
 | RackReservation         | `group`                   | `rack_group`                     | `/dcim/rack-reservations/?rack_group=<uuid/slug>`                         |
-|                         | `tag`                     | `tags`                           | `/dcim/rack-reservations/?tags=<slug>`                                    |
+|                         | `tag`                     | `tags`                           | `/dcim/rack-reservations/?tags=<uuid/slug>`                               |
 | RearPort                | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
-|                         | `tag`                     | `tags`                           | `/dcim/rear-ports/?tags=<slug>`                                           |
+|                         | `tag`                     | `tags`                           | `/dcim/rear-ports/?tags=<uuid/slug>`                                      |
+| RouteTarget             | `tag`                     | `tags`                           | `/ipam/route-targets/?tags=<uuid/slug>`                                   |
 | SecretsGroupAssociation | `group`                   | `secrets_group`                  | `/extras/secrets-groups-associations/?secrets_group=<uuid/slug>`          |
-| Site                    | `tag`                     | `tags`                           | `/dcim/sites/?tags=<slug>`                                                |
-| Tenant                  | `tag`                     | `tags`                           | `/tenancy/tenants/?tags=<slug>`                                           |
+| Service                 | `tag`                     | `tags`                           | `/ipam/services/?tags=<uuid/slug>`                                        |
+| Site                    | `tag`                     | `tags`                           | `/dcim/sites/?tags=<uuid/slug>`                                           |
+| Tenant                  | `tag`                     | `tags`                           | `/tenancy/tenants/?tags=<uuid/slug>`                                      |
 | User                    | `changes`                 | `object_changes`                 | `/users/users/?object_changes=<id>`                                       |
 |                         | `has_changes`             | `has_object_changes`             | `/users/users/?has_object_changes=True/False`                             |
 |                         | `group`                   | `groups`                         | `/users/users/?groups=<slug>`                                             |
@@ -379,6 +389,10 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | VirtualMachine          | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
 |                         | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
 |                         | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
+|                         | `tag`                     | `tags`                           | `/virtualization/virtual-machines/?tags=<uuid/slug>`                      |
+| VLAN                    | `tag`                     | `tags`                           | `/ipam/vlans/?tags=<uuid/slug>`                                           |
+| VMInterface             | `tag`                     | `tags`                           | `/virtualization/interfaces/?tags=<uuid/slug>`                            |
+| VRF                     | `tag`                     | `tags`                           | `/ipam/vrfs/?tags=<uuid/slug>`                                            |
 
 ### Enhanced Filter Fields
 
@@ -386,7 +400,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 | Model             | Enhanced Filter Field  | Changes                                                    | UI and Rest API endpoints Available in v2.X               |
 |-------------------|------------------------|------------------------------------------------------------|-----------------------------------------------------------|
-| (all)             | `created[__(gte/lte)]` | Enhanced to support date/time in addition to date alone    | `?created__gte=2023-02-14%2012:00:00`                     |
+| (all)             | `created[__(gte/lte)]` | Now can filter on multiple values; now supports date-times | `?created__gte=2023-02-14%2012:00:00`                     |
 | Circuit           | `circuit_type`         | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?circuit_type=<uuid/slug>`            |
 |                   | `provider`             | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?provider=<uuid/slug>`                |
 |                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                    |
@@ -429,22 +443,24 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | VirtualChassis    | `master`               | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`               |
 |                   | `site`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                 |
 |                   | `tenant`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`               |
-| VLAN              | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
+| VLAN              | `available_on_device`  | Enhanced to permit filtering on multiple values            | `/ipam/vlans/?available_on_device=<uuid>&...`             |
+|                   | `vlan_group`           | Enhanced to support primary key UUIDs in addition to slugs | `/ipam/vlans/?vlan_group=<uuid/slug>`                     |
 
 ### Corrected Filter Fields
 
 Below is a table documenting [corrected filter field changes](../release-notes/version-2.0.md#corrected-filter-fields-2804) in v2.x.
 
-| Model  | Changed Filter Field   | Before                                     | After                                                                                    |
-|--------|------------------------|--------------------------------------------|------------------------------------------------------------------------------------------|
-| Device | `console_ports`        | `/dcim/devices/?console_ports=True`        | `/dcim/devices/?console_ports=<uuid>` or `?has_console_ports=<True/False>`               |
-|        | `console_server_ports` | `/dcim/devices/?console_server_ports=True` | `/dcim/devices/?console_server_ports=<uuid>` or `?has_console_server_ports=<True/False>` |
-|        | `device_bays`          | `/dcim/devices/?device_bays=True`          | `/dcim/devices/?device_bays=<uuid>` or `?has_device_bays=<True/False>`                   |
-|        | `front_ports`          | `/dcim/devices/?front_ports=True`          | `/dcim/devices/?front_ports=<uuid>` or `?has_front_ports=<True/False>`                   |
-|        | `interfaces`           | `/dcim/devices/?interfaces=True`           | `/dcim/devices/?interfaces=<uuid>` or `?has_interfaces=<True/False>`                     |
-|        | `power_ports`          | `/dcim/devices/?power_ports=True`          | `/dcim/devices/?power_ports=<uuid>` or `?has_power_ports=<True/False>`                   |
-|        | `power_outlets`        | `/dcim/devices/?power_outlets=True`        | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`               |
-|        | `rear_ports`           | `/dcim/devices/?rear_ports=True`           | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                     |
+| Model                   | Changed Filter Field   | Before                                                  | After                                                                                   |
+|-------------------------|------------------------|---------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| CustomFieldChoice       | `custom_field`         | `/extras/custom-field-choices/?custom_field=<uuid/name>`| `/extras/custom-field-choices/?custom_field=<uuid/key>`                                 |
+| Device                  | `console_ports`        | `/dcim/devices/?console_ports=True`                     | `/dcim/devices/?console_ports=<uuid>` or `?has_console_ports=<True/False>`              |
+|                         | `console_server_ports` | `/dcim/devices/?console_server_ports=True`              | `/dcim/devices/?console_server_ports=<uuid>` or `?has_console_server_ports=<True/False>`|
+|                         | `device_bays`          | `/dcim/devices/?device_bays=True`                       | `/dcim/devices/?device_bays=<uuid>` or `?has_device_bays=<True/False>`                  |
+|                         | `front_ports`          | `/dcim/devices/?front_ports=True`                       | `/dcim/devices/?front_ports=<uuid>` or `?has_front_ports=<True/False>`                  |
+|                         | `interfaces`           | `/dcim/devices/?interfaces=True`                        | `/dcim/devices/?interfaces=<uuid>` or `?has_interfaces=<True/False>`                    |
+|                         | `power_ports`          | `/dcim/devices/?power_ports=True`                       | `/dcim/devices/?power_ports=<uuid>` or `?has_power_ports=<True/False>`                  |
+|                         | `power_outlets`        | `/dcim/devices/?power_outlets=True`                     | `/dcim/devices/?power_outlets=<uuid>` or `?has_power_outlets=<True/False>`              |
+|                         | `rear_ports`           | `/dcim/devices/?rear_ports=True`                        | `/dcim/devices/?rear_ports=<uuid>` or `?has_rear_ports=<True/False>`                    |
 
 ### Removed Filter Fields
 

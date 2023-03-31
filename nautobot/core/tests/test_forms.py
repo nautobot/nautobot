@@ -630,7 +630,7 @@ class JSONFieldTest(testing.TestCase):
         test_views.create_test_device("Foo Device")
         custom_field = extras_models.CustomField(
             type="json",
-            name="json-field",
+            label="JSON Field",
             required=False,
         )
         custom_field.save()
@@ -824,7 +824,7 @@ class DynamicFilterFormTest(TestCase):
         request_querydict.setlistdefault("slug", ["location-1"])
         request_querydict.setlistdefault("status", ["active"])
         request_querydict.setlistdefault("has_vlans", ["True"])
-        request_querydict.setdefault("created__gte", "2022-09-05 11:22:33")
+        request_querydict.setlistdefault("created__gte", ["2022-09-05 11:22:33"])
         request_querydict.setlistdefault("asn", ["4"])
 
         with self.subTest("Test for lookup_value with a CharField"):
@@ -869,9 +869,9 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
 
-        with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
-            # If `lookup_field` value is a ChoiceField and `lookup_type` lookup expr is `exact` or `in` then,
-            # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
+        with self.subTest("Test for lookup_value with a NullBooleanField and StaticSelect2 widget"):
+            # If `lookup_field` value is a boolean filter and `lookup_type` lookup expr is `exact`, then
+            # `lookup_value` field should be a NullBooleanField with StaticSelect2 widget
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
@@ -883,13 +883,13 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertIsInstance(form.fields["lookup_value"], django_forms.ChoiceField)
+            self.assertIsInstance(form.fields["lookup_value"], django_forms.NullBooleanField)
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},
             )
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.StaticSelect2)
-            self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
+            self.assertEqual(form.fields["lookup_value"].widget.choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateTimeField"):
             form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-4")

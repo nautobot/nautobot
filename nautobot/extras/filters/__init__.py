@@ -10,7 +10,6 @@ from nautobot.core.filters import (
     MultiValueUUIDFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
-    TagFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
@@ -335,7 +334,6 @@ class CustomFieldModelFilterSet(CustomFieldModelFilterSetMixin):
 class CustomFieldFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
             "label": "icontains",
             "description": "icontains",
         },
@@ -346,15 +344,15 @@ class CustomFieldFilterSet(BaseFilterSet):
 
     class Meta:
         model = CustomField
-        fields = ["id", "content_types", "name", "required", "filter_logic", "weight"]
+        fields = ["id", "content_types", "label", "required", "filter_logic", "weight"]
 
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
     custom_field = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CustomField.objects.all(),
-        to_field_name="name",
-        label="Field (ID or name)",
+        to_field_name="key",
+        label="Field (ID or Key)",
     )
 
     class Meta:
@@ -502,11 +500,10 @@ class GitRepositoryFilterSet(NautobotFilterSet):
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (ID or slug)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = GitRepository
-        fields = ["id", "name", "slug", "remote_url", "branch", "provided_contents"]
+        fields = ["id", "branch", "name", "provided_contents", "remote_url", "slug", "tags"]
 
 
 #
@@ -555,7 +552,6 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    tag = TagFilter()
 
     class Meta:
         model = Job
@@ -588,6 +584,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "soft_time_limit_override",
             "time_limit_override",
             "has_sensitive_variables_override",
+            "tags",
         ]
 
 
@@ -806,7 +803,6 @@ class RelationshipFilterSet(BaseFilterSet):
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
-
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__slug",
         queryset=Relationship.objects.all(),
@@ -860,7 +856,7 @@ class SecretFilterSet(
 
     class Meta:
         model = Secret
-        fields = ("id", "name", "slug", "provider", "created", "last_updated")
+        fields = ("id", "name", "slug", "provider", "created", "last_updated", "tags")
 
 
 class SecretsGroupFilterSet(

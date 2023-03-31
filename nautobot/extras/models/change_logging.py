@@ -146,7 +146,6 @@ class ObjectChange(BaseModel):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
     def save(self, *args, **kwargs):
-
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
             if self.user:

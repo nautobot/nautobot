@@ -281,9 +281,9 @@ Below is what the function might look like:
 def migrate_example_model_data_to_locations(apps, schema_editor):
     # Always use the provided `apps` to look up models
     # rather than importing them directly!
-    ExampleModel = apps.get("example_app", "examplemodel")
-    LocationType = apps.get("dcim", "locationtype")
-    Location = apps.get("dcim", "location")
+    ExampleModel = apps.get_model("example_app", "examplemodel")
+    LocationType = apps.get_model("dcim", "locationtype")
+    Location = apps.get_model("dcim", "location")
 
     # Query ExampleModel instances with non-null site field
     example_models = ExampleModel.objects.filter(
@@ -319,9 +319,9 @@ from django.db import migrations
 
 def migrate_example_model_data_to_locations(apps, schema_editor):
 
-    ExampleModel = apps.get("example_app", "examplemodel")
-    LocationType = apps.get("dcim", "locationtype")
-    Location = apps.get("dcim", "location")
+    ExampleModel = apps.get_model("example_app", "examplemodel")
+    LocationType = apps.get_model("dcim", "locationtype")
+    Location = apps.get_model("dcim", "location")
     # Get "Site" LocationType
     site_location_type = LocationType.objects.get(name="Site")
 

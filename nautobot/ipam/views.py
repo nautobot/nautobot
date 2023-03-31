@@ -366,7 +366,6 @@ class PrefixIPAddressesView(generic.ObjectView):
         ipaddresses = (
             instance.get_child_ips()
             .restrict(request.user, "view")
-            # .select_related("vrf", "status")
             .select_related("status")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")
         )
@@ -442,46 +441,24 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    # queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
-    queryset = IPAddress.objects.select_related("tenant")
+    queryset = IPAddress.objects.select_related("tenant", "status", "role")
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
 
 
 class IPAddressView(generic.ObjectView):
-    # queryset = IPAddress.objects.select_related("vrf__tenant", "tenant")
-    queryset = IPAddress.objects.select_related("tenant")
+    queryset = IPAddress.objects.select_related("tenant", "status", "role")
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
         parent_prefixes = (
-            Prefix.objects.restrict(request.user, "view").net_contains_or_equals(instance.address)
-            # .filter(vrf=instance.vrf)
-            .select_related("location", "status", "role")
+            instance.ancestors().restrict(request.user, "view").select_related("location", "status", "role", "tenant")
         )
-        parent_prefixes_table = tables.PrefixTable(list(parent_prefixes))
-        # parent_prefixes_table.exclude = ("vrf",)
-
-        # Duplicate IPs table
-        duplicate_ips = (
-            IPAddress.objects.restrict(request.user, "view")
-            # .filter(vrf=instance.vrf, host=instance.host)
-            .exclude(pk=instance.pk).select_related("nat_inside")
-        )
-        # Exclude anycast IPs if this IP is anycast
-        if instance.role == choices.IPAddressRoleChoices.ROLE_ANYCAST:
-            duplicate_ips = duplicate_ips.exclude(role=choices.IPAddressRoleChoices.ROLE_ANYCAST)
-        # Limit to a maximum of 10 duplicates displayed here
-        duplicate_ips_table = tables.IPAddressTable(duplicate_ips[:10], orderable=False)
+        parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
 
         # Related IP table
-        related_ips = (
-            IPAddress.objects.restrict(request.user, "view")
-            .net_host_contained(instance.address)
-            .exclude(host=instance.host)
-            # .filter(vrf=instance.vrf)
-        )
+        related_ips = instance.siblings().restrict(request.user, "view").select_related("status", "role", "tenant")
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
 
         paginate = {
@@ -492,8 +469,6 @@ class IPAddressView(generic.ObjectView):
 
         return {
             "parent_prefixes_table": parent_prefixes_table,
-            "duplicate_ips_table": duplicate_ips_table,
-            "more_duplicate_ips": duplicate_ips.count() > 10,
             "related_ips_table": related_ips_table,
         }
 

@@ -8,10 +8,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.extras.change_customfield %}
-            {% edit_button object key="slug" %}
+            {% edit_button object key="pk" %}
         {% endif %}
         {% if perms.extras.delete_customfield %}
-            {% delete_button object key="slug" %}
+            {% delete_button object key="pk" %}
         {% endif %}
 {% endblock buttons %}
 
@@ -22,9 +22,12 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        {% comment %}2.0 TODO: #824 remove name field{% endcomment %}
-                        <td>Name</td>
-                        <td><span>{{ object.name }}</span></td>
+                        <td>Label</td>
+                        <td><span>{{ object.label }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Key</td>
+                        <td><span>{{ object.key }}</span></td>
                     </tr>
                     <tr>
                         <td>Type</td>
@@ -33,10 +36,6 @@
                     <tr>
                         <td>Weight</td>
                         <td><span>{{ object.weight }}</span></td>
-                    </tr>
-                    <tr>
-                        <td>Label</td>
-                        <td><span>{{ object.label | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Grouping</td>

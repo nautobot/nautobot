@@ -29,7 +29,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
@@ -58,7 +57,6 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
@@ -183,7 +181,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
@@ -225,7 +222,6 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         cls.form_data = {
@@ -251,7 +247,6 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
         location_1 = cls.locations.first()
 
@@ -295,7 +290,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         custom_field = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, name="custom_field", default=""
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Custom Field", default=""
         )
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
@@ -344,7 +339,6 @@ class ServiceTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")

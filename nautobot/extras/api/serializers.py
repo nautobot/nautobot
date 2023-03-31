@@ -451,10 +451,6 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     )
     type = ChoiceField(choices=CustomFieldTypeChoices)
     filter_logic = ChoiceField(choices=CustomFieldFilterLogicChoices, required=False)
-    # Laying groundwork for 2.0:
-    # - in 1.4 `label` is not required at the model level due to backward compatibility, but in 2.0 it will be.
-    # - in 1.4 `name` is required at the model level, but in 2.0 it will be removed entirely.
-    # Since the API is versioned we can go ahead and adopt the future here.
     label = serializers.CharField(max_length=50, required=True)
 
     class Meta:
@@ -464,7 +460,7 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "content_types",
             "type",
             "label",
-            "slug",
+            "key",
             "description",
             "required",
             "filter_logic",
@@ -474,14 +470,6 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "validation_maximum",
             "validation_regex",
         ]
-
-    def validate(self, data):
-        # 2.0 TODO: #824 remove `name` entirely from the model; for now it's required.
-        if self.instance is None:
-            if "slug" in data and "name" not in data:
-                data["name"] = data["slug"]
-
-        return super().validate(data)
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
@@ -560,6 +548,7 @@ class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
 #
 # Export templates
 #
+
 
 # TODO: export-templates don't support custom-fields, is this omission intentional?
 class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelSerializer, NotesSerializerMixin):
@@ -700,7 +689,6 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         ]
 
     def validate(self, data):
-
         # Validate that the parent object exists
         try:
             data["content_type"].get_object_for_this_type(id=data["object_id"])
@@ -996,7 +984,6 @@ class JobMultiPartInputSerializer(serializers.Serializer):
                 )
 
             if data["_schedule_interval"] == JobExecutionType.TYPE_CUSTOM:
-
                 if data.get("_schedule_crontab") is None:
                     raise serializers.ValidationError({"_schedule_crontab": "Please enter a valid crontab."})
                 try:
