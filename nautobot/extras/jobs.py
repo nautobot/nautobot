@@ -184,10 +184,10 @@ class BaseJob(Task):
 
         try:
             self.get_job_result()
-        except TypeError:
-            raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}")
-        except Exception:
-            raise RunJobTaskFailed(f"Unexpected failure in job {self.name}")
+        except TypeError as err:
+            raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}") from err
+        except Exception as err:
+            raise RunJobTaskFailed(f"Unexpected failure in job {self.name}") from err
 
         job_model = self.get_job_model()
         if not job_model.enabled:
