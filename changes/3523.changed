@@ -1,0 +1,1 @@
+Remove nat_outside from IPAddress serializer and replaced with nat_outside_list.
