@@ -2,7 +2,7 @@ from django.forms.fields import CallableChoiceIterator
 from rest_framework import serializers
 
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
-from nautobot.extras.api.nested_serializers import NestedRoleSerializer, NestedStatusSerializer
+from nautobot.extras.api.nested_serializers import NestedRoleSerializer, NestedStatusSerializer, NestedTagSerializer
 
 
 class MultipleChoiceJSONField(serializers.MultipleChoiceField):
@@ -26,3 +26,7 @@ class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSeriali
 
 class StatusSerializerField(LimitQuerysetChoicesSerializerMixin, NestedStatusSerializer):
     """NestedSerializer field for `Status` object fields."""
+
+
+class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
+    """NestedSerializer field for `Tag` object fields."""

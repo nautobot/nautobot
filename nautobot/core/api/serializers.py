@@ -7,14 +7,31 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
 )
 from django.db.models import AutoField, ManyToManyField
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.reverse import reverse
+from rest_framework.fields import CreateOnlyDefault
+from rest_framework.serializers import SerializerMethodField
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.utils import dict_to_filter_params, get_serializer_for_model
 from nautobot.core.utils.requests import normalize_querydict
+from django.core.exceptions import (
+    ValidationError as DjangoValidationError,
+)
+from django.urls import NoReverseMatch
+
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.utils.lookup import get_route_for_model
+
+from nautobot.extras.api.relationships import RelationshipsDataField
+from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
+from nautobot.extras.choices import RelationshipSideChoices
+from nautobot.extras.models import RelationshipAssociation
 
 
 logger = logging.getLogger(__name__)
@@ -83,6 +100,63 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
+class NautobotPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
+    def to_internal_value(self, data):
+        if data is None:
+            return None
+
+        # Dictionary of related object attributes
+        if isinstance(data, dict):
+            params = dict_to_filter_params(data)
+
+            queryset = self.queryset
+            model_name = queryset.model._meta.model_name
+            try:
+                return queryset.get(**params)
+            except ObjectDoesNotExist:
+                raise ValidationError(
+                    {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
+                )
+            except MultipleObjectsReturned:
+                raise ValidationError({f"{model_name}": f"Multiple objects match the provided attributes: {params}"})
+            except FieldError as e:
+                raise ValidationError({f"{model_name}": e})
+
+        queryset = self.queryset
+        pk = None
+
+        if isinstance(queryset.model._meta.pk, AutoField):
+            # PK is an int for this model. This is usually the User model
+            try:
+                pk = int(data)
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    {
+                        f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                        f"unrecognized value: {data}"
+                    }
+                )
+
+        else:
+            # We assume a type of UUIDField for all other models
+
+            # PK of related object
+            try:
+                # Ensure the pk is a valid UUID
+                pk = uuid.UUID(str(data))
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    {
+                        f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                        f"unrecognized value: {data}"
+                    }
+                )
+        try:
+            return queryset.get(pk=pk)
+        except ObjectDoesNotExist:
+            raise ValidationError({f"{model_name}": f"Related object not found using the provided ID: {pk}"})
+
+
 class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
@@ -96,10 +170,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     url = serializers.HyperlinkedIdentityField(read_only=True, view_name="")
+    serializer_related_field = NautobotPrimaryKeyRelatedField
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.__class__.__name__ != "NestedSerializer":
+        if self.__class__.__name__ != "NautobotNestedSerializer":
             self.Meta.depth = self.context.get("depth", 0)
 
     @extend_schema_field(serializers.CharField)
@@ -151,99 +226,92 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             return fields + self.Meta.extra_fields
         return fields
 
+    def to_internal_value(self, data):
+        for key, value in self.get_fields().items():
+            if value.__class__.__name__ in ["NautobotNestedSerializer", "NautobotPrimaryKeyRelatedField"]:
+                sub_data = data.get(key, None)
+                if sub_data is not None:
+                    data[key] = value.to_internal_value(sub_data)
+        return data
+
     def build_nested_field(self, field_name, relation_info, nested_depth):
         field = get_serializer_for_model(relation_info.related_model)
 
-        class NestedSerializer(field):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
+        class NautobotNestedSerializer(field):
+            def to_internal_value(self, data):
+                if data is None:
+                    return None
+
+                # Dictionary of related object attributes
+                if isinstance(data, dict):
+                    params = dict_to_filter_params(data)
+
+                    # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
+                    # data any serializer fields that do not correspond to a specific model field
+                    for field_name, field_instance in self.fields.items():
+                        if field_name in params and field_instance.source == "*":
+                            logger.debug("Discarding non-database field %s", field_name)
+                            del params[field_name]
+
+                    queryset = self.Meta.model.objects
+                    model_name = self.Meta.model._meta.model_name
+                    try:
+                        return queryset.get(**params)
+                    except ObjectDoesNotExist:
+                        raise ValidationError(
+                            {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
+                        )
+                    except MultipleObjectsReturned:
+                        raise ValidationError(
+                            {f"{model_name}" f"Multiple objects match the provided attributes: {params}"}
+                        )
+                    except FieldError as e:
+                        raise ValidationError({f"{model_name}": e})
+
+                queryset = self.Meta.model.objects
+                pk = None
+
+                if isinstance(self.Meta.model._meta.pk, AutoField):
+                    # PK is an int for this model. This is usually the User model
+                    try:
+                        pk = int(data)
+                    except (TypeError, ValueError):
+                        raise ValidationError(
+                            {
+                                f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                                f"unrecognized value: {data}"
+                            }
+                        )
+
+                else:
+                    # We assume a type of UUIDField for all other models
+
+                    # PK of related object
+                    try:
+                        # Ensure the pk is a valid UUID
+                        pk = uuid.UUID(str(data))
+                    except (TypeError, ValueError):
+                        raise ValidationError(
+                            {
+                                f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                                f"unrecognized value: {data}"
+                            }
+                        )
+
+                try:
+                    return queryset.get(pk=pk)
+                except ObjectDoesNotExist:
+                    raise ValidationError({f"{model_name}": f"Related object not found using the provided ID: {pk}"})
 
             class Meta:
                 model = relation_info.related_model
                 depth = nested_depth - 1
                 fields = "__all__"
 
-        field_class = NestedSerializer
+        field_class = NautobotNestedSerializer
         field_kwargs = get_nested_relation_kwargs(relation_info)
 
         return field_class, field_kwargs
-
-    def is_valid(self, *, raise_exception=False):
-        assert hasattr(self, "initial_data"), (
-            "Cannot call `.is_valid()` as no `data=` keyword argument was "
-            "passed when instantiating the serializer instance."
-        )
-        if not hasattr(self, "_validated_data"):
-            try:
-                self._validated_data = self.run_validation(self.initial_data)
-            except ValidationError as exc:
-                self._validated_data = {}
-                self._errors = exc.detail
-            else:
-                self._errors = {}
-        if self._errors and raise_exception:
-            raise ValidationError(self.errors)
-
-        return not bool(self._errors)
-
-    def get_queryset(self):
-        return self.Meta.model.objects
-
-    def to_internal_value(self, data):
-        if data is None:
-            return None
-
-        # Dictionary of related object attributes
-        if isinstance(data, dict):
-            params = dict_to_filter_params(data)
-
-            # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
-            # data any serializer fields that do not correspond to a specific model field
-            for field_name, field_instance in self.fields.items():
-                if field_name in params and field_instance.source == "*":
-                    logger.debug("Discarding non-database field %s", field_name)
-                    del params[field_name]
-
-            queryset = self.get_queryset()
-            try:
-                return queryset.get(**params)
-            except ObjectDoesNotExist:
-                raise ValidationError(f"Related object not found using the provided attributes: {params}")
-            except MultipleObjectsReturned:
-                raise ValidationError(f"Multiple objects match the provided attributes: {params}")
-            except FieldError as e:
-                raise ValidationError(e)
-
-        queryset = self.get_queryset()
-        pk = None
-
-        if isinstance(self.Meta.model._meta.pk, AutoField):
-            # PK is an int for this model. This is usually the User model
-            try:
-                pk = int(data)
-            except (TypeError, ValueError):
-                raise ValidationError(
-                    "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    f"unrecognized value: {data}"
-                )
-
-        else:
-            # We assume a type of UUIDField for all other models
-
-            # PK of related object
-            try:
-                # Ensure the pk is a valid UUID
-                pk = uuid.UUID(str(data))
-            except (TypeError, ValueError):
-                raise ValidationError(
-                    "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    f"unrecognized value: {data}"
-                )
-
-        try:
-            return queryset.get(pk=pk)
-        except ObjectDoesNotExist:
-            raise ValidationError(f"Related object not found using the provided ID: {pk}")
 
 
 class TreeModelSerializerMixin(BaseModelSerializer):
@@ -420,3 +488,193 @@ class BulkOperationIntegerIDSerializer(serializers.Serializer):
 class GraphQLAPISerializer(serializers.Serializer):
     query = serializers.CharField(required=True, help_text="GraphQL query")
     variables = serializers.JSONField(required=False, help_text="Variables in JSON Format")
+
+
+class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
+    """
+    Extends ModelSerializer to render any CustomFields and their values associated with an object.
+    """
+
+    computed_fields = SerializerMethodField(read_only=True)
+    custom_fields = CustomFieldsDataField(
+        source="_custom_field_data",
+        default=CreateOnlyDefault(CustomFieldDefaultValues()),
+    )
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_computed_fields(self, obj):
+        return obj.get_computed_fields()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "custom_fields" and "computed_fields" are always included appropriately."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "custom_fields")
+        self.extend_field_names(fields, "computed_fields", opt_in_only=True)
+        return fields
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(CustomFieldModelSerializerMixin)
+class CustomFieldModelSerializer(CustomFieldModelSerializerMixin):
+    pass
+
+
+class RelationshipModelSerializerMixin(ValidatedModelSerializer):
+    """Extend ValidatedModelSerializer with a `relationships` field."""
+
+    relationships = RelationshipsDataField(required=False, source="*")
+
+    def create(self, validated_data):
+        relationships_data = validated_data.pop("relationships", {})
+        required_relationships_errors = self.Meta().model.required_related_objects_errors(
+            output_for="api", initial_data=relationships_data
+        )
+        if required_relationships_errors:
+            raise ValidationError({"relationships": required_relationships_errors})
+        instance = super().create(validated_data)
+        if relationships_data:
+            try:
+                self._save_relationships(instance, relationships_data)
+            except DjangoValidationError as error:
+                raise ValidationError(str(error))
+        return instance
+
+    def update(self, instance, validated_data):
+        relationships_key_specified = "relationships" in self.context["request"].data
+        relationships_data = validated_data.pop("relationships", {})
+        required_relationships_errors = self.Meta().model.required_related_objects_errors(
+            output_for="api",
+            initial_data=relationships_data,
+            relationships_key_specified=relationships_key_specified,
+            instance=instance,
+        )
+        if required_relationships_errors:
+            raise ValidationError({"relationships": required_relationships_errors})
+
+        instance = super().update(instance, validated_data)
+        if relationships_data:
+            self._save_relationships(instance, relationships_data)
+        return instance
+
+    def _save_relationships(self, instance, relationships):
+        """Create/update RelationshipAssociations corresponding to a model instance."""
+        # relationships has already passed RelationshipsDataField.to_internal_value(), so we can skip some try/excepts
+        logger.debug("_save_relationships: %s : %s", instance, relationships)
+        for relationship, relationship_data in relationships.items():
+            for other_side in ["source", "destination", "peer"]:
+                if other_side not in relationship_data:
+                    continue
+
+                other_type = getattr(relationship, f"{other_side}_type")
+                other_side_model = other_type.model_class()
+                other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                serializer_instance = other_side_serializer(context={"request": self.context.get("request")})
+
+                expected_objects_data = relationship_data[other_side]
+                expected_objects = [
+                    serializer_instance.to_internal_value(object_data) for object_data in expected_objects_data
+                ]
+
+                this_side = RelationshipSideChoices.OPPOSITE[other_side]
+
+                if this_side != RelationshipSideChoices.SIDE_PEER:
+                    existing_associations = relationship.relationship_associations.filter(
+                        **{f"{this_side}_id": instance.pk}
+                    )
+                    existing_objects = [assoc.get_peer(instance) for assoc in existing_associations]
+                else:
+                    existing_associations_1 = relationship.relationship_associations.filter(source_id=instance.pk)
+                    existing_objects_1 = [assoc.get_peer(instance) for assoc in existing_associations_1]
+                    existing_associations_2 = relationship.relationship_associations.filter(destination_id=instance.pk)
+                    existing_objects_2 = [assoc.get_peer(instance) for assoc in existing_associations_2]
+                    existing_associations = list(existing_associations_1) + list(existing_associations_2)
+                    existing_objects = existing_objects_1 + existing_objects_2
+
+                add_objects = []
+                remove_assocs = []
+
+                for obj, assoc in zip(existing_objects, existing_associations):
+                    if obj not in expected_objects:
+                        remove_assocs.append(assoc)
+                for obj in expected_objects:
+                    if obj not in existing_objects:
+                        add_objects.append(obj)
+
+                for add_object in add_objects:
+                    if "request" in self.context and not self.context["request"].user.has_perm(
+                        "extras.add_relationshipassociation"
+                    ):
+                        raise PermissionDenied("This user does not have permission to create RelationshipAssociations.")
+                    if other_side != RelationshipSideChoices.SIDE_SOURCE:
+                        assoc = RelationshipAssociation(
+                            relationship=relationship,
+                            source_type=relationship.source_type,
+                            source_id=instance.id,
+                            destination_type=relationship.destination_type,
+                            destination_id=add_object.id,
+                        )
+                    else:
+                        assoc = RelationshipAssociation(
+                            relationship=relationship,
+                            source_type=relationship.source_type,
+                            source_id=add_object.id,
+                            destination_type=relationship.destination_type,
+                            destination_id=instance.id,
+                        )
+                    assoc.validated_save()  # enforce relationship filter logic, etc.
+                    logger.debug("Created %s", assoc)
+
+                for remove_assoc in remove_assocs:
+                    if "request" in self.context and not self.context["request"].user.has_perm(
+                        "extras.delete_relationshipassociation"
+                    ):
+                        raise PermissionDenied("This user does not have permission to delete RelationshipAssociations.")
+                    logger.debug("Deleting %s", remove_assoc)
+                    remove_assoc.delete()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "relationships" is always included as an opt-in field."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "relationships", opt_in_only=True)
+        return fields
+
+
+class NotesSerializerMixin(BaseModelSerializer):
+    """Extend Serializer with a `notes` field."""
+
+    notes_url = serializers.SerializerMethodField()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that fields includes "notes_url" field if applicable."""
+        fields = list(super().get_field_names(declared_fields, info))
+        if hasattr(self.Meta.model, "notes"):
+            self.extend_field_names(fields, "notes_url")
+        return fields
+
+    @extend_schema_field(serializers.URLField())
+    def get_notes_url(self, instance):
+        try:
+            notes_url = get_route_for_model(instance, "notes", api=True)
+            return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        except NoReverseMatch:
+            model_name = type(instance).__name__
+            logger.warning(
+                (
+                    f"Notes feature is not available for model {model_name}. "
+                    "Please make sure to: "
+                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    "before including NotesSerializerMixin in the model serializer"
+                )
+            )
+
+            return None
+
+
+class NautobotModelSerializer(
+    RelationshipModelSerializerMixin, CustomFieldModelSerializerMixin, NotesSerializerMixin, ValidatedModelSerializer
+):
+    """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
+
+    Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
+    """

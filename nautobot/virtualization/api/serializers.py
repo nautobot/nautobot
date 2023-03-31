@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from nautobot.core.api import (
     ChoiceField,
+    NautobotModelSerializer,
     SerializedPKRelatedField,
 )
 from nautobot.dcim.api.nested_serializers import (
@@ -11,8 +12,7 @@ from nautobot.dcim.api.nested_serializers import (
 )
 from nautobot.dcim.api.serializers import InterfaceCommonSerializer
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.extras.api.serializers import (
-    NautobotModelSerializer,
+from nautobot.extras.api.mixins import (
     RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
@@ -79,27 +79,13 @@ class ClusterGroupSerializer(NautobotModelSerializer):
 
 class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
-    cluster_type = NestedClusterTypeSerializer()
-    cluster_group = NestedClusterGroupSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    location = NestedLocationSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Cluster
-        fields = [
-            "url",
-            "name",
-            "cluster_type",
-            "cluster_group",
-            "tenant",
-            "location",
-            "comments",
-            "tags",
-            "device_count",
-            "virtualmachine_count",
-        ]
+        fields = "__all__"
+        extra_fields = ["device_count", "virtualmachine_count"]
 
 
 #
@@ -111,17 +97,10 @@ class VirtualMachineSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
-    location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)
-    cluster = NestedClusterSerializer()
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    platform = NestedPlatformSerializer(required=False, allow_null=True)
-    primary_ip = NestedIPAddressSerializer(read_only=True)
-    primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
-    primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
-    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VirtualMachine
+        # TODO #3024 keeping this for the append on line 130
         fields = [
             "url",
             "name",
@@ -146,7 +125,6 @@ class VirtualMachineSerializer(
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     config_context = serializers.SerializerMethodField()
-    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta(VirtualMachineSerializer.Meta):
         fields = VirtualMachineSerializer.Meta.fields + ["config_context"]
@@ -163,9 +141,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 
 class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
-    virtual_machine = NestedVirtualMachineSerializer()
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
-    untagged_vlan = NestedVLANSerializer(required=False, allow_null=True)
     tagged_vlans = SerializedPKRelatedField(
         queryset=VLAN.objects.all(),
         serializer=NestedVLANSerializer,
@@ -178,28 +154,10 @@ class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixi
         required=False,
         many=True,
     )
-    parent_interface = NestedVMInterfaceSerializer(required=False, allow_null=True)
-    bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VMInterface
-        fields = [
-            "url",
-            "virtual_machine",
-            "name",
-            "status",
-            "enabled",
-            "parent_interface",
-            "bridge",
-            "mtu",
-            "mac_address",
-            "ip_addresses",
-            "description",
-            "mode",
-            "untagged_vlan",
-            "tagged_vlans",
-            "tags",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments

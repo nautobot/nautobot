@@ -15,25 +15,16 @@ from .nested_serializers import NestedTenantGroupSerializer, NestedTenantSeriali
 
 class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
-    parent = NestedTenantGroupSerializer(required=False, allow_null=True)
     tenant_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = TenantGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "parent",
-            "description",
-            "tenant_count",
-            "tree_depth",
-        ]
+        fields = "__all__"
+        extra_fields = ["tenant_count"]
 
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
-    tenant_group = NestedTenantGroupSerializer(required=False)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     ipaddress_count = serializers.IntegerField(read_only=True)
@@ -46,13 +37,8 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Tenant
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "tenant_group",
-            "description",
-            "comments",
+        fields = "__all__"
+        extra_fields = [
             "circuit_count",
             "device_count",
             "ipaddress_count",

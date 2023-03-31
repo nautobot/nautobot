@@ -6,27 +6,34 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
-from rest_framework.reverse import reverse
 
 from nautobot.core.api import (
+    BaseModelSerializer,
     ChoiceField,
     ContentTypeField,
+    CustomFieldModelSerializerMixin,
+    NautobotModelSerializer,
+    NotesSerializerMixin,
+    RelationshipModelSerializerMixin,
     SerializedPKRelatedField,
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
-from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxySerializer
+from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
 from nautobot.core.models.utils import get_all_concrete_models
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedRackSerializer,
+)
+from nautobot.dcim.api.serializers import (
+    DeviceSerializer,
+    LocationSerializer,
+    RackSerializer,
 )
 from nautobot.dcim.models import DeviceType, Location, Platform
 from nautobot.extras.choices import (
@@ -35,6 +42,9 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+)
+from nautobot.extras.api.mixins import (
+    TaggedModelSerializerMixin,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -82,9 +92,7 @@ from nautobot.virtualization.api.nested_serializers import (
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
-from .customfields import CustomFieldModelSerializerMixin
 from .fields import MultipleChoiceJSONField, RoleSerializerField
-from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
@@ -124,113 +132,6 @@ from .nested_serializers import (  # noqa: F401
 #
 
 logger = logging.getLogger(__name__)
-
-
-class NotesSerializerMixin(BaseModelSerializer):
-    """Extend Serializer with a `notes` field."""
-
-    notes_url = serializers.SerializerMethodField()
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that fields includes "notes_url" field if applicable."""
-        fields = list(super().get_field_names(declared_fields, info))
-        if hasattr(self.Meta.model, "notes"):
-            self.extend_field_names(fields, "notes_url")
-        return fields
-
-    @extend_schema_field(serializers.URLField())
-    def get_notes_url(self, instance):
-        try:
-            notes_url = get_route_for_model(instance, "notes", api=True)
-            return reverse(notes_url, args=[instance.id], request=self.context["request"])
-        except NoReverseMatch:
-            model_name = type(instance).__name__
-            logger.warning(
-                (
-                    f"Notes feature is not available for model {model_name}. "
-                    "Please make sure to: "
-                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
-                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
-                    "before including NotesSerializerMixin in the model serializer"
-                )
-            )
-
-            return None
-
-
-class NautobotModelSerializer(
-    RelationshipModelSerializerMixin, CustomFieldModelSerializerMixin, NotesSerializerMixin, ValidatedModelSerializer
-):
-    """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
-
-    Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
-    """
-
-
-class StatusModelSerializerMixin(BaseModelSerializer):
-    """Mixin to add `status` choice field to model serializers."""
-
-    content_types = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()),
-        required=False,
-        many=True,
-    )
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that "status" field is always present."""
-        fields = list(super().get_field_names(declared_fields, info))
-        if self.__class__.__name__ == "NestedSerializer":
-            return fields
-        self.extend_field_names(fields, "status")
-        return fields
-
-
-class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
-    """NestedSerializer field for `Tag` object fields."""
-
-
-class TaggedModelSerializerMixin(BaseModelSerializer):
-    tags = TagSerializerField(many=True, required=False)
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that 'tags' field is always present."""
-        fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "tags")
-        return fields
-
-    def create(self, validated_data):
-        tags = validated_data.pop("tags", None)
-        instance = super().create(validated_data)
-
-        if tags is not None:
-            return self._save_tags(instance, tags)
-        return instance
-
-    def update(self, instance, validated_data):
-        tags = validated_data.pop("tags", None)
-
-        # Cache tags on instance for change logging
-        instance._tags = tags or []
-
-        instance = super().update(instance, validated_data)
-
-        if tags is not None:
-            return self._save_tags(instance, tags)
-        return instance
-
-    def _save_tags(self, instance, tags):
-        if tags:
-            instance.tags.set([t.name for t in tags])
-        else:
-            instance.tags.clear()
-
-        return instance
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(TaggedModelSerializerMixin)
-class TaggedObjectSerializer(TaggedModelSerializerMixin):
-    pass
 
 
 #
@@ -480,11 +381,10 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
-    custom_field = NestedCustomFieldSerializer()
 
     class Meta:
         model = CustomFieldChoice
-        fields = ["url", "custom_field", "value", "weight"]
+        fields = "__all__"
 
 
 #
@@ -500,17 +400,7 @@ class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = CustomLink
-        fields = (
-            "url",
-            "target_url",
-            "name",
-            "content_type",
-            "text",
-            "weight",
-            "group_name",
-            "button_class",
-            "new_window",
-        )
+        fields = "__all__"
 
 
 #
@@ -525,6 +415,7 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     )
     # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
     # using their own endpoint at /api/extras/dynamic-group-memberships/.
+    # TODO #3024: How to get rid of this?
     children = NestedDynamicGroupMembershipSerializer(source="dynamic_group_memberships", read_only=True, many=True)
 
     class Meta:
@@ -543,12 +434,10 @@ class DynamicGroupSerializer(NautobotModelSerializer):
 
 class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
-    group = NestedDynamicGroupSerializer()
-    parent_group = NestedDynamicGroupSerializer()
 
     class Meta:
         model = DynamicGroupMembership
-        fields = ["url", "group", "parent_group", "operator", "weight"]
+        fields = "__all__"
 
 
 #
@@ -612,9 +501,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
-
-    secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
-
     provided_contents = MultipleChoiceJSONField(
         choices=lambda: get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
@@ -623,16 +509,7 @@ class GitRepositorySerializer(NautobotModelSerializer):
 
     class Meta:
         model = GitRepository
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "remote_url",
-            "branch",
-            "secrets_group",
-            "current_head",
-            "provided_contents",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         """
@@ -710,6 +587,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         PolymorphicProxySerializer(
             component_name="ImageAttachmentParent",
             resource_type_field_name="object_type",
+            # TODO #3024: How to get rid of this with the circular import problem for NautobotModelSerializers.
             serializers=[
                 NestedDeviceSerializer,
                 NestedLocationSerializer,
@@ -796,7 +674,6 @@ class JobVariableSerializer(serializers.Serializer):
     help_text = serializers.CharField(read_only=True, required=False)
     default = serializers.JSONField(read_only=True, required=False)
     required = serializers.BooleanField(read_only=True, required=False)
-
     min_length = serializers.IntegerField(read_only=True, required=False)
     max_length = serializers.IntegerField(read_only=True, required=False)
     min_value = serializers.IntegerField(read_only=True, required=False)
@@ -808,9 +685,6 @@ class JobVariableSerializer(serializers.Serializer):
 class JobRunResponseSerializer(serializers.Serializer):
     """Serializer representing responses from the JobModelViewSet.run() POST endpoint."""
 
-    schedule = NestedScheduledJobSerializer(read_only=True, required=False)
-    job_result = NestedJobResultSerializer(read_only=True, required=False)
-
 
 #
 # Job Results
@@ -819,28 +693,12 @@ class JobRunResponseSerializer(serializers.Serializer):
 
 class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
-    user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
-    job_model = NestedJobSerializer(read_only=True)
     obj_type = ContentTypeField(read_only=True)
-    scheduled_job = NestedScheduledJobSerializer(read_only=True)
 
     class Meta:
         model = JobResult
-        fields = [
-            "url",
-            "date_created",
-            "date_done",
-            "name",
-            "job_model",
-            "obj_type",
-            "status",
-            "user",
-            "data",
-            "task_id",
-            "task_kwargs",
-            "scheduled_job",
-        ]
+        fields = "__all__"
 
 
 #
@@ -850,31 +708,10 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
-    user = NestedUserSerializer(read_only=True)
-    job_model = NestedJobSerializer(read_only=True)
-    approved_by_user = NestedUserSerializer(read_only=True)
 
     class Meta:
         model = ScheduledJob
-        fields = [
-            "url",
-            "name",
-            "user",
-            "job_model",
-            "task",
-            "interval",
-            "queue",
-            "job_class",
-            "last_run_at",
-            "total_run_count",
-            "date_changed",
-            "description",
-            "user",
-            "approved_by_user",
-            "approval_required",
-            "approved_at",
-            "crontab",
-        ]
+        fields = "__all__"
 
 
 #
@@ -895,7 +732,6 @@ class JobClassSerializer(serializers.Serializer):
     description = serializers.CharField(max_length=255, required=False, read_only=True)
     test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
     vars = serializers.SerializerMethodField(read_only=True)
-    result = NestedJobResultSerializer(required=False)
 
     @extend_schema_field(serializers.DictField)
     def get_vars(self, instance):
@@ -959,6 +795,7 @@ class JobHookSerializer(NautobotModelSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
+    # TODO #3024: How to get rid of this?
     schedule = NestedScheduledJobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
@@ -1053,22 +890,12 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 class NoteSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
-    user = NestedUserSerializer(read_only=True)
     assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
     assigned_object = serializers.SerializerMethodField()
 
     class Meta:
         model = Note
-        fields = [
-            "url",
-            "user",
-            "user_name",
-            "assigned_object_type",
-            "assigned_object_id",
-            "assigned_object",
-            "note",
-            "slug",
-        ]
+        fields = "__all__"
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -1100,25 +927,13 @@ class NoteInputSerializer(serializers.Serializer):
 
 class ObjectChangeSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:objectchange-detail")
-    user = NestedUserSerializer(read_only=True)
     action = ChoiceField(choices=ObjectChangeActionChoices, read_only=True)
     changed_object_type = ContentTypeField(read_only=True)
     changed_object = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ObjectChange
-        fields = [
-            "url",
-            "time",
-            "user",
-            "user_name",
-            "request_id",
-            "action",
-            "changed_object_type",
-            "changed_object_id",
-            "changed_object",
-            "object_data",
-        ]
+        fields = "__all__"
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -1194,35 +1009,14 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()),
     )
 
-    relationship = NestedRelationshipSerializer()
-
     class Meta:
         model = RelationshipAssociation
-        fields = [
-            "url",
-            "relationship",
-            "source_type",
-            "source_id",
-            "destination_type",
-            "destination_id",
-        ]
+        fields = "__all__"
 
 
 #
 # Roles
 #
-
-
-class RoleModelSerializerMixin(BaseModelSerializer):
-    """Mixin to add `role` choice field to model serializers."""
-
-    role = RoleSerializerField(required=False)
-
-
-class RoleRequiredRoleModelSerializerMixin(BaseModelSerializer):
-    """Mixin to add `role` choice field to model serializers."""
-
-    role = RoleSerializerField()
 
 
 class RoleSerializer(NautobotModelSerializer):
@@ -1278,6 +1072,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
     # a `through` table, that appears very non-trivial to implement. For now we have this as a
     # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
     # api/extras/secrets-group-associations/ REST endpoint as appropriate.
+    # TODO #3024: How to get rid of this?
     secrets = NestedSecretsGroupAssociationSerializer(source="secrets_group_associations", many=True, read_only=True)
 
     class Meta:
@@ -1295,18 +1090,10 @@ class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
     """Serializer for `SecretsGroupAssociation` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
-    secrets_group = NestedSecretsGroupSerializer()
-    secret = NestedSecretSerializer()
 
     class Meta:
         model = SecretsGroupAssociation
-        fields = [
-            "url",
-            "secrets_group",
-            "access_type",
-            "secret_type",
-            "secret",
-        ]
+        fields = "__all__"
 
 
 #
