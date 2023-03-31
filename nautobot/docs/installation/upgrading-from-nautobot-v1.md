@@ -145,6 +145,7 @@
 | InventoryItem      | `lft`            |
 |                    | `rght`           |
 |                    | `tree_id`        |
+| IPAddress          | `vrf`            |
 | Location           | `site`           |
 | Rack               | `site`           |
 | RackGroup          | `lft`            |
@@ -216,6 +217,15 @@ The following changes have been made to the `Prefix` model.
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
+#### IPAddressd Parenting Concrete Relationship
+
+The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
+
+| Removed                | Replaced With   |
+|------------------------|-----------------|
+| `get_child_prefixes()` | `descendants()` |
+
+
 ## GraphQL and REST API Changes
 
 ### API Behavior Changes
@@ -263,11 +273,13 @@ The following changes have been made to the `Prefix` model.
 |                         | `local_context_schema` | `local_config_context_schema` |
 | FrontPortTemplate       | `rear_port`            | `rear_port_template`          |
 | Interface               | `count_ipaddresses`    | `ip_address_count`            |
+| IPAddress               | `family`               | `ip_version`                  |
 | InventoryItem           | `_depth`               | `tree_depth`                  |
 | Location                | `virtualmachine_count` | `virtual_machine_count`       |
 | Manufacturer            | `devicetype_count`     | `device_type_count`           |
 |                         | `inventoryitem_count`  | `inventory_item_count`        |
 | Platform                | `virtualmachine_count` | `virtual_machine_count`       |
+| Prefix                  | `family`               | `ip_version`                  |
 | PowerOutletTemplate     | `power_port`           | `power_port_template`         |
 | PowerPanel              | `powerfeed_count`      | `power_feed_count`            |
 | Rack                    | `group`                | `rack_group`                  |
@@ -288,7 +300,6 @@ The following changes have been made to the `Prefix` model.
 | Model/Endpoint                    | Removed Field        | Comments                                              |
 |-----------------------------------|----------------------|-------------------------------------------------------|
 | `/api/status/`                    | `rq-workers-running` | Removed as RQ is no longer supported                  |
-| `/ipam/prefixes/`                 | `is_pool`            | Functionality replaced by `type` field                |
 | `/circuits/circuit-terminations/` | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/virtualization/clusters/`       | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/extras/config-contexts/`        | `regions`            | `Site` and `Region` models are replaced by `Location` |
@@ -299,6 +310,8 @@ The following changes have been made to the `Prefix` model.
 | `/dcim/power-panels/`             | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/dcim/racks/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/dcim/rack-groups/`              | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/ipam/ip-addresses/`             | `vrf`                | VRFs are now inherited from parent `Prefix`           |
+| `/ipam/prefixes/`                 | `is_pool`            | Functionality replaced by `type` field                |
 | `/ipam/prefixes/`                 | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/ipam/vlans/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/ipam/vlangroups/`               | `site`               | `Site` and `Region` models are replaced by `Location` |
@@ -354,7 +367,8 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | InventoryItem           | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
 |                         | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
 |                         | `tag`                     | `tags`                           | `/dcim/inventory-items/?tags=<uuid/slug>`                                 |
-| IPAddress               | `tag`                     | `tags`                           | `/ipam/ip-addresses/?tags=<uuid/slug>`                                    |
+| IPAddress               | `family`                  | `ip_version`                     | `/ipam/ip-addresses/?ip_version=<4/6>`                                    |
+|                         | `tag`                     | `tags`                           | `/ipam/ip-addresses/?tags=<uuid/slug>`                                    |
 | Job                     | `tag`                     | `tags`                           | `/extras/jobs/?tags=<uuid/slug>`                                          |
 | Location                | `tag`                     | `tags`                           | `/dcim/locations/?tags=uuid/slug>`                                        |
 | ObjectPermission        | `group`                   | `groups`                         | `/users/permissions/?groups=<slug>`                                       |
@@ -365,7 +379,8 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | PowerOutlet             | `cabled`                  | `has_cable`                      | `/dcim/power-outlets/?has_cable=True/False`                               |
 | PowerPanel              | `tag`                     | `tags`                           | `/dcim/power-panels/?tags=<uuid/slug>`                                    |
 | PowerPort               | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
-| Prefix                  | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
+| Prefix                  | `family`                  | `ip_version`                     | `/ipam/prefixes/?ip_version=<4/6>`                                        |
+|                         | `is_pool`                 | `type`                           | `/ipam/prefixes/?type=<container/network/pool>`                           |
 |                         | `tag`                     | `tags`                           | `/ipam/prefixes/?tags=<uuid/slug>`                                        |
 | Provider                | `tag`                     | `tags`                           | `/circuits/provider/?tags=<uuid/slug>`                                    |
 | ProviderNetwork         | `tag`                     | `tags`                           | `/circuits/provider-networks/?tags=<uuid/slug>`                           |

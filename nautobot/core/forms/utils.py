@@ -85,15 +85,15 @@ def expand_alphanumeric_pattern(string):
             yield f"{lead}{i}{remnant}"
 
 
-def expand_ipaddress_pattern(string, family):
+def expand_ipaddress_pattern(string, ip_version):
     """
     Expand an IP address pattern into a list of strings. Examples:
       '192.0.2.[1,2,100-250]/24' => ['192.0.2.1/24', '192.0.2.2/24', '192.0.2.100/24' ... '192.0.2.250/24']
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
-    if family not in [4, 6]:
-        raise Exception(f"Invalid IP address family: {family}")
-    if family == 4:
+    if ip_version not in [4, 6]:
+        raise Exception(f"Invalid IP address version: {ip_version}")
+    if ip_version == 4:
         regex = forms.IP4_EXPANSION_PATTERN
         base = 10
     else:
@@ -103,10 +103,10 @@ def expand_ipaddress_pattern(string, family):
     parsed_range = parse_numeric_range(pattern, base)
     for i in parsed_range:
         if re.search(regex, remnant):
-            for string2 in expand_ipaddress_pattern(remnant, family):
-                yield "".join([lead, format(i, "x" if family == 6 else "d"), string2])
+            for string2 in expand_ipaddress_pattern(remnant, ip_version):
+                yield "".join([lead, format(i, "x" if ip_version == 6 else "d"), string2])
         else:
-            yield "".join([lead, format(i, "x" if family == 6 else "d"), remnant])
+            yield "".join([lead, format(i, "x" if ip_version == 6 else "d"), remnant])
 
 
 def add_blank_choice(choices):

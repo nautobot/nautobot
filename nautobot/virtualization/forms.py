@@ -294,7 +294,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         if self.instance.present_in_database:
 
             # Compile list of choices for primary IPv4 and IPv6 addresses
-            for family in [4, 6]:
+            for ip_version in [4, 6]:
                 ip_choices = [(None, "---------")]
 
                 # Gather PKs of all interfaces belonging to this VM
@@ -311,7 +311,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                             f"{assignment.ip_address.address} ({assignment.vm_interface})",
                         )
                         for assignment in interface_ip_assignments
-                        if assignment.ip_address.ip_version == family
+                        if assignment.ip_address.ip_version == ip_version
                     ]
                     ip_choices.append(("Interface IPs", ip_list))
 
@@ -324,11 +324,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                             [
                                 (ip.id, f"{ip.address} (NAT)")
                                 for ip in ip_assignment.ip_address.nat_outside_list.all()
-                                if ip.ip_version == family
+                                if ip.ip_version == ip_version
                             ]
                         )
                     ip_choices.append(("NAT IPs", nat_ips))
-                self.fields[f"primary_ip{family}"].choices = ip_choices
+                self.fields[f"primary_ip{ip_version}"].choices = ip_choices
 
         else:
 

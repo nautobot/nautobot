@@ -53,6 +53,7 @@ class NamespaceViewSet(NautobotModelViewSet):
 class VRFViewSet(NautobotModelViewSet):
     queryset = (
         VRF.objects.select_related("tenant").prefetch_related("import_targets", "export_targets", "tags")
+        # FIXME(jathan): See if we need to revise the counts for prefixes/ips, here?
         # .annotate(
         #     ipaddress_count=count_related(IPAddress, "vrf"),
         #     prefix_count=count_related(Prefix, "vrf"),
@@ -95,7 +96,6 @@ class PrefixViewSet(NautobotModelViewSet):
         "status",
         "tenant",
         "vlan",
-        # "vrf__tenant",
         "namespace",
     ).prefetch_related("tags")
     serializer_class = serializers.PrefixSerializer
@@ -142,7 +142,7 @@ class PrefixViewSet(NautobotModelViewSet):
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
-                            requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                            requested_prefix["namespace"] = prefix.namespace.pk
                             break
                     else:
                         return Response(
@@ -172,7 +172,7 @@ class PrefixViewSet(NautobotModelViewSet):
                 many=True,
                 context={
                     "request": request,
-                    "vrf": prefix.vrf,
+                    "namespace": prefix.namespace,
                 },
             )
 
@@ -223,12 +223,12 @@ class PrefixViewSet(NautobotModelViewSet):
                         status=status.HTTP_204_NO_CONTENT,
                     )
 
-                # Assign addresses from the list of available IPs and copy VRF assignment from the parent prefix
+                # Assign addresses from the list of available IPs and copy Namespace assignment from the parent Prefix
                 available_ips = iter(available_ips)
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                    requested_ip["namespace"] = prefix.namespace.pk
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request}
@@ -263,7 +263,7 @@ class PrefixViewSet(NautobotModelViewSet):
                 context={
                     "request": request,
                     "prefix": prefix.prefix,
-                    "vrf": prefix.vrf,
+                    "namespace": prefix.namespace,
                 },
             )
 
@@ -277,11 +277,11 @@ class PrefixViewSet(NautobotModelViewSet):
 
 class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
+        "parent",
         "nat_inside",
         "status",
         "role",
         "tenant",
-        # "vrf__tenant",
     ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet

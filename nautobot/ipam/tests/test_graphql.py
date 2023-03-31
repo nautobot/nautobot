@@ -12,18 +12,18 @@ class TestPrefix(APITestCase):
         super().setUp()
         self.api_url = reverse("graphql-api")
         self.statuses = Status.objects.get_for_model(Prefix)
-        self.prefixv4 = Prefix.objects.ip_family(4).first()
-        self.prefixv6 = Prefix.objects.ip_family(6).first()
+        self.prefixv4 = Prefix.objects.filter(ip_version=4).first()
+        self.prefixv6 = Prefix.objects.filter(ip_version=6).first()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_prefix_family(self):
-        """Test family is available for a Prefix via GraphQL."""
+    def test_prefix_ip_version(self):
+        """Test ip_version is available for a Prefix via GraphQL."""
         get_prefixes_query = """
         query {
             prefixes {
                 prefix
                 prefix_length
-                family
+                ip_version
             }
         }
         """
@@ -37,4 +37,4 @@ class TestPrefix(APITestCase):
         for prefix in prefixes:
             self.assertIsInstance(prefix["prefix"], str)
             self.assertIsInstance(prefix["prefix_length"], int)
-            self.assertIn(prefix["family"], [4, 6])
+            self.assertIn(prefix["ip_version"], [4, 6])

@@ -1343,8 +1343,8 @@ query {
                 IPAddress.objects.filter(host="10.0.1.1").count(),
             ),
             (
-                "family: 4",
-                IPAddress.objects.ip_family(4).count(),
+                "ip_version: 4",
+                IPAddress.objects.filter(ip_version=4).count(),
             ),
             (
                 f'status: "{self.ip_statuses[0].slug}"',
@@ -1410,7 +1410,7 @@ query {
                 virtual_machine { name }
             }
         }
-        family
+        ip_version
         interface { name }
         vminterface { name }
     }
@@ -1423,7 +1423,7 @@ query {
                 entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
             )
             self.assertIn("assigned_object", entry)
-            self.assertIn(entry["family"], (4, 6))
+            self.assertIn(entry["ip_version"], (4, 6))
             if entry["address"] == str(self.vmipaddr.address):
                 self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
                 self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)

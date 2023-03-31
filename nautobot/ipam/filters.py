@@ -107,7 +107,6 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
 
     class Meta:
         model = VRF
-        # fields = ["id", "name", "rd", "enforce_unique"]
         fields = ["id", "name", "rd", "tags"]
 
 
@@ -159,10 +158,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(
-        method="filter_ip_family",
-        label="Family",
-    )
 
     def search(self, qs, name, value):
         value = value.strip()
@@ -171,9 +166,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
             return qs
 
         return qs.string_search(value)
-
-    def filter_ip_family(self, qs, name, value):
-        return qs.ip_family(value)
 
 
 class PrefixFilterSet(

@@ -121,12 +121,13 @@ class NestedVLANSerializer(WritableNestedSerializer):
 
 class NestedPrefixSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     prefix = IPFieldSerializer()
+    namespace = NestedNamespaceSerializer()
 
     class Meta:
         model = models.Prefix
-        fields = ["id", "url", "family", "prefix"]
+        fields = ["id", "url", "ip_version", "namespace", "prefix"]
 
 
 #
@@ -136,12 +137,13 @@ class NestedPrefixSerializer(WritableNestedSerializer):
 
 class NestedIPAddressSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     address = IPFieldSerializer()
+    parent = IPFieldSerializer()
 
     class Meta:
         model = models.IPAddress
-        fields = ["id", "url", "family", "address"]
+        fields = ["id", "url", "ip_version", "address", "parent"]
 
 
 #

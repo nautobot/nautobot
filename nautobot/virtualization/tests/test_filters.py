@@ -686,10 +686,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         vminterfaces[2].tagged_vlans.add(cls.vlan2)
 
         # Assign primary IPs for filtering
-        ip_address4 = IPAddress.objects.ip_family(4).first()
+        ip_address4 = IPAddress.objects.filter(ip_version=4).first()
         vminterfaces[0].add_ip_addresses(ip_address4)
         ip_address4.validated_save()
-        ip_address6 = IPAddress.objects.ip_family(6).first()
+        ip_address6 = IPAddress.objects.filter(ip_version=6).first()
         vminterfaces[1].add_ip_addresses(ip_address6)
         ip_address6.validated_save()
 

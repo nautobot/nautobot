@@ -382,7 +382,7 @@ class ExpandableIPAddressField(django_forms.CharField):
             )
 
     def to_python(self, value):
-        # Hackish address family detection but it's all we have to work with
+        # Hackish address version detection but it's all we have to work with
         if "." in value and re.search(forms.IP4_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 4))
         elif ":" in value and re.search(forms.IP6_EXPANSION_PATTERN, value):

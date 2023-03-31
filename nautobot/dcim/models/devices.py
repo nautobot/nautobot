@@ -668,7 +668,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         # Validate primary IP addresses
         vc_interfaces = self.vc_interfaces.all()
         if self.primary_ip4:
-            if self.primary_ip4.family != 4:
+            if self.primary_ip4.ip_version != 4:
                 raise ValidationError({"primary_ip4": f"{self.primary_ip4} is not an IPv4 address."})
             if ipam_models.IPAddressToInterface.objects.filter(
                 ip_address=self.primary_ip4, interface__in=vc_interfaces
@@ -686,7 +686,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                     {"primary_ip4": f"The specified IP address ({self.primary_ip4}) is not assigned to this device."}
                 )
         if self.primary_ip6:
-            if self.primary_ip6.family != 6:
+            if self.primary_ip6.ip_version != 6:
                 raise ValidationError({"primary_ip6": f"{self.primary_ip6} is not an IPv6 address."})
             if ipam_models.IPAddressToInterface.objects.filter(
                 ip_address=self.primary_ip6, interface__in=vc_interfaces

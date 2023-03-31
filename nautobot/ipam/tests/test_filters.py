@@ -172,9 +172,9 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             count = self.queryset.string_search(value).count()
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), count)
 
-    def test_family(self):
-        params = {"family": "6"}
-        ipv6_prefixes = self.queryset.ip_family(6)
+    def test_ip_version(self):
+        params = {"ip_version": "6"}
+        ipv6_prefixes = self.queryset.filter(ip_version=6)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
 
     def test_within(self):
@@ -490,11 +490,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             params = {"q": ""}
             self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
-    def test_family(self):
-        params = {"family": "6"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.ip_family(6))
-        params = {"family": "4"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.ip_family(4))
+    def test_ip_version(self):
+        params = {"ip_version": "6"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
+        )
+        params = {"ip_version": "4"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
+        )
 
     def test_dns_name(self):
         names = list(self.queryset.exclude(dns_name="").distinct_values_list("dns_name", flat=True)[:2])
@@ -504,12 +508,12 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_parent(self):
-        ipv4_parent = self.queryset.ip_family(4).first().address.supernet()[-1]
+        ipv4_parent = self.queryset.filter(ip_version=4).first().address.supernet()[-1]
         params = {"parent": str(ipv4_parent)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent)
         )
-        ipv6_parent = self.queryset.ip_family(6).first().address.supernet()[-1]
+        ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
         params = {"parent": str(ipv6_parent)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv6_parent)
@@ -517,8 +521,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_filter_address(self):
         """Check IPv4 and IPv6, with and without a mask"""
-        ipv4_addresses = self.queryset.ip_family(4)[:2]
-        ipv6_addresses = self.queryset.ip_family(6)[:2]
+        ipv4_addresses = self.queryset.filter(ip_version=4)[:2]
+        ipv6_addresses = self.queryset.filter(ip_version=6)[:2]
         # single ipv4 address with mask: 10.0.0.1/24
         params = {"address": [str(ipv4_addresses[0].address)]}
         self.assertQuerysetEqualAndNotEmpty(

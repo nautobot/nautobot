@@ -9,7 +9,6 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     """Graphql Type Object for IPAddress model."""
 
     address = graphene.String()
-    family = graphene.Int()
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
     nat_outside = graphene.Field(lambda: IPAddressType)
@@ -18,9 +17,6 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     class Meta:
         model = models.IPAddress
         filterset_class = filters.IPAddressFilterSet
-
-    def resolve_family(self, args):
-        return self.family
 
     # TODO: update to work with interface M2M
     def resolve_interface(self, args):

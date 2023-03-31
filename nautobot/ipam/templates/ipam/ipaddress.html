@@ -32,12 +32,12 @@
             </div>
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    <td>Family</td>
-                    <td>IPv{{ object.family }}</td>
-                </tr>
-                <tr>
                     <td>Namespace</td>
                     <td>{{ object.parent.namespace|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>IP Version</td>
+                    <td>IPv{{ object.ip_version }}</td>
                 </tr>
                 <tr>
                     <td>Status</td>

@@ -18,7 +18,7 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.choices import IPAddressVersionChoices, PrefixTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     IPAddress,
@@ -287,9 +287,9 @@ class PrefixLengthSerializer(serializers.Serializer):
             raise serializers.ValidationError({"prefix_length": "this field must be int type"})
 
         prefix = self.context.get("prefix")
-        if prefix.family == 4 and requested_prefix > 32:
+        if prefix.ip_version == 4 and requested_prefix > 32:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv4"})
-        elif prefix.family == 6 and requested_prefix > 128:
+        elif prefix.ip_version == 6 and requested_prefix > 128:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv6"})
         return data
 
@@ -299,15 +299,16 @@ class AvailablePrefixSerializer(serializers.Serializer):
     Representation of a prefix which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     prefix = serializers.CharField(read_only=True)
-    # vrf = NestedVRFSerializer(read_only=True)
+    namespace = NestedNamespaceSerializer(read_only=True)
 
     def to_representation(self, instance):
         return OrderedDict(
             [
-                ("family", instance.version),
+                ("ip_version", instance.version),
                 ("prefix", str(instance)),
+                ("namepace", instance.namespace),
             ]
         )
 
@@ -321,7 +322,6 @@ class IPAddressSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
-    family = ChoiceField(choices=IPAddressVersionChoices, read_only=True)
     address = IPFieldSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
@@ -331,7 +331,7 @@ class IPAddressSerializer(
         model = IPAddress
         fields = [
             "url",
-            "family",
+            "ip_version",
             "address",
             "tenant",
             "status",
@@ -341,7 +341,7 @@ class IPAddressSerializer(
             "dns_name",
             "description",
         ]
-        read_only_fields = ["family"]
+        read_only_fields = ["ip_version"]
 
 
 class AvailableIPSerializer(serializers.Serializer):
@@ -349,17 +349,17 @@ class AvailableIPSerializer(serializers.Serializer):
     Representation of an IP address which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     address = serializers.CharField(read_only=True)
-    # vrf = NestedVRFSerializer(read_only=True)
+    namespace = NestedNamespaceSerializer(read_only=True)
     # TODO: Should be requesting a prefix instead
 
     def to_representation(self, instance):
         return OrderedDict(
             [
-                ("family", self.context["prefix"].version),
+                ("ip_verison", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                # ("vrf", vrf),
+                ("namespace", instance.namespace),
             ]
         )
 

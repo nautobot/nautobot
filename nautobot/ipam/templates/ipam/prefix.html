@@ -62,6 +62,16 @@
                         <td>IPv{{ object.ip_version }}</td>
                     </tr>
                     <tr>
+                        <td>Status</td>
+                        <td>
+                            {{ object.status| hyperlinked_object_with_color }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Role</td>
+                        <td>{{ object.role | hyperlinked_object_with_color }}</td>
+                    </tr>
+                    <tr>
                         <td>Type</td>
                         <td>
                             {{ object.get_type_display }}
@@ -88,16 +98,6 @@
                             {% endif %}
                             {{ object.vlan|hyperlinked_object }}
                         </td>
-                    </tr>
-                    <tr>
-                        <td>Status</td>
-                        <td>
-                            {{ object.status| hyperlinked_object_with_color }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Role</td>
-                        <td>{{ object.role | hyperlinked_object_with_color }}</td>
                     </tr>
                     <tr>
                         <td>RIR</td>

@@ -178,8 +178,8 @@ class ExpandIPAddress(TestCase):
 
         self.assertEqual(sorted(forms.expand_ipaddress_pattern(input_, 6)), output)
 
-    def test_invalid_address_family(self):
-        with self.assertRaisesRegex(Exception, "Invalid IP address family: 5"):
+    def test_invalid_address_version(self):
+        with self.assertRaisesRegex(Exception, "Invalid IP address version: 5"):
             sorted(forms.expand_ipaddress_pattern(None, 5))
 
     def test_invalid_non_pattern(self):

@@ -115,7 +115,7 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
-    brief_fields = ["display", "family", "id", "prefix", "url"]
+    brief_fields = ["display", "id", "ip_version", "namespace", "prefix", "url"]
     choices_fields = []
 
     @classmethod
@@ -152,7 +152,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of all available prefixes within a parent prefix.
         """
         prefix = (
-            Prefix.objects.ip_family(6)
+            Prefix.objects.filter(ip_version=6)
             .filter(prefix_length__lt=128)
             .exclude(type=choices.PrefixTypeChoices.TYPE_CONTAINER)
             .first()
@@ -372,7 +372,7 @@ class ParallelPrefixTest(APITransactionTestCase):
 
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
-    brief_fields = ["address", "display", "family", "id", "url"]
+    brief_fields = ["address", "display", "id", "ip_version", "parent", "url"]
 
     @classmethod
     def setUpTestData(cls):
