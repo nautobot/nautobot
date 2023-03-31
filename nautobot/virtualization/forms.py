@@ -311,7 +311,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                             f"{assignment.ip_address.address} ({assignment.vm_interface})",
                         )
                         for assignment in interface_ip_assignments
-                        if assignment.ip_address.family == family
+                        if assignment.ip_address.ip_version == family
                     ]
                     ip_choices.append(("Interface IPs", ip_list))
 
@@ -324,7 +324,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                             [
                                 (ip.id, f"{ip.address} (NAT)")
                                 for ip in ip_assignment.ip_address.nat_outside_list.all()
-                                if ip.family == family
+                                if ip.ip_version == family
                             ]
                         )
                     ip_choices.append(("NAT IPs", nat_ips))

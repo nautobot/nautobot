@@ -38,5 +38,9 @@ def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kw
     # TODO(jathan): Temporary workaround until a formset to add/remove/update VRFs <-> Devices and
     # optionally setting RD/name on assignment. k
     if action == "post_add":
-        for assignment in instance.device_assignments.iterator():
-            assignment.validated_save()
+        if isinstance(instance, VRF):
+            for assignment in instance.device_assignments.iterator():
+                assignment.validated_save()
+        else:
+            for assignment in instance.vrf_assignments.iterator():
+                assignment.validated_save()

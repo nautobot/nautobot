@@ -1656,6 +1656,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         query_params={"group_id": "$cluster_group"},
     )
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+    )
     comments = CommentField()
 
     class Meta:
@@ -1681,6 +1686,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "cluster",
             "tenant_group",
             "tenant",
+            "vrfs",
             "comments",
             "tags",
             "local_config_context_data",
@@ -1721,7 +1727,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                             f"{assignment.ip_address.address} ({assignment.interface})",
                         )
                         for assignment in interface_ip_assignments
-                        if assignment.ip_address.family == family
+                        if assignment.ip_address.ip_version == family
                     ]
                     ip_choices.append(("Interface IPs", ip_list))
 
@@ -1734,7 +1740,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                             [
                                 (ip.id, f"{ip.address} (NAT)")
                                 for ip in ip_assignment.ip_address.nat_outside_list.all()
-                                if ip.family == family
+                                if ip.ip_version == family
                             ]
                         )
                     ip_choices.append(("NAT IPs", nat_ips))
@@ -1755,6 +1761,8 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
+
         else:
 
             # An object that doesn't exist yet can't have any IPs assigned to it
@@ -1767,6 +1775,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         position = self.data.get("position") or self.initial.get("position")
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):

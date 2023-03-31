@@ -98,8 +98,6 @@ class VRFFactory(PrimaryModelFactory):
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    enforce_unique = NautobotBoolIterator()
-
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 

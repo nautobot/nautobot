@@ -134,20 +134,13 @@ class VRF(PrimaryModel):
         blank=True,
         null=True,
     )
-    # TODO(jathan): Nuke enforce_unique
-    enforce_unique = models.BooleanField(
-        default=True,
-        verbose_name="Enforce unique space",
-        help_text="Prevent duplicate prefixes/IP addresses within this VRF",
-    )
     description = models.CharField(max_length=200, blank=True)
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
-    csv_headers = ["name", "rd", "tenant", "enforce_unique", "description"]
+    csv_headers = ["name", "rd", "tenant", "description"]
     clone_fields = [
         "tenant",
-        "enforce_unique",
         "description",
     ]
 
@@ -171,7 +164,6 @@ class VRF(PrimaryModel):
             self.name,
             self.rd,
             self.tenant.name if self.tenant else None,
-            str(self.enforce_unique),
             self.description,
         )
 

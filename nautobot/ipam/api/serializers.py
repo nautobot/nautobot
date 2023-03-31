@@ -109,7 +109,6 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "rd",
             "namespace",
             "tenant",
-            "enforce_unique",
             "description",
             "import_targets",
             "export_targets",

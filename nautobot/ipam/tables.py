@@ -238,7 +238,6 @@ class VRFTable(BaseTable):
     name = tables.LinkColumn()
     # rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
-    enforce_unique = BooleanColumn(verbose_name="Unique")
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     tags = TagColumn(url_name="ipam:vrf_list")
@@ -251,7 +250,6 @@ class VRFTable(BaseTable):
             # "rd",
             "namespace",
             "tenant",
-            # "enforce_unique",
             "description",
             "import_targets",
             "export_targets",
@@ -264,15 +262,15 @@ class VRFTable(BaseTable):
 class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
-    vrf = tables.LinkColumn(verbose_name="VRF")
-    device = tables.LinkColumn()
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    device = tables.Column(linkify=lambda record: record.device.get_absolute_url(), accessor="device.name")
     rd = tables.Column(verbose_name="VRF RD")
-    name = tables.Column(verbose_name="VRF Name")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
-        fields = ("vrf", "device", "name", "rd", "tenant")
+        orderable = False
+        fields = ("vrf", "device", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):

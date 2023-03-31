@@ -4,7 +4,6 @@ from nautobot.core.forms import (
     add_blank_choice,
     AddressFieldMixin,
     BootstrapMixin,
-    BulkEditNullBooleanSelect,
     CSVChoiceField,
     CSVModelChoiceField,
     DateTimePicker,
@@ -107,7 +106,6 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "name",
             "rd",
             "namespace",
-            # "enforce_unique",
             "description",
             "import_targets",
             "export_targets",
@@ -142,9 +140,6 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    enforce_unique = forms.NullBooleanField(
-        required=False, widget=BulkEditNullBooleanSelect(), label="Enforce unique space"
-    )
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:

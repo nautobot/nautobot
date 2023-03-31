@@ -67,16 +67,6 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
         params = {"rd": [vrfs[0].rd, vrfs[1].rd]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_enforce_unique(self):
-        params = {"enforce_unique": "true"}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=True), ordered=False
-        )
-        params = {"enforce_unique": "false"}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=False), ordered=False
-        )
-
     def test_import_target(self):
         route_targets = list(RouteTarget.objects.filter(importing_vrfs__isnull=False).distinct())[:2]
         filter_params = [

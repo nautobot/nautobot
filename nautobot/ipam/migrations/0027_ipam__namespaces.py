@@ -176,4 +176,8 @@ class Migration(migrations.Migration):
             model_name="prefix",
             name="vrf",
         ),
+        migrations.RemoveField(
+            model_name="vrf",
+            name="enforce_unique",
+        ),
     ]
