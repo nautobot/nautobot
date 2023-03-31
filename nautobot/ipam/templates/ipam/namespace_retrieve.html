@@ -21,12 +21,9 @@
                 </tr>
             </table>
         </div>
-    {% include "utilities/obj_table.html" with table=prefix_table table_template="panel_table.html" heading="Prefixes" disable_pagination=False %}
 {% endblock content_left_page %}
 
-{% block content_right_page %}
-{% comment %}
-    {% include 'panel_table.html' with table=vrf_table heading="VRFs" %}
-{% endcomment %}
+{% block content_full_width_page %}
     {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="VRFs" disable_pagination=False %}
-{% endblock content_right_page %}
+    {% include "utilities/obj_table.html" with table=prefix_table table_template="panel_table.html" heading="Prefixes" disable_pagination=False %}
+{% endblock content_full_width_page %}

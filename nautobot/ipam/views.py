@@ -54,13 +54,13 @@ class NamespaceUIViewSet(
         if self.action == "retrieve":
             vrfs = instance.vrfs.restrict(request.user, "view")
             vrf_table = tables.VRFTable(vrfs, orderable=False)
-            vrf_table.columns.hide("namespace")
+            vrf_table.exclude = ("namespace",)
             context["vrf_table"] = vrf_table
 
             prefixes = instance.prefixes.restrict(request.user, "view")
             prefix_count = prefixes.count()
             prefix_table = tables.PrefixTable(prefixes)
-            prefix_table.columns.hide("namespace")
+            prefix_table.exclude = ("namespace",)
             context["prefix_count"] = prefix_count
             context["prefix_table"] = prefix_table
 
@@ -293,22 +293,16 @@ class PrefixView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        parent_prefixes = instance.ancestors().restrict(request.user, "view")
+        parent_prefixes = instance.ancestors().restrict(request.user, "view").select_related("parent", "namespace")
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes))
-
-        # TODO(jathan): Make duplicate prefixes go away entirely.
-        # Duplicate prefixes table
-        duplicate_prefixes = Prefix.objects.none()
-        duplicate_prefix_table = tables.PrefixTable(list(duplicate_prefixes))
+        parent_prefix_table.exclude = ("namespace",)
 
         vrfs = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
-        vrf_table.exclude = ("prefix",)
 
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
-            "duplicate_prefix_table": duplicate_prefix_table,
         }
 
 
@@ -329,6 +323,7 @@ class PrefixPrefixesView(generic.ObjectView):
             child_prefixes = add_available_prefixes(instance.prefix, child_prefixes)
 
         prefix_table = tables.PrefixDetailTable(child_prefixes)
+        prefix_table.exclude = ("namespace",)
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
             prefix_table.columns.show("pk")
 
