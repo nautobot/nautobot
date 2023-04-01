@@ -145,7 +145,7 @@
                                                     {% elif object.primary_ip4.nat_outside_list.exists %}
                                                         <br /><span>NAT: </span>
                                                         <ul>
-                                                            {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                                            {% for nat in object.primary_ip4.nat_outside_list.all %}
                                                                 <li>{{ nat.address.ip }}</li>
                                                             {% endfor %}
                                                         </ul>
