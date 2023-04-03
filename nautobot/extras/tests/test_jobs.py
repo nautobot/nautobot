@@ -43,12 +43,10 @@ def get_job_class_and_model(module, name):
     return (job_class, job_model)
 
 
-def create_job_result_and_run_job(module, name, *, kwargs=None):
+def create_job_result_and_run_job(module, name, *args, **kwargs):
     """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
-    if kwargs is None:
-        kwargs = {}
     _job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_model, kwargs=kwargs)
+    job_result = run_job_for_testing(job=job_model, **kwargs)
     job_result.refresh_from_db()
     return job_result
 
@@ -188,7 +186,7 @@ class JobTest(TransactionTestCase):
         # Prepare the job data
         data = job_class.serialize_data(form.cleaned_data)
         # Need to pass a mock request object as execute_webhooks will be called with the creation of the objects.
-        job_result = create_job_result_and_run_job(module, name, kwargs=data)
+        job_result = create_job_result_and_run_job(module, name, **data)
 
         log_info = JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
@@ -232,7 +230,7 @@ class JobTest(TransactionTestCase):
             "role": {"name": role.name},
             "roles": [role.pk],
         }
-        job_result = create_job_result_and_run_job(module, name, kwargs=data)
+        job_result = create_job_result_and_run_job(module, name, **data)
 
         info_log = JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
@@ -251,7 +249,7 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_optional"
         name = "TestOptionalObjectVar"
         data = {"location": None}
-        job_result = create_job_result_and_run_job(module, name, kwargs=data)
+        job_result = create_job_result_and_run_job(module, name, **data)
 
         info_log = JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
@@ -271,7 +269,7 @@ class JobTest(TransactionTestCase):
         name = "TestRequiredObjectVar"
         data = {"location": None}
         logging.disable(logging.ERROR)
-        job_result = create_job_result_and_run_job(module, name, kwargs=data)
+        job_result = create_job_result_and_run_job(module, name, **data)
         logging.disable(logging.NOTSET)
 
         # Assert stuff
@@ -372,7 +370,7 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
-        job_result = create_job_result_and_run_job(module, name, kwargs=serialized_data)
+        job_result = create_job_result_and_run_job(module, name, **serialized_data)
 
         warning_log = JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run"
@@ -403,7 +401,7 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Run the job
         logging.disable(logging.ERROR)
-        job_result = create_job_result_and_run_job(module, name, kwargs=serialized_data)
+        job_result = create_job_result_and_run_job(module, name, **serialized_data)
         self.assertIsNotNone(job_result.traceback)
         # TODO(jathan): If there are more use-cases for asserting class comparison for errors raised
         # by Jobs, factor this into a test case method.
@@ -568,7 +566,7 @@ class JobButtonReceiverTest(TransactionTestCase):
         module = "test_job_button_receiver"
         name = "TestJobButtonReceiverFail"
         logging.disable(logging.ERROR)
-        job_result = create_job_result_and_run_job(module, name, kwargs=self.data)
+        job_result = create_job_result_and_run_job(module, name, **self.data)
         logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
@@ -624,7 +622,7 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_object_change_context(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverChange"
-        job_result = create_job_result_and_run_job(module, name, kwargs=self.data)
+        job_result = create_job_result_and_run_job(module, name, **self.data)
         test_location = Location.objects.get(name="test_jhr")
         oc = get_changes_for_model(test_location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
@@ -634,7 +632,7 @@ class JobHookReceiverTest(TransactionTestCase):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
         logging.disable(logging.ERROR)
-        job_result = create_job_result_and_run_job(module, name, kwargs=self.data)
+        job_result = create_job_result_and_run_job(module, name, **self.data)
         logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
