@@ -749,7 +749,7 @@ The 'profile' form field on jobs is automatically available when the `DEBUG` set
 
 ### Reading profiling reports
 
-A full description on how to deal with the output of `cProfile` can be found in the [Instant's users manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual), but here is something to get you started:
+A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual), but here is something to get you started:
 
 ```python
 import pstats
