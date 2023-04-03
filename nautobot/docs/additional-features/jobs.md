@@ -745,7 +745,7 @@ Debugging the performance of Nautobot jobs can be tricky, because they are execu
 The 'profile' form field on jobs is automatically available when the `DEBUG` settings is `True`. When you select that checkbox, a profiling report in the pstats format will be written to the file system of the worker instance - the path will be logged in the job.
 
 !!! note
-    If you need to run this in an environment with `DEBUG` set to `True` you have to option of using `nautobot-server runjob` with the `--profile` flag. According to the docs, `cProfile` should have minimal impact on the performance of the job, still - proceed with caution when using this in a production environment.
+    If you need to run this in an environment where `DEBUG` is `False`, you have the option of using `nautobot-server runjob` with the `--profile` flag. According to the docs, `cProfile` should have minimal impact on the performance of the job; still, proceed with caution when using this in a production environment.
 
 ### Reading profiling reports
 
