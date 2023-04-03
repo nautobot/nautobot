@@ -68,7 +68,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from . import nested_serializers, serializers
+from . import serializers
 
 
 class ExtrasRootView(APIRootView):
@@ -236,7 +236,6 @@ class CustomFieldModelViewSet(ModelViewSet):
     """
 
     def get_serializer_context(self):
-
         # Gather all custom fields for the model
         content_type = ContentType.objects.get_for_model(self.queryset.model)
         custom_fields = content_type.custom_fields.all()
@@ -617,13 +616,9 @@ def _run_job(request, job_model, legacy_response=False):
         # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
         data = {"scheduled_job": None, "job_result": None}
         if schedule:
-            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
-                schedule, context={"request": request}
-            ).data
+            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
         if job_result:
-            data["job_result"] = nested_serializers.NestedJobResultSerializer(
-                job_result, context={"request": request}
-            ).data
+            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -828,7 +823,7 @@ class JobResultViewSet(
     def logs(self, request, pk=None):
         job_result = self.get_object()
         logs = job_result.job_log_entries.all()
-        serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
+        serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
 

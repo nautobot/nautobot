@@ -5,8 +5,10 @@ from django.core.exceptions import (
     FieldError,
     MultipleObjectsReturned,
     ObjectDoesNotExist,
+    ValidationError as DjangoValidationError,
 )
 from django.db.models import AutoField, ManyToManyField
+from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import serializers
@@ -18,16 +20,9 @@ from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.utils import dict_to_filter_params, get_serializer_for_model
-from nautobot.core.utils.requests import normalize_querydict
-from django.core.exceptions import (
-    ValidationError as DjangoValidationError,
-)
-from django.urls import NoReverseMatch
-
-from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
-
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
 from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
 from nautobot.extras.choices import RelationshipSideChoices
@@ -198,6 +193,13 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 self.Meta.opt_in_fields.append(field_name)
         return fields
 
+    def eliminate_field_names(self, fields, field_name):
+        """Eliminate non-user-facing field_name from `fields` e.g. `_custom_field_data`, `_name`"""
+        if field_name not in fields:
+            return fields
+        fields.remove(field_name)
+        return fields
+
     def get_field_names(self, declared_fields, info):
         """
         Override get_field_names() to ensure certain fields are present even when not explicitly stated in Meta.fields.
@@ -214,6 +216,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         self.extend_field_names(fields, "display", at_start=True)
         self.extend_field_names(fields, "id", at_start=True)
+        self.eliminate_field_names(fields, "_custom_field_data")
+        self.eliminate_field_names(fields, "_name")
         # Needed because we don't have a common base class for all nested serializers vs non-nested serializers
         if not self.__class__.__name__.startswith("Nested"):
             if hasattr(self.Meta.model, "created"):

@@ -79,18 +79,14 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         """
         Select the specific serializer based on the request context.
 
-        If the `brief` query param equates to True, return the NestedVirtualMachineSerializer
-
         If the `exclude` query param includes `config_context` as a value, return the VirtualMachineSerializer
 
         Else, return the VirtualMachineWithConfigContextSerializer
         """
 
         request = self.get_serializer_context()["request"]
-        if request is not None and request.query_params.get("brief", False):
-            return serializers.NestedVirtualMachineSerializer
 
-        elif request is not None and "config_context" in request.query_params.get("exclude", []):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.VirtualMachineSerializer
 
         return serializers.VirtualMachineWithConfigContextSerializer

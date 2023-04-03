@@ -2,15 +2,13 @@ import logging
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.api import BaseModelSerializer
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.extras.api.fields import RoleSerializerField, TagSerializerField
-from nautobot.extras.utils import FeatureQuery
-
 from nautobot.core.api import (
     BaseModelSerializer,
     ContentTypeField,
 )
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.extras.api.fields import RoleSerializerField, TagSerializerField
+from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
 

@@ -4,10 +4,6 @@ from nautobot.core.api import TreeModelSerializerMixin
 from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import NestedTenantGroupSerializer, NestedTenantSerializer  # noqa: F401
-
 #
 # Tenants
 #

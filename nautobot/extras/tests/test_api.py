@@ -26,8 +26,7 @@ from nautobot.dcim.models import (
     RackGroup,
 )
 from nautobot.dcim.tests import test_views
-from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
-from nautobot.extras.api.serializers import ConfigContextSerializer
+from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
@@ -1496,11 +1495,11 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertIsNone(response.data["scheduled_job"])
-        # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
+        # The urls in a JobResultSerializer depends on the request context, which we don't have
         data_job_result = response.data["job_result"]
         del data_job_result["url"]
         del data_job_result["user"]["url"]
-        expected_data_job_result = NestedJobResultSerializer(job_result, context={"request": None}).data
+        expected_data_job_result = JobResultSerializer(job_result, context={"request": None}).data
         del expected_data_job_result["url"]
         del expected_data_job_result["user"]["url"]
         self.assertEqual(data_job_result, expected_data_job_result)

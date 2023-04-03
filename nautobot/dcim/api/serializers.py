@@ -7,7 +7,6 @@ from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
     NautobotModelSerializer,
-    SerializedPKRelatedField,
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
     ValidatedModelSerializer,
@@ -81,51 +80,11 @@ from nautobot.extras.api.mixins import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.api.nested_serializers import (
-    NestedIPAddressSerializer,
-    NestedVLANSerializer,
-)
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    NestedCableSerializer,
-    NestedConsolePortSerializer,
-    NestedConsolePortTemplateSerializer,
-    NestedConsoleServerPortSerializer,
-    NestedConsoleServerPortTemplateSerializer,
-    NestedDeviceBaySerializer,
-    NestedDeviceBayTemplateSerializer,
-    NestedDeviceRedundancyGroupSerializer,
+from .nested_serializers import (
     NestedDeviceSerializer,
-    NestedDeviceTypeSerializer,
-    NestedFrontPortSerializer,
-    NestedFrontPortTemplateSerializer,
     NestedInterfaceSerializer,
-    NestedInterfaceTemplateSerializer,
-    NestedInventoryItemSerializer,
-    NestedLocationSerializer,
-    NestedLocationTypeSerializer,
-    NestedManufacturerSerializer,
-    NestedPlatformSerializer,
-    NestedPowerFeedSerializer,
-    NestedPowerOutletSerializer,
-    NestedPowerOutletTemplateSerializer,
-    NestedPowerPanelSerializer,
-    NestedPowerPortSerializer,
-    NestedPowerPortTemplateSerializer,
-    NestedRackGroupSerializer,
-    NestedRackReservationSerializer,
-    NestedRackSerializer,
-    NestedRearPortSerializer,
-    NestedRearPortTemplateSerializer,
-    NestedVirtualChassisSerializer,
 )
 
 
@@ -530,6 +489,7 @@ class DeviceSerializer(
 
         return data
 
+    # TODO #3024: How to get rid of this?
     @extend_schema_field(NestedDeviceSerializer)
     def get_parent_device(self, obj):
         try:
@@ -537,9 +497,8 @@ class DeviceSerializer(
         except DeviceBay.DoesNotExist:
             return None
         context = {"request": self.context["request"]}
-        # TODO #3024: How to get rid of this?
-        data = NestedDeviceSerializer(instance=device_bay.device, context=context).data
-        data["device_bay"] = NestedDeviceBaySerializer(instance=device_bay, context=context).data
+        data = DeviceSerializer(instance=device_bay.device, context=context).data
+        data["device_bay"] = DeviceBaySerializer(instance=device_bay, context=context).data
         return data
 
 
@@ -643,19 +602,7 @@ class InterfaceSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     type = ChoiceField(choices=InterfaceTypeChoices)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
-    tagged_vlans = SerializedPKRelatedField(
-        queryset=VLAN.objects.all(),
-        serializer=NestedVLANSerializer,
-        required=False,
-        many=True,
-    )
     ip_address_count = serializers.IntegerField(read_only=True)
-    ip_addresses = SerializedPKRelatedField(
-        queryset=IPAddress.objects.all(),
-        serializer=NestedIPAddressSerializer,
-        required=False,
-        many=True,
-    )
 
     class Meta:
         model = Interface
@@ -697,7 +644,7 @@ class FrontPortRearPortSerializer(WritableNestedSerializer):
 
     class Meta:
         model = RearPort
-        fields = ["id", "url", "name", "label"]
+        fields = "__all__"
 
 
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):

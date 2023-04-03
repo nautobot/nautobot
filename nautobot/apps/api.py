@@ -4,6 +4,7 @@ from nautobot.core.api import (
     BaseModelSerializer,
     CustomFieldModelSerializerMixin,
     NautobotModelSerializer,
+    NotesSerializerMixin,
     OrderedDefaultRouter,
     RelationshipModelSerializerMixin,
     ValidatedModelSerializer,

@@ -1,11 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
-from rest_framework.serializers import SerializerMethodField
-from rest_framework.fields import CreateOnlyDefault, Field
+from rest_framework.fields import Field
 
 # from nautobot.core.api import ValidatedModelSerializer
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import CustomField
 
 

@@ -4,11 +4,6 @@ from rest_framework import serializers
 from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
-    SerializedPKRelatedField,
-)
-from nautobot.dcim.api.nested_serializers import (
-    NestedLocationSerializer,
-    NestedPlatformSerializer,
 )
 from nautobot.dcim.api.serializers import InterfaceCommonSerializer
 from nautobot.dcim.choices import InterfaceModeChoices
@@ -17,29 +12,12 @@ from nautobot.extras.api.mixins import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
-from nautobot.ipam.api.nested_serializers import (
-    NestedIPAddressSerializer,
-    NestedVLANSerializer,
-)
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
     ClusterType,
     VirtualMachine,
     VMInterface,
-)
-
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    NestedClusterGroupSerializer,
-    NestedClusterSerializer,
-    NestedClusterTypeSerializer,
-    NestedVirtualMachineSerializer,
-    NestedVMInterfaceSerializer,
 )
 
 #
@@ -53,13 +31,8 @@ class ClusterTypeSerializer(NautobotModelSerializer):
 
     class Meta:
         model = ClusterType
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "cluster_count",
-        ]
+        fields = "__all__"
+        extra_fields = ["cluster_count"]
 
 
 class ClusterGroupSerializer(NautobotModelSerializer):
@@ -68,13 +41,8 @@ class ClusterGroupSerializer(NautobotModelSerializer):
 
     class Meta:
         model = ClusterGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "cluster_count",
-        ]
+        fields = "__all__"
+        extra_fields = ["cluster_count"]
 
 
 class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -142,18 +110,6 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
-    tagged_vlans = SerializedPKRelatedField(
-        queryset=VLAN.objects.all(),
-        serializer=NestedVLANSerializer,
-        required=False,
-        many=True,
-    )
-    ip_addresses = SerializedPKRelatedField(
-        queryset=IPAddress.objects.all(),
-        serializer=NestedIPAddressSerializer,
-        required=False,
-        many=True,
-    )
 
     class Meta:
         model = VMInterface

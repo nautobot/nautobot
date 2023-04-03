@@ -5,29 +5,13 @@ from rest_framework import serializers
 
 from nautobot.core.api import (
     ContentTypeField,
-    SerializedPKRelatedField,
     ValidatedModelSerializer,
 )
 from nautobot.users.models import ObjectPermission, Token
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    NestedGroupSerializer,
-    NestedObjectPermissionSerializer,
-    NestedTokenSerializer,
-    NestedUserSerializer,
-)
-
 
 class UserSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="users-api:user-detail")
-    groups = SerializedPKRelatedField(
-        queryset=Group.objects.all(),
-        serializer=NestedGroupSerializer,
-        required=False,
-        many=True,
-    )
 
     class Meta:
         model = get_user_model()
@@ -86,18 +70,6 @@ class TokenSerializer(ValidatedModelSerializer):
 class ObjectPermissionSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="users-api:objectpermission-detail")
     object_types = ContentTypeField(queryset=ContentType.objects.all(), many=True)
-    groups = SerializedPKRelatedField(
-        queryset=Group.objects.all(),
-        serializer=NestedGroupSerializer,
-        required=False,
-        many=True,
-    )
-    users = SerializedPKRelatedField(
-        queryset=get_user_model().objects.all(),
-        serializer=NestedUserSerializer,
-        required=False,
-        many=True,
-    )
 
     class Meta:
         model = ObjectPermission

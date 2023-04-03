@@ -1,3 +1,5 @@
+import netaddr
+
 from collections import OrderedDict
 
 from rest_framework import serializers
@@ -6,11 +8,6 @@ from rest_framework.validators import UniqueTogetherValidator
 from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
-    SerializedPKRelatedField,
-)
-from nautobot.dcim.api.nested_serializers import (
-    NestedDeviceSerializer,
-    NestedLocationSerializer,
 )
 from nautobot.extras.api.mixins import (
     RoleModelSerializerMixin,
@@ -29,24 +26,22 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.virtualization.api.nested_serializers import (
-    NestedVirtualMachineSerializer,
-)
 
-# Not all of these variable(s) are actually used anywhere in this file, but are required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    IPFieldSerializer,
-    NestedIPAddressSerializer,
-    NestedPrefixSerializer,
-    NestedRIRSerializer,
-    NestedRouteTargetSerializer,
-    NestedServiceSerializer,
-    NestedVLANGroupSerializer,
-    NestedVLANSerializer,
-    NestedVRFSerializer,
-)
+
+class IPFieldSerializer(serializers.CharField):
+    def to_representation(self, value):
+        """Convert internal (IPNetwork) representation to API (string) representation."""
+        return str(value)
+
+    def to_internal_value(self, value):
+        """Convert API (string) representation to internal (IPNetwork) representation."""
+        try:
+            return netaddr.IPNetwork(value)
+        except netaddr.AddrFormatError:
+            raise serializers.ValidationError(f"Invalid IP address format: {value}")
+        except (TypeError, ValueError) as e:
+            raise serializers.ValidationError(e)
+
 
 #
 # VRFs
@@ -55,32 +50,13 @@ from .nested_serializers import (  # noqa: F401
 
 class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vrf-detail")
-    import_targets = SerializedPKRelatedField(
-        queryset=RouteTarget.objects.all(),
-        serializer=NestedRouteTargetSerializer,
-        required=False,
-        many=True,
-    )
-    export_targets = SerializedPKRelatedField(
-        queryset=RouteTarget.objects.all(),
-        serializer=NestedRouteTargetSerializer,
-        required=False,
-        many=True,
-    )
     ipaddress_count = serializers.IntegerField(read_only=True)
     prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VRF
-        fields = [
-            "url",
-            "name",
-            "rd",
-            "tenant",
-            "enforce_unique",
-            "description",
-            "import_targets",
-            "export_targets",
+        fields = "__all__"
+        extra_fields = [
             "ipaddress_count",
             "prefix_count",
         ]
@@ -276,12 +252,6 @@ class AvailableIPSerializer(serializers.Serializer):
 class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:service-detail")
     protocol = ChoiceField(choices=ServiceProtocolChoices, required=False)
-    ip_addresses = SerializedPKRelatedField(
-        queryset=IPAddress.objects.all(),
-        serializer=NestedIPAddressSerializer,
-        required=False,
-        many=True,
-    )
     ports = serializers.ListField(
         child=serializers.IntegerField(
             min_value=constants.SERVICE_PORT_MIN,

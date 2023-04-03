@@ -1,10 +1,8 @@
 import logging
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.fields import JSONField
 from rest_framework.reverse import reverse
 from rest_framework.serializers import ValidationError
@@ -12,7 +10,7 @@ from rest_framework.serializers import ValidationError
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.models import Relationship, RelationshipAssociation
+from nautobot.extras.models import Relationship
 
 
 logger = logging.getLogger(__name__)
@@ -257,124 +255,3 @@ class RelationshipsDataField(JSONField):
 
         logger.debug("to_internal_value(%s) -> %s", data, output_data)
         return {self.field_name: output_data}
-
-
-# class RelationshipModelSerializerMixin(ValidatedModelSerializer):
-#     """Extend ValidatedModelSerializer with a `relationships` field."""
-
-#     relationships = RelationshipsDataField(required=False, source="*")
-
-#     def create(self, validated_data):
-#         relationships_data = validated_data.pop("relationships", {})
-#         required_relationships_errors = self.Meta().model.required_related_objects_errors(
-#             output_for="api", initial_data=relationships_data
-#         )
-#         if required_relationships_errors:
-#             raise ValidationError({"relationships": required_relationships_errors})
-#         instance = super().create(validated_data)
-#         if relationships_data:
-#             try:
-#                 self._save_relationships(instance, relationships_data)
-#             except DjangoValidationError as error:
-#                 raise ValidationError(str(error))
-#         return instance
-
-#     def update(self, instance, validated_data):
-#         relationships_key_specified = "relationships" in self.context["request"].data
-#         relationships_data = validated_data.pop("relationships", {})
-#         required_relationships_errors = self.Meta().model.required_related_objects_errors(
-#             output_for="api",
-#             initial_data=relationships_data,
-#             relationships_key_specified=relationships_key_specified,
-#             instance=instance,
-#         )
-#         if required_relationships_errors:
-#             raise ValidationError({"relationships": required_relationships_errors})
-
-#         instance = super().update(instance, validated_data)
-#         if relationships_data:
-#             self._save_relationships(instance, relationships_data)
-#         return instance
-
-#     def _save_relationships(self, instance, relationships):
-#         """Create/update RelationshipAssociations corresponding to a model instance."""
-#         # relationships has already passed RelationshipsDataField.to_internal_value(), so we can skip some try/excepts
-#         logger.debug("_save_relationships: %s : %s", instance, relationships)
-#         for relationship, relationship_data in relationships.items():
-
-#             for other_side in ["source", "destination", "peer"]:
-#                 if other_side not in relationship_data:
-#                     continue
-
-#                 other_type = getattr(relationship, f"{other_side}_type")
-#                 other_side_model = other_type.model_class()
-#                 other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
-#                 serializer_instance = other_side_serializer(context={"request": self.context.get("request")})
-
-#                 expected_objects_data = relationship_data[other_side]
-#                 expected_objects = [
-#                     serializer_instance.to_internal_value(object_data) for object_data in expected_objects_data
-#                 ]
-
-#                 this_side = RelationshipSideChoices.OPPOSITE[other_side]
-
-#                 if this_side != RelationshipSideChoices.SIDE_PEER:
-#                     existing_associations = relationship.relationship_associations.filter(
-#                         **{f"{this_side}_id": instance.pk}
-#                     )
-#                     existing_objects = [assoc.get_peer(instance) for assoc in existing_associations]
-#                 else:
-#                     existing_associations_1 = relationship.relationship_associations.filter(source_id=instance.pk)
-#                     existing_objects_1 = [assoc.get_peer(instance) for assoc in existing_associations_1]
-#                     existing_associations_2 = relationship.relationship_associations.filter(destination_id=instance.pk)
-#                     existing_objects_2 = [assoc.get_peer(instance) for assoc in existing_associations_2]
-#                     existing_associations = list(existing_associations_1) + list(existing_associations_2)
-#                     existing_objects = existing_objects_1 + existing_objects_2
-
-#                 add_objects = []
-#                 remove_assocs = []
-
-#                 for obj, assoc in zip(existing_objects, existing_associations):
-#                     if obj not in expected_objects:
-#                         remove_assocs.append(assoc)
-#                 for obj in expected_objects:
-#                     if obj not in existing_objects:
-#                         add_objects.append(obj)
-
-#                 for add_object in add_objects:
-#                     if "request" in self.context and not self.context["request"].user.has_perm(
-#                         "extras.add_relationshipassociation"
-#                     ):
-#                         raise PermissionDenied("This user does not have permission to create RelationshipAssociations.")
-#                     if other_side != RelationshipSideChoices.SIDE_SOURCE:
-#                         assoc = RelationshipAssociation(
-#                             relationship=relationship,
-#                             source_type=relationship.source_type,
-#                             source_id=instance.id,
-#                             destination_type=relationship.destination_type,
-#                             destination_id=add_object.id,
-#                         )
-#                     else:
-#                         assoc = RelationshipAssociation(
-#                             relationship=relationship,
-#                             source_type=relationship.source_type,
-#                             source_id=add_object.id,
-#                             destination_type=relationship.destination_type,
-#                             destination_id=instance.id,
-#                         )
-#                     assoc.validated_save()  # enforce relationship filter logic, etc.
-#                     logger.debug("Created %s", assoc)
-
-#                 for remove_assoc in remove_assocs:
-#                     if "request" in self.context and not self.context["request"].user.has_perm(
-#                         "extras.delete_relationshipassociation"
-#                     ):
-#                         raise PermissionDenied("This user does not have permission to delete RelationshipAssociations.")
-#                     logger.debug("Deleting %s", remove_assoc)
-#                     remove_assoc.delete()
-
-#     def get_field_names(self, declared_fields, info):
-#         """Ensure that "relationships" is always included as an opt-in field."""
-#         fields = list(super().get_field_names(declared_fields, info))
-#         self.extend_field_names(fields, "relationships", opt_in_only=True)
-#         return fields

@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from django.urls import NoReverseMatch
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -15,27 +14,17 @@ from nautobot.core.api import (
     NautobotModelSerializer,
     NotesSerializerMixin,
     RelationshipModelSerializerMixin,
-    SerializedPKRelatedField,
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
 from nautobot.core.models.utils import get_all_concrete_models
-from nautobot.dcim.api.nested_serializers import (
-    NestedDeviceSerializer,
-    NestedDeviceTypeSerializer,
-    NestedLocationSerializer,
-    NestedPlatformSerializer,
-    NestedRackSerializer,
-)
 from nautobot.dcim.api.serializers import (
     DeviceSerializer,
     LocationSerializer,
     RackSerializer,
 )
-from nautobot.dcim.models import DeviceType, Location, Platform
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -80,51 +69,13 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
-from nautobot.tenancy.api.nested_serializers import (
-    NestedTenantSerializer,
-    NestedTenantGroupSerializer,
-)
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.virtualization.api.nested_serializers import (
-    NestedClusterGroupSerializer,
-    NestedClusterSerializer,
-)
-from nautobot.virtualization.models import Cluster, ClusterGroup
 
-from .fields import MultipleChoiceJSONField, RoleSerializerField
+from .fields import MultipleChoiceJSONField
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import (  # noqa: F401
-    NestedComputedFieldSerializer,
-    NestedConfigContextSchemaSerializer,
-    NestedConfigContextSerializer,
-    NestedCustomFieldChoiceSerializer,
-    NestedCustomFieldSerializer,
-    NestedCustomLinkSerializer,
-    NestedDynamicGroupSerializer,
     NestedDynamicGroupMembershipSerializer,
-    NestedExportTemplateSerializer,
-    NestedGitRepositorySerializer,
-    NestedGraphQLQuerySerializer,
-    NestedImageAttachmentSerializer,
-    NestedJobButtonSerializer,
-    NestedJobHookSerializer,
-    NestedJobSerializer,
-    NestedJobResultSerializer,
-    NestedNoteSerializer,
-    NestedRelationshipAssociationSerializer,
-    NestedRelationshipSerializer,
-    NestedRoleSerializer,
-    NestedScheduledJobSerializer,
     NestedScheduledJobCreationSerializer,
-    NestedSecretSerializer,
-    NestedSecretsGroupSerializer,
     NestedSecretsGroupAssociationSerializer,
-    NestedStatusSerializer,
-    NestedTagSerializer,
-    NestedWebhookSerializer,
 )
 
 #
@@ -173,63 +124,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         default=None,
     )
     owner = serializers.SerializerMethodField(read_only=True)
-    config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
-    locations = SerializedPKRelatedField(
-        queryset=Location.objects.all(),
-        serializer=NestedLocationSerializer,
-        required=False,
-        many=True,
-    )
-    roles = SerializedPKRelatedField(
-        queryset=Role.objects.all(),
-        serializer=NestedRoleSerializer,
-        required=False,
-        many=True,
-    )
-    device_types = SerializedPKRelatedField(
-        queryset=DeviceType.objects.all(),
-        serializer=NestedDeviceTypeSerializer,
-        required=False,
-        many=True,
-    )
-    platforms = SerializedPKRelatedField(
-        queryset=Platform.objects.all(),
-        serializer=NestedPlatformSerializer,
-        required=False,
-        many=True,
-    )
-    cluster_groups = SerializedPKRelatedField(
-        queryset=ClusterGroup.objects.all(),
-        serializer=NestedClusterGroupSerializer,
-        required=False,
-        many=True,
-    )
-    clusters = SerializedPKRelatedField(
-        queryset=Cluster.objects.all(),
-        serializer=NestedClusterSerializer,
-        required=False,
-        many=True,
-    )
-    tenant_groups = SerializedPKRelatedField(
-        queryset=TenantGroup.objects.all(),
-        serializer=NestedTenantGroupSerializer,
-        required=False,
-        many=True,
-    )
-    tenants = SerializedPKRelatedField(
-        queryset=Tenant.objects.all(),
-        serializer=NestedTenantSerializer,
-        required=False,
-        many=True,
-    )
     tags = serializers.SlugRelatedField(queryset=Tag.objects.all(), slug_field="slug", required=False, many=True)
-
-    dynamic_groups = SerializedPKRelatedField(
-        queryset=DynamicGroup.objects.all(),
-        serializer=NestedDynamicGroupSerializer,
-        required=False,
-        many=True,
-    )
 
     # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
@@ -240,28 +135,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = ConfigContext
-        fields = [
-            "url",
-            "name",
-            "owner_content_type",
-            "owner_object_id",
-            "owner",
-            "weight",
-            "description",
-            "config_context_schema",
-            "is_active",
-            "locations",
-            "roles",
-            "device_types",
-            "platforms",
-            "cluster_groups",
-            "clusters",
-            "tenant_groups",
-            "tenants",
-            "tags",
-            "dynamic_groups",
-            "data",
-        ]
+        fields = "__all__"
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -298,16 +172,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 
     class Meta:
         model = ConfigContextSchema
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "owner_content_type",
-            "owner_object_id",
-            "owner",
-            "description",
-            "data_schema",
-        ]
+        fields = "__all__"
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -338,7 +203,7 @@ class ContentTypeSerializer(BaseModelSerializer):
 
     class Meta:
         model = ContentType
-        fields = ["url", "app_label", "model"]
+        fields = "__all__"
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
@@ -362,21 +227,7 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = CustomField
-        fields = [
-            "url",
-            "content_types",
-            "type",
-            "label",
-            "key",
-            "description",
-            "required",
-            "filter_logic",
-            "default",
-            "weight",
-            "validation_minimum",
-            "validation_maximum",
-            "validation_regex",
-        ]
+        fields = "__all__"
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
@@ -420,15 +271,7 @@ class DynamicGroupSerializer(NautobotModelSerializer):
 
     class Meta:
         model = DynamicGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "content_type",
-            "filter",
-            "children",
-        ]
+        fields = "__all__"
         extra_kwargs = {"filter": {"read_only": False}}
 
 
@@ -461,18 +304,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 
     class Meta:
         model = ExportTemplate
-        fields = [
-            "url",
-            "content_type",
-            "owner_content_type",
-            "owner_object_id",
-            "owner",
-            "name",
-            "description",
-            "template_code",
-            "mime_type",
-            "file_extension",
-        ]
+        fields = "__all__"
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -555,21 +387,10 @@ class GraphQLQueryOutputSerializer(serializers.Serializer):
 class ImageAttachmentSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:imageattachment-detail")
     content_type = ContentTypeField(queryset=ContentType.objects.all())
-    parent = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ImageAttachment
-        fields = [
-            "url",
-            "content_type",
-            "object_id",
-            "parent",
-            "name",
-            "image",
-            "image_height",
-            "image_width",
-            "created",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         # Validate that the parent object exists
@@ -589,9 +410,9 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
             resource_type_field_name="object_type",
             # TODO #3024: How to get rid of this with the circular import problem for NautobotModelSerializers.
             serializers=[
-                NestedDeviceSerializer,
-                NestedLocationSerializer,
-                NestedRackSerializer,
+                DeviceSerializer,
+                LocationSerializer,
+                RackSerializer,
             ],
         )
     )
@@ -610,40 +431,7 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Job
-        fields = [
-            "url",
-            "source",
-            "module_name",
-            "job_class_name",
-            "grouping",
-            "grouping_override",
-            "name",
-            "name_override",
-            "slug",
-            "description",
-            "description_override",
-            "installed",
-            "enabled",
-            "is_job_hook_receiver",
-            "is_job_button_receiver",
-            "has_sensitive_variables",
-            "has_sensitive_variables_override",
-            "approval_required",
-            "approval_required_override",
-            "commit_default",
-            "commit_default_override",
-            "hidden",
-            "hidden_override",
-            "read_only",
-            "read_only_override",
-            "soft_time_limit",
-            "soft_time_limit_override",
-            "time_limit",
-            "time_limit_override",
-            "task_queues",
-            "task_queues_override",
-            "tags",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         # note no validation for on creation of jobs because we do not support user creation of Job records via API
@@ -762,17 +550,7 @@ class JobHookSerializer(NautobotModelSerializer):
 
     class Meta:
         model = JobHook
-        fields = [
-            "id",
-            "url",
-            "name",
-            "content_types",
-            "job",
-            "enabled",
-            "type_create",
-            "type_update",
-            "type_delete",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         validated_data = super().validate(data)
@@ -843,16 +621,7 @@ class JobLogEntrySerializer(BaseModelSerializer):
 
     class Meta:
         model = JobLogEntry
-        fields = [
-            "url",
-            "absolute_url",
-            "created",
-            "grouping",
-            "job_result",
-            "log_level",
-            "log_object",
-            "message",
-        ]
+        fields = "__all__"
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, obj):
@@ -980,22 +749,7 @@ class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = Relationship
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "type",
-            "required_on",
-            "source_type",
-            "source_label",
-            "source_hidden",
-            "source_filter",
-            "destination_type",
-            "destination_label",
-            "destination_hidden",
-            "destination_filter",
-        ]
+        fields = "__all__"
 
 
 class RelationshipAssociationSerializer(ValidatedModelSerializer):
@@ -1030,14 +784,7 @@ class RoleSerializer(NautobotModelSerializer):
 
     class Meta:
         model = Role
-        fields = [
-            "url",
-            "content_types",
-            "name",
-            "slug",
-            "color",
-            "weight",
-        ]
+        fields = "__all__"
 
 
 #
@@ -1052,14 +799,7 @@ class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Secret
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "provider",
-            "parameters",
-        ]
+        fields = "__all__"
 
 
 class SecretsGroupSerializer(NautobotModelSerializer):
@@ -1077,13 +817,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
 
     class Meta:
         model = SecretsGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "secrets",
-        ]
+        fields = "__all__"
 
 
 class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
@@ -1112,13 +846,7 @@ class StatusSerializer(NautobotModelSerializer):
 
     class Meta:
         model = Status
-        fields = [
-            "url",
-            "content_types",
-            "name",
-            "slug",
-            "color",
-        ]
+        fields = "__all__"
 
 
 #
@@ -1137,15 +865,7 @@ class TagSerializer(NautobotModelSerializer):
 
     class Meta:
         model = Tag
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "tagged_items",
-            "content_types",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         data = super().validate(data)
@@ -1175,22 +895,7 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = Webhook
-        fields = [
-            "url",
-            "content_types",
-            "name",
-            "type_create",
-            "type_update",
-            "type_delete",
-            "payload_url",
-            "http_method",
-            "http_content_type",
-            "additional_headers",
-            "body_template",
-            "secret",
-            "ssl_verification",
-            "ca_file_path",
-        ]
+        fields = "__all__"
 
     def validate(self, data):
         validated_data = super().validate(data)
