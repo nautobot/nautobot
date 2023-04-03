@@ -5,8 +5,6 @@ import { NautobotUIProvider } from "@nautobot/nautobot-ui"
 import Layout from '@components/layouts/Layout';
 import NautobotRouter from "src/router"
 
-import { extendTheme } from '@chakra-ui/react'
-
 const theme = {
   fonts: {
     heading: `'Ubuntu', sans-serif`,
