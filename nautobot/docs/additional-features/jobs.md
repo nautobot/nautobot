@@ -758,7 +758,7 @@ stats = pstats.Stats(f"/tmp/{job_result_uuid}.pstats")
 stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
 ```
 
-This will print the 10 function that the job execution spent their most time in - adapt this to your needs!
+This will print the 10 functions that the job execution spent the most time in - adapt this to your needs!
 
 ## Example Jobs
 
