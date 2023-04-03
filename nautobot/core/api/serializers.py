@@ -19,6 +19,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 from nautobot.core.api.fields import ObjectTypeField
+from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.api.utils import dict_to_filter_params, get_serializer_for_model
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
@@ -95,61 +96,8 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
-class NautobotPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
-    def to_internal_value(self, data):
-        if data is None:
-            return None
-
-        # Dictionary of related object attributes
-        if isinstance(data, dict):
-            params = dict_to_filter_params(data)
-
-            queryset = self.queryset
-            model_name = queryset.model._meta.model_name
-            try:
-                return queryset.get(**params)
-            except ObjectDoesNotExist:
-                raise ValidationError(
-                    {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
-                )
-            except MultipleObjectsReturned:
-                raise ValidationError({f"{model_name}": f"Multiple objects match the provided attributes: {params}"})
-            except FieldError as e:
-                raise ValidationError({f"{model_name}": e})
-
-        queryset = self.queryset
-        pk = None
-
-        if isinstance(queryset.model._meta.pk, AutoField):
-            # PK is an int for this model. This is usually the User model
-            try:
-                pk = int(data)
-            except (TypeError, ValueError):
-                raise ValidationError(
-                    {
-                        f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                        f"unrecognized value: {data}"
-                    }
-                )
-
-        else:
-            # We assume a type of UUIDField for all other models
-
-            # PK of related object
-            try:
-                # Ensure the pk is a valid UUID
-                pk = uuid.UUID(str(data))
-            except (TypeError, ValueError):
-                raise ValidationError(
-                    {
-                        f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                        f"unrecognized value: {data}"
-                    }
-                )
-        try:
-            return queryset.get(pk=pk)
-        except ObjectDoesNotExist:
-            raise ValidationError({f"{model_name}": f"Related object not found using the provided ID: {pk}"})
+class NautobotPrimaryKeyRelatedField(WritableSerializerMixin, serializers.PrimaryKeyRelatedField):
+    """DRF's built-in PrimaryKeyRelatedField combined with custom to_internal_value() function"""
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
@@ -231,6 +179,26 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         return fields
 
     def to_internal_value(self, data):
+        """
+        Find the object using the combination of fields passed to NautobotNestedSerializer or NautobotPrimaryKeyRelatedField.
+        Replace the entry in `data` with the found object.
+        e.g.
+        Data passed in:
+        {
+            "location_type": {"name": "Floor"},
+            "parent": { "location_type__parent": {"name": "Campus"}, "parent__name": "Campus-29" },
+            "status": {"name": "Retired"},
+            "name": "Floor-02"
+        }
+        vs
+        Data returned:
+        {
+            "location_type": LocationType.objects.get(name="Floor"),
+            "parent": Location.objects.get(location_type__parent__name="Campus", parent__name="Campus-29"),
+            "status": Status.objects.get(name="Retired"),
+            "name": "Floor-02"
+        }
+        """
         for key, value in self.get_fields().items():
             if value.__class__.__name__ in ["NautobotNestedSerializer", "NautobotPrimaryKeyRelatedField"]:
                 sub_data = data.get(key, None)
@@ -241,71 +209,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     def build_nested_field(self, field_name, relation_info, nested_depth):
         field = get_serializer_for_model(relation_info.related_model)
 
-        class NautobotNestedSerializer(field):
+        class NautobotNestedSerializer(field, WritableSerializerMixin):
             def to_internal_value(self, data):
-                if data is None:
-                    return None
-
-                # Dictionary of related object attributes
-                if isinstance(data, dict):
-                    params = dict_to_filter_params(data)
-
-                    # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
-                    # data any serializer fields that do not correspond to a specific model field
-                    for field_name, field_instance in self.fields.items():
-                        if field_name in params and field_instance.source == "*":
-                            logger.debug("Discarding non-database field %s", field_name)
-                            del params[field_name]
-
-                    queryset = self.Meta.model.objects
-                    model_name = self.Meta.model._meta.model_name
-                    try:
-                        return queryset.get(**params)
-                    except ObjectDoesNotExist:
-                        raise ValidationError(
-                            {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
-                        )
-                    except MultipleObjectsReturned:
-                        raise ValidationError(
-                            {f"{model_name}" f"Multiple objects match the provided attributes: {params}"}
-                        )
-                    except FieldError as e:
-                        raise ValidationError({f"{model_name}": e})
-
-                queryset = self.Meta.model.objects
-                pk = None
-
-                if isinstance(self.Meta.model._meta.pk, AutoField):
-                    # PK is an int for this model. This is usually the User model
-                    try:
-                        pk = int(data)
-                    except (TypeError, ValueError):
-                        raise ValidationError(
-                            {
-                                f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                                f"unrecognized value: {data}"
-                            }
-                        )
-
-                else:
-                    # We assume a type of UUIDField for all other models
-
-                    # PK of related object
-                    try:
-                        # Ensure the pk is a valid UUID
-                        pk = uuid.UUID(str(data))
-                    except (TypeError, ValueError):
-                        raise ValidationError(
-                            {
-                                f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                                f"unrecognized value: {data}"
-                            }
-                        )
-
-                try:
-                    return queryset.get(pk=pk)
-                except ObjectDoesNotExist:
-                    raise ValidationError({f"{model_name}": f"Related object not found using the provided ID: {pk}"})
+                # We need to specify which to_internal_value() to use here.
+                return super(WritableSerializerMixin).to_internal_value(data)
 
             class Meta:
                 model = relation_info.related_model
