@@ -1,1 +1,1 @@
-Updated `redis` to 4.5.3. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+Updated `redis` to 4.5.4. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.

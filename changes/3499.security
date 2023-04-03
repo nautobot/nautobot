@@ -1,1 +1,1 @@
-Updated `redis` to 4.5.3 due to CVE-2023-28858. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+Updated `redis` to 4.5.4 due to CVE-2023-28858 and CVE-2023-28859. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
