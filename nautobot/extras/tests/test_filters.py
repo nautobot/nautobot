@@ -795,10 +795,6 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"job_class_name": "TestPass", "enabled": False}
         self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
-    def test_commit_default(self):
-        params = {"commit_default": False}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
-
     def test_hidden(self):
         params = {"hidden": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)

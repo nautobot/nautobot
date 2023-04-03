@@ -519,9 +519,7 @@ class JobTable(BaseTable):
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
-    commit_default = BooleanColumn()
     hidden = BooleanColumn()
-    read_only = BooleanColumn()
     approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
     is_job_button_receiver = BooleanColumn()
@@ -557,9 +555,7 @@ class JobTable(BaseTable):
             "enabled",
             "has_sensitive_variables",
             "description",
-            "commit_default",
             "hidden",
-            "read_only",
             "is_job_hook_receiver",
             "is_job_button_receiver",
             "approval_required",

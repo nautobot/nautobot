@@ -359,20 +359,12 @@ class BaseJob(Task):
         return ""
 
     @classproperty
-    def commit_default(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "commit_default", True)
-
-    @classproperty
     def hidden(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "hidden", False)
 
     @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "field_order", None)
-
-    @classproperty
-    def read_only(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "read_only", False)
 
     @classproperty
     def approval_required(cls):  # pylint: disable=no-self-argument
