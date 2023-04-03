@@ -1,6 +1,10 @@
 // Import the RTK Query methods from the React-specific entry point
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { API_BASE, API_USER_SESSION_INFO, API_UI_MENU_INFO } from '@constants/apiPath'
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import {
+    API_BASE,
+    API_USER_SESSION_INFO,
+    API_UI_MENU_INFO,
+} from "@constants/apiPath";
 
 /*
   The one true API!
@@ -11,27 +15,25 @@ import { API_BASE, API_USER_SESSION_INFO, API_UI_MENU_INFO } from '@constants/ap
   in React and Redux's sites.
 */
 export const baseApi = createApi({
-  baseQuery: fetchBaseQuery({ baseUrl: API_BASE }),
-  endpoints: builder => ({
-    getSession: builder.query({
-      query: () => API_USER_SESSION_INFO
+    baseQuery: fetchBaseQuery({ baseUrl: API_BASE }),
+    endpoints: (builder) => ({
+        getSession: builder.query({
+            query: () => API_USER_SESSION_INFO,
+        }),
+        getUIMenu: builder.query({
+            query: () => API_UI_MENU_INFO,
+        }),
     }),
-    getUIMenu: builder.query({
-        query: () => API_UI_MENU_INFO
-    })
-  })
-})
+});
 
 // Because the Session and Menu objects in the current iteration are used extensively we can export
 //   their hooks to make retrieving them easier.
 // Otherwise you can retrieve them via navigating baseApi:
 //   import baseApi
 //   baseApi.useGetSessionQuery
-//   // or  
+//   // or
 //   baseApi.endpoints.getSession.getQuery
-export const { useGetSessionQuery, useGetUIMenuQuery } = baseApi
-
-
+export const { useGetSessionQuery, useGetUIMenuQuery } = baseApi;
 
 // TODO: Below is a pattern for taking the menu API and building an entire RTK-Query API for it
 // Few things need to be done here:
@@ -66,7 +68,7 @@ export const { useGetSessionQuery, useGetUIMenuQuery } = baseApi
 //       { ...a , [v[0]]: build.query({ query: () => v[1]}) }
 //       ), {});
 //   }
-  
+
 //   const extendedAPI = baseApi.injectEndpoints({
 //     endpoints: buildEndpoints,
 //     overrideExisting: false

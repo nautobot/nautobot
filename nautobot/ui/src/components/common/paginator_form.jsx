@@ -1,27 +1,24 @@
-import React, { useState } from "react"
-import { Box, Text, Select } from "@nautobot/nautobot-ui"
-import { useSearchParams } from "react-router-dom"
-
+import React, { useState } from "react";
+import { Box, Text, Select } from "@nautobot/nautobot-ui";
+import { useSearchParams } from "react-router-dom";
 
 export default function PaginatorForm({ start, end, total_count }) {
-  let [searchParams, setSearchParams] = useSearchParams();
-  let paginator_string = `Showing ${start} - ${end} of ${total_count}`
-  const { setType } = useState("PaginatorForm");
+    let [searchParams, setSearchParams] = useSearchParams();
+    let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
+    const { setType } = useState("PaginatorForm");
 
-  return (
-    <Box>
-      <Select>
-        <option>50</option>
-        <option>100</option>
-        <option>200</option>
-        <option>500</option>
-      </Select>
-      <Text>
-        {paginator_string}
-      </Text>
-    </Box>
-    // TODO: come up with equivalent nautobot-ui pattern to the below, from react-bootstrap
-    /*
+    return (
+        <Box>
+            <Select>
+                <option>50</option>
+                <option>100</option>
+                <option>200</option>
+                <option>500</option>
+            </Select>
+            <Text>{paginator_string}</Text>
+        </Box>
+        // TODO: come up with equivalent nautobot-ui pattern to the below, from react-bootstrap
+        /*
     <Col sm={3}>
       <Form.Control
         as="select"
@@ -44,5 +41,5 @@ export default function PaginatorForm({ start, end, total_count }) {
       </Form.Text>
     </Col >
     */
-  )
+    );
 }

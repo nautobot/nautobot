@@ -1,21 +1,24 @@
-import { render, screen } from "@testing-library/react"
-import { BrowserRouter } from "react-router-dom"
-import Paginator from "../paginator"
+import { render, screen } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
+import Paginator from "../paginator";
 
-
-describe('Paginator', () => {
-    it('renders the paginator form with correct start and end range', () => {
+describe("Paginator", () => {
+    it("renders the paginator form with correct start and end range", () => {
         const data_count = 30;
         const page_size = 10;
         const active_page = 1;
-        const url = 'https://example.com/list';
+        const url = "https://example.com/list";
 
         const { container } = render(
             <BrowserRouter>
-                <Paginator url={url} data_count={data_count} page_size={page_size} active_page={active_page} />
+                <Paginator
+                    url={url}
+                    data_count={data_count}
+                    page_size={page_size}
+                    active_page={active_page}
+                />
             </BrowserRouter>
         );
-
 
         // const allPaginationButton = document.evaluate('//*[contains(@class, "page-link")]', document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
         // const firstPageButton = allPaginationButton.snapshotItem(0)
@@ -38,4 +41,3 @@ describe('Paginator', () => {
         // TODO(timizuo): Include test to get active Button
     });
 });
-
