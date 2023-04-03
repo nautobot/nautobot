@@ -762,7 +762,7 @@ class JobForm(BootstrapMixin, forms.Form):
         required=False,
         initial=False,
         label="Profile job execution",
-        help_text="Profiles the job execution using cProfile",
+        help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
     )
     _task_queue = forms.ChoiceField(
         required=False,
