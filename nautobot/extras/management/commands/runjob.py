@@ -27,7 +27,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--profile",
             action="store_true",
-            help="Run cProfile on the job execution and write the result to the disk under /tmp (use --local to run the job locally, writing to the local filesystem).",
+            help="Run cProfile on the job execution and write the result to the disk under /tmp.",
         )
         parser.add_argument(
             "-u",

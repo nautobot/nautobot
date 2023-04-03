@@ -161,7 +161,9 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit", "_profile"]
+        )
 
     def test_no_field_order(self):
         """
@@ -171,7 +173,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -183,7 +185,7 @@ class JobTest(TransactionTestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit", "_profile"],
         )
 
     def test_read_only_job_pass(self):
@@ -400,7 +402,8 @@ class JobTest(TransactionTestCase):
             <span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
-            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
 
@@ -425,7 +428,8 @@ class JobTest(TransactionTestCase):
             </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
-            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
 
@@ -678,7 +682,9 @@ class JobButtonReceiverTest(TransactionTestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit", "_profile"]
+        )
 
     def test_hidden(self):
         module = "test_job_button_receiver"
@@ -735,7 +741,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit", "_profile"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"
