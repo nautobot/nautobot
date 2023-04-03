@@ -1,6 +1,5 @@
 import json
 import time
-import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
@@ -9,7 +8,6 @@ from django.utils import timezone
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import Job, JobLogEntry, JobResult
 from nautobot.extras.jobs import get_job
-from nautobot.extras.utils import get_job_content_type
 
 
 class Command(BaseCommand):
@@ -53,28 +51,17 @@ class Command(BaseCommand):
         except json.decoder.JSONDecodeError as error:
             raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
-        job_content_type = get_job_content_type()
         job = Job.objects.get_for_class_path(job_class.class_path)
 
         # Run the job and create a new JobResult
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
-            job_result = JobResult.objects.create(
-                name=job.class_path,
-                obj_type=job_content_type,
-                user=user,
+            job_result = JobResult.run_job_synchronously(
                 job_model=job,
-                task_id=uuid.uuid4(),
+                user=user,
+                **data,
             )
-            eager_result = job.job_task.apply(kwargs=data, task_id=str(job_result.task_id))
-            job_result.refresh_from_db()
-            job_result.date_done = timezone.now()
-            job_result.status = eager_result.status
-            job_result.result = eager_result.result
-            job_result.traceback = eager_result.traceback
-            job_result.worker = eager_result.worker
-            job_result.save()
 
         else:
             job_result = JobResult.enqueue_job(job, user, **data)

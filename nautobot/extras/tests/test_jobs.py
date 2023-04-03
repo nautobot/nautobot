@@ -157,6 +157,78 @@ class JobTest(TransactionTestCase):
             ["testvar1", "b_testvar2", "a_testvar3", "_task_queue"],
         )
 
+    def test_atomic_transaction_decorator_job_pass(self):
+        """
+        Job with @transaction.atomic decorator test with pass result.
+        """
+        module = "test_atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job log messages were saved
+        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        self.assertEqual(len(job_logs), 3)
+        self.assertIn("Running job", job_logs)
+        self.assertIn("Job succeeded.", job_logs)
+        self.assertIn("Job completed", job_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
+
+    def test_atomic_transaction_context_manager_job_pass(self):
+        """
+        Job with `with transaction.atomic()` context manager test with pass result.
+        """
+        module = "test_atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job log messages were saved
+        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        self.assertEqual(len(job_logs), 3)
+        self.assertIn("Running job", job_logs)
+        self.assertIn("Job succeeded.", job_logs)
+        self.assertIn("Job completed", job_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
+
+    def test_atomic_transaction_decorator_job_fail(self):
+        """
+        Job with @transaction.atomic decorator test with fail result.
+        """
+        module = "test_atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, fail=True)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job log messages were saved
+        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        self.assertEqual(len(job_logs), 3)
+        self.assertIn("Running job", job_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
+        self.assertIn("Job completed", job_logs)
+        self.assertNotIn("Job succeeded.", job_logs)
+
+    def test_atomic_transaction_context_manager_job_fail(self):
+        """
+        Job with `with transaction.atomic()` context manager test with fail result.
+        """
+        module = "test_atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, fail=True)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job log messages were saved
+        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        self.assertEqual(len(job_logs), 3)
+        self.assertIn("Running job", job_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
+        self.assertIn("Job completed", job_logs)
+        self.assertNotIn("Job succeeded.", job_logs)
+
     def test_ip_address_vars(self):
         """
         Test that IPAddress variable fields behave as expected.

@@ -1,7 +1,4 @@
-import uuid
-
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
@@ -18,7 +15,6 @@ from nautobot.core.testing.utils import (
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
 from nautobot.extras.models import JobResult
-from nautobot.extras.utils import get_job_content_type
 
 __all__ = (
     "APITestCase",
@@ -64,26 +60,12 @@ def run_job_for_testing(job, username="test-user", **kwargs):
     user_instance, _ = User.objects.get_or_create(
         username=username, defaults={"is_superuser": True, "password": "password"}
     )
-    job_result = JobResult.objects.create(
-        name=job.class_path,
-        task_kwargs=kwargs,
-        obj_type=get_job_content_type(),
-        user=user_instance,
+    # Run the job synchronously in the current thread as if it were being executed by a worker
+    job_result = JobResult.run_job_synchronously(
         job_model=job,
-        task_id=uuid.uuid4(),
+        user=user_instance,
+        **kwargs,
     )
-
-    # This runs the job synchronously in the current thread as if it were being executed by a
-    # worker. Celery refuses to update some of the values in the job result so they are
-    # extracted from the returned EagerResult
-    eager_result = job.job_task.apply(kwargs=kwargs, task_id=job_result.task_id)
-    job_result.refresh_from_db()
-    job_result.date_done = timezone.now()
-    job_result.status = eager_result.status
-    job_result.result = eager_result.result
-    job_result.traceback = eager_result.traceback
-    job_result.worker = eager_result.worker
-    job_result.save()
     return job_result
 
 

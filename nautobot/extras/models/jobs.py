@@ -743,23 +743,28 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, schedule=None, **job_kwargs):
+    def run_job_synchronously(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
         """
-        Create a JobResult instance and enqueue a job using the given callable
+        Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
+        a limitation in Celery where some of the fields in the job result are not updated when running synchronously so
+        they are extracted from the returned EagerResult.
 
-        job_model: The Job to be enqueued for execution
-        user: User object to link to the JobResult instance
-        celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
-        schedule: Optional ScheduledJob instance to link to the JobResult
-        job_args: args passed to the job task
-        job_kwargs: kwargs passed to the job task
+        Args:
+            job_model (Job): The Job to be enqueued for execution
+            user (User): User object to link to the JobResult instance
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            *job_args: positional args passed to the job task
+            **job_kwargs: keyword args passed to the job task
+
+        Returns:
+            JobResult instance
         """
         job_result = cls.objects.create(
+            job_model=job_model,
             name=job_model.class_path,
             obj_type=ContentType.objects.get_for_model(job_model),
-            user=user,
             task_id=uuid.uuid4(),
-            scheduled_job=schedule,
+            user=user,
         )
 
         if celery_kwargs is None:
@@ -769,8 +774,49 @@ class JobResult(BaseModel, CustomFieldModel):
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:
             celery_kwargs["time_limit"] = job_model.time_limit
-        job_result.job_model = job_model
+        eager_result = job_model.job_task.apply(
+            args=job_args, kwargs=job_kwargs, task_id=job_result.task_id, **celery_kwargs
+        )
+        job_result.refresh_from_db()
+        job_result.date_done = timezone.now()
+        job_result.status = eager_result.status
+        job_result.result = eager_result.result
+        job_result.traceback = eager_result.traceback
+        job_result.worker = eager_result.worker
         job_result.save()
+        return job_result
+
+    @classmethod
+    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, schedule=None, **job_kwargs):
+        """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+
+        Args:
+            job_model (Job): The Job to be enqueued for execution
+            user (User): User object to link to the JobResult instance
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult
+            *job_args: positional args passed to the job task
+            **job_kwargs: keyword args passed to the job task
+
+        Returns:
+            JobResult instance
+        """
+        job_result = cls.objects.create(
+            job_model=job_model,
+            name=job_model.class_path,
+            obj_type=ContentType.objects.get_for_model(job_model),
+            scheduled_job=schedule,
+            task_id=uuid.uuid4(),
+            user=user,
+        )
+
+        if celery_kwargs is None:
+            celery_kwargs = {}
+
+        if job_model.soft_time_limit > 0:
+            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            celery_kwargs["time_limit"] = job_model.time_limit
 
         # Set argsrepr and kwargsrepr to sanitize sensitive variables
         if job_model.has_sensitive_variables:
