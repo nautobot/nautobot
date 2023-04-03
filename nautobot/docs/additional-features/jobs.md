@@ -740,6 +740,8 @@ class MyJobTestCase(TransactionTestCase):
 
 ## Debugging job performance
 
++++ 1.5.15
+
 Debugging the performance of Nautobot jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the job execution.
 
 The 'profile' form field on jobs is automatically available when the `DEBUG` settings is `True`. When you select that checkbox, a profiling report in the pstats format will be written to the file system of the worker instance - the path will be logged in the job.
