@@ -1219,7 +1219,7 @@ def run_job(data, request, job_result_pk, commit=True, profile=False, *args, **k
 
                     # TODO: This should probably be available as a file download rather than dumped to the hard drive.
                     # Pending this: https://github.com/nautobot/nautobot/issues/3352
-                    profiling_path = f"/tmp/{job_result_pk}.pstats"
+                    profiling_path = f"/tmp/nautobot-jobresult-{job_result_pk}.pstats"
 
                     # TODO: Context manager for this is added in 3.8
                     profiler = cProfile.Profile()
