@@ -40,7 +40,7 @@ class IPAddressToInterfaceTest(TestCase):
             status=int_status,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
-        cluster_type = ClusterType.objects.create(name="cluster_type1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
         vmint_status = Status.objects.get_for_model(VMInterface).first()
         cls.test_vm = VirtualMachine.objects.create(
@@ -170,7 +170,7 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
-        prefix.status = self.statuses.get(slug="active")
+        prefix.status = self.statuses[0]
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
@@ -538,8 +538,9 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
 
     def test_create_ip_address_without_slaac_status(self):
-        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
-        Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
+        slaac_status_name = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
+        IPAddress.objects.filter(status__name=slaac_status_name).delete()
+        Status.objects.get(name=slaac_status_name).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 
@@ -581,7 +582,7 @@ class VLANTestCase(ModelTestCases.BaseModelTestCase):
         location_type.validated_save()
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
-        vlan.status = Status.objects.get_for_model(VLAN).get(slug="active")
+        vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))

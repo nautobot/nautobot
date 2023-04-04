@@ -23,6 +23,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.hyperlinked_object("hello"), "hello")
         # An object with get_absolute_url gives a hyperlink
         location = models.Location.objects.first()
+        # Initially remove description if any
+        location.description = ""
+        location.save()
         self.assertEqual(
             helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.slug}/">{location.name}</a>'
         )

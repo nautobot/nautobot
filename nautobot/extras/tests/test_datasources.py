@@ -59,12 +59,12 @@ class GitTest(TransactionTestCase):
         self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
         self.location = Location.objects.create(location_type=self.location_type, name="Test Location")
-        self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        self.manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
         self.role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             name="test-device",
             role=self.role,
@@ -313,17 +313,15 @@ class GitTest(TransactionTestCase):
 
                 username_secret = Secret.objects.create(
                     name="Git Username",
-                    slug="git-username",
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "username.txt")},
                 )
                 token_secret = Secret.objects.create(
                     name="Git Token",
-                    slug="git-token",
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "token.txt")},
                 )
-                secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
+                secrets_group = SecretsGroup.objects.create(name="Git Credentials")
                 SecretsGroupAssociation.objects.create(
                     secret=username_secret,
                     secrets_group=secrets_group,

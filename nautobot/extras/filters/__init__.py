@@ -217,7 +217,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     platform = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="platforms",
         queryset=Platform.objects.all(),
-        label="Platform (ID or slug)",
+        to_field_name="name",
+        label="Platform (ID or name)",
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_groups",
@@ -227,7 +228,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
-        label="Cluster group (ID or slug)",
+        to_field_name="name",
+        label="Cluster group (ID or name)",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="clusters",
@@ -242,7 +244,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
-        label="Tenant group (ID or slug)",
+        label="Tenant group (ID or name)",
+        to_field_name="name",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         field_name="tenants",
@@ -252,13 +255,14 @@ class ConfigContextFilterSet(BaseFilterSet):
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tenants",
         queryset=Tenant.objects.all(),
-        label="Tenant (ID or slug)",
+        label="Tenant (ID or name)",
+        to_field_name="name",
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_redundancy_groups",
         queryset=DeviceRedundancyGroup.objects.all(),
-        to_field_name="slug",
-        label="Device Redundancy Group (slug or PK)",
+        to_field_name="name",
+        label="Device Redundancy Group (name or PK)",
     )
     tag = django_filters.ModelMultipleChoiceFilter(
         field_name="tags__slug",
@@ -275,7 +279,8 @@ class ConfigContextFilterSet(BaseFilterSet):
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
                 queryset=DynamicGroup.objects.all(),
-                label="Dynamic Groups (slug or ID)",
+                label="Dynamic Groups (name or ID)",
+                to_field_name="name",
             )
 
     class Meta:
@@ -418,7 +423,6 @@ class DynamicGroupFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
@@ -428,7 +432,7 @@ class DynamicGroupFilterSet(NautobotFilterSet):
 
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "slug", "description")
+        fields = ("id", "name", "description")
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):
@@ -436,18 +440,18 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
         filter_predicates={
             "operator": "icontains",
             "group__name": "icontains",
-            "group__slug": "icontains",
             "parent_group__name": "icontains",
-            "parent_group__slug": "icontains",
         },
     )
     group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DynamicGroup.objects.all(),
-        label="Group (slug or ID)",
+        label="Group (name or ID)",
+        to_field_name="name",
     )
     parent_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DynamicGroup.objects.all(),
-        label="Parent Group (slug or ID)",
+        label="Parent Group (name or ID)",
+        to_field_name="name",
     )
 
     class Meta:
@@ -498,7 +502,8 @@ class GitRepositoryFilterSet(NautobotFilterSet):
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Secrets group (ID or slug)",
+        label="Secrets group (ID or name)",
+        to_field_name="name",
     )
 
     class Meta:
@@ -515,14 +520,15 @@ class GraphQLQueryFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "query": "icontains",
         },
     )
 
     class Meta:
         model = GraphQLQuery
-        fields = ["name", "slug"]
+        fields = [
+            "name",
+        ]
 
 
 #
@@ -589,7 +595,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
 
 class JobHookFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
+    q = SearchFilter(filter_predicates={"name": "icontains"})
     content_types = ContentTypeMultipleChoiceFilter(
         choices=ChangeLoggedModelsQuery().get_choices,
     )
@@ -605,7 +611,6 @@ class JobHookFilterSet(BaseFilterSet):
             "content_types",
             "enabled",
             "job",
-            "slug",
             "type_create",
             "type_update",
             "type_delete",
@@ -847,7 +852,6 @@ class SecretFilterSet(
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
         },
     )
     # TODO(Glenn): dynamic choices needed. The issue being that secrets providers are Python
@@ -856,7 +860,7 @@ class SecretFilterSet(
 
     class Meta:
         model = Secret
-        fields = ("id", "name", "slug", "provider", "created", "last_updated", "tags")
+        fields = ("id", "name", "provider", "created", "last_updated", "tags")
 
 
 class SecretsGroupFilterSet(
@@ -869,13 +873,12 @@ class SecretsGroupFilterSet(
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
         },
     )
 
     class Meta:
         model = SecretsGroup
-        fields = ("id", "name", "slug", "created", "last_updated")
+        fields = ("id", "name", "created", "last_updated")
 
 
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
@@ -883,7 +886,8 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
 
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Secrets Group (ID or slug)",
+        label="Secrets Group (ID or name)",
+        to_field_name="name",
     )
     secret_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Secret.objects.all(),
@@ -891,7 +895,8 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
     )
     secret = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Secret.objects.all(),
-        label="Secret (ID or slug)",
+        label="Secret (ID or name)",
+        to_field_name="name",
     )
     access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
     secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
@@ -912,7 +917,6 @@ class StatusFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "content_types__model": "icontains",
         },
     )
@@ -927,7 +931,6 @@ class StatusFilterSet(NautobotFilterSet):
             "content_types",
             "color",
             "name",
-            "slug",
             "created",
             "last_updated",
         ]
@@ -992,7 +995,6 @@ class RoleFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "content_types__model": "icontains",
         },
     )
@@ -1013,7 +1015,6 @@ class RoleFilterSet(NautobotFilterSet):
             "content_types",
             "color",
             "name",
-            "slug",
             "weight",
             "created",
             "last_updated",

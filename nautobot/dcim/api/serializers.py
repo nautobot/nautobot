@@ -455,7 +455,6 @@ class ManufacturerSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "device_type_count",
             "inventory_item_count",
@@ -664,7 +663,6 @@ class PlatformSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "manufacturer",
             "napalm_driver",
             "napalm_args",
@@ -1075,7 +1073,6 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerial
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "failover_strategy",
             "secrets_group",

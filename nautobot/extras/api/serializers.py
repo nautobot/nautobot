@@ -526,7 +526,6 @@ class DynamicGroupSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "content_type",
             "filter",
@@ -650,7 +649,6 @@ class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
         fields = (
             "url",
             "name",
-            "slug",
             "query",
             "variables",
         )
@@ -1234,7 +1232,6 @@ class RoleSerializer(NautobotModelSerializer):
             "url",
             "content_types",
             "name",
-            "slug",
             "color",
             "weight",
         ]
@@ -1255,7 +1252,6 @@ class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "provider",
             "parameters",
@@ -1279,7 +1275,6 @@ class SecretsGroupSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "secrets",
         ]
@@ -1323,7 +1318,6 @@ class StatusSerializer(NautobotModelSerializer):
             "url",
             "content_types",
             "name",
-            "slug",
             "color",
         ]
 

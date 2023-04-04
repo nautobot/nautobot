@@ -119,7 +119,7 @@ class ScriptVariablesTest(TestCase):
     def test_objectvar(self):
         # Populate some objects
         for i in range(1, 6):
-            Role(name=f"Device Role {i}", slug=f"device-role-{i}").save()
+            Role(name=f"Device Role {i}").save()
 
         # Validate valid data
         data = {"var1": Role.objects.get_for_model(Device).first().pk}
@@ -130,7 +130,7 @@ class ScriptVariablesTest(TestCase):
     def test_multiobjectvar(self):
         # Populate some objects
         for i in range(1, 6):
-            Role(name=f"Device Role {i}", slug=f"device-role-{i}").save()
+            Role(name=f"Device Role {i}").save()
 
         # Validate valid data
         data = {"var1": [role.pk for role in Role.objects.all()[:3]]}

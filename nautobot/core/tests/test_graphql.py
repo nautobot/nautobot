@@ -69,7 +69,8 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+from nautobot.virtualization.factory import ClusterTypeFactory
+from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -78,10 +79,8 @@ User = get_user_model()
 class GraphQLTestCase(TestCase):
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
-        GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: locations {name} }")
-        GraphQLQuery.objects.create(
-            name="GQL 2", slug="gql-2", query="query ($name: [String!]) { locations(name:$name) {name} }"
-        )
+        GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
+        GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
         self.location_type = LocationType.objects.get(name="Campus")
         self.locations = (
             Location.objects.create(name="Location-1", slug="location-1", location_type=self.location_type),
@@ -109,11 +108,11 @@ class GraphQLTestCase(TestCase):
             execute_query(query, user=self.user).to_dict()
 
     def test_execute_saved_query(self):
-        resp = execute_saved_query("gql-1", user=self.user).to_dict()
+        resp = execute_saved_query("GQL 1", user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
 
     def test_execute_saved_query_with_variable(self):
-        resp = execute_saved_query("gql-2", user=self.user, variables={"name": "location-1"}).to_dict()
+        resp = execute_saved_query("GQL 2", user=self.user, variables={"name": "location-1"}).to_dict()
         self.assertFalse(resp["data"].get("error"))
 
 
@@ -658,8 +657,8 @@ class GraphQLQueryTest(TestCase):
         cls.location2.validated_save()
         cls.rack1 = Rack.objects.create(name="Rack 1", location=cls.location1)
         cls.rack2 = Rack.objects.create(name="Rack 2", location=cls.location2)
-        cls.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
-        cls.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
+        cls.tenant1 = Tenant.objects.create(name="Tenant 1")
+        cls.tenant2 = Tenant.objects.create(name="Tenant 2")
 
         cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, location=cls.location1)
         cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, location=cls.location2)
@@ -669,15 +668,16 @@ class GraphQLQueryTest(TestCase):
             PowerPanel.objects.create(name="location1-powerpanel2", location=cls.location1),
             PowerPanel.objects.create(name="location1-powerpanel3", location=cls.location1),
         ]
+        powerfeed_status = Status.objects.get_for_model(PowerFeed).first()
         cls.location1_power_feeds = [
             PowerFeed.objects.create(
                 name="location1-powerfeed1",
-                status=Status.objects.get(name="Active"),
+                status=powerfeed_status,
                 power_panel=cls.location1_power_panels[0],
             ),
             PowerFeed.objects.create(
                 name="location1-powerfeed2",
-                status=Status.objects.get(name="Active"),
+                status=powerfeed_status,
                 power_panel=cls.location1_power_panels[1],
             ),
         ]
@@ -832,40 +832,41 @@ class GraphQLQueryTest(TestCase):
             enabled=False,
         )
 
+        cable_statuses = Status.objects.get_for_model(Cable)
         cls.cable1 = Cable.objects.create(
             termination_a=cls.interface11,
             termination_b=cls.interface12,
-            status=Status.objects.get_for_model(Cable)[0],
+            status=cable_statuses[0],
         )
         cls.cable2 = Cable.objects.create(
             termination_a=cls.interface31,
             termination_b=cls.interface21,
-            status=Status.objects.get_for_model(Cable)[1],
+            status=cable_statuses[1],
         )
 
         # Power Cables
         cls.cable3 = Cable.objects.create(
             termination_a=cls.device1_power_ports[0],
             termination_b=cls.upsdevice1_power_outlets[0],
-            status=Status.objects.get(name="Active"),
+            status=cable_statuses[0],
         )
         cls.cable3 = Cable.objects.create(
             termination_a=cls.upsdevice1_power_ports[0],
             termination_b=cls.location1_power_feeds[0],
-            status=Status.objects.get(name="Active"),
+            status=cable_statuses[0],
         )
 
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
 
-        Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
-        Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+        Provider.objects.create(name="provider 1", asn=1)
+        Provider.objects.create(name="provider 2", asn=4294967295)
 
         webhook1 = Webhook.objects.create(name="webhook 1", type_delete=True, enabled=False)
         webhook1.content_types.add(ContentType.objects.get_for_model(Device))
         webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
         webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        clustertype = ClusterTypeFactory.create()
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype)
         cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
@@ -1211,7 +1212,7 @@ query {
                     }
                 }
             """
-            % (self.device_role1.slug,)
+            % (self.device_role1.name,)
         )
         result = self.execute_query(query)
 
@@ -1254,15 +1255,15 @@ query {
             (f'id: ["{self.location1.pk}"]', 1),
             (f'id: ["{self.location1.pk}", "{self.location2.pk}"]', 2),
             (
-                f'status: "{self.location_statuses[0].slug}"',
+                f'status: "{self.location_statuses[0].name}"',
                 Location.objects.filter(status=self.location_statuses[0]).count(),
             ),
             (
-                f'status: ["{self.location_statuses[1].slug}"]',
+                f'status: ["{self.location_statuses[1].name}"]',
                 Location.objects.filter(status=self.location_statuses[1]).count(),
             ),
             (
-                f'status: ["{self.location_statuses[0].slug}", "{self.location_statuses[1].slug}"]',
+                f'status: ["{self.location_statuses[0].name}", "{self.location_statuses[1].name}"]',
                 Location.objects.filter(status__in=self.location_statuses[:2]).count(),
             ),
         )
@@ -1296,10 +1297,10 @@ query {
             f'id: "{self.device1.pk}"': _count({"id": [self.device1.pk]}),
             f'id: ["{self.device1.pk}"]': _count({"id": [self.device1.pk]}),
             f'id: ["{self.device1.pk}", "{self.device2.pk}"]': _count({"id": [self.device1.pk, self.device2.pk]}),
-            f'role: "{self.device_role1.slug}"': _count({"role": [self.device_role1.slug]}),
-            f'role: ["{self.device_role1.slug}"]': _count({"role": [self.device_role1.slug]}),
-            f'role: ["{self.device_role1.slug}", "{self.device_role2.slug}"]': _count(
-                {"role": [self.device_role1.slug, self.device_role2.slug]}
+            f'role: "{self.device_role1.name}"': _count({"role": [self.device_role1.name]}),
+            f'role: ["{self.device_role1.name}"]': _count({"role": [self.device_role1.name]}),
+            f'role: ["{self.device_role1.name}", "{self.device_role2.name}"]': _count(
+                {"role": [self.device_role1.name, self.device_role2.name]}
             ),
             f'location: "{self.location1.slug}"': _count({"location": [self.location1.slug]}),
             f'location: ["{self.location1.slug}"]': _count({"location": [self.location1.slug]}),
@@ -1308,10 +1309,10 @@ query {
             ),
             'face: "front"': _count({"face": ["front"]}),
             'face: "rear"': _count({"face": ["rear"]}),
-            f'status: "{self.device_statuses[0].slug}"': _count({"status": [self.device_statuses[0].slug]}),
-            f'status: ["{self.device_statuses[1].slug}"]': _count({"status": [self.device_statuses[1].slug]}),
-            f'status: ["{self.device_statuses[0].slug}", "{self.device_statuses[1].slug}"]': _count(
-                {"status": [self.device_statuses[0].slug, self.device_statuses[1].slug]}
+            f'status: "{self.device_statuses[0].name}"': _count({"status": [self.device_statuses[0].name]}),
+            f'status: ["{self.device_statuses[1].name}"]': _count({"status": [self.device_statuses[1].name]}),
+            f'status: ["{self.device_statuses[0].name}", "{self.device_statuses[1].name}"]': _count(
+                {"status": [self.device_statuses[0].name, self.device_statuses[1].name]}
             ),
             "is_full_depth: true": _count({"is_full_depth": True}),
             "is_full_depth: false": _count({"is_full_depth": False}),
@@ -1347,15 +1348,15 @@ query {
                 IPAddress.objects.ip_family(4).count(),
             ),
             (
-                f'status: "{self.ip_statuses[0].slug}"',
+                f'status: "{self.ip_statuses[0].name}"',
                 IPAddress.objects.filter(status=self.ip_statuses[0]).count(),
             ),
             (
-                f'status: ["{self.ip_statuses[1].slug}"]',
+                f'status: ["{self.ip_statuses[1].name}"]',
                 IPAddress.objects.filter(status=self.ip_statuses[1]).count(),
             ),
             (
-                f'status: ["{self.ip_statuses[0].slug}", "{self.ip_statuses[1].slug}"]',
+                f'status: ["{self.ip_statuses[0].name}", "{self.ip_statuses[1].name}"]',
                 IPAddress.objects.filter(status__in=[self.ip_statuses[0], self.ip_statuses[1]]).count(),
             ),
             (
@@ -1453,8 +1454,8 @@ query {
             (f'location: "{self.location2.slug}"', 1),
             (f'location: ["{self.location1.slug}", "{self.location2.slug}"]', 4),
             (f'tenant_id: "{self.tenant1.id}"', 3),
-            ('tenant: "tenant-2"', 1),
-            ('tenant: ["tenant-1", "tenant-2"]', 4),
+            ('tenant: "Tenant 2"', 1),
+            ('tenant: ["Tenant 1", "Tenant 2"]', 4),
         )
 
         for filterv, nbr_expected_results in filters:

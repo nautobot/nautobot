@@ -43,11 +43,11 @@ class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = tables.Column(verbose_name="Clusters")
-    actions = ButtonsColumn(ClusterType, pk_field="slug")
+    actions = ButtonsColumn(ClusterType)
 
     class Meta(BaseTable.Meta):
         model = ClusterType
-        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        fields = ("pk", "name", "cluster_count", "description", "actions")
         default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 
@@ -60,11 +60,11 @@ class ClusterGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = tables.Column(verbose_name="Clusters")
-    actions = ButtonsColumn(ClusterGroup, pk_field="slug")
+    actions = ButtonsColumn(ClusterGroup)
 
     class Meta(BaseTable.Meta):
         model = ClusterGroup
-        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        fields = ("pk", "name", "cluster_count", "description", "actions")
         default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 

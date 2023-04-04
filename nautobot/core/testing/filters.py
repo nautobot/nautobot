@@ -152,15 +152,20 @@ class FilterTestCases:
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
             self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
-    class NameSlugFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name and by slug."""
+    class NameOnlyFilterTestCase(FilterTestCase):
+        """Add simple tests for filtering by name."""
 
         def test_name(self):
             """Verify that the filterset supports filtering by name."""
-            params = {"name": self.queryset.values_list("name", flat=True)[:2]}
+            params = {"name": list(self.queryset.values_list("name", flat=True)[:2])}
             filterset = self.filterset(params, self.queryset)
             self.assertTrue(filterset.is_valid())
-            self.assertEqual(filterset.qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(
+                filterset.qs.order_by("name"), self.queryset.filter(name__in=params["name"]).order_by("name")
+            )
+
+    class NameSlugFilterTestCase(NameOnlyFilterTestCase):
+        """Add simple tests for filtering by name and by slug."""
 
         def test_slug(self):
             """Verify that the filterset supports filtering by slug."""
@@ -180,7 +185,7 @@ class FilterTestCases:
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
-            params = {"tenant": [tenants[0].slug, tenants[1].slug]}
+            params = {"tenant": [tenants[0].name, tenants[1].name]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
@@ -202,7 +207,7 @@ class FilterTestCases:
                 ordered=False,
             )
 
-            params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
+            params = {"tenant_group": [tenant_groups[0].name, tenant_groups[1].name]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant__tenant_group__in=tenant_groups_including_children),
