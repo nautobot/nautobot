@@ -85,8 +85,9 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=semver,pattern={{version}}-py${{ matrix.python-version }}
+            type=semver,pattern={{version}}+py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value={{version}}-py${{ matrix.python-version }}r
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
@@ -112,8 +113,9 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=semver,pattern={{version}}-py${{ matrix.python-version }}
+            type=semver,pattern={{version}}+py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value={{version}}-py${{ matrix.python-version }}r
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
