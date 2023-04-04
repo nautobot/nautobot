@@ -494,6 +494,20 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             address=netaddr.IPNetwork("192.0.2.1/24"),
             role=roles[1],
         )
+        
+    def test_multiple_nat_outside_list(self):
+        """
+        Test suite to test supporing nat_outside_list.
+        """
+        nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"))
+        nat_outside1 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside)
+        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"), nat_inside=nat_inside)
+        nat_outside3 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.3/24"), nat_inside=nat_inside)
+        nat_inside.refresh_from_db()
+        self.assertEqual(nat_inside.nat_outside_list.count(), 3)
+        self.assertEqual(nat_inside.nat_outside_list.all()[0], nat_outside1)
+        self.assertEqual(nat_inside.nat_outside_list.all()[1], nat_outside2)
+        self.assertEqual(nat_inside.nat_outside_list.all()[2], nat_outside3)
 
     def test_create_ip_address_without_slaac_status(self):
         IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
