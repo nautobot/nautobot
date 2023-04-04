@@ -494,7 +494,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             address=netaddr.IPNetwork("192.0.2.1/24"),
             role=roles[1],
         )
-        
+
     def test_multiple_nat_outside_list(self):
         """
         Test suite to test supporing nat_outside_list.
