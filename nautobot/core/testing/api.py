@@ -353,28 +353,30 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
         def check_expected_slug(self, obj):
-            if getattr(self, "slug_source", None):
-                slug_source = self.slug_source if isinstance(self.slug_source, (list, tuple)) else [self.slug_source]
-                expected_slug = ""
-                for source_item in slug_source:
-                    # e.g. self.slug_source = ["parent__name", "name"]
-                    source_keys = source_item.split("__")
-                    try:
-                        val = getattr(obj, source_keys[0])
-                        for key in source_keys[1:]:
-                            val = getattr(val, key)
-                    except AttributeError:
-                        val = ""
-                    if val:
-                        if expected_slug != "":
-                            expected_slug += "-"
-                        expected_slug += self.slugify_function(val)
+            if not getattr(self, "slug_source", None):
+                self.skipTest("No slug_source defined for this test")
 
-                self.assertNotEqual(expected_slug, "")
-                if hasattr(obj, "slug"):
-                    self.assertEqual(obj.slug, expected_slug)
-                else:
-                    self.assertEqual(obj.key, expected_slug)
+            slug_source = self.slug_source if isinstance(self.slug_source, (list, tuple)) else [self.slug_source]
+            expected_slug = ""
+            for source_item in slug_source:
+                # e.g. self.slug_source = ["parent__name", "name"]
+                source_keys = source_item.split("__")
+                try:
+                    val = getattr(obj, source_keys[0])
+                    for key in source_keys[1:]:
+                        val = getattr(val, key)
+                except AttributeError:
+                    val = ""
+                if val:
+                    if expected_slug != "":
+                        expected_slug += "-"
+                    expected_slug += self.slugify_function(val)
+
+            self.assertNotEqual(expected_slug, "")
+            if hasattr(obj, "slug"):
+                self.assertEqual(obj.slug, expected_slug)
+            else:
+                self.assertEqual(obj.key, expected_slug)
 
         def test_create_object(self):
             """
