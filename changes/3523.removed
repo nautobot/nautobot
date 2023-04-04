@@ -1,1 +1,1 @@
-Removed nat_outside getter-setter in IPAddress model.
+Removed `nat_outside` getter-setter in IPAddress model.
