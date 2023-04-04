@@ -231,7 +231,10 @@ exclude = '''
 '''
 
 [tool.pylint.master]
-load-plugins = "pylint_django"
+load-plugins = [
+    "pylint_django",
+    "nautobot.utilities.pylint"
+]
 py-version = "3.7"
 ignore-paths = [
     ".*third_party.*"
