@@ -151,7 +151,7 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
     field_order = ["q", "provider"]
     q = forms.CharField(required=False, label="Search")
     provider = DynamicModelMultipleChoiceField(
-        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="slug"
+        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="name"
     )
     tags = TagFilterField(model)
 
@@ -284,9 +284,9 @@ class CircuitFilterForm(
     ]
     q = forms.CharField(required=False, label="Search")
     circuit_type = DynamicModelMultipleChoiceField(
-        queryset=CircuitType.objects.all(), to_field_name="slug", required=False
+        queryset=CircuitType.objects.all(), to_field_name="name", required=False
     )
-    provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
+    provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="name", required=False)
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,

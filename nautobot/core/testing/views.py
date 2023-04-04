@@ -370,7 +370,6 @@ class ViewTestCases:
             # order_by() is no supported by django TreeNode,
             # So we directly retrieve the instance by "slug".
             if isinstance(self._get_queryset().first(), TreeNode):
-                # treenode_filter_by_field_name: Determines which field the queryset should be filtered by
                 filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
                 instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
                 self.assertInstanceEqual(instance, self.form_data)

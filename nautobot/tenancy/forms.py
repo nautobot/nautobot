@@ -124,13 +124,13 @@ class TenancyForm(forms.Form):
 class TenancyFilterForm(forms.Form):
     tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
         queryset=Tenant.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
         query_params={"tenant_group": "$tenant_group"},

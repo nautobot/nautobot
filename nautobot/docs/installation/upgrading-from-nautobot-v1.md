@@ -433,7 +433,6 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | Cable                   | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/cabels/?tenant=<uuid/name>`                             |
 | Circuit                 | `circuit_type`            | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?circuit_type=<uuid/name>`                 |
 |                         | `provider`                | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?provider=<uuid/name>`                     |
-|                         | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/circuits/?site=<uuid/slug>`                         |
 |                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?tenant=<uuid/name>`                       |
 |                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/circuits/circuits/?tenant_group=<uuid/name>`                 |
 | Cluster                 | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/virtualization/clusters/?cluster_group=<uuid/name>`          |
@@ -452,14 +451,12 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 |                         | `device_type_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`                       |
 |                         | `device_redundancy_group` | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?device_redundancy_group=<uuid/name>`           |
 |                         | `manufacturer`            | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?manufacturer=<uuid/name>`                      |
-|                         | `model`                   | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`                             |
 |                         | `platform`                | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?platform=<uuid/name>`                          |
 |                         | `role`                    | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?role=<uuid/name>`                              |
 |                         | `rack_id`                 | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`                              |
 |                         | `rack_group_id`           | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`                        |
 |                         | `serial`                  | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`              |
 |                         | `secrets_group`           | Enhanced to support primary key UUIDs in addition to names | `/dcim/devices/?secrets_group=<uuid/name>`                     |
-|                         | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`                              |
 |                         | `virtual_chassis_id`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`                   |
 | DeviceBay               | `cable`                   | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`                            |
 |                         | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`                        |
@@ -476,13 +473,10 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 | InventoryItem           | `device`                  | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`                    |
 |                         | `manufacturer`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`              |
 |                         | `serial`                  | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...`      |
-|                         | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`                      |
 | Manufacturer            | `platforms`               | Enhanced to support primary key UUIDs in addition to names | `/dcim/manufacturers/?platforms=<uuid/name>`                   |
 | Platform                | `manufacturer`            | Enhanced to support primary key UUIDs in addition to names | `/dcim/platforms/?manufacturer=<uuid/name>`                    |
-| PowerFeed               | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`                          |
 | PowerOutlet             | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`                      |
 | PowerPort               | `device`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-ports/?device=<uuid/name>`                        |
-| Provider                | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/circuits/providers/?site=<uuid/slug>`                        |
 | Prefix                  | `rir`                     | Enhanced to support primary key UUIDs in addition to names | `/ipam/prefixes/?rir=<uuid/name>`                              |
 |                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/ipam/prefixes/?tenant=<uuid/name>`                           |
 |                         | `tenant_group`            | Enhanced to support primary key UUIDs in addition to names | `/ipam/prefixes/?tenant_group=<uuid/name>`                     |
@@ -504,7 +498,6 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 |                         | `children`                | Enhanced to support primary key UUIDs in addition to names | `/tenancy/tenant-groups/?children=<uuid/name>`                 |
 |                         | `tenants`                 | Enhanced to support primary key UUIDs in addition to names | `/tenancy/tenant-groups/?tenants=<uuid/name>`                  |
 | VirtualChassis          | `master`                  | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`                    |
-|                         | `site`                    | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`                      |
 |                         | `tenant`                  | Enhanced to support primary key UUIDs in addition to names | `/dcim/virtual-chassis/?tenant=<uuid/name>`                    |
 | VirtualMachine          | `cluster_group`           | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?cluster_group=<uuid/name>`  |
 |                         | `cluster_type`            | Enhanced to support primary key UUIDs in addition to names | `/virtualization/virtual-machines/?cluster_type=<uuid/name>`   |
