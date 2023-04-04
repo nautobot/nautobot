@@ -27,8 +27,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
 from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
 from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.models import RelationshipAssociation
-
+from nautobot.extras.models import RelationshipAssociation, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +204,42 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 if sub_data is not None:
                     data[key] = value.to_internal_value(sub_data)
         return data
+
+    def build_field(self, field_name, info, model_class, nested_depth):
+        """
+        Return a two tuple of (cls, kwargs) to build a serializer field with.
+        """
+        from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+
+        # For tags field, DRF does not recognize the relationship between tags and the model itself (?)
+        # so instead of calling build_nested_field() it will call build_property_field() which
+        # makes the field impervious to the `?depth` parameter.
+        # So we intercept it here to call build_nested_field()
+        # which will make the tags field be rendered with TagSerializer() and respect the `depth` parameter.
+        if field_name == "tags":
+            if nested_depth > 0:
+                relation_info = RelationInfo(
+                    model_field=getattr(model_class, "tags"),
+                    related_model=Tag,
+                    to_many=True,
+                    has_through_model=True,
+                    to_field=_get_to_field(getattr(model_class, "tags")),
+                    reverse=False,
+                )
+                return self.build_nested_field(field_name, relation_info, nested_depth)
+
+        return super().build_field(field_name, info, model_class, nested_depth)
+
+    def build_property_field(self, field_name, model_class):
+        """
+        Create a read only field for model methods and properties.
+        """
+        if field_name == "tags":
+            field_class = NautobotPrimaryKeyRelatedField
+            field_kwargs = {"queryset": Tag.objects.all()}
+
+            return field_class, field_kwargs
+        return super().build_property_field(field_name, model_class)
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
         field = get_serializer_for_model(relation_info.related_model)

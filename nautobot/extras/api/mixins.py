@@ -7,7 +7,7 @@ from nautobot.core.api import (
     ContentTypeField,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.extras.api.fields import RoleSerializerField, TagSerializerField
+from nautobot.extras.api.fields import RoleSerializerField
 from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,6 @@ class StatusModelSerializerMixin(BaseModelSerializer):
 
 
 class TaggedModelSerializerMixin(BaseModelSerializer):
-    tags = TagSerializerField(many=True, required=False)
-
     def get_field_names(self, declared_fields, info):
         """Ensure that 'tags' field is always present."""
         fields = list(super().get_field_names(declared_fields, info))

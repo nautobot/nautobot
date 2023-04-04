@@ -471,7 +471,36 @@ class DeviceSerializer(
 
     class Meta:
         model = Device
-        fields = "__all__"
+        # TODO #824 Leaving this here so that line 538 does not throw an error
+        fields = [
+            "url",
+            "name",
+            "device_type",
+            "role",
+            "tenant",
+            "platform",
+            "serial",
+            "asset_tag",
+            "location",
+            "rack",
+            "position",
+            "face",
+            "parent_device",
+            "status",
+            "primary_ip",
+            "primary_ip4",
+            "primary_ip6",
+            "secrets_group",
+            "cluster",
+            "virtual_chassis",
+            "vc_position",
+            "vc_priority",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
+            "comments",
+            "local_config_context_schema",
+            "local_config_context_data",
+        ]
         validators = []
 
     def validate(self, data):
@@ -502,15 +531,15 @@ class DeviceSerializer(
         return data
 
 
-# class DeviceWithConfigContextSerializer(DeviceSerializer):
-#     config_context = serializers.SerializerMethodField()
+class DeviceWithConfigContextSerializer(DeviceSerializer):
+    config_context = serializers.SerializerMethodField()
 
-#     class Meta(DeviceSerializer.Meta):
-#         fields = DeviceSerializer.Meta.fields + ["config_context"]
+    class Meta(DeviceSerializer.Meta):
+        fields = DeviceSerializer.Meta.fields + ["config_context"]
 
-#     @extend_schema_field(serializers.DictField)
-#     def get_config_context(self, obj):
-#         return obj.get_config_context()
+    @extend_schema_field(serializers.DictField)
+    def get_config_context(self, obj):
+        return obj.get_config_context()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):

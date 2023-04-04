@@ -41,39 +41,51 @@ class WritableSerializerMixin:
     "parent": "10dff139-7333-46b0-bef6-f6a5a7b5497c"
     """
 
+    def get_unique_object_from_data(self, data):
+        params = dict_to_filter_params(data)
+        if hasattr(self, "fields"):
+            for field_name, field_instance in self.fields.items():
+                if field_name in params and field_instance.source == "*":
+                    logger.debug("Discarding non-database field %s", field_name)
+                    del params[field_name]
+
+        if hasattr(self, "queryset"):
+            queryset = self.queryset
+        else:
+            queryset = self.Meta.model.objects
+        model_name = queryset.model._meta.model_name
+        try:
+            return queryset.get(**params)
+        except ObjectDoesNotExist:
+            raise ValidationError(
+                {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
+            )
+        except MultipleObjectsReturned:
+            raise ValidationError({f"{model_name}": f"Multiple objects match the provided attributes: {params}"})
+        except FieldError as e:
+            raise ValidationError({f"{model_name}": e})
+
     def to_internal_value(self, data):
         if data is None:
             return None
 
         # Dictionary of related object attributes
         if isinstance(data, dict):
-            params = dict_to_filter_params(data)
-            if hasattr(self, "fields"):
-                for field_name, field_instance in self.fields.items():
-                    if field_name in params and field_instance.source == "*":
-                        logger.debug("Discarding non-database field %s", field_name)
-                        del params[field_name]
+            result = self.get_unique_object_from_data(data)
+            return result
 
-            if hasattr(self, "queryset"):
-                queryset = self.queryset
-            else:
-                queryset = self.Meta.model.objects
-            model_name = queryset.model._meta.model_name
-            try:
-                return queryset.get(**params)
-            except ObjectDoesNotExist:
-                raise ValidationError(
-                    {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
-                )
-            except MultipleObjectsReturned:
-                raise ValidationError({f"{model_name}": f"Multiple objects match the provided attributes: {params}"})
-            except FieldError as e:
-                raise ValidationError({f"{model_name}": e})
+        # List of dictionary objects like tags or contenttypes
+        if isinstance(data, list):
+            result = []
+            for entry in data:
+                result.append(self.get_unique_object_from_data(entry))
+            return result
 
         if hasattr(self, "queryset"):
             queryset = self.queryset
         else:
             queryset = self.Meta.model.objects
+        model_name = queryset.model._meta.model_name
         pk = None
 
         if isinstance(queryset.model._meta.pk, AutoField):

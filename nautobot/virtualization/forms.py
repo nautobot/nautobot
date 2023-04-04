@@ -215,7 +215,6 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         ]
 
     def __init__(self, cluster, *args, **kwargs):
-
         self.cluster = cluster
 
         super().__init__(*args, **kwargs)
@@ -292,7 +291,6 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         super().__init__(*args, **kwargs)
 
         if self.instance.present_in_database:
-
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
                 ip_choices = [(None, "---------")]
@@ -331,7 +329,6 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                 self.fields[f"primary_ip{family}"].choices = ip_choices
 
         else:
-
             # An object that doesn't exist yet can't have any IPs assigned to it
             self.fields["primary_ip4"].choices = []
             self.fields["primary_ip4"].widget.attrs["readonly"] = True
@@ -463,7 +460,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         label="Untagged VLAN",
-        brief_mode=False,
+        depth=1,
         query_params={
             "location_id": "null",
         },
@@ -472,7 +469,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         label="Tagged VLANs",
-        brief_mode=False,
+        depth=1,
         query_params={
             "location_id": "null",
         },
@@ -481,7 +478,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         queryset=IPAddress.objects.all(),
         required=False,
         label="IP Addresses",
-        brief_mode=False,
+        depth=1,
     )
 
     class Meta:
@@ -565,7 +562,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        brief_mode=False,
+        depth=1,
         query_params={
             "location_id": "null",
         },
@@ -573,7 +570,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        brief_mode=False,
+        depth=1,
         query_params={
             "location_id": "null",
         },
@@ -661,7 +658,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        brief_mode=False,
+        depth=1,
         query_params={
             "location_id": "null",
         },
@@ -669,7 +666,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        brief_mode=False,
+        depth=1,
         query_params={
             "location_id": "null",
         },

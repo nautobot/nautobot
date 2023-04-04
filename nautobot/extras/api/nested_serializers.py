@@ -19,7 +19,6 @@ __all__ = [
     "NestedSecretsGroupAssociationSerializer",
     "NestedSecretSerializer",
     "NestedStatusSerializer",
-    "NestedTagSerializer",
 ]
 
 
@@ -150,11 +149,3 @@ class NestedStatusSerializer(WritableNestedSerializer):
     class Meta:
         model = models.Status
         fields = ["id", "url", "name", "slug"]
-
-
-class NestedTagSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
-
-    class Meta:
-        model = models.Tag
-        fields = ["id", "url", "name", "slug", "color"]
