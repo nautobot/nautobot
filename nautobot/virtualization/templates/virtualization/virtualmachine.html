@@ -69,7 +69,12 @@
                             {% if object.primary_ip4.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
                             {% elif object.primary_ip4.nat_outside_list.exists %}
-                                <span>(NAT: {% for nat in object.primary_ip4.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
+                                <br /><span>NAT: </span>
+                                <ul>
+                                    {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                        <li>{{ nat|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>    
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
@@ -84,7 +89,12 @@
                             {% if object.primary_ip6.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
                             {% elif object.primary_ip6.nat_outside_list.exists %}
-                                <span>(NAT: {% for nat in object.primary_ip6.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
+                                <br /><span>NAT: </span>
+                                <ul>
+                                    {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                        <li>{{ nat|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
