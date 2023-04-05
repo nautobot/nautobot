@@ -54,31 +54,35 @@ GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
 GitRepoInfo = namedtuple("GitRepoInfo", ["from_url", "to_path", "from_branch"])
 
 
-def enqueue_git_repository_helper(repository, request, func, **kwargs):
+def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
     """
     Wrapper for JobResult.enqueue_job() to enqueue one of several possible Git repository functions.
     """
-    git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
+    job_model = job_class().get_job_model()
+    # FIXME(jathan): There's something missing I haven't quite figured out yet that is preventing
+    # `job_model.job_class` from being automatically populated correctly. So this will do for this
+    # precise use-case for now.
+    job_model._job_class = job_class
     JobResult.enqueue_job(
-        func,
-        repository.name,
-        git_repository_content_type,
-        request.user,
+        job_model,
+        user,
         repository_pk=repository.pk,
-        request=copy_safe_request(request),
     )
 
 
-def enqueue_git_repository_diff_origin_and_local(repository, request):
+def enqueue_git_repository_diff_origin_and_local(repository, user):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    enqueue_git_repository_helper(repository, request, git_repository_diff_origin_and_local)
+    enqueue_git_repository_helper(repository, user, git_repository_diff_origin_and_local)
 
 
-def enqueue_pull_git_repository_and_refresh_data(repository, request):
+def enqueue_pull_git_repository_and_refresh_data(repository, user):
     """
     Convenience wrapper for JobResult.enqueue_job() to enqueue the pull_git_repository_and_refresh_data job.
     """
-    enqueue_git_repository_helper(repository, request, pull_git_repository_and_refresh_data)
+    from nautobot.extras.jobs import get_job
+
+    job_class = get_job("system/git/GitRepositoryPullAndRefreshData")
+    enqueue_git_repository_helper(repository, user, job_class)
 
 
 def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):  # pylint: disable=redefined-outer-name
@@ -100,8 +104,6 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
             level_choice=LogLevelChoices.LOG_FAILURE,
             logger=logger,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
-        job_result.save()
         return GitJobResult(job_result=job_result, repository_record=None)
 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
@@ -109,29 +111,22 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
 
 # TODO(jathan): This should likely be deleted since it's coercing state and this
 # should be managed by the database backend.
-def log_job_result_final_status(job_result, job_type):
+def log_job_result_final_status(job_type):
     """Check Job status and save log to DB
     Args:
-        job_result (JobResult): JobResult Instance
         job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
     """
-    if job_result.status not in JobResultStatusChoices.READY_STATES:
-        if JobLogEntry.objects.filter(job_result__pk=job_result.pk, log_level=LogLevelChoices.LOG_FAILURE).exists():
-            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
-        else:
-            job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
     job_result.log(
         f"Repository {job_type} completed in {job_result.duration}",
         level_choice=LogLevelChoices.LOG_INFO,
         logger=logger,
     )
-    job_result.save()
 
 
 # TODO(jathan): The state transition stuff here should be deleted in exchange
 # for trusting the database backend.
 @nautobot_task
-def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
+def pull_git_repository_and_refresh_data(repository_pk, user_pk, job_result_pk):
     """
     Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
     """
@@ -145,8 +140,6 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
         return
 
     job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_STARTED)
-    job_result.save()
 
     try:
         if not os.path.exists(settings.GIT_ROOT):
@@ -164,14 +157,14 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
             logger=logger,
         )
 
-        refresh_datasource_content("extras.gitrepository", repository_record, request, job_result, delete=False)
+        # user = User.objects.get(pk=user_pk)
+        refresh_datasource_content("extras.gitrepository", repository_record, user, job_result, delete=False)
 
     except Exception as exc:
         job_result.log(
             f"Error while refreshing {repository_record.name}: {exc}",
             level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
 
     finally:
         log_job_result_final_status(job_result, "synchronization")
@@ -180,7 +173,7 @@ def pull_git_repository_and_refresh_data(repository_pk, request, job_result_pk):
 # TODO(jathan): The state transition stuff here should be deleted in exchange
 # for trusting the database backend.
 @nautobot_task
-def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, **kwargs):
+def git_repository_diff_origin_and_local(repository_pk, user_pk, job_result_pk, **kwargs):
     """
     Worker function to run a dry run on a Git repository.
     """
@@ -193,8 +186,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         return
 
     job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
-    job_result.set_status(JobResultStatusChoices.STATUS_STARTED)
-    job_result.save()
+
     try:
         if not os.path.exists(settings.GIT_ROOT):
             os.makedirs(settings.GIT_ROOT)
@@ -206,7 +198,7 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
             f"Error while running a dry run on {repository_record.name}: {exc}",
             level_choice=LogLevelChoices.LOG_FAILURE,
         )
-        job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
+        raise
 
     finally:
         log_job_result_final_status(job_result, "dry run")
@@ -287,9 +279,7 @@ def ensure_git_repository(
 
     except Exception as exc:
         if job_result:
-            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
-            job_result.save()
         elif logger:
             logger.error(str(exc))
         raise
@@ -300,7 +290,6 @@ def ensure_git_repository(
             level_choice=LogLevelChoices.LOG_SUCCESS,
             logger=logger,
         )
-        job_result.save()
     elif logger:
         logger.info("Repository successfully refreshed")
 
@@ -328,9 +317,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
 
     except Exception as exc:
         if job_result:
-            job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
-            job_result.save()
         elif logger:
             logger.error(str(exc))
         raise
@@ -396,7 +383,7 @@ def update_git_config_contexts(repository_record, job_result):
                 grouping="config contexts",
                 logger=logger,
             )
-            job_result.save()
+            raise
 
     # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
     for filter_type in (
@@ -450,7 +437,7 @@ def update_git_config_contexts(repository_record, job_result):
                     grouping="config contexts",
                     logger=logger,
                 )
-                job_result.save()
+                raise
 
     # Finally, handle device- and virtual-machine-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
     for local_type in ("devices", "virtual_machines"):
@@ -494,7 +481,7 @@ def update_git_config_contexts(repository_record, job_result):
                     grouping="local config contexts",
                     logger=logger,
                 )
-                job_result.save()
+                raise
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_contexts(
@@ -1122,7 +1109,7 @@ def update_git_export_templates(repository_record, job_result):
                 grouping="export templates",
                 logger=logger,
             )
-            job_result.save()
+            raise
 
     # Delete any prior templates that are owned by this repository but were not discovered above
     delete_git_export_templates(repository_record, job_result, preserve=managed_export_templates)

@@ -306,6 +306,9 @@ class BaseJob(Task):
         # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
         if cls in registry["plugin_jobs"]:
             source_grouping = "plugins"
+        # TODO(jathan): I know this is a hack but I'm just trying to get it working right now.
+        elif cls.name.lower().startswith("gitrepo"):
+            source_grouping = "system"
         elif cls.file_path.startswith(settings.JOBS_ROOT):
             source_grouping = "local"
         elif cls.file_path.startswith(settings.GIT_ROOT):
@@ -481,7 +484,7 @@ class BaseJob(Task):
         return form
 
     def get_job_model(self):
-        return self.job_result.job_model or JobModel.objects.get(
+        return getattr(self.job_result, "job_model", None) or JobModel.objects.get(
             module_name=self.__module__, job_class_name=self.__name__
         )
 
@@ -1108,6 +1111,14 @@ def _get_job_source_paths():
     # Locally installed jobs
     if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
         paths["local"] = settings.JOBS_ROOT
+
+    # TOD(jathan): System jobs. Hack. Temp. Blah blah blah.
+    if getattr(settings, "CELERY_IMPORTS", None):
+        from kombu.utils.imports import symbol_by_name
+
+        for path in settings.CELERY_IMPORTS:
+            mod = symbol_by_name(path)
+            paths["system"] = os.path.dirname(mod.__file__)
 
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
