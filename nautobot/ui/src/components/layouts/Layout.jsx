@@ -9,7 +9,7 @@ import {
     Text,
     Button,
 } from "@nautobot/nautobot-ui";
-import { useLocation } from "react-router-dom";
+import { Link as ReactRouterLink, useLocation } from "react-router-dom";
 import {
     GLOBAL_GRID_GAP,
     GLOBAL_PADDING_RIGHT,
@@ -20,6 +20,7 @@ import RouterLink from "@components/common/RouterLink";
 import LoadingWidget from "@components/common/LoadingWidget";
 
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+import RouterButton from "@components/common/RouterButton";
 
 export default function Layout({ children }) {
     const location = useLocation();
@@ -70,16 +71,14 @@ export default function Layout({ children }) {
                         {sessionInfo && sessionInfo.logged_in ? (
                             <>
                                 <SidebarNav />
-                                <Button m={3}>
-                                    <RouterLink to="/logout/">
-                                        Log Out
-                                    </RouterLink>
-                                </Button>
+                                <RouterButton m={3} to="/logout/">
+                                    Log Out
+                                </RouterButton>
                             </>
                         ) : (
-                            <Button m={3}>
-                                <RouterLink to="/login/">Log In</RouterLink>
-                            </Button>
+                            <RouterButton m={3} to="/login/">
+                                Log In
+                            </RouterButton>
                         )}
                     </Sidebar>
                 </Box>

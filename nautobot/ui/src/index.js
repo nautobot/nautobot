@@ -8,7 +8,9 @@ import { persistStore } from "redux-persist";
 import reportWebVitals from "src/reportWebVitals";
 import App from "./App";
 
-import "src/styles/globals.css";
+import "@fontsource/ubuntu/400.css";
+import "@fontsource/ubuntu/500.css";
+import "@fontsource/ubuntu-mono/400.css";
 
 // const dev = process.env.NODE_ENV !== "production";
 const container = document.getElementById("root");

@@ -1,8 +1,0 @@
-/* Font should be pulled in earlier to prevent jumpy experience */
-@import url("https://fonts.googleapis.com/css2?family=Ubuntu+Mono&family=Ubuntu:wght@400;500&display=swap");
-
-html,
-body {
-    font-family: "Ubuntu", sans-serif;
-    background-color: #f1f1f1;
-}

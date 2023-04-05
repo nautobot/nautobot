@@ -1,5 +1,6 @@
 import { Button, Frame } from "@nautobot/nautobot-ui";
 import { Link } from "./RouterLink";
+import { RouterButton } from "./RouterButton";
 import { ButtonGroup } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
@@ -18,18 +19,16 @@ export default function ObjectListTable({
     let location = useLocation();
     return (
         <Frame>
-            <ButtonGroup>
-                <Button>
-                    <Link to={`${location.pathname}add`}>
-                        <Icon.TbPlus /> Add
-                    </Link>
-                </Button>{" "}
-                <Button variant="secondary">
+            <ButtonGroup pb={2}>
+                <RouterButton to={`${location.pathname}add`} mr={2}>
+                    <Icon.TbPlus /> Add
+                </RouterButton>
+                <RouterButton to="#" variant="secondary" mr={2}>
                     <Icon.TbDatabaseImport /> Import
-                </Button>{" "}
-                <Button variant="secondary">
+                </RouterButton>
+                <RouterButton to="#" variant="secondary" mr={2}>
                     <Icon.TbDatabaseExport /> Export
-                </Button>{" "}
+                </RouterButton>
             </ButtonGroup>
             <NautobotTable data={tableData} headers={tableHeader} />
             <Paginator
