@@ -113,11 +113,18 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     url = serializers.HyperlinkedIdentityField(read_only=True, view_name="")
     serializer_related_field = NautobotPrimaryKeyRelatedField
+    object_type = ObjectTypeField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.__class__.__name__ != "NautobotNestedSerializer":
-            self.Meta.depth = self.context.get("depth", 0)
+        # If it is not a NestedSerializer, we should set the depth argument to whatever is in the request's context
+        if "NautobotNestedSerializer" not in self.__class__.__name__:
+            # We set our default depth value here to 1 because in OpenAPISchema
+            # get_serializer_context() (where we get the depth from self.request.query_params) is not called
+            # so in order to have enough information present in the OpenAPISchema, we set depth here to 1
+            # RestAPI serializer is not affected by this because get_serializer_context() is always called
+            # and depth is either passed into the request.query_params, or default to 0.
+            self.Meta.depth = self.context.get("depth", 1)
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -175,6 +182,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         # e.g. for annotated fields `circuit_count`, `device_count` and etc.
         if getattr(self.Meta, "extra_fields", None):
             return fields + self.Meta.extra_fields
+        # This is here for the PolymorphicProxySerializers which
+        # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
+        if "object_type" not in fields:
+            fields.append("object_type")
         return fields
 
     def to_internal_value(self, data):
@@ -199,7 +210,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         }
         """
         for key, value in self.get_fields().items():
-            if value.__class__.__name__ in ["NautobotNestedSerializer", "NautobotPrimaryKeyRelatedField"]:
+            if (
+                "NautobotNestedSerializer" in value.__class__.__name__
+                or value.__class__.__name__ == "NautobotPrimaryKeyRelatedField"
+            ):
                 sub_data = data.get(key, None)
                 if sub_data is not None:
                     data[key] = value.to_internal_value(sub_data)
@@ -254,6 +268,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 depth = nested_depth - 1
                 fields = "__all__"
 
+        # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
+        # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90
+        # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
+        # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
+        # does not make our schema happy.
+        NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
         field_class = NautobotNestedSerializer
         field_kwargs = get_nested_relation_kwargs(relation_info)
 
@@ -513,7 +533,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
                 other_type = getattr(relationship, f"{other_side}_type")
                 other_side_model = other_type.model_class()
-                other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                other_side_serializer = get_serializer_for_model(other_side_model)
                 serializer_instance = other_side_serializer(context={"request": self.context.get("request")})
 
                 expected_objects_data = relationship_data[other_side]

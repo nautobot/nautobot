@@ -141,16 +141,14 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         PolymorphicProxySerializer(
             component_name="ConfigContextOwner",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(
-                FeatureQuery("config_context_owners").list_subclasses(), prefix="Nested"
-            ),
+            serializers=lambda: get_serializers_for_models(FeatureQuery("config_context_owners").list_subclasses()),
             allow_null=True,
         )
     )
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        serializer = get_serializer_for_model(obj.owner, prefix="Nested")
+        serializer = get_serializer_for_model(obj.owner)
         context = {"request": self.context["request"]}
         return serializer(obj.owner, context=context).data
 
@@ -178,16 +176,14 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
         PolymorphicProxySerializer(
             component_name="ConfigContextSchemaOwner",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(
-                FeatureQuery("config_context_owners").list_subclasses(), prefix="Nested"
-            ),
+            serializers=lambda: get_serializers_for_models(FeatureQuery("config_context_owners").list_subclasses()),
             allow_null=True,
         )
     )
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        serializer = get_serializer_for_model(obj.owner, prefix="Nested")
+        serializer = get_serializer_for_model(obj.owner)
         context = {"request": self.context["request"]}
         return serializer(obj.owner, context=context).data
 
@@ -310,16 +306,14 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
         PolymorphicProxySerializer(
             component_name="ExportTemplateOwner",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(
-                FeatureQuery("export_template_owners").list_subclasses(), prefix="Nested"
-            ),
+            serializers=lambda: get_serializers_for_models(FeatureQuery("export_template_owners").list_subclasses()),
             allow_null=True,
         )
     )
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        serializer = get_serializer_for_model(obj.owner, prefix="Nested")
+        serializer = get_serializer_for_model(obj.owner)
         context = {"request": self.context["request"]}
         return serializer(obj.owner, context=context).data
 
@@ -417,7 +411,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         )
     )
     def get_parent(self, obj):
-        serializer = get_serializer_for_model(obj.parent, prefix="Nested")
+        serializer = get_serializer_for_model(obj.parent)
         return serializer(obj.parent, context={"request": self.context["request"]}).data
 
 
@@ -670,7 +664,7 @@ class NoteSerializer(BaseModelSerializer):
         PolymorphicProxySerializer(
             component_name="NoteAssignedObject",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(NotesMixin), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(NotesMixin)),
             allow_null=True,
         )
     )
@@ -678,7 +672,7 @@ class NoteSerializer(BaseModelSerializer):
         if obj.assigned_object is None:
             return None
         try:
-            serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
+            serializer = get_serializer_for_model(obj.assigned_object)
             context = {"request": self.context["request"]}
             return serializer(obj.assigned_object, context=context).data
         except SerializerNotFound:
@@ -708,9 +702,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
         PolymorphicProxySerializer(
             component_name="ObjectChangeChangedObject",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(
-                ChangeLoggedModelsQuery().list_subclasses(), prefix="Nested"
-            ),
+            serializers=lambda: get_serializers_for_models(ChangeLoggedModelsQuery().list_subclasses()),
             allow_null=True,
         )
     )
@@ -722,7 +714,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
             return None
 
         try:
-            serializer = get_serializer_for_model(obj.changed_object, prefix="Nested")
+            serializer = get_serializer_for_model(obj.changed_object)
         except SerializerNotFound:
             return obj.object_repr
         context = {"request": self.context["request"]}

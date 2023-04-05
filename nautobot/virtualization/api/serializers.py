@@ -12,6 +12,7 @@ from nautobot.extras.api.mixins import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
+from nautobot.ipam.api.serializers import IPAddressSerializer
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -65,6 +66,9 @@ class VirtualMachineSerializer(
     NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
+    location = serializers.SerializerMethodField(read_only=True)
+    # TODO #824 How to get rid of this?
+    primary_ip = IPAddressSerializer(read_only=True)
 
     class Meta:
         model = VirtualMachine
@@ -89,6 +93,10 @@ class VirtualMachineSerializer(
             "local_config_context_schema",
         ]
         validators = []
+
+    @extend_schema_field(str)
+    def get_location(self, obj):
+        return obj.cluster.location
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):

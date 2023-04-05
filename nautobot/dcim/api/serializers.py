@@ -81,6 +81,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
+from nautobot.ipam.api.serializers import IPAddressSerializer
 
 from .nested_serializers import (
     NestedDeviceSerializer,
@@ -102,7 +103,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
             allow_null=True,
         )
     )
@@ -111,7 +112,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         Return the appropriate serializer for the cable termination model.
         """
         if obj._cable_peer is not None:
-            serializer = get_serializer_for_model(obj._cable_peer, prefix="Nested")
+            serializer = get_serializer_for_model(obj._cable_peer)
             context = {"request": self.context["request"]}
             return serializer(obj._cable_peer, context=context).data
         return None
@@ -138,7 +139,7 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         PolymorphicProxySerializer(
             component_name="PathEndpoint",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint)),
             allow_null=True,
         )
     )
@@ -147,7 +148,7 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         Return the appropriate serializer for the type of connected object.
         """
         if obj._path is not None and obj._path.destination is not None:
-            serializer = get_serializer_for_model(obj._path.destination, prefix="Nested")
+            serializer = get_serializer_for_model(obj._path.destination)
             context = {"request": self.context["request"]}
             return serializer(obj._path.destination, context=context).data
         return None
@@ -468,6 +469,8 @@ class DeviceSerializer(
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     parent_device = serializers.SerializerMethodField()
+    # TODO #824 How to get rid of this?
+    primary_ip = IPAddressSerializer(read_only=True)
 
     class Meta:
         model = Device
@@ -756,7 +759,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         if side.lower() not in ["a", "b"]:
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
-        serializer = get_serializer_for_model(termination, prefix="Nested")
+        serializer = get_serializer_for_model(termination)
         context = {"request": self.context["request"]}
         data = serializer(termination, context=context).data
 
@@ -766,7 +769,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
         )
     )
     def get_termination_a(self, obj):
@@ -776,7 +779,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
         )
     )
     def get_termination_b(self, obj):
@@ -810,14 +813,14 @@ class CablePathSerializer(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="PathEndpoint",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint)),
         )
     )
     def get_origin(self, obj):
         """
         Return the appropriate serializer for the origin.
         """
-        serializer = get_serializer_for_model(obj.origin, prefix="Nested")
+        serializer = get_serializer_for_model(obj.origin)
         context = {"request": self.context["request"]}
         return serializer(obj.origin, context=context).data
 
@@ -825,7 +828,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="PathEndpoint",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint)),
             allow_null=True,
         )
     )
@@ -834,7 +837,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         Return the appropriate serializer for the destination, if any.
         """
         if obj.destination_id is not None:
-            serializer = get_serializer_for_model(obj.destination, prefix="Nested")
+            serializer = get_serializer_for_model(obj.destination)
             context = {"request": self.context["request"]}
             return serializer(obj.destination, context=context).data
         return None
@@ -843,14 +846,14 @@ class CablePathSerializer(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination), prefix="Nested"),
+            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
             many=True,
         )
     )
     def get_path(self, obj):
         ret = []
         for node in obj.get_path():
-            serializer = get_serializer_for_model(node, prefix="Nested")
+            serializer = get_serializer_for_model(node)
             context = {"request": self.context["request"]}
             ret.append(serializer(node, context=context).data)
         return ret

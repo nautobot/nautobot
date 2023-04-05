@@ -129,7 +129,7 @@ class RelationshipsDataField(JSONField):
                 other_side_model = other_type.model_class()
                 if other_side_model is not None:
                     try:
-                        other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                        other_side_serializer = get_serializer_for_model(other_side_model)
                     except SerializerNotFound:
                         pass
 
@@ -238,7 +238,7 @@ class RelationshipsDataField(JSONField):
                 if other_side_model is None:
                     raise ValidationError(f"Model {other_type} is not currently installed, cannot look it up")
                 try:
-                    other_side_serializer = get_serializer_for_model(other_side_model, prefix="Nested")
+                    other_side_serializer = get_serializer_for_model(other_side_model)
                 except SerializerNotFound as exc:
                     raise ValidationError(
                         f"No Nested{other_side_model}Serializer found, cannot deserialize it"

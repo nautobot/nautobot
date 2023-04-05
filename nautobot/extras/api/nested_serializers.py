@@ -67,7 +67,7 @@ class NestedNoteSerializer(WritableNestedSerializer):
         if obj.assigned_object is None:
             return None
         try:
-            serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
+            serializer = get_serializer_for_model(obj.assigned_object)
             context = {"request": self.context["request"]}
             return serializer(obj.assigned_object, context=context).data
         except SerializerNotFound:

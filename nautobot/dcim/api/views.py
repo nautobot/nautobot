@@ -97,14 +97,14 @@ class PathEndpointMixin:
                 break
 
             # Serialize each object
-            serializer_a = get_serializer_for_model(near_end, prefix="Nested")
+            serializer_a = get_serializer_for_model(near_end)
             x = serializer_a(near_end, context={"request": request}).data
             if cable is not None:
                 y = serializers.TracedCableSerializer(cable, context={"request": request}).data
             else:
                 y = None
             if far_end is not None:
-                serializer_b = get_serializer_for_model(far_end, prefix="Nested")
+                serializer_b = get_serializer_for_model(far_end)
                 z = serializer_b(far_end, context={"request": request}).data
             else:
                 z = None
