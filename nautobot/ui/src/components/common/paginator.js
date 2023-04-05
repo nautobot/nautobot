@@ -13,9 +13,9 @@ export default function Paginator({ url, data_count, page_size, active_page }) {
 
     // convert float to int
     num_pages = ~~num_pages;
-    const pages = [];
+    // const pages = [];
 
-    let list_url = url.split("?")[0]; // strip the query parameters to retain the original list url
+    // let list_url = url.split("?")[0]; // strip the query parameters to retain the original list url
     let start_range;
     let end_range;
 

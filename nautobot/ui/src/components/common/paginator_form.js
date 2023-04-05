@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box, Text, Select } from "@nautobot/nautobot-ui";
-import { useSearchParams } from "react-router-dom";
+// import { useSearchParams } from "react-router-dom";
 
 export default function PaginatorForm({ start, end, total_count }) {
-    let [searchParams, setSearchParams] = useSearchParams();
+    // let [searchParams, setSearchParams] = useSearchParams();
     let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
-    const { setType } = useState("PaginatorForm");
+    // const { setType } = useState("PaginatorForm");
 
     return (
         <Box>

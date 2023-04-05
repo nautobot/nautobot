@@ -7,7 +7,6 @@ import {
     Heading,
     SidebarButton,
 } from "@nautobot/nautobot-ui";
-import { LinkOverlay, LinkBox } from "@chakra-ui/react";
 import { Link as ReactRouterLink } from "react-router-dom";
 
 import { useGetUIMenuQuery } from "@utils/api";
@@ -29,7 +28,7 @@ export default function SidebarNav() {
             {menuInfo.map((item, idx, arr) => (
                 <AccordionItem key={item.name}>
                     <Heading>
-                        <AccordionButton isLast={idx == arr.length - 1}>
+                        <AccordionButton isLast={idx === arr.length - 1}>
                             {item.name}
                             <AccordionIcon />
                         </AccordionButton>
@@ -46,7 +45,7 @@ export default function SidebarNav() {
                                         <Heading>
                                             <AccordionButton
                                                 isLast={
-                                                    group_idx ==
+                                                    group_idx ===
                                                     group_arr.length - 1
                                                 }
                                             >
@@ -63,7 +62,7 @@ export default function SidebarNav() {
                                                         level={2}
                                                         to={menu[0]}
                                                         isLast={
-                                                            menu_idx ==
+                                                            menu_idx ===
                                                             menu_arr.length - 1
                                                         }
                                                     >

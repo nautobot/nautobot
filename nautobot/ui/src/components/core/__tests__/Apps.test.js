@@ -1,4 +1,3 @@
-import { __esModule } from "@testing-library/jest-dom/dist/matchers";
 import Apps from "../Apps";
 
 // As of now we are not testing any plugin integration; so mock default value would be empty

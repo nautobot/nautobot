@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useLocation } from "react-router-dom";
 import Layout from "../Layout";
 
@@ -17,15 +17,15 @@ describe("Layout", () => {
     });
 
     it("should render Menu, Alert, and children", () => {
-        const { getByTestId, getByRole } = render(
+        render(
             <Layout>
                 <div data-testid="child-div">Child Text</div>
             </Layout>
         );
 
-        const alert = getByRole("alert");
+        const alert = screen.getByRole("alert");
         expect(alert.innerHTML).toBe("Current route is /test");
-        const childrenDom = getByTestId("child-div");
+        const childrenDom = screen.getByTestId("child-div");
         expect(childrenDom.innerHTML).toBe("Child Text");
     });
 });

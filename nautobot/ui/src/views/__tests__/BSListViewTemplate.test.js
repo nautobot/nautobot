@@ -73,9 +73,9 @@ describe("BSListViewTemplate component", () => {
         // Assert we have 3 buttons: Add, Import and Export
         const buttons = screen.getAllByRole("button");
         expect(buttons.length).toBe(3);
-        const addBtn = buttons[0];
-        const importBtn = buttons[1];
-        const exportBtn = buttons[2];
+        // const addBtn = buttons[0];
+        // const importBtn = buttons[1];
+        // const exportBtn = buttons[2];
         // expect(addBtn.getAttribute("to")).toBe("/add")
         // expect(addBtn.getAttribute("class")).toBe("btn btn-primary")
         // expect(addBtn.innerHTML).toContain("Add")

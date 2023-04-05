@@ -1,4 +1,4 @@
-import { useParams, useLocation, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Text } from "@nautobot/nautobot-ui";
 import { LoadingWidget } from "@components/common/LoadingWidget";
 
@@ -15,10 +15,10 @@ const fetcher = (...urls) => {
 
 export default function GenericObjectListView() {
     const { app_name, model_name } = useParams();
-    const { [0]: searchParams } = useSearchParams();
+    const { 0: searchParams } = useSearchParams();
 
     // TODO: If we can solve the dynamic API of RTK-Query we won't need to construct the API URLs
-    const list_url = `/api/${app_name}/${model_name}/`;
+    let list_url = `/api/${app_name}/${model_name}/`;
     const headers_url = list_url + "table-fields/";
 
     // Current fetcher allows to be passed multiple endpoints and fetch them at once
@@ -28,7 +28,7 @@ export default function GenericObjectListView() {
         error,
         isLoading: isLoadingData,
     } = useSWR(urls, fetcher);
-    const { [0]: tableData, [1]: tableFields } = data;
+    const { 0: tableData, 1: tableFields } = data;
 
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable

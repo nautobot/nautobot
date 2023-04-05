@@ -28,7 +28,7 @@ function get_components() {
                 Object.entries(value.default.view_overrides).map(
                     ([route, views]) => {
                         // eslint-disable-next-line
-                        Object.entries(views).map(
+                        return Object.entries(views).map(
                             ([view_action, component]) => {
                                 if (!base["CustomViews"][route])
                                     base["CustomViews"][route] = {};
@@ -39,6 +39,7 @@ function get_components() {
                                             component
                                         )
                                 );
+                                return true; // probably need to switch to using something other than map
                             }
                         );
                     }
@@ -58,6 +59,7 @@ function get_components() {
                                 )
                             );
                         });
+                        return true; // probably need to switch to using something other than map
                     }
                 );
             }

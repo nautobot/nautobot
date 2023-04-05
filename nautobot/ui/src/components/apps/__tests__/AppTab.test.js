@@ -1,7 +1,3 @@
-import { render, screen, act } from "@testing-library/react";
-import { Tabs } from "@nautobot/nautobot-ui";
-import create_app_tab from "../AppTab";
-
 describe("create_app_tab", () => {
     it("should render a tab with correct content", async () => {
         // const mockTab = { title: 'Test Tab', url: 'http://example.com/test' };

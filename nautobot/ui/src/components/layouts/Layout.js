@@ -7,9 +7,8 @@ import {
     DcimIcon,
     StatusIndicator,
     Text,
-    Button,
 } from "@nautobot/nautobot-ui";
-import { Link as ReactRouterLink, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
     GLOBAL_GRID_GAP,
     GLOBAL_PADDING_RIGHT,
@@ -39,7 +38,7 @@ export default function Layout({ children }) {
 
     let toRender = children;
 
-    if (!sessionLoaded || !menuLoaded || sessionInfo == undefined)
+    if (!sessionLoaded || !menuLoaded || sessionInfo === undefined)
         toRender = <LoadingWidget name="application" />;
 
     // TODO: This needs to be moved to useEffect. Weird order of operations.

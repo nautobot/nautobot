@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Button, Frame, Text } from "@nautobot/nautobot-ui";
 import { Card, CardHeader, CardBody } from "@chakra-ui/react"; // TODO import from nautobot-ui when available
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/core";
 import useSWR from "swr";
