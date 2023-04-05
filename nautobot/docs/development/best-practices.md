@@ -268,7 +268,8 @@ from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        to_field_name="name",
+        label="Provider (name or ID)",
     )
 ```
 

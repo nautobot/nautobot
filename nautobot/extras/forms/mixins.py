@@ -710,7 +710,7 @@ class RoleModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Role.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -755,7 +755,7 @@ class StatusModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -765,7 +765,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
     status = CSVModelChoiceField(
         queryset=Status.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         help_text="Operational status",
     )
 

@@ -42,10 +42,10 @@ class CablePathTestCase(TestCase):
         # Create a single device that will hold all components
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
         device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        device_status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             location=cls.location,
             device_type=device_type,
@@ -56,13 +56,13 @@ class CablePathTestCase(TestCase):
 
         cls.powerpanel = PowerPanel.objects.create(location=cls.location, name="Power Panel")
 
-        provider = Provider.objects.create(name="Provider", slug="provider")
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
         cls.circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Circuit 1")
 
         cls.statuses = Status.objects.get_for_model(Cable)
-        cls.status = cls.statuses.get(slug="connected")
-        cls.status_planned = cls.statuses.get(slug="planned")
+        cls.status = cls.statuses.get(name="Connected")
+        cls.status_planned = cls.statuses.get(name="Planned")
 
         # create a Cable that is not contained in any CablePath
         cls.dneCable = Cable(status=cls.status)

@@ -5,6 +5,10 @@
 Nautobot is a Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
 [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
+## Nautobot User Survey
+
+It's back! Network to Code is excited to announce our third Nautobot User Survey! This is your opportunity to provide feedback on your use of Nautobot and what you'd like to see this year, next year, and beyond. [We are super excited to hear from you!](https://hubs.ly/Q01HR5jT0)
+
 ## Key Use Cases
 
 **1. Flexible Source of Truth for Networking** - Nautobot core data models are used to define the intended state of network infrastructure enabling it as a Source of Truth. While a baseline set of models are provided (such as IP networks and addresses, devices and racks, circuits and cable, etc.) it is Nautobot's goal to offer maximum data model flexibility. This is enabled through features such as user-defined relationships, custom fields on any model, and data validation that permits users to codify everything from naming standards to having automated tests run before data can be populated into Nautobot.

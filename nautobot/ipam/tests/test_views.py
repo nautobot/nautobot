@@ -85,26 +85,20 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        RIR.objects.create(name="RFC N/A")
-        RIR.objects.create(name="MAGICNIC")
-        RIR.objects.create(name="NOTANIC")
 
         cls.form_data = {
             "name": "RIR X",
-            "slug": "rir-x",
             "is_private": True,
             "description": "A new RIR",
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "RIR 4,rir-4,Fourth RIR",
-            "RIR 5,rir-5,Fifth RIR",
-            "RIR 6,rir-6,Sixth RIR",
-            "RIR 7,,Seventh RIR",
+            "name,description",
+            "RIR 4,Fourth RIR",
+            "RIR 5,Fifth RIR",
+            "RIR 6,Sixth RIR",
+            "RIR 7,Seventh RIR",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = RIR.objects.first().name
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
@@ -120,7 +114,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         roles = Role.objects.get_for_model(Prefix)[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
-        status_reserved = statuses.get(slug="reserved")
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
@@ -128,7 +121,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "vrf": vrfs[1].pk,
             "tenant": None,
             "vlan": None,
-            "status": status_reserved.pk,
+            "status": statuses[1].pk,
             "role": roles[1].pk,
             "type": "pool",
             "rir": rir.pk,
@@ -139,16 +132,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.csv_data = (
             "vrf,prefix,status,rir",
-            f"{vrfs[0].name},10.4.0.0/16,active,{rir.name}",
-            f"{vrfs[0].name},10.5.0.0/16,active,{rir.name}",
-            f"{vrfs[0].name},10.6.0.0/16,active,{rir.name}",
+            f"{vrfs[0].name},10.4.0.0/16,{statuses[0].name},{rir.name}",
+            f"{vrfs[0].name},10.5.0.0/16,{statuses[0].name},{rir.name}",
+            f"{vrfs[0].name},10.6.0.0/16,{statuses[1].name},{rir.name}",
         )
 
         cls.bulk_edit_data = {
             "location": None,
             "vrf": vrfs[1].pk,
             "tenant": None,
-            "status": status_reserved.pk,
+            "status": statuses[1].pk,
             "role": roles[1].pk,
             "type": "network",
             "rir": RIR.objects.last().pk,
@@ -164,8 +157,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
-        s = Status.objects.create(name="nonexistentstatus")
-        s.content_types.add(ContentType.objects.get_for_model(Prefix))
+        status = Status.objects.create(name="nonexistentstatus")
+        status.content_types.add(ContentType.objects.get_for_model(Prefix))
         self.assertNotEqual(prefixes.count(), 0)
 
         url = self._get_url("list")
@@ -186,7 +179,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
-        status_reserved = statuses.get(slug="reserved")
 
         roles = Role.objects.get_for_model(IPAddress)
 
@@ -194,7 +186,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "vrf": vrfs[1].pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
-            "status": status_reserved.pk,
+            "status": statuses[1].pk,
             "role": roles[0].pk,
             "nat_inside": None,
             "dns_name": "example",
@@ -204,15 +196,15 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "vrf,address,status",
-            f"{vrfs[0].name},192.0.2.4/24,active",
-            f"{vrfs[0].name},192.0.2.5/24,active",
-            f"{vrfs[0].name},192.0.2.6/24,active",
+            f"{vrfs[0].name},192.0.2.4/24,{statuses[0].name}",
+            f"{vrfs[0].name},192.0.2.5/24,{statuses[0].name}",
+            f"{vrfs[0].name},192.0.2.6/24,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {
             "vrf": vrfs[1].pk,
             "tenant": None,
-            "status": status_reserved.pk,
+            "status": statuses[1].pk,
             "role": roles[1].pk,
             "dns_name": "example",
             "description": "New description",
@@ -260,8 +252,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         roles = Role.objects.get_for_model(VLAN)[:2]
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_active = statuses.get(slug="active")
-        status_reserved = statuses.get(slug="reserved")
+        status_1 = statuses[0]
+        status_2 = statuses[1]
 
         VLAN.objects.create(
             vlan_group=vlangroups[0],
@@ -269,7 +261,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="VLAN101",
             location=location_1,
             role=roles[0],
-            status=status_active,
+            status=status_1,
             _custom_field_data={"custom_field": "Value"},
         )
         VLAN.objects.create(
@@ -278,7 +270,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="VLAN102",
             location=location_1,
             role=roles[0],
-            status=status_active,
+            status=status_1,
             _custom_field_data={"custom_field": "Value"},
         )
         VLAN.objects.create(
@@ -287,7 +279,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="VLAN103",
             location=location_1,
             role=roles[0],
-            status=status_active,
+            status=status_1,
             _custom_field_data={"custom_field": "Value"},
         )
 
@@ -302,7 +294,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
-            "status": status_reserved.pk,
+            "status": status_2.pk,
             "role": roles[1].pk,
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
@@ -310,16 +302,16 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "vid,name,status",
-            "104,VLAN104,active",
-            "105,VLAN105,active",
-            "106,VLAN106,active",
+            f"104,VLAN104,{status_1.name}",
+            f"105,VLAN105,{status_1.name}",
+            f"106,VLAN106,{status_1.name}",
         )
 
         cls.bulk_edit_data = {
             "location": cls.locations.first().pk,
             "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
-            "status": status_reserved.pk,
+            "status": status_2.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
@@ -342,7 +334,7 @@ class ServiceTestCase(
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)

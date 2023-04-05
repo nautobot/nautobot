@@ -82,15 +82,15 @@ class PlatformTable(BaseTable):
     name = tables.LinkColumn()
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="Devices",
     )
     virtual_machine_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="VMs",
     )
-    actions = ButtonsColumn(Platform, pk_field="slug")
+    actions = ButtonsColumn(Platform)
 
     class Meta(BaseTable.Meta):
         model = Platform
@@ -100,7 +100,6 @@ class PlatformTable(BaseTable):
             "manufacturer",
             "device_count",
             "virtual_machine_count",
-            "slug",
             "napalm_driver",
             "napalm_args",
             "description",
@@ -923,5 +922,5 @@ class DeviceRedundancyGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "slug", "status", "failover_strategy", "device_count", "secrets_group", "tags")
+        fields = ("pk", "name", "status", "failover_strategy", "device_count", "secrets_group", "tags")
         default_columns = ("pk", "name", "status", "failover_strategy", "device_count")

@@ -466,7 +466,8 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     platforms = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        label="Platforms (slug or ID)",
+        to_field_name="name",
+        label="Platforms (name or ID)",
     )
     has_platforms = RelatedMembershipBooleanFilter(
         field_name="platforms",
@@ -475,7 +476,7 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = Manufacturer
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class DeviceTypeFilterSet(NautobotFilterSet):
@@ -488,7 +489,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         },
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
+        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
     console_ports = django_filters.BooleanFilter(
         method="_console_ports",
@@ -732,7 +733,7 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
+        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -748,7 +749,6 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = [
             "id",
             "name",
-            "slug",
             "napalm_driver",
             "description",
             "napalm_args",
@@ -784,13 +784,18 @@ class DeviceFilterSet(
         },
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device_type__manufacturer", queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
+        field_name="device_type__manufacturer",
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
     )
-    platform = NaturalKeyOrPKMultipleChoiceFilter(queryset=Platform.objects.all(), label="Platform (slug or ID)")
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Platform.objects.all(), to_field_name="name", label="Platform (name or ID)"
+    )
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
@@ -823,6 +828,7 @@ class DeviceFilterSet(
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
+        to_field_name="name",
         label="Secrets group (slug or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
@@ -838,7 +844,8 @@ class DeviceFilterSet(
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_redundancy_group",
         queryset=DeviceRedundancyGroup.objects.all(),
-        label="Device Redundancy Groups (slug or ID)",
+        to_field_name="name",
+        label="Device Redundancy Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
@@ -1251,7 +1258,8 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
-        label="Manufacturer (slug or ID)",
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     children = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1323,7 +1331,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         method="filter_device", field_name="device__location__slug", label="Location (name)"
     )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
-    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
+    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
     termination_a_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
@@ -1475,10 +1483,10 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        to_field_name="slug",
-        label="Secrets group",
+        to_field_name="name",
+        label="Secrets group (name or ID)",
     )
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = ["id", "name", "slug", "failover_strategy", "tags"]
+        fields = ["id", "name", "failover_strategy", "tags"]

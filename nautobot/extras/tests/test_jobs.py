@@ -556,7 +556,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def test_runjob_db_change_no_commit(self):
         """A job that changes the DB, when run with commit=False, doesn't modify the database."""
         with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
+            Status.objects.get(name="test status")
 
         module = "test_modify_db"
         name = "TestModifyDB"
@@ -571,7 +571,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         self.assertEqual("", err)
 
         with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
+            Status.objects.get(name="test status")
 
         info_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_INFO).first()
         self.assertEqual("Database changes have been reverted automatically.", info_log.message)
@@ -610,7 +610,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
         self.assertEqual(success_log.message, "Status created successfully.")
 
-        status = Status.objects.get(slug="test-status")
+        status = Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
 
         status.delete()

@@ -116,7 +116,7 @@ To retrieve a particular object (typically by its primary key or other unique fi
 In most cases, you will want to retrieve only a specific subset of objects. To filter a queryset, replace `all()` with `filter()` and pass one or more keyword arguments. For example:
 
 ```python
->>> Device.objects.filter(status__slug="active")
+>>> Device.objects.filter(status__name="Active")
 <QuerySet [<Device: TestDevice1>, <Device: TestDevice2>, <Device: TestDevice3>,
 <Device: TestDevice8>, <Device: TestDevice9>, '...(remaining elements truncated)...']>
 ```
@@ -124,14 +124,14 @@ In most cases, you will want to retrieve only a specific subset of objects. To f
 Querysets support slicing to return a specific range of objects.
 
 ```python
->>> Device.objects.filter(status__slug="active")[:3]
+>>> Device.objects.filter(status__name="Active")[:3]
 <QuerySet [<Device: TestDevice1>, <Device: TestDevice2>, <Device: TestDevice3>]>
 ```
 
 The `count()` method can be appended to the queryset to return a count of objects rather than the full list.
 
 ```python
->>> Device.objects.filter(status__slug="active").count()
+>>> Device.objects.filter(status__name="Active").count()
 982
 ```
 

@@ -1,1 +1,0 @@
-Changed extras abstract model ForeignKeys to use ForeignKeyWithAutoRelatedName.

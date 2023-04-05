@@ -8,7 +8,6 @@ from django.urls import reverse
 from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -35,14 +34,12 @@ class Secret(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     provider = models.CharField(max_length=100)
     parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
     csv_headers = [
         "name",
-        "slug",
         "description",
         "provider",
         "parameters",
@@ -58,12 +55,11 @@ class Secret(PrimaryModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("extras:secret", args=[self.slug])
+        return reverse("extras:secret", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.description,
             self.provider,
             self.parameters,
@@ -116,22 +112,21 @@ class SecretsGroup(OrganizationalModel):
     """A group of related Secrets."""
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", unique=True)
     description = models.CharField(max_length=200, blank=True)
     secrets = models.ManyToManyField(
         to=Secret, related_name="secrets_groups", through="extras.SecretsGroupAssociation", blank=True
     )
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("extras:secretsgroup", args=[self.slug])
+        return reverse("extras:secretsgroup", args=[self.pk])
 
     def to_csv(self):
-        return (self.name, self.slug, self.description)
+        return (self.name, self.description)
 
     def get_secret_value(self, access_type, secret_type, obj=None, **kwargs):
         """Helper method to retrieve a specific secret from this group.

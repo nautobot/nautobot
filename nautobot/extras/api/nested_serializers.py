@@ -30,7 +30,7 @@ class NestedDynamicGroupSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.DynamicGroup
-        fields = ["id", "url", "name", "slug", "content_type"]
+        fields = ["id", "url", "name", "content_type"]
 
 
 class NestedDynamicGroupMembershipSerializer(WritableNestedSerializer):
@@ -79,7 +79,7 @@ class NestedRoleSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Role
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name"]
 
 
 class NestedScheduledJobCreationSerializer(BaseModelSerializer):
@@ -130,7 +130,7 @@ class NestedSecretSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Secret
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name"]
 
 
 class NestedSecretsGroupAssociationSerializer(WritableNestedSerializer):
@@ -148,4 +148,4 @@ class NestedStatusSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Status
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name"]

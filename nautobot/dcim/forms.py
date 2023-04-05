@@ -783,13 +783,10 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 
 
 class ManufacturerForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = Manufacturer
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -1561,13 +1558,11 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
 
 class PlatformForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
-    slug = SlugField(max_length=64)
 
     class Meta:
         model = Platform
         fields = [
             "name",
-            "slug",
             "manufacturer",
             "napalm_driver",
             "napalm_args",
@@ -2013,7 +2008,7 @@ class DeviceFilterForm(
     )
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         label="Manufacturer",
     )
@@ -2025,14 +2020,14 @@ class DeviceFilterForm(
     )
     platform = DynamicModelMultipleChoiceField(
         queryset=Platform.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
     mac_address = forms.CharField(required=False, label="MAC address")
     device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
@@ -3342,7 +3337,7 @@ class InventoryItemBulkEditForm(
 class InventoryItemFilterForm(DeviceComponentFilterForm):
     model = InventoryItem
     manufacturer = DynamicModelMultipleChoiceField(
-        queryset=Manufacturer.objects.all(), to_field_name="slug", required=False
+        queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
     serial = forms.CharField(required=False)
     asset_tag = forms.CharField(required=False)
@@ -3730,7 +3725,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
@@ -3974,13 +3969,13 @@ class VirtualChassisFilterForm(NautobotFilterForm):
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
         queryset=Tenant.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
         query_params={"tenant_group": "$tenant_group"},
@@ -4221,7 +4216,6 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
 class DeviceRedundancyGroupForm(NautobotModelForm):
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     comments = CommentField()
-    slug = SlugField()
 
     class Meta:
         model = DeviceRedundancyGroup
@@ -4239,7 +4233,7 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
         widget=StaticSelect2(),
     )
     secrets_group = DynamicModelMultipleChoiceField(
-        queryset=SecretsGroup.objects.all(), to_field_name="slug", required=False
+        queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
     )
 
     tag = TagFilterField(model)

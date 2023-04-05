@@ -312,9 +312,10 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
             # order_by() is no supported by django TreeNode,
-            # So we directly retrieve the instance by "slug".
+            # So we directly retrieve the instance by "slug" or "name".
             if isinstance(self._get_queryset().first(), TreeNode):
-                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+                filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
+                instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
                 self.assertInstanceEqual(instance, self.form_data)
             else:
                 if hasattr(self.model, "last_updated"):
@@ -369,7 +370,8 @@ class ViewTestCases:
             # order_by() is no supported by django TreeNode,
             # So we directly retrieve the instance by "slug".
             if isinstance(self._get_queryset().first(), TreeNode):
-                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+                filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
+                instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
                 self.assertInstanceEqual(instance, self.form_data)
             else:
                 if hasattr(self.model, "last_updated"):
@@ -380,7 +382,7 @@ class ViewTestCases:
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""
             # This really should go on a models test page, but we don't have test structures for models.
-            if self.slug_source is not None:
+            if getattr(self.model, "slug_source", None) is not None:
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 self.assertEqual(obj.slug, expected_slug)
@@ -388,7 +390,7 @@ class ViewTestCases:
         def test_slug_not_modified(self):
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
-            if self.slug_source is not None:
+            if getattr(self.model, "slug_source", None) is not None:
                 new_slug_source_value = "kwyjibo"
 
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})

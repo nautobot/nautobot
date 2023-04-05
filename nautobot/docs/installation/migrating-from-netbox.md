@@ -110,7 +110,7 @@ Update it to this:
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Device
 
-Device.objects.filter(status=Status.objects.get(slug="planned"))
+Device.objects.filter(status=Status.objects.get(name="Planned"))
 ```
 
 ### UUID Primary Database Keys

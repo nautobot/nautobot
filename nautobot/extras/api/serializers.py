@@ -359,7 +359,6 @@ class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
         fields = (
             "url",
             "name",
-            "slug",
             "query",
             "variables",
         )

@@ -17,33 +17,22 @@ class AppTest(APITestCase):
 
 class ProviderTest(APIViewTestCases.APIViewTestCase):
     model = Provider
-    brief_fields = ["circuit_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["circuit_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Provider 4",
-            "slug": "provider-4",
         },
         {
             "name": "Provider 5",
-            "slug": "provider-5",
         },
         {
             "name": "Provider 6",
-            "slug": "provider-6",
         },
         {"name": "Provider 7"},
     ]
     bulk_update_data = {
         "asn": 1234,
     }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        Provider.objects.create(name="Provider 1", slug="provider-1")
-        Provider.objects.create(name="Provider 2", slug="provider-2")
-        Provider.objects.create(name="Provider 3", slug="provider-3")
 
 
 class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
@@ -52,11 +41,7 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        providers = (
-            Provider(name="Provider 1", slug="provider-1"),
-            Provider(name="Provider 2", slug="provider-2"),
-        )
-        Provider.objects.bulk_create(providers)
+        providers = Provider.objects.all()[:2]
 
         provider_networks = (
             ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
@@ -91,33 +76,29 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     model = CircuitType
-    brief_fields = ["circuit_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["circuit_count", "display", "id", "name", "url"]
     create_data = (
         {
             "name": "Circuit Type 4",
-            "slug": "circuit-type-4",
         },
         {
             "name": "Circuit Type 5",
-            "slug": "circuit-type-5",
         },
         {
             "name": "Circuit Type 6",
-            "slug": "circuit-type-6",
         },
         {"name": "Circuit Type 7"},
     )
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-
-        CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
-        CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
+        # TODO: There is not enough CircuitTypes without associated Circuits for test_bulk_delete to jus work
+        CircuitType.objects.create(name="Circuit Type 1")
+        CircuitType.objects.create(name="Circuit Type 2")
+        CircuitType.objects.create(name="Circuit Type 3")
 
 
 class CircuitTest(APIViewTestCases.APIViewTestCase):
@@ -126,16 +107,9 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        providers = Provider.objects.all()[:2]
 
-        providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1"),
-            Provider.objects.create(name="Provider 2", slug="provider-2"),
-        )
-
-        circuit_types = (
-            CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),
-            CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2"),
-        )
+        circuit_types = CircuitType.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Circuit)
 
@@ -199,8 +173,8 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Location.objects.last(),
         )
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
 
         circuits = (
             Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),

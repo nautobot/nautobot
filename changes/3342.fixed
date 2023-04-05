@@ -1,1 +1,0 @@
-Fixed BaseFilterSet not using multiple choice filters for CharFields with choices.
