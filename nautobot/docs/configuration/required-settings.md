@@ -208,6 +208,10 @@ CACHES = {
 }
 ```
 
+The following environment variables may also be set for some of the above values:
+
+* `NAUTOBOT_CACHES_BACKEND`
+
 ### Task Queuing with RQ
 
 +/- 1.1.0
