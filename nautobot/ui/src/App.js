@@ -3,7 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import { NautobotUIProvider } from "@nautobot/nautobot-ui";
 
 import Layout from "@components/layouts/Layout";
-import NautobotRouter from "src/router";
+import NautobotRouter from "./router";
 
 const theme = {
     fonts: {

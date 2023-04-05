@@ -45,7 +45,7 @@ class Command(BaseCommand):
         ui_dir = settings.NAUTOBOT_UI_DIR
 
         router_file_path = Path(ui_dir, "src", "router.js")
-        jsconfig_file_path = Path(ui_dir, "jsconfig.json")
+        jsconfig_file_path = Path(ui_dir, "jsconfig.paths.json")
         jsconfig_base_file_path = Path(ui_dir, "jsconfig-base.json")
 
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:

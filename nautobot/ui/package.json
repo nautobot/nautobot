@@ -33,11 +33,11 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "start": "react-app-rewired start",
-        "build": "react-app-rewired build",
+        "start": "craco start",
+        "build": "craco build",
         "gen:theme-typings": "chakra-cli tokens node_modules/@nautobot/nautobot-ui",
-        "test": "react-app-rewired test",
-        "eject": "react-app-rewired eject"
+        "test": "craco test",
+        "eject": "react-scripts eject"
     },
     "eslintConfig": {
         "extends": [
@@ -70,7 +70,9 @@
     },
     "devDependencies": {
         "@chakra-ui/cli": "^2.3.0",
-        "react-app-rewire-alias": "^1.1.7",
-        "react-app-rewired": "^2.2.1"
+        "@craco/craco": "^7.1.0",
+        "prettier": "^2.8.7",
+        "react-app-alias": "^2.2.2",
+        "react-app-alias-ex": "^2.1.0"
     }
 }
