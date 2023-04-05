@@ -771,18 +771,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         def __str__(self):
             return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
 
-    @property
-    def nat_outside(self):
-        if self.nat_outside_list.count() > 1:
-            raise self.NATOutsideMultipleObjectsReturned(self)
-        return self.nat_outside_list.first()
-
-    @nat_outside.setter
-    def nat_outside(self, value):
-        if self.nat_outside_list.count() > 1:
-            raise self.NATOutsideMultipleObjectsReturned(self)
-        return self.nat_outside_list.set([value])
-
     def _set_mask_length(self, value):
         """
         Expose the IPNetwork object's prefixlen attribute on the parent model so that it can be manipulated directly,
