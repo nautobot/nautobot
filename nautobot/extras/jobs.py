@@ -109,7 +109,7 @@ class BaseJob(Task):
 
         self.active_test = "main"
         self.failed = False
-        self._job_result = None
+        self.job_result = None
 
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
@@ -180,10 +180,9 @@ class BaseJob(Task):
             None: The return value of this handler is ignored.
         """
         self.active_test = "initialization"
-        self._job_result = None
 
         try:
-            self.get_job_result()
+            self.job_result = self.get_job_result()
         except TypeError as err:
             raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}") from err
         except Exception as err:
@@ -273,6 +272,9 @@ class BaseJob(Task):
 
         Keyword Arguments
             einfo - ExceptionInfo instance, containing the traceback (if any).
+
+        Returns:
+            None: The return value of this handler is ignored.
         """
 
         # Cleanup FileProxy objects
@@ -282,6 +284,9 @@ class BaseJob(Task):
             self.delete_files(*file_ids)
 
         self.log_info("Job completed")
+
+        # TODO(gary): document this in job author docs
+        # Super.after_return must be called for chords to function properly
         super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
 
     @classproperty
@@ -438,12 +443,6 @@ class BaseJob(Task):
                 file_vars[name] = attr
 
         return file_vars
-
-    @property
-    def job_result(self):
-        if self._job_result is None:
-            self._job_result = self.get_job_result()
-        return self._job_result
 
     def as_form_class(self):
         """

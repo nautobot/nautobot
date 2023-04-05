@@ -743,7 +743,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def run_job_synchronously(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
+    def apply_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
         a limitation in Celery where some of the fields in the job result are not updated when running synchronously so

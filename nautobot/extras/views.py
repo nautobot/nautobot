@@ -34,7 +34,6 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import csv_format, prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
-from nautobot.extras.jobs import ScriptVariable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
@@ -1208,11 +1207,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_kwargs = job_form.cleaned_data
-                for key in list(job_kwargs.keys()):
-                    attr = getattr(job_model.job_class, key, None)
-                    if not isinstance(attr, ScriptVariable):
-                        job_kwargs.pop(key)
+                job_kwargs = {k: v for k, v in job_form.cleaned_data.items() if k in job_model.job_class._get_vars()}
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
@@ -1323,11 +1318,9 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to run this job")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = scheduled_job.kwargs.get("data", {})
-                for key in list(job_kwargs.keys()):
-                    attr = getattr(job_model.job_class, key, None)
-                    if not isinstance(attr, ScriptVariable):
-                        job_kwargs.pop(key)
+                job_kwargs = {
+                    k: v for k, v in scheduled_job.kwargs.get("data", {}) if k in job_model.job_class._get_vars()
+                }
                 celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
                 job_result = JobResult.enqueue_job(
                     job_model,

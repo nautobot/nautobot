@@ -61,7 +61,7 @@ def run_job_for_testing(job, username="test-user", **kwargs):
         username=username, defaults={"is_superuser": True, "password": "password"}
     )
     # Run the job synchronously in the current thread as if it were being executed by a worker
-    job_result = JobResult.run_job_synchronously(
+    job_result = JobResult.apply_job(
         job_model=job,
         user=user_instance,
         **kwargs,
