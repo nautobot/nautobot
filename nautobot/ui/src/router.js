@@ -15,40 +15,40 @@ export default function NautobotRouter() {
         {
             path: "/",
             element: <Home />,
-            children: []
+            children: [],
         },
         {
             path: "/login/",
-            element: <Login />
+            element: <Login />,
         },
         {
             path: "/logout/",
-            element: <Logout />
+            element: <Logout />,
         },
         {
             path: "/:app_name/:model_name",
             element: <ListView />,
-            children: []
+            children: [],
         },
         {
             path: "/:app_name/:model_name/add",
             element: <CreateView />,
-            children: []
+            children: [],
         },
         {
             path: "/:app_name/:model_name/:object_id",
             element: <DetailView />,
-            children: []
+            children: [],
         },
         {
             path: "/plugins/",
             children: [
                 {
                     path: "installed-plugins",
-                    element: <InstalledApps />
-                }
-            ]
-        }
+                    element: <InstalledApps />,
+                },
+            ],
+        },
     ]);
     return element;
 }

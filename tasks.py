@@ -851,6 +851,39 @@ def unittest_ui(
 
 @task(
     help={
+        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
+    }
+)
+def prettier(context, autoformat=False):
+    """Check Node.JS code style with Prettier."""
+    if autoformat:
+        prettier_command = "npx prettier -w"
+    else:
+        prettier_command = "npx prettier -c"
+
+    command = f"{prettier_command} ."
+
+    run_command(context, command)
+
+
+@task(
+    help={
+        "autoformat": "Apply some recommendations automatically, rather than failing if formatting is incorrect. Not all issues can be fixed automatically.",
+    }
+)
+def eslint(context, autoformat=False):
+    """Check for ESLint rule compliance and other style issues."""
+    eslint_command = "npx eslint --max-warnings 0"
+
+    if autoformat:
+        eslint_command += " --fix"
+
+    command = f"{eslint_command} ."
+    run_command(context, command)
+
+
+@task(
+    help={
         "lint-only": "Only run linters; unit tests will be excluded.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
@@ -859,6 +892,8 @@ def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
     black(context)
     flake8(context)
+    prettier(context)
+    eslint(context)
     hadolint(context)
     markdownlint(context)
     pylint(context)

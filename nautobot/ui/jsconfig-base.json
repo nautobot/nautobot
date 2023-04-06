@@ -2,27 +2,13 @@
     "compilerOptions": {
         "baseUrl": ".",
         "paths": {
-            "@utils/*": [
-                "src/utils/*"
-            ],
-            "@constants/*": [
-                "src/constants/*"
-            ],
-            "@views/*": [
-                "src/views/*"
-            ],
-            "@components/*": [
-                "src/components/*"
-            ],
-            "@layouts/*": [
-                "src/components/layouts/*"
-            ],
-            "@common/*": [
-                "src/components/common/*"
-            ],
-            "@core/*": [
-                "src/components/core/*"
-            ]
+            "@utils/*": ["src/utils/*"],
+            "@constants/*": ["src/constants/*"],
+            "@views/*": ["src/views/*"],
+            "@components/*": ["src/components/*"],
+            "@layouts/*": ["src/components/layouts/*"],
+            "@common/*": ["src/components/common/*"],
+            "@core/*": ["src/components/core/*"]
         }
     }
 }

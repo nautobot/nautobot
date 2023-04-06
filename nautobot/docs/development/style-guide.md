@@ -4,11 +4,13 @@ Nautobot generally follows the [Django style guide](https://docs.djangoproject.c
 
 * [Flake8](https://flake8.pycqa.org/) is used to validate code style.
 * [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions.
+* [ESLint](https://eslint.org) is used to validate code style for the UI.
+* [Prettier](https://prettier.io) is used to enforce code formatting conventions for the UI.
 * [Pylint](https://pylint.pycqa.org/en/latest/) is used for Python static code analysis.
 * [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile.
 * [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown (documentation) files.
 
-Nautobot-specific configuration of these tools is maintained in the files `.flake8`, `.markdownlint.yml`, or `pyproject.toml` as appropriate to the individual tool.
+Nautobot-specific configuration of these tools is maintained in the files `.flake8`, `.markdownlint.yml`, `.prettierrc`, `package.json`, or `pyproject.toml` as appropriate to the individual tool.
 
 It is strongly recommended to include all of the above tools as part of your commit process before opening any pull request. A Git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke these tools prior to every commit attempt and abort if the validation fails.
 
@@ -22,6 +24,8 @@ You can also invoke these utilities manually against the development Docker cont
 ```no-highlight
 invoke flake8
 invoke black
+invoke eslint
+invoke prettier
 invoke check-migrations
 invoke hadolint
 invoke markdownlint

@@ -201,6 +201,7 @@ Available tasks:
   destroy                Destroy all containers and volumes.
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
+  eslint                 Check for ESLint rule compliance and other style issues.
   flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
@@ -211,6 +212,7 @@ Available tasks:
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
+  prettier               Check Node.JS code style with Prettier.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
   serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
@@ -219,6 +221,7 @@ Available tasks:
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
+  unittest-ui            Run Nautobot UI unit tests.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
 ```
 
@@ -687,12 +690,14 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 
 ### Verifying Code Style and Static Analysis
 
-To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/),  [Black](https://black.readthedocs.io/), [ESLint](https://eslint.org), and [Prettier](https://prettier.io). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `invoke flake8`         | `flake8`                                                                                                |
 | `invoke black`          | `black`                                                                                                 |
+| `invoke eslint`         | `npx eslint .`                                                                                          |
+| `invoke prettier`       | `npx prettier -c .`                                                                                     |
 | `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
 
 ### Handling Migrations
