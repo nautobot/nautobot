@@ -397,7 +397,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, job_model, user, task_queue=None):
+def _create_schedule(serializer, data, job_model, user, approval_required, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -437,160 +437,12 @@ def _create_schedule(serializer, data, job_model, user, task_queue=None):
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=user,
-        approval_required=job_model.approval_required,
+        approval_required=approval_required,
         crontab=crontab,
         queue=task_queue,
     )
     scheduled_job.save()
     return scheduled_job
-
-
-def _run_job(request, job_model):
-    """An internal function providing logic shared between JobModelViewSet.run() and JobViewSet.run()."""
-    if not request.user.has_perm("extras.run_job"):
-        raise PermissionDenied("This user does not have permission to run jobs.")
-    if not job_model.enabled:
-        raise PermissionDenied("This job is not enabled to be run.")
-    if not job_model.installed:
-        raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
-    if job_model.has_sensitive_variables:
-        if (
-            "schedule" in request.data
-            and "interval" in request.data["schedule"]
-            and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
-        ):
-            raise ValidationError(
-                {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
-            )
-        if job_model.approval_required:
-            raise ValidationError(
-                "Unable to run or schedule job: "
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                "One of these two flags must be removed before this job can be scheduled or run."
-            )
-
-    job_class = job_model.job_class
-    if job_class is None:
-        raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
-
-    valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
-    # Get a default queue from either the job model's specified task queue or system default to fall back on if request doesn't provide one
-    default_valid_queue = valid_queues[0]
-
-    # We need to call request.data for both cases as this is what pulls and caches the request data
-    data = request.data
-    files = None
-    schedule_data = None
-
-    # We must extract from the request:
-    # - Job Form data (for submission to the job itself)
-    # - Schedule data
-    # - Desired task queue
-    # Depending on request content type (largely for backwards compatibility) the keys at which these are found are different
-    if "multipart/form-data" in request.content_type:
-        data = request._data.dict()  # .data will return data and files, we just want the data
-        files = request.FILES
-
-        # JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer
-        input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
-        input_serializer.is_valid(raise_exception=True)
-
-        task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
-
-        # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
-        # everything else is a candidate for the job form's data.
-        # job_class.validate_data will throw an error for any unexpected key/value pairs.
-        non_job_keys = input_serializer.validated_data.keys()
-        for non_job_key in non_job_keys:
-            data.pop(non_job_key, None)
-
-        # List of keys in serializer that are effectively exploded versions of the schedule dictionary from JobInputSerializer
-        schedule_keys = ("_schedule_name", "_schedule_start_time", "_schedule_interval", "_schedule_crontab")
-
-        # Assign the key from the validated_data output to dictionary without prefixed "_schedule_"
-        # For all the keys that are schedule keys
-        # Assign only if the key is in the output since we don't want None's if not provided
-        if any(schedule_key in non_job_keys for schedule_key in schedule_keys):
-            schedule_data = {
-                k.replace("_schedule_", ""): input_serializer.validated_data[k]
-                for k in schedule_keys
-                if k in input_serializer.validated_data
-            }
-
-    else:
-        input_serializer = serializers.JobInputSerializer(data=data, context={"request": request})
-        input_serializer.is_valid(raise_exception=True)
-
-        data = input_serializer.validated_data.get("data", {})
-        task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
-        schedule_data = input_serializer.validated_data.get("schedule", None)
-
-    if task_queue not in valid_queues:
-        raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
-
-    cleaned_data = None
-    try:
-        cleaned_data = job_class().validate_data(data, files=files)
-        for key in list(cleaned_data.keys()):
-            attr = getattr(job_model.job_class, key, None)
-            if not isinstance(attr, ScriptVariable):
-                cleaned_data.pop(key)
-
-    except FormsValidationError as e:
-        # message_dict can only be accessed if ValidationError got a dict
-        # in the constructor (saved as error_dict). Otherwise we get a list
-        # of errors under messages
-        return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
-
-    if not get_worker_count(queue=task_queue):
-        raise CeleryWorkerNotRunningException(queue=task_queue)
-
-    # Default to a null JobResult.
-    job_result = None
-
-    # Assert that a job with `approval_required=True` has a schedule that enforces approval and
-    # executes immediately.
-    if schedule_data is None and job_model.approval_required:
-        schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
-
-    # Skip creating a ScheduledJob when job can be executed immediately
-    elif (
-        schedule_data
-        and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY
-        and not job_model.approval_required
-    ):
-        schedule_data = None
-
-    # Try to create a ScheduledJob, or...
-    if schedule_data:
-        schedule = _create_schedule(
-            schedule_data,
-            job_class.serialize_data(cleaned_data),
-            job_model,
-            request.user,
-            task_queue=input_serializer.validated_data.get("task_queue", None),
-        )
-    else:
-        schedule = None
-
-    # ... If we can't create one, create a JobResult instead.
-    if schedule is None:
-        job_result = JobResult.enqueue_job(
-            job_model,
-            request.user,
-            celery_kwargs={"queue": task_queue},
-            **job_class.serialize_data(cleaned_data),
-        )
-
-    # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-    data = {"scheduled_job": None, "job_result": None}
-    if schedule:
-        data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
-            schedule, context={"request": request}
-        ).data
-    if job_result:
-        data["job_result"] = nested_serializers.NestedJobResultSerializer(job_result, context={"request": request}).data
-    return Response(data, status=status.HTTP_201_CREATED)
 
 
 class JobViewSet(
@@ -674,7 +526,155 @@ class JobViewSet(
     def run(self, request, *args, pk, **kwargs):
         """Run the specified Job."""
         job_model = self.get_object()
-        return _run_job(request, job_model)
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied("This user does not have permission to run jobs.")
+        if not job_model.enabled:
+            raise PermissionDenied("This job is not enabled to be run.")
+        if not job_model.installed:
+            raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
+        if job_model.has_sensitive_variables:
+            if (
+                "schedule" in request.data
+                and "interval" in request.data["schedule"]
+                and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+            ):
+                raise ValidationError(
+                    {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
+                )
+            if job_model.approval_required:
+                raise ValidationError(
+                    "Unable to run or schedule job: "
+                    "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                    "One of these two flags must be removed before this job can be scheduled or run."
+                )
+
+        job_class = job_model.job_class
+        if job_class is None:
+            raise MethodNotAllowed(
+                request.method, detail="This job's source code could not be located and cannot be run"
+            )
+
+        valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+        # Get a default queue from either the job model's specified task queue or system default to fall back on if request doesn't provide one
+        default_valid_queue = valid_queues[0]
+
+        # We need to call request.data for both cases as this is what pulls and caches the request data
+        data = request.data
+        files = None
+        schedule_data = None
+
+        # We must extract from the request:
+        # - Job Form data (for submission to the job itself)
+        # - Schedule data
+        # - Desired task queue
+        # Depending on request content type (largely for backwards compatibility) the keys at which these are found are different
+        if "multipart/form-data" in request.content_type:
+            data = request._data.dict()  # .data will return data and files, we just want the data
+            files = request.FILES
+
+            # JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer
+            input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
+            input_serializer.is_valid(raise_exception=True)
+
+            task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
+
+            # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
+            # everything else is a candidate for the job form's data.
+            # job_class.validate_data will throw an error for any unexpected key/value pairs.
+            non_job_keys = input_serializer.validated_data.keys()
+            for non_job_key in non_job_keys:
+                data.pop(non_job_key, None)
+
+            # List of keys in serializer that are effectively exploded versions of the schedule dictionary from JobInputSerializer
+            schedule_keys = ("_schedule_name", "_schedule_start_time", "_schedule_interval", "_schedule_crontab")
+
+            # Assign the key from the validated_data output to dictionary without prefixed "_schedule_"
+            # For all the keys that are schedule keys
+            # Assign only if the key is in the output since we don't want None's if not provided
+            if any(schedule_key in non_job_keys for schedule_key in schedule_keys):
+                schedule_data = {
+                    k.replace("_schedule_", ""): input_serializer.validated_data[k]
+                    for k in schedule_keys
+                    if k in input_serializer.validated_data
+                }
+
+        else:
+            input_serializer = serializers.JobInputSerializer(data=data, context={"request": request})
+            input_serializer.is_valid(raise_exception=True)
+
+            data = input_serializer.validated_data.get("data", {})
+            task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
+            schedule_data = input_serializer.validated_data.get("schedule", None)
+
+        if task_queue not in valid_queues:
+            raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
+
+        cleaned_data = None
+        try:
+            cleaned_data = job_class().validate_data(data, files=files)
+            for key in list(cleaned_data.keys()):
+                attr = getattr(job_model.job_class, key, None)
+                if not isinstance(attr, ScriptVariable):
+                    cleaned_data.pop(key)
+
+        except FormsValidationError as e:
+            # message_dict can only be accessed if ValidationError got a dict
+            # in the constructor (saved as error_dict). Otherwise we get a list
+            # of errors under messages
+            return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
+
+        if not get_worker_count(queue=task_queue):
+            raise CeleryWorkerNotRunningException(queue=task_queue)
+
+        # Default to a null JobResult.
+        job_result = None
+
+        # approval is not required when dryrun is set
+        dryrun = data.get("dryrun", False)
+        approval_required = not dryrun and job_model.approval_required
+
+        # Assert that a job with `approval_required=True` has a schedule that enforces approval and
+        # executes immediately.
+        if schedule_data is None and approval_required:
+            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
+
+        # Skip creating a ScheduledJob when job can be executed immediately
+        elif schedule_data and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY and not approval_required:
+            schedule_data = None
+
+        # Try to create a ScheduledJob, or...
+        if schedule_data:
+            schedule = _create_schedule(
+                schedule_data,
+                job_class.serialize_data(cleaned_data),
+                job_model,
+                request.user,
+                approval_required,
+                task_queue=input_serializer.validated_data.get("task_queue", None),
+            )
+        else:
+            schedule = None
+
+        # ... If we can't create one, create a JobResult instead.
+        if schedule is None:
+            job_result = JobResult.enqueue_job(
+                job_model,
+                request.user,
+                celery_kwargs={"queue": task_queue},
+                **job_class.serialize_data(cleaned_data),
+            )
+
+        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
+        data = {"scheduled_job": None, "job_result": None}
+        if schedule:
+            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
+                schedule, context={"request": request}
+            ).data
+        if job_result:
+            data["job_result"] = nested_serializers.NestedJobResultSerializer(
+                job_result, context={"request": request}
+            ).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 #
