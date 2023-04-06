@@ -60,6 +60,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         """
 
         # Prepare the fields for creating/updating a `JobResult`.
+        # TODO: task_args and task_kwargs MUST be censored here
         fields = {
             "status": status,
             "result": result,
