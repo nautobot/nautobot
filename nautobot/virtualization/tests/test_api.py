@@ -17,7 +17,6 @@ from nautobot.virtualization.models import (
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("virtualization-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -47,7 +46,6 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ClusterType.objects.create(name="Cluster Type 1")
         ClusterType.objects.create(name="Cluster Type 2")
         ClusterType.objects.create(name="Cluster Type 3")
@@ -76,7 +74,6 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ClusterGroup.objects.create(name="Cluster Group 1")
         ClusterGroup.objects.create(name="Cluster Group 2")
         ClusterGroup.objects.create(name="Cluster Group 3")
@@ -248,7 +245,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(str(response.data["local_config_context_schema"]), str(schema.pk))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -283,7 +280,6 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")

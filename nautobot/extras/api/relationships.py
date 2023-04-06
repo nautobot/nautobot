@@ -127,17 +127,27 @@ class RelationshipsDataField(JSONField):
                 # or in the case of a relationship involving models from a plugin that's not currently enabled.
                 other_side_serializer = None
                 other_side_model = other_type.model_class()
-                if other_side_model is not None:
-                    try:
-                        other_side_serializer = get_serializer_for_model(other_side_model)
-                    except SerializerNotFound:
-                        pass
+                from nautobot.core.api.utils import get_relation_info_for_nested_serializers
 
                 other_objects = [assoc.get_peer(value) for assoc in associations if assoc.get_peer(value) is not None]
 
+                if other_side_model is not None:
+                    try:
+                        depth = int(self.context.get("depth", 0))
+                        if depth != 0:
+                            relation_info = get_relation_info_for_nested_serializers(
+                                associations[0], other_objects[0], f"{other_side}"
+                            )
+                            other_side_serializer, field_kwargs = self.build_nested_field(
+                                f"{other_side}", relation_info, depth
+                            )
+                    except SerializerNotFound:
+                        pass
+
                 if other_side_serializer is not None:
                     data[relationship.slug][other_side]["objects"] = [
-                        other_side_serializer(other_obj, context=self.context).data for other_obj in other_objects
+                        other_side_serializer(other_obj, context=self.context, **field_kwargs).data
+                        for other_obj in other_objects
                     ]
                 else:
                     # Simulate a serializer that contains nothing but the id field.
@@ -147,6 +157,37 @@ class RelationshipsDataField(JSONField):
 
         logger.debug("to_representation(%s) -> %s", value, data)
         return data
+
+    def build_nested_field(self, field_name, relation_info, nested_depth):
+        import uuid
+        from nautobot.core.api.mixins import WritableSerializerMixin
+        from rest_framework.utils.field_mapping import get_nested_relation_kwargs
+
+        field = get_serializer_for_model(relation_info.related_model)
+
+        class NautobotNestedSerializer(field, WritableSerializerMixin):
+            def to_internal_value(self, data):
+                # We need to specify which to_internal_value() to use here.
+                return super(WritableSerializerMixin).to_internal_value(data)
+
+            class Meta:
+                model = relation_info.related_model
+                depth = nested_depth - 1
+                if hasattr(field.Meta, "fields"):
+                    fields = field.Meta.fields
+                if hasattr(field.Meta, "exclude"):
+                    exclude = field.Meta.exclude
+
+        # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
+        # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90
+        # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
+        # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
+        # does not make our schema happy.
+        NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
+        field_class = NautobotNestedSerializer
+        field_kwargs = get_nested_relation_kwargs(relation_info)
+
+        return field_class, field_kwargs
 
     def to_internal_value(self, data):
         """

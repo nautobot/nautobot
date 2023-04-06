@@ -209,14 +209,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             "name": "Floor-02"
         }
         """
-        for key, value in self.get_fields().items():
-            if (
-                "NautobotNestedSerializer" in value.__class__.__name__
-                or value.__class__.__name__ == "NautobotPrimaryKeyRelatedField"
-            ):
-                sub_data = data.get(key, None)
-                if sub_data is not None:
-                    data[key] = value.to_internal_value(sub_data)
+        data = super().to_internal_value(data)
+        # for key, value in self.get_fields().items():
+        #     sub_data = data.get(key, None)
+        #     if sub_data is not None:
+        #         data[key] = value.to_internal_value(sub_data)
+        # print(data)
         return data
 
     def build_field(self, field_name, info, model_class, nested_depth):
@@ -250,7 +248,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         if field_name == "tags":
             field_class = NautobotPrimaryKeyRelatedField
-            field_kwargs = {"queryset": Tag.objects.all()}
+            field_kwargs = {"queryset": Tag.objects.all(), "required": False}
 
             return field_class, field_kwargs
         return super().build_property_field(field_name, model_class)
@@ -266,7 +264,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             class Meta:
                 model = relation_info.related_model
                 depth = nested_depth - 1
-                fields = "__all__"
+                if hasattr(field.Meta, "fields"):
+                    fields = field.Meta.fields
+                if hasattr(field.Meta, "exclude"):
+                    exclude = field.Meta.exclude
 
         # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
         # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90

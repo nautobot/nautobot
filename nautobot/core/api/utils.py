@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.utils import formatting
+from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api import exceptions
 
@@ -179,3 +180,15 @@ def rest_api_server_error(request, *args, **kwargs):
         "python_version": platform.python_version(),
     }
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def get_relation_info_for_nested_serializers(model_class, related_model, field_name):
+    relation_info = RelationInfo(
+        model_field=getattr(type(model_class), field_name),
+        related_model=type(related_model),
+        to_many=False,
+        has_through_model=False,
+        to_field=_get_to_field(getattr(type(model_class), field_name)),
+        reverse=False,
+    )
+    return relation_info

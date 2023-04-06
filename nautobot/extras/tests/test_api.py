@@ -549,7 +549,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             response.data,
             # Since we are setting blank=True on the key field, we only need to check
             # error messages from the label field.
-            {"label": ["This field is required."]},
+            {"label": ["This field cannot be blank."]},
         )
 
 

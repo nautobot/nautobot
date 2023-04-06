@@ -252,7 +252,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with null time_zone attr.
@@ -273,13 +272,12 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with blank time_zone attr.
         response = self.client.post(url, **self.header, data=location, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+        self.assertEqual(response.json()["time_zone"], {"time_zone": ["A valid timezone is required."]})
 
     def test_time_zone_field_post_valid(self):
         """
@@ -295,7 +293,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with valid time_zone attr.
@@ -317,7 +314,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with invalid time_zone attr.
@@ -325,7 +321,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json()["time_zone"],
-            ["A valid timezone is required."],
+            {"time_zone": ["A valid timezone is required."]},
         )
 
     def test_time_zone_field_get_blank(self):
@@ -1197,7 +1193,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(str(response.data["local_config_context_schema"]), str(schema.pk))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -2137,7 +2133,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         # Make sure the master is set
         self.assertNotEqual(virtual_chassis_1["master"], None)
 
-        master_device = Device.objects.get(pk=virtual_chassis_1["master"]["id"])
+        master_device = Device.objects.get(pk=virtual_chassis_1["master"])
 
         # Set the virtual_chassis of the master device to null
         url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})

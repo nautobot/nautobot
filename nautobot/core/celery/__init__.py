@@ -106,9 +106,10 @@ class NautobotKombuJSONEncoder(DjangoJSONEncoder):
         elif isinstance(obj, set):
             # Convert a set to a list for passing to and from a task
             return list(obj)
+        elif isinstance(obj, _NautobotTaggableManager):
+            obj = list(obj.values_list("id", flat=True))
+            return obj
         else:
-            if isinstance(obj, _NautobotTaggableManager):
-                obj = list(obj.values_list("id", flat=True))
             return DjangoJSONEncoder.default(self, obj)
 
 

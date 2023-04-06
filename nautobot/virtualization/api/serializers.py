@@ -67,7 +67,7 @@ class VirtualMachineSerializer(
 ):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     location = serializers.SerializerMethodField(read_only=True)
-    # TODO #824 How to get rid of this?
+    # TODO #3024 How to get rid of this?
     primary_ip = IPAddressSerializer(read_only=True)
 
     class Meta:

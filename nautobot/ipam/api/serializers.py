@@ -150,9 +150,7 @@ class VLANSerializer(
 #
 
 
-class PrefixSerializer(
-    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
-):
+class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, RoleModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -164,7 +162,7 @@ class PrefixSerializer(
         read_only_fields = ["family"]
 
 
-class PrefixLengthSerializer(serializers.Serializer):
+class PrefixLengthSerializer(PrefixSerializer):
     prefix_length = serializers.IntegerField()
 
     def to_internal_value(self, data):
@@ -209,9 +207,7 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(
-    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
-):
+class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()

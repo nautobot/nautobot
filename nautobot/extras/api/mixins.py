@@ -19,12 +19,6 @@ class RoleModelSerializerMixin(BaseModelSerializer):
     role = RoleSerializerField(required=False)
 
 
-class RoleRequiredRoleModelSerializerMixin(BaseModelSerializer):
-    """Mixin to add `role` choice field to model serializers."""
-
-    role = RoleSerializerField()
-
-
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
