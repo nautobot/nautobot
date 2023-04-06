@@ -95,6 +95,7 @@ plugins:
             heading_level: 1
             show_root_heading: true
             show_root_members_full_path: true
+  - "table-reader"
 
 nav:
   - Overview: "index.md"

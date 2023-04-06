@@ -173,6 +173,8 @@ mkdocs-gen-files = "~0.4.0"
 mkdocs-include-markdown-plugin = "~3.9.0"
 # Material for mkdocs theme
 mkdocs-material = "~8.5.8"
+# Allow docs to include tables as structured data files like YAML and CSV
+mkdocs-table-reader-plugin = "^2.0"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs

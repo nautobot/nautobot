@@ -1106,10 +1106,10 @@ Additional examples are available in the [`/examples/logging`](https://github.co
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
 * `nautobot.auth.*` - Authentication events
-* `nautobot.jobs.*` - Job execution (`* = JobClassName`)
-* `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
-* `nautobot.plugins.*` - Plugin loading and activity
-* `nautobot.views.*` - Views which handle business logic for the web UI
+* `nautobot.extras.jobs.*` - Job execution (`* = JobClassName`)
+* `nautobot.core.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
+* `nautobot.extras.plugins.*` - Plugin loading and activity
+* `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
 
 ---
 
