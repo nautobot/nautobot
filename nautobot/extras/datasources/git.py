@@ -7,20 +7,16 @@ import os
 import re
 from urllib.parse import quote
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
 from django.utils.text import slugify
 import yaml
 
-from nautobot.core.celery import nautobot_task
 from nautobot.core.utils.git import GitRepo
-from nautobot.core.utils.requests import copy_safe_request
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobSourceChoices,
-    JobResultStatusChoices,
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -32,7 +28,6 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     Job,
-    JobLogEntry,
     JobResult,
     Role,
     Tag,
@@ -41,7 +36,6 @@ from nautobot.extras.registry import DatasourceContent, register_datasource_cont
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
-from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
 
 
@@ -72,7 +66,10 @@ def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
 
 def enqueue_git_repository_diff_origin_and_local(repository, user):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    enqueue_git_repository_helper(repository, user, git_repository_diff_origin_and_local)
+    from nautobot.extras.jobs import get_job
+
+    job_class = get_job("system/git/GitRepositoryDiffOriginalAndLocal")
+    enqueue_git_repository_helper(repository, user, job_class)
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, user):
@@ -111,97 +108,18 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
 
 # TODO(jathan): This should likely be deleted since it's coercing state and this
 # should be managed by the database backend.
-def log_job_result_final_status(job_type):
+def log_job_result_final_status(job_result, job_type, logger):
     """Check Job status and save log to DB
     Args:
+        job_result (JobResult): JobResult Instance
         job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
+        logger (logger): Logger instance
     """
     job_result.log(
         f"Repository {job_type} completed in {job_result.duration}",
         level_choice=LogLevelChoices.LOG_INFO,
         logger=logger,
     )
-
-
-# TODO(jathan): The state transition stuff here should be deleted in exchange
-# for trusting the database backend.
-@nautobot_task
-def pull_git_repository_and_refresh_data(repository_pk, user_pk, job_result_pk):
-    """
-    Worker function to clone and/or pull a Git repository into Nautobot, then invoke refresh_datasource_content().
-    """
-    job_result, repository_record = get_job_result_and_repository_record(
-        repository_pk=repository_pk,
-        job_result_pk=job_result_pk,
-        logger=logger,
-    )
-
-    if not repository_record:
-        return
-
-    job_result.log(f'Creating/refreshing local copy of Git repository "{repository_record.name}"...', logger=logger)
-
-    try:
-        if not os.path.exists(settings.GIT_ROOT):
-            os.makedirs(settings.GIT_ROOT)
-
-        ensure_git_repository(
-            repository_record,
-            job_result=job_result,
-            logger=logger,
-        )
-
-        job_result.log(
-            f'The current Git repository hash is "{repository_record.current_head}"',
-            level_choice=LogLevelChoices.LOG_INFO,
-            logger=logger,
-        )
-
-        # user = User.objects.get(pk=user_pk)
-        refresh_datasource_content("extras.gitrepository", repository_record, user, job_result, delete=False)
-
-    except Exception as exc:
-        job_result.log(
-            f"Error while refreshing {repository_record.name}: {exc}",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-        )
-
-    finally:
-        log_job_result_final_status(job_result, "synchronization")
-
-
-# TODO(jathan): The state transition stuff here should be deleted in exchange
-# for trusting the database backend.
-@nautobot_task
-def git_repository_diff_origin_and_local(repository_pk, user_pk, job_result_pk, **kwargs):
-    """
-    Worker function to run a dry run on a Git repository.
-    """
-    job_result, repository_record = get_job_result_and_repository_record(
-        repository_pk,
-        job_result_pk,
-        logger=logger,
-    )
-    if not repository_record:
-        return
-
-    job_result.log(f'Running a Dry Run on Git repository "{repository_record.name}"...', logger=logger)
-
-    try:
-        if not os.path.exists(settings.GIT_ROOT):
-            os.makedirs(settings.GIT_ROOT)
-
-        git_repository_dry_run(repository_record, job_result=job_result, logger=logger)
-
-    except Exception as exc:
-        job_result.log(
-            f"Error while running a dry run on {repository_record.name}: {exc}",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-        )
-        raise
-
-    finally:
-        log_job_result_final_status(job_result, "dry run")
 
 
 def get_repo_from_url_to_path_and_from_branch(repository_record):

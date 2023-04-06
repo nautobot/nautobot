@@ -1,5 +1,6 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
+import importlib
 import inspect
 import json
 import logging
@@ -1114,10 +1115,10 @@ def _get_job_source_paths():
 
     # TOD(jathan): System jobs. Hack. Temp. Blah blah blah.
     if getattr(settings, "CELERY_IMPORTS", None):
-        from kombu.utils.imports import symbol_by_name
 
         for path in settings.CELERY_IMPORTS:
-            mod = symbol_by_name(path)
+            pkg, mod = path.rsplit(".", 1)
+            mod = importlib.import_module(mod, package=pkg)
             paths["system"] = os.path.dirname(mod.__file__)
 
     # Jobs derived from Git repositories
