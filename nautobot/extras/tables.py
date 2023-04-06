@@ -93,6 +93,7 @@ WEBHOOK_CONTENT_TYPES = """
 {{ value.all|join:", "|truncatewords:15 }}
 """
 
+# TODO UI 2.0: Disable dry run button if job does not support dry run
 SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
         onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"

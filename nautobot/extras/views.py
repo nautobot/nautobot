@@ -51,7 +51,7 @@ from .datasources import (
 from .filters import RoleFilterSet
 from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from .jobs import Job as JobClass
-from .jobs import get_job
+from .jobs import BooleanVar, get_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -1091,6 +1091,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
+                    # TODO(gary): task_queue is no longer stored on the task kwargs, may need to add it as a field on JobResult?
                     task_queue = job_result.task_kwargs.get("task_queue")
                     if task_queue is not None:
                         initial.setdefault("_task_queue", task_queue)
@@ -1152,10 +1153,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             task_queue = job_form.cleaned_data.get("_task_queue", None)
+            dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 crontab = ""
 
                 if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
@@ -1260,7 +1262,7 @@ class JobApprovalRequestView(generic.ObjectView):
     job's execution, rather than initial job form input.
     """
 
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     template_name = "extras/job_approval_request.html"
     additional_permissions = ("extras.view_job",)
 
@@ -1279,8 +1281,8 @@ class JobApprovalRequestView(generic.ObjectView):
 
         if job_class is not None:
             # Render the form with all fields disabled
-            initial = instance.kwargs.get("data", {})
-            initial["_commit"] = instance.kwargs.get("commit", True)
+            initial = instance.kwargs
+            initial["_task_queue"] = instance.queue
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
             job_form = None
@@ -1316,16 +1318,15 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
+            elif not isinstance(getattr(job_model.job_class, "dryrun", None), BooleanVar):
+                messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = {
-                    k: v for k, v in scheduled_job.kwargs.get("data", {}) if k in job_model.job_class._get_vars()
-                }
-                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
+                job_kwargs = {k: v for k, v in scheduled_job.kwargs.items() if k in job_model.job_class._get_vars()}
+                job_kwargs["dryrun"] = True
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
-                    celery_kwargs=celery_kwargs,
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
 
@@ -1395,7 +1396,7 @@ class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     table = tables.ScheduledJobApprovalQueueTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm

@@ -6,10 +6,34 @@ from django.db import transaction
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver, JobButtonReceiver
+from nautobot.extras.jobs import BooleanVar, IntegerVar, Job, JobHookReceiver, JobButtonReceiver
 
 
 name = "ExamplePlugin jobs"
+
+
+class ExampleDryRunJob(Job):
+    dryrun = BooleanVar(default=True, description="Do not make any changes to Nautobot database or external systems.")
+
+    class Meta:
+        approval_required = True
+        has_sensitive_variables = False
+        description = "Example job to remove serial number on all devices, supports dryrun mode."
+
+    def run(self, dryrun):
+        try:
+            with transaction.atomic():
+                devices_with_serial = Device.objects.exclude(serial="")
+                log_msg = f"Removing serial on {devices_with_serial.count()} devices."
+                if dryrun:
+                    log_msg += " (DRYRUN)"
+                self.log_info(log_msg)
+                for device in devices_with_serial:
+                    if not dryrun:
+                        device.serial = ""
+                        device.save()
+        except Exception:
+            self.log_failure(f"{self.__name__} failed. Database changes rolled back.")
 
 
 class ExampleJob(Job):
@@ -121,29 +145,6 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             else:
                 self._run_device_job(obj)
         self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
-
-
-class ExampleDryRunJob(Job):
-    class Meta:
-        approval_required = True
-        has_sensitive_variables = False
-        provides_dry_run = True
-        description = "Example job to remove serial number on all devices, supports dry run mode."
-
-    def run(self, data, commit):
-        try:
-            with transaction.atomic():
-                devices_with_serial = Device.objects.exclude(serial="")
-                log_msg = f"Removing serial on {devices_with_serial.count()} devices."
-                if not commit:
-                    log_msg += " DRYRUN"
-                self.log_info(log_msg)
-                for device in devices_with_serial:
-                    if commit:
-                        device.serial = ""
-                        device.save()
-        except Exception:
-            self.log_failure(f"{self.__name__} failed. Database changes rolled back.")
 
 
 jobs = (

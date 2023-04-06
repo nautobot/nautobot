@@ -24,7 +24,6 @@ from django.utils.functional import classproperty
 import netaddr
 import yaml
 
-from nautobot.core.celery import nautobot_task
 from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -42,7 +41,6 @@ from nautobot.extras.models import (
     JobHook,
     JobResult,
     ObjectChange,
-    ScheduledJob,
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
@@ -101,7 +99,6 @@ class BaseJob(Task):
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
-        - provides_dry_run (bool)
         - task_queues (list)
         """
 
@@ -383,10 +380,6 @@ class BaseJob(Task):
         return getattr(cls.Meta, "has_sensitive_variables", True)
 
     @classproperty
-    def provides_dry_run(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "provides_dry_run", False)
-
-    @classproperty
     def task_queues(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "task_queues", [])
 
@@ -462,11 +455,6 @@ class BaseJob(Task):
 
         job_model = JobModel.objects.get_for_class_path(self.class_path)
         task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
-
-        if not self.provides_dry_run:
-            # Hide the commit field for read only jobs and jobs that don't support dry run
-            form.fields["_commit"].widget = forms.HiddenInput()
-            form.fields["_commit"].initial = False
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
@@ -1189,27 +1177,6 @@ def get_job(class_path):
 
     jobs = get_jobs()
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
-
-
-# TODO: this probably goes away
-@nautobot_task
-def scheduled_job_handler(*args, **kwargs):
-    """
-    A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task
-    for the purposes of enqueuing scheduled jobs at their recurring intervals. Thus, JobResult.enqueue_job()
-    is responsible for enqueuing the actual job for execution and this method is the task executed
-    by the scheduler to kick off the job execution on a recurring interval.
-    """
-    from nautobot.extras.models import JobResult  # avoid circular import
-
-    user_pk = kwargs.pop("user")
-    user = User.objects.get(pk=user_pk)
-    kwargs.pop("name")
-    scheduled_job_pk = kwargs.pop("scheduled_job_pk")
-    celery_kwargs = kwargs.pop("celery_kwargs", {})
-    schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
-
-    JobResult.enqueue_job(schedule.job_model, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs)
 
 
 def enqueue_job_hooks(object_change):

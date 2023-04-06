@@ -600,7 +600,7 @@ nautobot-server runjob --username myusername local/example/MyJobWithNoVars
 ```
 
 !!! warning
-    The `--username <username>` must be supplied to specify the user that will be identified as the requester of the job. 
+    The `--username <username>` must be supplied to specify the user that will be identified as the requester of the job.
 
     Note that `nautobot-server` commands, like all management commands and other direct interactions with the Django database, are not gated by the usual Nautobot user authentication flow. It is possible to specify any existing `--username` with the `nautobot-server runjob` command in order to impersonate any defined user in Nautobot. Use this power wisely and be cautious who you allow to access it.
 
@@ -633,7 +633,7 @@ class MyJobTestCase(TransactionTestCase):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
         job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
-        job_result = run_job_for_testing(job, data={})
+        job_result = run_job_for_testing(job, var1="abc", var2=123)
 
         # inspect the logs created by running the job
         log_entries = JobLogEntry.objects.filter(job_result=job_result)

@@ -30,7 +30,6 @@ from nautobot.core.api.views import (
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
-from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
@@ -398,20 +397,12 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, job_model, request, celery_kwargs=dict, task_queue=None):
+def _create_schedule(serializer, data, job_model, user, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
-    task_kwargs = {
-        "data": data,
-        "request": copy_safe_request(request),
-        "user": request.user.pk,
-        "name": job_model.class_path,
-        "celery_kwargs": celery_kwargs,
-        "task_queue": task_queue,
-    }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
         time = timezone.now()
@@ -437,15 +428,15 @@ def _create_schedule(serializer, data, job_model, request, celery_kwargs=dict, t
     # scheduled for.
     scheduled_job = ScheduledJob(
         name=name,
-        task="nautobot.extras.jobs.scheduled_job_handler",
+        task=job_model.job_class.registered_name,
         job_class=job_model.class_path,
         job_model=job_model,
         start_time=time,
-        description=f"Nautobot job {name} scheduled by {request.user} on {time}",
-        kwargs=task_kwargs,
+        description=f"Nautobot job {name} scheduled by {user} for {time}",
+        kwargs=data,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
-        user=request.user,
+        user=user,
         approval_required=job_model.approval_required,
         crontab=crontab,
         queue=task_queue,
@@ -576,8 +567,7 @@ def _run_job(request, job_model):
             schedule_data,
             job_class.serialize_data(cleaned_data),
             job_model,
-            request,
-            celery_kwargs={"queue": task_queue},
+            request.user,
             task_queue=input_serializer.validated_data.get("task_queue", None),
         )
     else:
