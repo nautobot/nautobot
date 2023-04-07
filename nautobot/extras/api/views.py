@@ -34,7 +34,6 @@ from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.filters import RoleFilterSet
-from nautobot.extras.jobs import ScriptVariable
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -372,7 +371,7 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(
@@ -612,10 +611,7 @@ class JobViewSet(
         cleaned_data = None
         try:
             cleaned_data = job_class().validate_data(data, files=files)
-            for key in list(cleaned_data.keys()):
-                attr = getattr(job_model.job_class, key, None)
-                if not isinstance(attr, ScriptVariable):
-                    cleaned_data.pop(key)
+            cleaned_data = job_model.job_class.prepare_job_kwargs(cleaned_data)
 
         except FormsValidationError as e:
             # message_dict can only be accessed if ValidationError got a dict
@@ -872,11 +868,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job
-        job_kwargs = scheduled_job.kwargs.get("data", {})
-        for key in list(job_kwargs.keys()):
-            attr = getattr(job_model.job_class, key, None)
-            if not isinstance(attr, ScriptVariable):
-                job_kwargs.pop(key)
+        job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,

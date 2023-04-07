@@ -120,7 +120,6 @@ class RIRSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "is_private",
             "description",
             "assigned_prefix_count",
@@ -298,7 +297,7 @@ class IPAddressSerializer(
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
-    nat_outside = NestedIPAddressSerializer(read_only=True, many=True, source="nat_outside_list")
+    nat_outside_list = NestedIPAddressSerializer(read_only=True, many=True)
 
     class Meta:
         model = IPAddress
@@ -311,7 +310,7 @@ class IPAddressSerializer(
             "status",
             "role",
             "nat_inside",
-            "nat_outside",
+            "nat_outside_list",
             "dns_name",
             "description",
         ]

@@ -14,7 +14,6 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
-    SlugField,
     SmallTextarea,
     StaticSelect2,
     TagFilterField,
@@ -60,13 +59,10 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 
 class ClusterTypeForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterType
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -83,13 +79,10 @@ class ClusterTypeCSVForm(CustomFieldModelCSVForm):
 
 
 class ClusterGroupForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = ClusterGroup
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -173,11 +166,11 @@ class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, Tenan
     field_order = ["q", "cluster_type", "location", "cluster_group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     cluster_type = DynamicModelMultipleChoiceField(
-        queryset=ClusterType.objects.all(), to_field_name="slug", required=False
+        queryset=ClusterType.objects.all(), to_field_name="name", required=False
     )
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
@@ -421,14 +414,14 @@ class VirtualMachineFilterForm(
     )
     cluster_type = DynamicModelMultipleChoiceField(
         queryset=ClusterType.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     platform = DynamicModelMultipleChoiceField(
         queryset=Platform.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )

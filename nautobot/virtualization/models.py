@@ -6,7 +6,7 @@ from taggit.managers import TaggableManager
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.models import BaseManager
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
@@ -49,10 +49,9 @@ class ClusterType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -61,12 +60,11 @@ class ClusterType(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("virtualization:clustertype", args=[self.slug])
+        return reverse("virtualization:clustertype", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.description,
         )
 
@@ -86,10 +84,9 @@ class ClusterGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -98,12 +95,11 @@ class ClusterGroup(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("virtualization:clustergroup", args=[self.slug])
+        return reverse("virtualization:clustergroup", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.description,
         )
 

@@ -127,7 +127,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
     elif Status.objects.filter(content_types=prefix_ct).exists():
         prefix_default_status = Status.objects.filter(content_types=prefix_ct).first()
     else:
-        prefix_default_status = Status.objects.create(name="Active")
+        prefix_default_status = Status.objects.create(name="Active", slug="active")
         prefix_default_status.content_types.add(prefix_ct)
 
     # add prefix content type to any existing aggregate tags

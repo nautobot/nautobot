@@ -1209,7 +1209,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_kwargs = {k: v for k, v in job_form.cleaned_data.items() if k in job_model.job_class._get_vars()}
+                job_kwargs = job_model.job_class.prepare_job_kwargs(job_form.cleaned_data)
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
@@ -1322,11 +1322,13 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = {k: v for k, v in scheduled_job.kwargs.items() if k in job_model.job_class._get_vars()}
+                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
                 job_kwargs["dryrun"] = True
+                celery_kwargs = {"queue": scheduled_job.queue, "user": request.user}
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
+                    celery_kwargs=celery_kwargs,
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
 
@@ -1829,6 +1831,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     form_class = RoleForm
     serializer_class = serializers.RoleSerializer
     table_class = RoleTable
+    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

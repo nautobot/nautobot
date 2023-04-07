@@ -7,7 +7,6 @@ from taggit.managers import TaggableManager
 
 from nautobot.core.models.utils import serialize_object
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.extras.management import populate_status_choices
 from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
@@ -63,8 +62,8 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.aggregate_ct = self.content_type.objects.get_for_model(self.aggregate)
         self.prefix_ct = self.content_type.objects.get_for_model(self.prefix)
 
-        populate_status_choices(verbosity=0)
-        self.prefix_status = self.status.objects.get(content_types=self.prefix_ct, slug="active")
+        self.prefix_status = self.status.objects.create(name="Active")
+        self.prefix_status.content_types.add(self.prefix_ct)
 
         self.rir1 = self.rir.objects.create(name="RFC1918", is_private=True)
         self.rir2 = self.rir.objects.create(name="ARIN")

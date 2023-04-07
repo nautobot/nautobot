@@ -21,6 +21,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         task_args=None,
         task_kwargs=None,
         worker=None,
+        user=None,
         using=None,
         content_type=None,
         content_encoding=None,
@@ -71,6 +72,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             "task_name": task_name,
             "task_args": task_args,
             "task_kwargs": task_kwargs,
+            "user_id": user,
             "worker": worker,
         }
 
