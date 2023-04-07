@@ -23,7 +23,6 @@ class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
         fields = [
             "url",
             "name",
-            "slug",
             "parent",
             "description",
             "tenant_count",
@@ -49,7 +48,6 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = [
             "url",
             "name",
-            "slug",
             "tenant_group",
             "description",
             "comments",

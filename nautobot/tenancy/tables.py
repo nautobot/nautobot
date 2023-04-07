@@ -55,14 +55,14 @@ class TenantGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
-        url_params={"tenant_group": "slug"},
+        url_params={"tenant_group": "name"},
         verbose_name="Tenants",
     )
-    actions = ButtonsColumn(TenantGroup, pk_field="slug")
+    actions = ButtonsColumn(TenantGroup)
 
     class Meta(BaseTable.Meta):
         model = TenantGroup
-        fields = ("pk", "name", "tenant_count", "description", "slug", "actions")
+        fields = ("pk", "name", "tenant_count", "description", "actions")
         default_columns = ("pk", "name", "tenant_count", "description", "actions")
 
 
@@ -79,5 +79,5 @@ class TenantTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "slug", "tenant_group", "description", "tags")
+        fields = ("pk", "name", "tenant_group", "description", "tags")
         default_columns = ("pk", "name", "tenant_group", "description")

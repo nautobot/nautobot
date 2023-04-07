@@ -44,8 +44,7 @@ class WebhookTest(APITestCase):
         for webhook in webhooks:
             webhook.content_types.set([location_ct])
 
-        cls.active_status = Status.objects.get_for_model(Location).get(slug="active")
-        cls.planned_status = Status.objects.get_for_model(Location).get(slug="planned")
+        cls.statuses = Status.objects.get_for_model(Location)
 
     def test_webhooks_process_webhook_on_update(self):
         """
@@ -77,11 +76,11 @@ class WebhookTest(APITestCase):
             self.assertEqual(body["username"], "nautobotuser")
             self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Location Update")
-            self.assertEqual(body["data"]["status"]["slug"], self.planned_status.slug)
+            self.assertEqual(body["data"]["status"]["name"], self.statuses[1].name)
             self.assertEqual(body["snapshots"]["prechange"]["name"], "Location 1")
-            self.assertEqual(body["snapshots"]["prechange"]["status"]["slug"], self.active_status.slug)
+            self.assertEqual(body["snapshots"]["prechange"]["status"]["name"], self.statuses[0].name)
             self.assertEqual(body["snapshots"]["postchange"]["name"], "Location Update")
-            self.assertEqual(body["snapshots"]["postchange"]["status"]["slug"], self.planned_status.slug)
+            self.assertEqual(body["snapshots"]["postchange"]["status"]["name"], self.statuses[1].name)
             self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Location Update")
 
@@ -98,12 +97,12 @@ class WebhookTest(APITestCase):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(
-                    name="Location 1", slug="location-1", status=self.active_status, location_type=location_type
+                    name="Location 1", slug="location-1", status=self.statuses[0], location_type=location_type
                 )
                 location.save()
 
                 location.name = "Location Update"
-                location.status = self.planned_status
+                location.status = self.statuses[1]
                 location.save()
 
                 serializer = LocationSerializer(location, context={"request": None})
@@ -225,9 +224,9 @@ class WebhookTest(APITestCase):
             # Validate the outgoing request body
             body = json.loads(request.body)
 
-            self.assertEqual(body["snapshots"]["prechange"]["status"], str(self.active_status.id))
+            self.assertEqual(body["snapshots"]["prechange"]["status"], str(self.statuses[0].id))
             self.assertEqual(body["snapshots"]["postchange"]["name"], "Location Update")
-            self.assertEqual(body["snapshots"]["postchange"]["status"], str(self.planned_status.id))
+            self.assertEqual(body["snapshots"]["postchange"]["status"], str(self.statuses[1].id))
             self.assertEqual(body["snapshots"]["differences"]["removed"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["differences"]["added"]["name"], "Location Update")
 
@@ -243,12 +242,12 @@ class WebhookTest(APITestCase):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(
-                    name="Location 1", slug="location-1", status=self.active_status, location_type=location_type
+                    name="Location 1", slug="location-1", status=self.statuses[0], location_type=location_type
                 )
                 location.save()
 
                 location.name = "Location Update"
-                location.status = self.planned_status
+                location.status = self.statuses[1]
                 location.save()
 
                 serializer = LocationSerializer(location, context={"request": None})

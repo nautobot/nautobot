@@ -1826,6 +1826,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     form_class = RoleForm
     serializer_class = serializers.RoleSerializer
     table_class = RoleTable
+    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

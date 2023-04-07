@@ -1,0 +1,1 @@
+Renamed `nat_outside` field on IPAddress serializer to `nat_outside_list` for self-consistency.

@@ -285,12 +285,12 @@ class PrettyPrintQueryTest(TestCase):
         # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         queries = [
-            ((Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__slug="active"))
-            | Q(status__slug="planned"),
-            (Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__slug="active"),
+            ((Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__name="Active"))
+            | Q(status__name="Planned"),
+            (Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__name="Active"),
             Q(location__slug="ams01") | Q(location__slug="ang01"),
-            Q(location__slug="ang01") & ~Q(status__slug="active"),
-            Q(location__slug="ams01", status__slug="planned"),
+            Q(location__slug="ang01") & ~Q(status__name="Active"),
+            Q(location__slug="ams01", status__name="Planned"),
             Q(location__slug="ang01"),
             Q(status__id=12345),
             Q(location__slug__in=["ams01", "ang01"]),
@@ -303,16 +303,16 @@ class PrettyPrintQueryTest(TestCase):
     (
       location__slug='ams01' OR location__slug='ang01'
     ) AND (
-      NOT (status__slug='active')
+      NOT (status__name='Active')
     )
-  ) OR status__slug='planned'
+  ) OR status__name='Planned'
 )""",
             """\
 (
   (
     location__slug='ams01' OR location__slug='ang01'
   ) AND (
-    NOT (status__slug='active')
+    NOT (status__name='Active')
   )
 )""",
             """\
@@ -322,12 +322,12 @@ class PrettyPrintQueryTest(TestCase):
             """\
 (
   location__slug='ang01' AND (
-    NOT (status__slug='active')
+    NOT (status__name='Active')
   )
 )""",
             """\
 (
-  location__slug='ams01' AND status__slug='planned'
+  location__slug='ams01' AND status__name='Planned'
 )""",
             """\
 (

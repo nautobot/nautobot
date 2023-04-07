@@ -82,9 +82,6 @@ class APIPaginationTestCase(testing.APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        for i in range(10):
-            Provider.objects.create(name=f"Provider {i}", slug=f"provider-{i}")
-
         cls.url = reverse("circuits-api:provider-list")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=5, MAX_PAGE_SIZE=10)
@@ -332,7 +329,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             {
                 "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
-                'display-field="display" value-field="slug" data-url="/api/extras/roles/" id="id_for_role" '
+                'display-field="display" value-field="name" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             },
         )

@@ -49,7 +49,7 @@ curl -s http://nautobot/api/ipam/ip-addresses/c557df87-9a63-4555-bfd1-21cea2f6aa
     "connection_status": null
   },
   "nat_inside": null,
-  "nat_outside": null,
+  "nat_outside_list": null,
   "dns_name": "",
   "description": "Example IP address",
   "tags": [],

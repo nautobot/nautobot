@@ -1095,7 +1095,7 @@ class RequiredRelationshipTestMixin(TestCase):
                 "create_data": {
                     "vid": "1",
                     "name": "New VLAN",
-                    "status": str(Status.objects.get_for_model(VLAN).get(slug="active").pk),
+                    "status": str(Status.objects.get_for_model(VLAN).first().pk),
                 },
                 "relationship": relationship_m2m,
                 "required_objects_generator": [
@@ -1145,7 +1145,7 @@ class RequiredRelationshipTestMixin(TestCase):
                 },
                 "relationship": relationship_o2o,
                 "required_objects_generator": [
-                    lambda: Platform.objects.create(name="New Platform 2", slug="new-platform-2", napalm_args="null")
+                    lambda: Platform.objects.create(name="New Platform 2", napalm_args="null")
                 ],
                 "expected_errors": {
                     "api": {

@@ -4,6 +4,8 @@ from django.test import TestCase
 
 from nautobot.extras.models import Status
 from nautobot.ipam import forms, models
+from nautobot.ipam.choices import IPAddressStatusChoices
+from nautobot.ipam.models import IPAddress, Prefix
 
 
 class BaseNetworkFormTest:
@@ -53,7 +55,7 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
     def setUp(self):
         super().setUp()
         self.extra_data = {
-            "status": Status.objects.get(slug="active"),
+            "status": Status.objects.get_for_model(Prefix).first(),
             "type": "network",
             "rir": models.RIR.objects.first(),
         }
@@ -66,19 +68,20 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get(slug="active")}
+        self.extra_data = {"status": Status.objects.get_for_model(IPAddress).first()}
 
     def test_slaac_valid_ipv6(self):
         form = self.form_class(
             data={
                 self.field_name: "2001:0db8:0000:0000:0000:ff00:0042:8329/128",
-                "status": Status.objects.get(slug="slaac"),
+                "status": Status.objects.get(name="SLAAC"),
             }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
 
     def test_slaac_status_invalid_ipv4(self):
-        form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(slug="slaac")})
+        slaac = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
+        form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(name=slaac)})
         self.assertFalse(form.is_valid())
         self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])

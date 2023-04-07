@@ -23,8 +23,19 @@ class Role(NameColorContentTypesModel):
     )
     weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
+    csv_headers = ["name", "weight", "color", "content_types", "description"]
+
     class Meta:
         ordering = ("weight", "name")
+
+    def to_csv(self):
+        return (
+            self.name,
+            self.weight,
+            self.color,
+            self.get_content_types(),
+            self.description,
+        )
 
 
 class RoleField(ForeignKeyLimitedByContentTypes):

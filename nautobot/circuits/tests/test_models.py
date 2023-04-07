@@ -12,8 +12,8 @@ class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_1.content_types.set([])

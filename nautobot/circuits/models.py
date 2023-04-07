@@ -85,7 +85,6 @@ class Provider(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     asn = ASNField(
         blank=True,
         null=True,
@@ -101,7 +100,6 @@ class Provider(PrimaryModel):
 
     csv_headers = [
         "name",
-        "slug",
         "asn",
         "account",
         "portal_url",
@@ -124,12 +122,11 @@ class Provider(PrimaryModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("circuits:provider", args=[self.slug])
+        return reverse("circuits:provider", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.asn,
             self.account,
             self.portal_url,
@@ -147,13 +144,12 @@ class CircuitType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(
         max_length=200,
         blank=True,
     )
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -162,12 +158,11 @@ class CircuitType(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("circuits:circuittype", args=[self.slug])
+        return reverse("circuits:circuittype", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.description,
         )
 

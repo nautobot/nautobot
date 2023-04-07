@@ -35,7 +35,7 @@ class NestedProviderSerializer(WritableNestedSerializer):
 
     class Meta:
         model = Provider
-        fields = ["id", "url", "name", "slug", "circuit_count"]
+        fields = ["id", "url", "name", "circuit_count"]
 
 
 #
@@ -49,7 +49,7 @@ class NestedCircuitTypeSerializer(WritableNestedSerializer):
 
     class Meta:
         model = CircuitType
-        fields = ["id", "url", "name", "slug", "circuit_count"]
+        fields = ["id", "url", "name", "circuit_count"]
 
 
 class NestedCircuitSerializer(WritableNestedSerializer):

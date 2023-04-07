@@ -212,7 +212,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         """
         Test rendering config context data for a device.
         """
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -628,32 +628,31 @@ class DynamicGroupTestMixin:
             Location.objects.create(name="Location 3", slug="location-3", location_type=location_type),
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
             slug="device-type-1",
         )
         device_role = Role.objects.get_for_model(Device).first()
-        status_active = Status.objects.get(slug="active")
-        status_planned = Status.objects.get(slug="planned")
+        statuses = Status.objects.get_for_model(Device)
         Device.objects.create(
             name="device-location-1",
-            status=status_active,
+            status=statuses[0],
             role=device_role,
             device_type=device_type,
             location=locations[0],
         )
         Device.objects.create(
             name="device-location-2",
-            status=status_active,
+            status=statuses[0],
             role=device_role,
             device_type=device_type,
             location=locations[1],
         )
         Device.objects.create(
             name="device-location-3",
-            status=status_planned,
+            status=statuses[1],
             role=device_role,
             device_type=device_type,
             location=locations[2],
@@ -661,22 +660,19 @@ class DynamicGroupTestMixin:
 
         # Then the DynamicGroups.
         cls.content_type = ContentType.objects.get_for_model(Device)
-        cls.groups = [
+        cls.groups = cls.groups = [
             DynamicGroup.objects.create(
                 name="API DynamicGroup 1",
-                slug="api-dynamicgroup-1",
                 content_type=cls.content_type,
-                filter={"status": ["active"]},
+                filter={"status": [statuses[0].name]},
             ),
             DynamicGroup.objects.create(
                 name="API DynamicGroup 2",
-                slug="api-dynamicgroup-2",
                 content_type=cls.content_type,
-                filter={"status": ["planned"]},
+                filter={"status": [statuses[0].name]},
             ),
             DynamicGroup.objects.create(
                 name="API DynamicGroup 3",
-                slug="api-dynamicgroup-3",
                 content_type=cls.content_type,
                 filter={"location": [f"{locations[2].slug}"]},
             ),
@@ -685,24 +681,21 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    brief_fields = ["content_type", "display", "id", "name", "url"]
     choices_fields = ["content_type"]
     create_data = [
         {
             "name": "API DynamicGroup 4",
-            "slug": "api-dynamicgroup-4",
             "content_type": "dcim.device",
             "filter": {"location": ["location-1"]},
         },
         {
             "name": "API DynamicGroup 5",
-            "slug": "api-dynamicgroup-5",
             "content_type": "dcim.device",
             "filter": {"has_interfaces": False},
         },
         {
             "name": "API DynamicGroup 6",
-            "slug": "api-dynamicgroup-6",
             "content_type": "dcim.device",
             "filter": {"location": ["location-2"]},
         },
@@ -730,13 +723,11 @@ class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIView
 
         parent = DynamicGroup.objects.create(
             name="parent",
-            slug="parent",
             content_type=cls.content_type,
             filter={},
         )
         parent2 = DynamicGroup.objects.create(
             name="parent2",
-            slug="parent2",
             content_type=cls.content_type,
             filter={},
         )
@@ -841,8 +832,8 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         cls.repos = (
@@ -957,12 +948,10 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "graphql-query-4",
-            "slug": "graphql-query-4",
             "query": "{ query: locations {name} }",
         },
         {
             "name": "graphql-query-5",
-            "slug": "graphql-query-5",
             "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
         {
@@ -970,24 +959,20 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
     ]
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
         cls.graphqlqueries = (
             GraphQLQuery(
                 name="graphql-query-1",
-                slug="graphql-query-1",
                 query="{ locations {name} }",
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                slug="graphql-query-2",
                 query='{ devices(role: "edge") { id, name, role { name slug } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
-                slug="graphql-query-3",
                 query="""
 query ($device: [String!]) {
   devices(name: $device) {
@@ -1014,7 +999,6 @@ query ($device: [String!]) {
     }
     platform {
       name
-      slug
       manufacturer {
         name
       }
@@ -2462,9 +2446,8 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         for relationship in cls.relationships:
             relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
-        cls.location = Location.objects.create(
-            name="Location 1", status=Status.objects.get(slug="active"), location_type=cls.lt
-        )
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location = Location.objects.create(name="Location 1", status=location_status, location_type=cls.lt)
 
     def test_get_all_relationships_on_location(self):
         """Verify that all relationships are accurately represented when requested."""
@@ -2534,28 +2517,33 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         """Verify that relationship associations can be populated at instance creation time."""
         location_type = LocationType.objects.get(name="Campus")
         existing_location_1 = Location.objects.create(
-            name="Existing Location 1", status=Status.objects.get(slug="active"), location_type=location_type
+            name="Existing Location 1",
+            status=Status.objects.get_for_model(Location).first(),
+            location_type=location_type,
         )
         existing_location_2 = Location.objects.create(
-            name="Existing Location 2", status=Status.objects.get(slug="active"), location_type=location_type
+            name="Existing Location 2",
+            status=Status.objects.get_for_model(Location).first(),
+            location_type=location_type,
         )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
             slug="device-type-1",
         )
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         existing_device_1 = Device.objects.create(
             name="existing-device-location-1",
-            status=Status.objects.get(slug="active"),
+            status=device_status,
             role=device_role,
             device_type=device_type,
             location=existing_location_1,
         )
         existing_device_2 = Device.objects.create(
             name="existing-device-location-2",
-            status=Status.objects.get(slug="active"),
+            status=device_status,
             role=device_role,
             device_type=device_type,
             location=existing_location_2,
@@ -2566,7 +2554,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             reverse("dcim-api:location-list"),
             data={
                 "name": "New location",
-                "status": Status.objects.get(slug="active").pk,
+                "status": Status.objects.get_for_model(Location).first().pk,
                 "location_type": location_type.pk,
                 "relationships": {
                     self.relationships[0].slug: {
@@ -2656,15 +2644,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 **self.header,
             )
 
-        status_active = Status.objects.get(slug="active")
+        device_status = Status.objects.get_for_model(Device).first()
 
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
             data=[
-                {"vid": "1", "name": "1", "status": status_active.pk},
-                {"vid": "2", "name": "2", "status": status_active.pk},
+                {"vid": "1", "name": "1", "status": device_status.pk},
+                {"vid": "2", "name": "2", "status": device_status.pk},
             ],
         )
         self.assertHttpStatus(response, 400)
@@ -2698,21 +2686,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 vlan1_json_data = {
                     "vid": "1",
                     "name": "1",
-                    "status": status_active.pk,
+                    "status": device_status.pk,
                 }
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": status_active.pk,
+                    "status": device_status.pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": status_active.pk, "id": str(vlan1.id)}
+                vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
 
-                vlan2_json_data = {"status": status_active.pk, "id": str(vlan2.id)}
+                vlan2_json_data = {"status": device_status.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
@@ -2754,7 +2742,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.location_type = ContentType.objects.get_for_model(Location)
         cls.device_type = ContentType.objects.get_for_model(Device)
-        cls.status_active = Status.objects.get(slug="active")
+        cls.location_status = Status.objects.get_for_model(Location).first()
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
@@ -2767,28 +2755,29 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
             Location.objects.create(
-                name="Empty Location", slug="empty", status=cls.status_active, location_type=cls.lt
+                name="Empty Location", slug="empty", status=cls.location_status, location_type=cls.lt
             ),
             Location.objects.create(
-                name="Occupied Location", slug="occupied", status=cls.status_active, location_type=cls.lt
+                name="Occupied Location", slug="occupied", status=cls.location_status, location_type=cls.lt
             ),
             Location.objects.create(
                 name="Another Empty Location",
                 slug="another-empty",
-                status=cls.status_active,
+                status=cls.location_status,
                 location_type=cls.lt,
             ),
         )
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         cls.devices = [
             Device.objects.create(
                 name=f"Device {num}",
                 device_type=devicetype,
                 role=devicerole,
                 location=cls.locations[1],
-                status=cls.status_active,
+                status=device_status,
             )
             for num in range(1, 5)
         ]
@@ -3102,7 +3091,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
     model = Secret
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     create_data = [
@@ -3123,14 +3112,12 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
         },
         {
             "name": "GitHub Token for My Repository",
-            "slug": "github-token-my-repository",
             "provider": "text-file",
             "parameters": {
                 "path": "/github-tokens/user/myusername.txt",
             },
         },
     ]
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -3158,14 +3145,12 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
 
 class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroup
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
-
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-        secrets = (
+        secrets = secrets = (
             Secret.objects.create(
                 name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
             ),
@@ -3175,9 +3160,9 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group A", slug="group-a"),
-            SecretsGroup.objects.create(name="Group B", slug="group-b"),
-            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+            SecretsGroup.objects.create(name="Group A"),
+            SecretsGroup.objects.create(name="Group B"),
+            SecretsGroup.objects.create(name="Group C", description="Some group"),
         )
 
         SecretsGroupAssociation.objects.create(
@@ -3196,7 +3181,6 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Secrets Group 1",
-                "slug": "secrets-group-1",
                 "description": "First Secrets Group",
             },
             {
@@ -3231,9 +3215,9 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group A", slug="group-a"),
-            SecretsGroup.objects.create(name="Group B", slug="group-b"),
-            SecretsGroup.objects.create(name="Group C", slug="group-c", description="Some group"),
+            SecretsGroup.objects.create(name="Group A"),
+            SecretsGroup.objects.create(name="Group B"),
+            SecretsGroup.objects.create(name="Group C", description="Some group"),
         )
 
         SecretsGroupAssociation.objects.create(
@@ -3279,7 +3263,7 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }
@@ -3287,19 +3271,16 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Pizza",
-            "slug": "pizza",
             "color": "0000ff",
             "content_types": ["dcim.device", "dcim.rack"],
         },
         {
             "name": "Oysters",
-            "slug": "oysters",
             "color": "00ff00",
             "content_types": ["ipam.ipaddress", "ipam.prefix"],
         },
         {
             "name": "Bad combinations",
-            "slug": "bad-combinations",
             "color": "ff0000",
             "content_types": ["dcim.device"],
         },
@@ -3309,7 +3290,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.device"],
         },
     ]
-    slug_source = "name"
 
 
 class TagTest(APIViewTestCases.APIViewTestCase):
@@ -3627,7 +3607,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class RoleTest(APIViewTestCases.APIViewTestCase):
     model = Role
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }
@@ -3635,21 +3615,17 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Role 1",
-            "slug": "role-1",
             "color": "0000ff",
             "content_types": ["dcim.device", "dcim.rack"],
         },
         {
             "name": "Role 2",
-            "slug": "role-2",
             "color": "0000ff",
             "content_types": ["dcim.rack"],
         },
         {
             "name": "Role 3",
-            "slug": "role-3",
             "color": "0000ff",
             "content_types": ["ipam.ipaddress", "ipam.vlan"],
         },
     ]
-    slug_source = "name"

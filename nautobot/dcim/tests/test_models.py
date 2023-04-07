@@ -52,7 +52,7 @@ from nautobot.tenancy.models import Tenant
 class CableLengthTestCase(TestCase):
     def setUp(self):
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        self.manufacturer = Manufacturer.objects.first()
         self.devicetype = DeviceType.objects.create(
             manufacturer=self.manufacturer,
             model="Test Device Type 1",
@@ -71,7 +71,7 @@ class CableLengthTestCase(TestCase):
             name="TestDevice2",
             location=self.location,
         )
-        self.status = Status.objects.get_for_model(Cable).get(slug="connected")
+        self.status = Status.objects.get_for_model(Cable).get(name="Connected")
 
     def test_cable_validated_save(self):
         interface1 = Interface.objects.create(device=self.device1, name="eth0")
@@ -108,7 +108,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         """
         statuses = Status.objects.get_for_model(Device)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 1", default="value_1"),
@@ -157,7 +157,7 @@ class InterfaceTemplateTestCase(TestCase):
         """
         statuses = Status.objects.get_for_model(Device)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         InterfaceTemplate.objects.create(
@@ -174,12 +174,12 @@ class InterfaceTemplateTestCase(TestCase):
             location=location,
         )
 
-        active_status = Status.objects.get(slug="active")
-        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, active_status)
+        status = Status.objects.get_for_model(Interface).get(name="Active")
+        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, status)
 
         # Assert that a different status is picked if active status is not found for interface
         interface_ct = ContentType.objects.get_for_model(Interface)
-        active_status.content_types.remove(interface_ct)
+        status.content_types.remove(interface_ct)
 
         device_2 = Device.objects.create(
             device_type=device_type,
@@ -302,7 +302,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
             u_height=42,
         )
-        self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        self.manufacturer = Manufacturer.objects.first()
 
         self.device_type = {
             "ff2048": DeviceType.objects.create(
@@ -317,24 +317,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
                 u_height=0,
             ),
         }
-        self.role = {
-            "Server": Role.objects.create(
-                name="Server",
-                slug="server",
-            ),
-            "Switch": Role.objects.create(
-                name="Switch",
-                slug="switch",
-            ),
-            "Console Server": Role.objects.create(
-                name="Console Server",
-                slug="console-server",
-            ),
-            "PDU": Role.objects.create(
-                name="PDU",
-                slug="pdu",
-            ),
-        }
+        self.roles = Role.objects.get_for_model(Rack)
+        self.device_roles = Role.objects.get_for_model(Device)
 
     def test_rack_device_outside_height(self):
 
@@ -349,8 +333,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            role=Role.objects.get(slug="switch"),
+            device_type=self.device_type["ff2048"],
+            role=self.device_roles[0],
             location=self.location1,
             rack=rack1,
             position=43,
@@ -365,8 +349,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            role=Role.objects.get(slug="switch"),
+            device_type=self.device_type["ff2048"],
+            role=self.device_roles[1],
             location=self.location1,
             rack=self.rack,
             position=10,
@@ -394,7 +378,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
     def test_mount_zero_ru(self):
         pdu = Device.objects.create(
             name="TestPDU",
-            role=self.role.get("PDU"),
+            role=self.device_roles[3],
             device_type=self.device_type.get("cc5000"),
             location=self.location1,
             rack=self.rack,
@@ -414,14 +398,14 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
         # Device2 is explicitly assigned to the same location as the Rack
         device2 = Device.objects.create(
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
 
         # Move self.rack to a new location
@@ -442,7 +426,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
 
         # Move self.rack to a new location that permits Racks but not Devices
@@ -528,7 +512,7 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
         )
 
-        self.status = Status.objects.get(slug="active")
+        self.status = Status.objects.get_for_model(Location).first()
 
     def test_custom_natural_key_field_lookups(self):
         """Test that the custom implementation of Location.natural_key_field_lookups works as intended."""
@@ -571,12 +555,12 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        status = Status.objects.get_for_model(Location).first()
         location = Location(
             location_type=self.root_type,
             name="Location A",
             slug="location-a",
-            status=active_status,
+            status=status,
             longitude=55.1234567896,
             latitude=55.1234567896,
         )
@@ -662,15 +646,14 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     model = Device
 
     def setUp(self):
-
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
         self.device_role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")
@@ -816,7 +799,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
-        tenant = Tenant.objects.create(name="Test Tenant 1", slug="test-tenant-1")
+        tenant = Tenant.objects.first()
         self.device.tenant = tenant
         self.device.save()
         device2.tenant = tenant
@@ -889,7 +872,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
     def setUp(self):
 
         location = Location.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
@@ -911,7 +894,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.interface1 = Interface.objects.create(device=self.device1, name="eth0")
         self.interface2 = Interface.objects.create(device=self.device2, name="eth0")
         self.interface3 = Interface.objects.create(device=self.device2, name="eth1")
-        self.status = Status.objects.get_for_model(Cable).get(slug="connected")
+        self.status = Status.objects.get_for_model(Cable).get(name="Connected")
         self.cable = Cable(
             termination_a=self.interface1,
             termination_b=self.interface2,
@@ -958,9 +941,9 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             rear_port=self.rear_port4,
             rear_port_position=1,
         )
-        self.provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        self.provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
-        self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        self.circuittype = CircuitType.objects.first()
         self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
         self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
         self.circuittermination1 = CircuitTermination.objects.create(
@@ -1124,7 +1107,8 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         """Test for https://github.com/nautobot/nautobot/issues/2081"""
         # Delete all cables because some cables has connected status.
         Cable.objects.all().delete()
-        Status.objects.get(slug=CableStatusChoices.STATUS_CONNECTED).delete()
+        connected_status_name = CableStatusChoices.as_dict()[CableStatusChoices.STATUS_CONNECTED]
+        Status.objects.get(name=connected_status_name).delete()
         device = Device.objects.first()
 
         interfaces = (
@@ -1151,9 +1135,9 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
-        active = Status.objects.get(name="Active")
+        status = Status.objects.get_for_model(Location).first()
         location_type_1 = LocationType.objects.create(name="Location Type 1")
-        location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=active)
+        location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=status)
         power_panel = PowerPanel(name="Power Panel 1", location=location_1)
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
@@ -1162,7 +1146,7 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
         location_type_1.content_types.add(ContentType.objects.get_for_model(PowerPanel))
         rack_group = RackGroup.objects.create(name="Rack Group 1", location=location_1)
         power_panel.rack_group = rack_group
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type_1, status=active)
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type_1, status=status)
         rack_group.location = location_2
         rack_group.save()
         with self.assertRaises(ValidationError) as cm:
@@ -1175,7 +1159,7 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
 
 class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
     def setUp(self):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

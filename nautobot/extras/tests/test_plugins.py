@@ -312,7 +312,6 @@ class PluginTest(TestCase):
         # The "constant-value" provider is implemented by the plugin
         secret = Secret.objects.create(
             name="Constant Secret",
-            slug="constant-secret",
             provider="constant-value",
             parameters={"constant": "It's a secret to everybody"},
         )
@@ -526,49 +525,38 @@ class FilterExtensionTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
-        )
-
-        Tenant.objects.create(
-            name="Tenant 1", slug="tenant-1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 2", slug="tenant-2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
+        tenant_groups = TenantGroup.objects.all()[:3]
+        tenants = (
+            Tenant.objects.create(name="Tenant 1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"),
+            Tenant.objects.create(name="Tenant 2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"),
+            Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"),
         )
         location_type = LocationType.objects.get(name="Campus")
         Location.objects.create(
             name="Location 1",
             slug="location-1",
-            tenant=Tenant.objects.get(slug="tenant-1"),
+            tenant=tenants[0],
             location_type=location_type,
         )
         Location.objects.create(
             name="Location 2",
             slug="location-2",
-            tenant=Tenant.objects.get(slug="tenant-2"),
+            tenant=tenants[1],
             location_type=location_type,
         )
         Location.objects.create(
             name="Location 3",
             slug="location-3",
-            tenant=Tenant.objects.get(slug="tenant-3"),
+            tenant=tenants[2],
             location_type=location_type,
         )
 
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
+        manufactures = Manufacturer.objects.all()[:3]
 
         roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufactures[0],
             model="Model 1",
             slug="model-1",
             part_number="Part Number 1",
@@ -576,7 +564,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufactures[1],
             model="Model 2",
             slug="model-2",
             part_number="Part Number 2",
@@ -584,7 +572,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufactures[2],
             model="Model 3",
             slug="model-3",
             part_number="Part Number 3",
@@ -596,21 +584,21 @@ class FilterExtensionTest(TestCase):
             name="Device 1",
             device_type=DeviceType.objects.get(slug="model-1"),
             role=roles[0],
-            tenant=Tenant.objects.get(slug="tenant-1"),
+            tenant=tenants[0],
             location=Location.objects.get(slug="location-1"),
         )
         Device.objects.create(
             name="Device 2",
             device_type=DeviceType.objects.get(slug="model-2"),
             role=roles[1],
-            tenant=Tenant.objects.get(slug="tenant-2"),
+            tenant=tenants[1],
             location=Location.objects.get(slug="location-2"),
         )
         Device.objects.create(
             name="Device 3",
             device_type=DeviceType.objects.get(slug="model-2"),
             role=roles[3],
-            tenant=Tenant.objects.get(slug="tenant-3"),
+            tenant=tenants[2],
             location=Location.objects.get(slug="location-3"),
         )
 
@@ -652,8 +640,6 @@ class FilterExtensionTest(TestCase):
             data={
                 "example_plugin_description": "tenant-1.nautobot.com",
                 "example_plugin_dtype": "model-1",
-                "slug__ic": "tenant-1",
-                "slug": "tenant-1",
                 "example_plugin_sdescrip": "tenant-1",
             }
         )
@@ -695,13 +681,13 @@ class TestPluginCoreViewOverrides(TestCase):
     def setUp(self):
         super().setUp()
         self.device = create_test_device("Device")
-        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
         self.circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
             circuit_type=circuit_type,
-            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+            status=Status.objects.get_for_model(Circuit).first(),
         )
         self.user.is_superuser = True
         self.user.save()

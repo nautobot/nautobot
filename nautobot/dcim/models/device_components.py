@@ -544,7 +544,8 @@ class BaseInterface(RelationshipModel, StatusModel):
         if not self.status:
             query = Status.objects.get_for_model(self)
             try:
-                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+                status_as_dict = InterfaceStatusChoices.as_dict()
+                status = query.get(name=status_as_dict.get(InterfaceStatusChoices.STATUS_ACTIVE))
             except Status.DoesNotExist:
                 raise ValidationError({"status": "Default status 'active' does not exist"})
             self.status = status

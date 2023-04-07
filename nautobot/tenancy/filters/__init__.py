@@ -28,11 +28,13 @@ __all__ = (
 class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        label="Parent tenant group (slug or ID)",
+        label="Parent tenant group (name or ID)",
+        to_field_name="name",
     )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        label="Children (slug or ID)",
+        label="Children (name or ID)",
+        to_field_name="name",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -40,7 +42,8 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     tenants = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
-        label="Tenants (slug or ID)",
+        label="Tenants (name or ID)",
+        to_field_name="name",
     )
     has_tenants = RelatedMembershipBooleanFilter(
         field_name="tenants",
@@ -49,14 +52,13 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = TenantGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class TenantFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "description": "icontains",
             "comments": "icontains",
         },
@@ -64,7 +66,8 @@ class TenantFilterSet(NautobotFilterSet):
     tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="tenant_group",
-        label="Tenant group (slug or ID)",
+        label="Tenant group (name or ID)",
+        to_field_name="name",
     )
     circuits = django_filters.ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
@@ -176,7 +179,6 @@ class TenantFilterSet(NautobotFilterSet):
             "description",
             "id",
             "name",
-            "slug",
             "tags",
         ]
 
