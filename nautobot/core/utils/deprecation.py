@@ -1,7 +1,6 @@
 """Utilities for handling deprecation of code and features."""
 
 import logging
-import sys
 import traceback
 import warnings
 

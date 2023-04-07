@@ -1,5 +1,4 @@
 import logging
-import sys
 
 from taggit.managers import TaggableManager, _TaggableManager
 
