@@ -164,6 +164,7 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def setUp(self):
         super().setUp()
         Prefix.objects.all().delete()
+        IPAddress.objects.all().delete()
         self.statuses = Status.objects.get_for_model(Prefix)
 
     def test_prefix_validation(self):

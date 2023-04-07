@@ -822,7 +822,7 @@ class JobResult(BaseModel, CustomFieldModel):
         logger (logging.logger): Optional logger to also output the message to
         """
         if level_choice not in LogLevelChoices.as_dict():
-            raise Exception(f"Unknown logging level: {level_choice}")
+            raise ValueError(f"Unknown logging level: {level_choice}")
 
         message = sanitize(str(message))
 

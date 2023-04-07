@@ -241,14 +241,14 @@ class JobTest(TransactionTestCase):
         job_class, _job_model = get_job_class_and_model(module, name)
 
         # Fill out the form
-        form_data = dict(
-            ipv4_address="1.2.3.4",
-            ipv4_with_mask="1.2.3.4/32",
-            ipv4_network="1.2.3.0/24",
-            ipv6_address="2001:db8::1",
-            ipv6_with_mask="2001:db8::1/64",
-            ipv6_network="2001:db8::/64",
-        )
+        form_data = {
+            "ipv4_address": "1.2.3.4",
+            "ipv4_with_mask": "1.2.3.4/32",
+            "ipv4_network": "1.2.3.0/24",
+            "ipv6_address": "2001:db8::1",
+            "ipv6_with_mask": "2001:db8::1/64",
+            "ipv6_network": "2001:db8::/64",
+        }
         form = job_class().as_form(form_data)
         self.assertTrue(form.is_valid())
 
