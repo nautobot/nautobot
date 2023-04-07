@@ -11,8 +11,10 @@ class NautobotDatabaseBackend(DatabaseBackend):
 
     TaskModel = JobResult
 
-    # overloaded to pass through actual args/kwargs to let the manager censor sensitive args before storing
     def _get_extended_properties(self, request, traceback):
+        """
+        Overload default so that `argsrepr` and `kwargsrepr` aren't used to construct `args` and `kwargs`.
+        """
         extended_props = {
             "periodic_task_name": None,
             "task_args": None,
@@ -23,6 +25,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
         }
         if request and self.app.conf.find_value_for_key("extended", "result"):
 
+            # do not encode args/kwargs as we store these in a JSONField instead of TextField
             task_args = getattr(request, "args", None)
             task_kwargs = getattr(request, "kwargs", None)
 
