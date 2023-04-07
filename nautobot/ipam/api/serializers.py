@@ -158,11 +158,13 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Role
 
     class Meta:
         model = Prefix
-        fields = "__all__"
         read_only_fields = ["family"]
+        # excluded here so that the user do not need to pass in a `prefix_length` value
+        # when doing a POST request.
+        exclude = ["prefix_length"]
 
 
-class PrefixLengthSerializer(PrefixSerializer):
+class PrefixLengthSerializer(serializers.Serializer):
     prefix_length = serializers.IntegerField()
 
     def to_internal_value(self, data):

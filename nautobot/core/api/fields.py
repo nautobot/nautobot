@@ -1,15 +1,9 @@
-import pytz
 from collections import OrderedDict
-from django import VERSION, conf
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.encoding import force_str
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
-
-from zoneinfo._zoneinfo import ZoneInfo
-from zoneinfo._common import ZoneInfoNotFoundError
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 
@@ -143,30 +137,6 @@ class SerializedPKRelatedField(PrimaryKeyRelatedField):
         return self.serializer(value, context={"request": self.context["request"]}).data
 
 
-def use_pytz_default():
-    return getattr(conf.settings, "USE_DEPRECATED_PYTZ", VERSION < (4, 0))
-
-
 @extend_schema_field(str)
 class TimeZoneSerializerField(TimeZoneSerializerField_):
     """Represents a time zone as a string."""
-
-    def __init__(self, *args, **kwargs):
-        self.use_pytz = kwargs.pop("use_pytz", use_pytz_default())
-        super().__init__(*args, **kwargs)
-
-    def to_internal_value(self, data):
-        if self.use_pytz:
-            try:
-                return pytz.timezone(force_str(data))
-            except pytz.UnknownTimeZoneError:
-                # I have to override the way the error is raised here because DRF expects
-                # a pair of key, value error message to be raised
-                raise ValidationError({"time_zone": ["A valid timezone is required."]})
-        else:
-            try:
-                return ZoneInfo(force_str(data))
-            except ZoneInfoNotFoundError:
-                # I have to override the way the error is raised here because DRF expects
-                # a pair of key, value error message to be raised
-                raise ValidationError({"time_zone": ["A valid timezone is required."]})

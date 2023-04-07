@@ -3,6 +3,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.models.generics import _NautobotTaggableManager
+from nautobot.core.utils.requests import NautobotFakeRequest
 
 
 class FormlessBrowsableAPIRenderer(BrowsableAPIRenderer):
@@ -27,6 +28,8 @@ class NautobotJSONEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, _NautobotTaggableManager):
             obj = list(obj.values_list("id", flat=True))
+        if isinstance(obj, NautobotFakeRequest):
+            obj = obj.nautobot_serialize()
         return super().default(obj)
 
 

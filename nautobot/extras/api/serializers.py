@@ -489,6 +489,7 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
+    start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
         model = ScheduledJob

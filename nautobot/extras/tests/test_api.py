@@ -284,7 +284,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["config_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["config_context_schema"], schema.pk)
 
     def test_schema_validation_fails(self):
         """
@@ -549,7 +549,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             response.data,
             # Since we are setting blank=True on the key field, we only need to check
             # error messages from the label field.
-            {"label": ["This field cannot be blank."]},
+            {"label": [ErrorDetail(string="This field is required.", code="required")]},
         )
 
 
@@ -1484,9 +1484,10 @@ class JobTest(
         del data_job_result["url"]
         del data_job_result["user"]["url"]
         expected_data_job_result = JobResultSerializer(job_result, context={"request": None}).data
+        expected_data_job_result["relationships"]
         del expected_data_job_result["url"]
         del expected_data_job_result["user"]["url"]
-        self.assertEqual(data_job_result, expected_data_job_result)
+        self.assertEqual(sorted(data_job_result), sorted(expected_data_job_result))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

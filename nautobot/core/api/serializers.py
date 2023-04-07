@@ -210,11 +210,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         }
         """
         data = super().to_internal_value(data)
-        # for key, value in self.get_fields().items():
-        #     sub_data = data.get(key, None)
-        #     if sub_data is not None:
-        #         data[key] = value.to_internal_value(sub_data)
-        # print(data)
         return data
 
     def build_field(self, field_name, info, model_class, nested_depth):
