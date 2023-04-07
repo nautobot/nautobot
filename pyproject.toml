@@ -32,7 +32,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.8,<3.11"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
@@ -141,9 +141,9 @@ sso = ["social-auth-core"]
 # Code style enforcement
 black = "~23.3.0"
 # Test code coverage measurement
-coverage = "~6.5.0"
+coverage = "~7.2.3"
 # Tool for debugging Django
-django-debug-toolbar = "~3.8.0"
+django-debug-toolbar = "~4.0.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
@@ -155,22 +155,22 @@ factory-boy = "~3.2.1"
 # Code style checking and limited static analysis
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~1.7.1"
+invoke = "~2.0.0"
 # Code style checking for python import statements
-isort = "^5.10.1"
+isort = "~5.12.0"
 # Rendering docs to HTML
 mkdocs = "~1.4.2"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.4.0"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.9.0"
+mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
-mkdocs-material = "~8.5.8"
+mkdocs-material = "~9.1.6"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "0.19.1"
-mkdocstrings-python = "0.8.2"
+mkdocstrings = "~0.21.2"
+mkdocstrings-python = "~0.9.0"
 # Code static analysis
 pylint = {version = "~2.15.0", python = "^3.7.2"}
 # Pylint extensions for Django
@@ -178,15 +178,15 @@ pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
 requests = "~2.28.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~12.6.0"
+rich = "~13.3.3"
 # Selenium web drivers for live integration testing
 selenium = "~4.7.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
 # Change log management and generation
-towncrier = "~22.8.0"
+towncrier = "~22.12.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~2.2.0"
+watchdog = "~3.0.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
