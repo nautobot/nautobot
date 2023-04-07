@@ -40,7 +40,7 @@ Django = "~3.2.18"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.1.0", optional = true}
+django-auth-ldap = {version = "~4.2.0", optional = true}
 # Caching with Redis
 django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
@@ -50,34 +50,32 @@ django-celery-results = "~2.4.0"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
-django-cors-headers = "~3.13.0"
+django-cors-headers = "~3.14.0"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus
 django-extensions = "~3.2.0"
 # Advanced query filters
-django-filter = "~21.1"
+django-filter = "~23.1"
 # Health check endpoint
-django-health-check = "~3.16.5"
+django-health-check = "~3.17.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.10.2"
 # Prometheus metrics for Django
 django-prometheus = "~2.2.0"
-# Custom prometheus metrics
-prometheus-client = "~0.15.0"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.0", optional = true}
 # Advanced HTML tables
-django-tables2 = "~2.4.1"
+django-tables2 = "~2.5.3"
 # Tags
 django-taggit = "~3.1.0"
 # Represent time zones in Django
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~4.1.2"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.13.0"
+django-tree-queries = "~0.14.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
@@ -110,7 +108,9 @@ netaddr = "~0.8.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.4.1"
 # Image processing library
-Pillow = "~9.3.0"
+Pillow = "~9.5.0"
+# Custom prometheus metrics
+prometheus-client = "~0.16.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.5"
@@ -119,9 +119,9 @@ pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
-social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnect", "saml"]}
+social-auth-core = {version = "~4.4.1", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
-social-auth-app-django = "~5.0.0"
+social-auth-app-django = "~5.2.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
 
