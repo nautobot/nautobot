@@ -1,5 +1,6 @@
 from django.core.exceptions import FieldError
 
+from nautobot.extras.filters.mixins import RelationshipFilter
 from nautobot.utilities.utils import is_uuid
 
 
@@ -29,13 +30,19 @@ def check_filter_for_display(filters, field_name, values):
     if field_name not in filters.keys():
         return resolved_filter
 
-    resolved_filter["display"] = filters[field_name].label or field_name
-    if len(values) == 0 or not hasattr(filters[field_name], "queryset") or not is_uuid(values[0]):
+    field = filters[field_name]
+
+    resolved_filter["display"] = (
+        (type(field) == RelationshipFilter and field.relationship.get_label(side=field.side))
+        or field.label
+        or field_name
+    )
+    if len(values) == 0 or not hasattr(field, "queryset") or not is_uuid(values[0]):
         return resolved_filter
     else:
         try:
             new_values = []
-            for value in filters[field_name].queryset.filter(pk__in=values):
+            for value in field.queryset.filter(pk__in=values):
                 new_values.append({"name": str(value.pk), "display": getattr(value, "display", str(value))})
             resolved_filter["values"] = new_values
         except (FieldError, AttributeError):

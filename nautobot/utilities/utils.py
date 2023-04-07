@@ -844,6 +844,13 @@ def get_all_lookup_expr_for_field(model, field_name):
                     "name": build_lookup_label(name, field.lookup_expr),
                 }
             )
+        elif name == field_name and not name.startswith("has_"):
+            lookup_expr_choices.append(
+                {
+                    "id": name,
+                    "name": "exact",
+                }
+            )
 
     return lookup_expr_choices
 
@@ -964,7 +971,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ... }
     """
     query_dict = QueryDict(mutable=True)
-    filterset_class_fields = filterset_class().filters.keys()
+    filterset_class_fields = filterset_class.filters.keys()
 
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)

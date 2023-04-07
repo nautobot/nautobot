@@ -245,7 +245,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
-            filterset_filters = filterset.get_filters()
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -255,17 +254,17 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 self.queryset = self.queryset.none()
 
             display_filter_params = [
-                check_filter_for_display(filterset_filters, field_name, values)
+                check_filter_for_display(filterset.filters, field_name, values)
                 for field_name, values in filter_params.items()
             ]
 
             if request.GET:
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                    request.GET, self.filterset
+                    request.GET, filterset
                 )
-                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset, data=factory_formset_params)
+                dynamic_filter_form = DynamicFilterFormSet(filterset_class=filterset, data=factory_formset_params)
             else:
-                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
+                dynamic_filter_form = DynamicFilterFormSet(filterset_class=filterset)
 
             if self.filterset_form:
                 filter_form = self.filterset_form(filter_params, label_suffix="")
