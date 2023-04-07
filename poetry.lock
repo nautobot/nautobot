@@ -4005,6 +4005,22 @@ files = [
 lxml = ">=3.8"
 
 [[package]]
+name = "yamllint"
+version = "1.30.0"
+description = "A linter for YAML files."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "yamllint-1.30.0.tar.gz", hash = "sha256:4f58f323aedda16189a489d183ecc25c66d7a9cc0fe88f61b650fef167b13190"},
+]
+
+[package.dependencies]
+pathspec = ">=0.5.3"
+pyyaml = "*"
+setuptools = "*"
+
+[[package]]
 name = "yamlordereddictloader"
 version = "0.4.0"
 description = "YAML loader and dump for PyYAML allowing to keep keys order."
@@ -4045,4 +4061,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "8e4697386153a31673970a07e0f665e5571c20dd269b38c86e0ab9988ee664eb"
+content-hash = "d707225590cfe226c76d6965f80ae354e81c8caf5905b02149190f4af07908fd"
