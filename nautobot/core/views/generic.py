@@ -262,9 +262,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
                     request.GET, filterset
                 )
-                dynamic_filter_form = DynamicFilterFormSet(filterset_class=filterset, data=factory_formset_params)
+                dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
             else:
-                dynamic_filter_form = DynamicFilterFormSet(filterset_class=filterset)
+                dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
             if self.filterset_form:
                 filter_form = self.filterset_form(filter_params, label_suffix="")

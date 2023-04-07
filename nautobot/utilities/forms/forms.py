@@ -7,6 +7,7 @@ from django import forms
 from django.forms import formset_factory
 from django.urls import reverse
 
+from nautobot.core.utilities import get_filter_field_label
 from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.utilities.utils import (
     build_lookup_label,
@@ -317,13 +318,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         else:
             logger.warning(f"FilterSet for {model.__class__} not found.")
 
-    @staticmethod
-    def capitalize(field):
-        field = field.replace("_custom_field_data__", "")
-        split_field = field.split("__") if "__" in field else field.split("_")
-        words = " ".join(split_field)
-        return words[0].upper() + words[1:]
-
     def _get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
         from nautobot.extras.filters.mixins import RelationshipFilter  # Avoid circular import
@@ -331,22 +325,17 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         filterset_without_lookup = (
             (
                 name,
-                field.label
-                or (isinstance(field, RelationshipFilter) and field.relationship.get_label(side=field.side))
-                or self.capitalize(field.field_name),
+                get_filter_field_label(filter_field),
             )
-            for name, field in self.filterset_filters.items()
-            if isinstance(field, RelationshipFilter) or ("__" not in name and name != "q")
+            for name, filter_field in self.filterset_filters.items()
+            if isinstance(filter_field, RelationshipFilter) or ("__" not in name and name != "q")
         )
         return sorted(filterset_without_lookup, key=lambda x: x[1])
 
 
-def dynamic_formset_factory(filterset_class, data=None, **kwargs):
+def dynamic_formset_factory(filterset, data=None, **kwargs):
     filter_form = DynamicFilterForm
-    if isinstance(filterset_class, type):
-        filter_form.filterset_class = filterset_class()
-    else:
-        filter_form.filterset_class = filterset_class
+    filter_form.filterset_class = filterset
 
     params = {
         "can_delete_extra": True,

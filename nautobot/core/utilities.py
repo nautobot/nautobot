@@ -1,6 +1,5 @@
 from django.core.exceptions import FieldError
 
-from nautobot.extras.filters.mixins import RelationshipFilter
 from nautobot.utilities.utils import is_uuid
 
 
@@ -30,22 +29,49 @@ def check_filter_for_display(filters, field_name, values):
     if field_name not in filters.keys():
         return resolved_filter
 
-    field = filters[field_name]
+    filter_field = filters[field_name]
 
-    resolved_filter["display"] = (
-        (isinstance(field, RelationshipFilter) and field.relationship.get_label(side=field.side))
-        or field.label
-        or field_name
-    )
-    if len(values) == 0 or not hasattr(field, "queryset") or not is_uuid(values[0]):
+    resolved_filter["display"] = get_filter_field_label(filter_field)
+
+    if len(values) == 0 or not hasattr(filter_field, "queryset") or not is_uuid(values[0]):
         return resolved_filter
     else:
         try:
             new_values = []
-            for value in field.queryset.filter(pk__in=values):
+            for value in filter_field.queryset.filter(pk__in=values):
                 new_values.append({"name": str(value.pk), "display": getattr(value, "display", str(value))})
             resolved_filter["values"] = new_values
         except (FieldError, AttributeError):
             pass
 
     return resolved_filter
+
+
+def get_filter_field_label(filter_field):
+    """
+    Return a label for a given field name and value.
+
+    Args:
+        field (Filter): The filter to get a label for
+
+    Returns:
+        (str): The label for the given field
+    """
+    from nautobot.extras.filters.mixins import RelationshipFilter
+
+    if filter_field.label:
+        return filter_field.label
+    elif isinstance(filter_field, RelationshipFilter):
+        return filter_field.relationship.get_label(side=filter_field.side)
+    else:
+        return field_name_to_display(filter_field.field_name)
+
+
+def field_name_to_display(field_name):
+    """
+    Return a more human readable version of a field name.
+    """
+    field_name = field_name.replace("_custom_field_data__", "")
+    split_field = field_name.split("__") if "__" in field_name else field_name.split("_")
+    words = " ".join(split_field)
+    return words[0].upper() + words[1:]

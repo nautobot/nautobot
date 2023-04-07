@@ -812,9 +812,10 @@ def build_lookup_label(field_name, _verbose_name):
     """
     verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
     label = ""
-    search = CONTAINS_LOOKUP_EXPR_RE.search(field_name)
-    if search:
-        label = f" ({search.group()})"
+    if not ("__destination" in field_name or "__source" in field_name):
+        search = CONTAINS_LOOKUP_EXPR_RE.search(field_name)
+        if search:
+            label = f" ({search.group()})"
 
     verbose_name = "not " + verbose_name if label.startswith(" (n") else verbose_name
 
@@ -946,7 +947,7 @@ def get_filterset_parameter_form_field(model, parameter):
     return form_field
 
 
-def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
+def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict
     while discarding `querydict` params which are not part of `filterset_class` params
@@ -970,10 +971,9 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ...     'form-1-value': ['site']
         ... }
     """
+    from nautobot.extras.filters import RelationshipFilter
     query_dict = QueryDict(mutable=True)
-    if isinstance(filterset_class, type):
-        filterset_class = filterset_class()
-    filterset_class_fields = filterset_class.filters.keys()
+    filterset_class_fields = filterset.filters.keys()
 
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)
@@ -986,15 +986,18 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     num = 0
     request_querydict = request_querydict.copy()
     request_querydict.pop("q", None)
-    for lookup_type, value in request_querydict.items():
+    for filter_field_name, value in request_querydict.items():
         # Discard fields without values
         if value:
-            if lookup_type in filterset_class_fields:
-                lookup_field = re.sub(r"__\w+", "", lookup_type)
-                lookup_value = request_querydict.getlist(lookup_type)
+            if filter_field_name in filterset_class_fields:
+                if isinstance(filterset.filters[filter_field_name], RelationshipFilter):
+                    lookup_field = filter_field_name
+                else:
+                    lookup_field = re.sub(r"__\w+", "", filter_field_name)
+                lookup_value = request_querydict.getlist(filter_field_name)
 
                 query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
-                query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
+                query_dict.setlistdefault(lookup_type_placeholder % num, [filter_field_name])
                 query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
                 num += 1
 

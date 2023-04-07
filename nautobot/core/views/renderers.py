@@ -32,17 +32,17 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
 
-    def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
+    def get_dynamic_filter_form(self, view, request, *args, filterset=None, **kwargs):
         """
         Helper function to obtain the filter_form_class,
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
         factory_formset_params = {}
-        if filterset_class:
+        if filterset:
             factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, filterset_class()
+                request.GET, filterset()
             )
-        return DynamicFilterFormSet(filterset_class=view.filterset_class, data=factory_formset_params)
+        return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
@@ -209,7 +209,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "content_type": content_type,
             "form": form,
             "filter_form": filter_form,
-            "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
+            "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset=view.filterset_class),
             "search_form": search_form,
             "filter_params": display_filter_params,
             "object": instance,
