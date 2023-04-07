@@ -325,19 +325,17 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return words[0].upper() + words[1:]
 
     def _get_lookup_field_choices(self):
-        from nautobot.extras.filters.mixins import RelationshipFilter
-
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
-        # TODO: Mimic the logic in
+        from nautobot.extras.filters.mixins import RelationshipFilter  # Avoid circular import
         filterset_without_lookup = (
             (
                 name,
                 field.label
-                or (type(field) == RelationshipFilter and field.relationship.get_label(side=field.side))
+                or (isinstance(field, RelationshipFilter) and field.relationship.get_label(side=field.side))
                 or self.capitalize(field.field_name),
             )
             for name, field in self.filterset_filters.items()
-            if (type(field) == RelationshipFilter) or ("__" not in name and name != "q")
+            if isinstance(field, RelationshipFilter) or ("__" not in name and name != "q")
         )
         return sorted(filterset_without_lookup, key=lambda x: x[1])
 

@@ -971,6 +971,8 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ... }
     """
     query_dict = QueryDict(mutable=True)
+    if isinstance(filterset_class, type):
+        filterset_class = filterset_class()
     filterset_class_fields = filterset_class.filters.keys()
 
     query_dict.setdefault("form-INITIAL_FORMS", 0)

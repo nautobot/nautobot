@@ -33,7 +33,7 @@ def check_filter_for_display(filters, field_name, values):
     field = filters[field_name]
 
     resolved_filter["display"] = (
-        (type(field) == RelationshipFilter and field.relationship.get_label(side=field.side))
+        (isinstance(field, RelationshipFilter) and field.relationship.get_label(side=field.side))
         or field.label
         or field_name
     )
