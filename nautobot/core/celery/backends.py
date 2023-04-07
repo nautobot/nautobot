@@ -1,6 +1,5 @@
 from django_celery_results.backends import DatabaseBackend
 
-from nautobot.core.celery import _dumps, _loads
 from nautobot.extras.models import JobResult
 
 
@@ -43,11 +42,3 @@ class NautobotDatabaseBackend(DatabaseBackend):
             )
 
         return extended_props
-
-    def encode_content(self, data):
-        """Pass through encoding since we're storing as JSON explicitly."""
-        return "application/x-nautobot-json", "utf-8", _dumps(data)
-
-    def decode_content(self, obj, content):
-        """Pass through decoding since we're storing as JSON explicitly."""
-        return _loads(content)
