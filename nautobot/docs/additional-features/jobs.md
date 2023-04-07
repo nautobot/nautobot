@@ -794,7 +794,7 @@ class NewBranch(Job):
     )
 
     def run(self, data, commit):
-        STATUS_PLANNED = Status.objects.get(slug='planned')
+        STATUS_PLANNED = Status.objects.get(name='Planned')
 
         # Create the new site
         site = Site(
@@ -849,7 +849,7 @@ class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):
-        STATUS_ACTIVE = Status.objects.get(slug='active')
+        STATUS_ACTIVE = Status.objects.get(name='Active')
 
         # Check that every console port for every active device has a connection defined.
         for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
@@ -867,7 +867,7 @@ class DeviceConnectionsReport(Job):
                 self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
-        STATUS_ACTIVE = Status.objects.get(slug='active')
+        STATUS_ACTIVE = Status.objects.get(name='Active')
 
         # Check that every active device has at least two connected power supplies.
         for device in Device.objects.filter(status=STATUS_ACTIVE):

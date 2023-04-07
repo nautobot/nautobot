@@ -544,7 +544,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
         self.assertEqual(success_log.message, "Status created successfully.")
 
-        status = Status.objects.get(slug="test-status")
+        status = Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
 
         status.delete()

@@ -1,7 +1,6 @@
 from django.db import models
 from django.urls import reverse
 
-from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.extras.utils import extras_features
@@ -23,10 +22,9 @@ class TenantGroup(TreeModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "parent", "description"]
+    csv_headers = ["name", "parent", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -35,12 +33,11 @@ class TenantGroup(TreeModel, OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("tenancy:tenantgroup", args=[self.slug])
+        return reverse("tenancy:tenantgroup", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.parent.name if self.parent else "",
             self.description,
         )
@@ -60,7 +57,6 @@ class Tenant(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     tenant_group = models.ForeignKey(
         to="tenancy.TenantGroup",
         on_delete=models.SET_NULL,
@@ -71,7 +67,7 @@ class Tenant(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "slug", "tenant_group", "description", "comments"]
+    csv_headers = ["name", "tenant_group", "description", "comments"]
     clone_fields = [
         "tenant_group",
         "description",
@@ -84,12 +80,11 @@ class Tenant(PrimaryModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("tenancy:tenant", args=[self.slug])
+        return reverse("tenancy:tenant", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.tenant_group.name if self.tenant_group else None,
             self.description,
             self.comments,

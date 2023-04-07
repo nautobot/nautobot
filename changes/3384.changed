@@ -1,0 +1,2 @@
+Moved extra information stored previously in `block sidebar` to `block header_extra` in page templates (`aggregate_list.html` and `objectchange_list.html`).
+Documented `block header_extra` in `docs/development/templates.md`.

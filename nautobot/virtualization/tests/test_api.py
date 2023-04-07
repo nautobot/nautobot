@@ -26,19 +26,16 @@ class AppTest(APITestCase):
 
 class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     model = ClusterType
-    brief_fields = ["cluster_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["cluster_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Cluster Type 4",
-            "slug": "cluster-type-4",
         },
         {
             "name": "Cluster Type 5",
-            "slug": "cluster-type-5",
         },
         {
             "name": "Cluster Type 6",
-            "slug": "cluster-type-6",
         },
         {
             "name": "Cluster Type 7",
@@ -47,31 +44,27 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
 
-        ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
-        ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
+        ClusterType.objects.create(name="Cluster Type 1")
+        ClusterType.objects.create(name="Cluster Type 2")
+        ClusterType.objects.create(name="Cluster Type 3")
 
 
 class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     model = ClusterGroup
-    brief_fields = ["cluster_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["cluster_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Cluster Group 4",
-            "slug": "cluster-type-4",
         },
         {
             "name": "Cluster Group 5",
-            "slug": "cluster-type-5",
         },
         {
             "name": "Cluster Group 6",
-            "slug": "cluster-type-6",
         },
         {
             "name": "Cluster Group 7",
@@ -80,14 +73,13 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
 
-        ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-type-1")
-        ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-type-2")
-        ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-type-3")
+        ClusterGroup.objects.create(name="Cluster Group 1")
+        ClusterGroup.objects.create(name="Cluster Group 2")
+        ClusterGroup.objects.create(name="Cluster Group 3")
 
 
 class ClusterTest(APIViewTestCases.APIViewTestCase):
@@ -99,15 +91,14 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_types = (
-            ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
-            ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
+            ClusterType.objects.create(name="Cluster Type 1"),
+            ClusterType.objects.create(name="Cluster Type 2"),
         )
 
         cluster_groups = (
-            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
-            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
+            ClusterGroup.objects.create(name="Cluster Group 1"),
+            ClusterGroup.objects.create(name="Cluster Group 2"),
         )
 
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0])
@@ -140,8 +131,12 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        clustergroup = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        clustertype = ClusterType.objects.create(
+            name="Cluster Type 1",
+        )
+        clustergroup = ClusterGroup.objects.create(
+            name="Cluster Group 1",
+        )
         location_type = LocationType.objects.get(name="Campus")
         locations = Location.objects.filter(location_type=location_type)[:2]
 
@@ -289,10 +284,10 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
+        clustertype = ClusterType.objects.create(name="Test Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
-        status_active = Status.objects.get(slug="active")
+        interface_status = Status.objects.get_for_model(VMInterface).first()
 
         interfaces = (
             VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1"),
@@ -310,7 +305,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 4",
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
@@ -318,7 +313,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 5",
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
@@ -327,7 +322,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 6",
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
@@ -338,7 +333,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         cls.untagged_vlan_data = {
             "virtual_machine": virtualmachine.pk,
             "name": "expected-to-fail",
-            "status": status_active.pk,
+            "status": interface_status.pk,
             "untagged_vlan": vlans[0].pk,
         }
 
@@ -366,7 +361,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             payload = {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Tagged Interface",
-                "status": Status.objects.get(slug="active").pk,
+                "status": Status.objects.get_for_model(VMInterface).first().pk,
                 "tagged_vlans": [vlan.pk],
             }
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)

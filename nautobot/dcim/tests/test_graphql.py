@@ -12,7 +12,7 @@ class GraphQLTestCase(TestCase):
         self.user = create_test_user("graphql_testuser")
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         self.device_role = Role.objects.get_for_model(Device).first()
-        self.manufacturer = Manufacturer.objects.create(name="Brand")
+        self.manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(model="Model", manufacturer=self.manufacturer)
         self.device = Device.objects.create(
             location=self.location, role=self.device_role, device_type=self.device_type, name="Device"

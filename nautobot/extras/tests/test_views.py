@@ -477,13 +477,12 @@ class DynamicGroupTestCase(
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
 
         cls.form_data = {
             "name": "new_dynamic_group",
-            "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
             # Management form fields required for the dynamic formset
@@ -576,8 +575,8 @@ class GitRepositoryTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         # Create four GitRepository records
@@ -716,20 +715,16 @@ class SecretTestCase(
 
         cls.form_data = {
             "name": "View Test 4",
-            "slug": "view-test-4",
             "provider": "environment-variable",
             "parameters": '{"variable": "VIEW_TEST_4"}',
         }
 
         cls.csv_data = (
-            "name,slug,provider,parameters",
-            'View Test 5,view-test-5,environment-variable,{"variable": "VIEW_TEST_5"}',
-            'View Test 6,,environment-variable,{"variable": "VIEW_TEST_6"}',
-            'View Test 7,,environment-variable,{"variable": "VIEW_TEST_7"}',
+            "name,provider,parameters",
+            'View Test 5,environment-variable,{"variable": "VIEW_TEST_5"}',
+            'View Test 6,environment-variable,{"variable": "VIEW_TEST_6"}',
+            'View Test 7,environment-variable,{"variable": "VIEW_TEST_7"}',
         )
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "View Test 3"
 
 
 # Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
@@ -747,15 +742,15 @@ class SecretsGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
-            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
-            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+            SecretsGroup.objects.create(name="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 2"),
+            SecretsGroup.objects.create(name="Group 3"),
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", slug="secret-1", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 2", slug="secret-2", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 3", slug="secret-3", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),
         )
 
         SecretsGroupAssociation.objects.create(
@@ -779,7 +774,6 @@ class SecretsGroupTestCase(
 
         cls.form_data = {
             "name": "Group 4",
-            "slug": "group-4",
             "description": "Some description",
             # Management form fields required for the dynamic Secret formset
             "secrets_group_associations-TOTAL_FORMS": "0",
@@ -787,9 +781,6 @@ class SecretsGroupTestCase(
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Group 3"
 
 
 class GraphQLQueriesTestCase(
@@ -807,17 +798,14 @@ class GraphQLQueriesTestCase(
         graphqlqueries = (
             GraphQLQuery(
                 name="graphql-query-1",
-                slug="graphql-query-1",
                 query="{ query: locations {name} }",
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                slug="graphql-query-2",
                 query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
-                slug="graphql-query-3",
                 query="""
 query ($device: String!) {
   devices(name: $device) {
@@ -920,7 +908,6 @@ query ($device: String!) {
 
         cls.form_data = {
             "name": "graphql-query-4",
-            "slug": "graphql-query-4",
             "query": "{query: locations {name}}",
         }
 
@@ -1972,6 +1959,7 @@ class RelationshipTestCase(
         interface_type = ContentType.objects.get_for_model(Interface)
         device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
+        status = Status.objects.get_for_model(Interface).first()
 
         Relationship(
             name="Device VLANs",
@@ -2001,7 +1989,7 @@ class RelationshipTestCase(
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
-            "source_filter": '{"status": ["active"]}',
+            "source_filter": '{"status": ["' + status.name + '"]}',
             "destination_type": interface_type.pk,
             "destination_label": "VLANs",
             "destination_hidden": True,
@@ -2106,7 +2094,7 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
         )
         relationship.validated_save()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.first()
@@ -2161,26 +2149,22 @@ class StatusTestCase(
 
         cls.form_data = {
             "name": "new_status",
-            "slug": "new-status",
             "description": "I am a new status object.",
             "color": "ffcc00",
             "content_types": [content_type.pk],
         }
 
         cls.csv_data = (
-            "name,slug,color,content_types"
-            'test_status1,test-status1,ffffff,"dcim.device"'
-            'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
-            'test_status3,test-status3,ffffff,"dcim.device,dcim.location"'
-            'test_status4,,ffffff,"dcim.device,dcim.location"'
+            "name,color,content_types"
+            'test_status1,ffffff,"dcim.device"'
+            'test_status2,ffffff,"dcim.device"'
+            'test_status3,ffffff,"dcim.device"'
+            'test_status4,ffffff,"dcim.device"'
         )
 
         cls.bulk_edit_data = {
             "color": "000000",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = Status.objects.first().name
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -2334,23 +2318,19 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "New Role",
-            "slug": "new-role",
             "description": "I am a new role object.",
             "color": ColorChoices.COLOR_GREY,
             "content_types": [content_type.pk],
         }
 
         cls.csv_data = (
-            "name,slug,weight,color,content_types",
-            'test_role1,test-role1,1000,ffffff,"dcim.device"',
-            'test_role2,test-role2,200,ffffff,"dcim.device,dcim.rack"',
-            'test_role3,test-role3,100,ffffff,"dcim.device,ipam.prefix"',
-            'test_role4,test-role4,50,ffffff,"ipam.ipaddress,ipam.vlan"',
+            "name,weight,color,content_types,description",
+            'test_role1,1000,ffffff,"dcim.device",A Role',
+            'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
+            'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
+            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
         )
 
         cls.bulk_edit_data = {
             "color": "000000",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = Role.objects.first().name

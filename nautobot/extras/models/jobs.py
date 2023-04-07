@@ -410,7 +410,6 @@ class JobHook(OrganizationalModel):
         limit_choices_to={"is_job_hook_receiver": True},
     )
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     type_create = models.BooleanField(default=False, help_text="Call this job hook when a matching object is created.")
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
@@ -429,7 +428,7 @@ class JobHook(OrganizationalModel):
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
     def get_absolute_url(self):
-        return reverse("extras:jobhook", kwargs={"slug": self.slug})
+        return reverse("extras:jobhook", kwargs={"pk": self.pk})
 
     @classmethod
     def check_for_conflicts(

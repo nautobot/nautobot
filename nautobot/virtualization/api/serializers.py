@@ -56,7 +56,6 @@ class ClusterTypeSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "cluster_count",
         ]
@@ -71,7 +70,6 @@ class ClusterGroupSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "cluster_count",
         ]

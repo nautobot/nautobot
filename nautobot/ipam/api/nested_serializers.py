@@ -70,7 +70,7 @@ class NestedRIRSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.RIR
-        fields = ["id", "url", "name", "slug", "assigned_prefix_count"]
+        fields = ["id", "url", "name", "assigned_prefix_count"]
 
 
 #

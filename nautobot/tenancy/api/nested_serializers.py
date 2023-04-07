@@ -20,7 +20,7 @@ class NestedTenantGroupSerializer(WritableNestedSerializer, TreeModelSerializerM
 
     class Meta:
         model = TenantGroup
-        fields = ["id", "url", "name", "slug", "tenant_count", "tree_depth"]
+        fields = ["id", "url", "name", "tenant_count", "tree_depth"]
 
 
 class NestedTenantSerializer(WritableNestedSerializer):
@@ -28,4 +28,4 @@ class NestedTenantSerializer(WritableNestedSerializer):
 
     class Meta:
         model = Tenant
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name"]

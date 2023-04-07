@@ -61,7 +61,6 @@ User = get_user_model()
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("dcim-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -191,18 +190,18 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.lt3 = LocationType.objects.get(name="Floor")
         cls.lt4 = LocationType.objects.get(name="Room")
 
-        cls.status_active = Status.objects.get(slug="active")
-        tenant = Tenant.objects.create(name="Test Tenant")
+        cls.location_statuses = Status.objects.get_for_model(Location)
+        tenant = Tenant.objects.first()
 
-        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.status_active)
+        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.location_statuses[0])
         cls.loc2 = Location.objects.create(
-            name="RTP4E", location_type=cls.lt2, status=cls.status_active, parent=cls.loc1
+            name="RTP4E", location_type=cls.lt2, status=cls.location_statuses[0], parent=cls.loc1
         )
         cls.loc3 = Location.objects.create(
-            name="RTP4E-3", location_type=cls.lt3, status=cls.status_active, parent=cls.loc2
+            name="RTP4E-3", location_type=cls.lt3, status=cls.location_statuses[0], parent=cls.loc2
         )
         cls.loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.status_active, parent=cls.loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.location_statuses[1], parent=cls.loc3, tenant=tenant
         )
         for loc in [cls.loc1, cls.loc2, cls.loc3, cls.loc4]:
             loc.validated_save()
@@ -211,35 +210,33 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Downtown Durham",
                 "location_type": cls.lt1.pk,
-                "status": cls.status_active.pk,
+                "status": cls.location_statuses[0].pk,
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
                 "location_type": cls.lt2.pk,
                 "parent": cls.loc1.pk,
-                "status": cls.status_active.pk,
+                "status": cls.location_statuses[0].pk,
             },
             {
                 "name": "RTP4E-2",
                 "location_type": cls.lt3.pk,
                 "parent": cls.loc2.pk,
-                "status": cls.status_active.pk,
+                "status": cls.location_statuses[0].pk,
                 "description": "Second floor of RTP4E",
                 "tenant": tenant.pk,
             },
         ]
 
-        status_planned = Status.objects.get(slug="planned")
-
         # Changing location_type of an existing instance is not permitted
         cls.update_data = {
             "name": "A revised location",
             "slug": "a-different-slug",
-            "status": status_planned.pk,
+            "status": cls.location_statuses[1].pk,
         }
         cls.bulk_update_data = {
-            "status": status_planned.pk,
+            "status": cls.location_statuses[1].pk,
         }
 
     def test_time_zone_field_post_null(self):
@@ -252,7 +249,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -273,7 +270,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -295,7 +292,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -317,7 +314,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         location = {
             "name": "foo",
             "slug": "foo",
-            "status": self.status_active.pk,
+            "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
             "location": self.loc1.pk,
@@ -354,11 +351,11 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.active = Status.objects.get(slug="active")
+        cls.status = Status.objects.get_for_model(Location).first()
         location_type = LocationType.objects.create(name="Location Type 1")
         cls.locations = (
-            Location.objects.create(name="Location 1", location_type=location_type, status=cls.active),
-            Location.objects.create(name="Location 2", location_type=location_type, status=cls.active),
+            Location.objects.create(name="Location 1", location_type=location_type, status=cls.status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=cls.status),
         )
         cls.parent_rack_groups = (
             RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
@@ -423,7 +420,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         )
         child_location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
         child_location = Location.objects.create(
-            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.active
+            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.status
         )
 
         data = {
@@ -442,7 +439,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
         # A sibling of locations[0], not a child of it.
         sibling_location = Location.objects.create(
-            name="Location 1B", location_type=self.locations[0].location_type, status=self.active
+            name="Location 1B", location_type=self.locations[0].location_type, status=self.status
         )
 
         data = {
@@ -467,7 +464,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.all()[:2]
 
         rack_groups = (
@@ -655,19 +651,16 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["device_type_count", "display", "id", "name", "slug", "url"]
+    brief_fields = ["device_type_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
-            "slug": "test-manufacturer-4",
         },
         {
             "name": "Test Manufacturer 5",
-            "slug": "test-manufacturer-5",
         },
         {
             "name": "Test Manufacturer 6",
-            "slug": "test-manufacturer-6",
         },
         {
             "name": "Test Manufacturer 7",
@@ -676,11 +669,9 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
@@ -1028,19 +1019,16 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtual_machine_count"]
+    brief_fields = ["device_count", "display", "id", "name", "url", "virtual_machine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
-            "slug": "test-platform-4",
         },
         {
             "name": "Test Platform 5",
-            "slug": "test-platform-5",
         },
         {
             "name": "Test Platform 6",
-            "slug": "test-platform-6",
         },
         {
             "name": "Test Platform 7",
@@ -1049,7 +1037,6 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
@@ -1059,7 +1046,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         racks = (
@@ -1069,7 +1055,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         device_statuses = Status.objects.get_for_model(Device)
 
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
 
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
@@ -1077,8 +1063,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         device_type = DeviceType.objects.first()
@@ -1417,7 +1403,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        status_active = Status.objects.get(slug="active")
+        interface_status = Status.objects.get_for_model(Interface).first()
 
         cls.devices = (
             Device.objects.create(
@@ -1462,7 +1448,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 8",
                 "type": "1000base-t",
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
@@ -1471,7 +1457,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 9",
                 "type": "1000base-t",
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1481,7 +1467,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 10",
                 "type": "virtual",
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1493,7 +1479,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             "device": cls.devices[0].pk,
             "name": "expected-to-fail",
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-            "status": status_active.pk,
+            "status": interface_status.pk,
             "untagged_vlan": cls.vlans[0].pk,
         }
 
@@ -1502,7 +1488,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
@@ -1510,7 +1496,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                "status": status_active.pk,
+                "status": interface_status.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
         ]
@@ -1522,7 +1508,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                    "status": status_active.pk,
+                    "status": interface_status.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
@@ -1532,7 +1518,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                    "status": status_active.pk,
+                    "status": interface_status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
@@ -1542,7 +1528,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
-                    "status": status_active.pk,
+                    "status": interface_status.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
@@ -1945,14 +1931,13 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
 class ConnectedDeviceTest(APITestCase):
     def setUp(self):
-
         super().setUp()
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = Role.objects.get_for_model(Device).first()
 
-        cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
 
         self.device1 = Device.objects.create(
             device_type=device_type,
@@ -2296,7 +2281,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
-    brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
+    brief_fields = ["display", "failover_strategy", "id", "name", "url"]
     choices_fields = ["failover_strategy"]
 
     @classmethod
