@@ -1207,7 +1207,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_kwargs = {k: v for k, v in job_form.cleaned_data.items() if k in job_model.job_class._get_vars()}
+                job_kwargs = job_model.job_class.prepare_job_kwargs(job_form.cleaned_data)
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
@@ -1318,9 +1318,7 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to run this job")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = {
-                    k: v for k, v in scheduled_job.kwargs.get("data", {}) if k in job_model.job_class._get_vars()
-                }
+                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
                 celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
                 job_result = JobResult.enqueue_job(
                     job_model,

@@ -596,6 +596,12 @@ class BaseJob(Task):
 
         return f.cleaned_data
 
+    @classmethod
+    def prepare_job_kwargs(cls, job_kwargs):
+        """Process dict and return kwargs that exist as ScriptVariables on this job."""
+        job_vars = cls._get_vars()
+        return {k: v for k, v in job_kwargs.items() if k in job_vars}
+
     @staticmethod
     def load_file(pk):
         """Load a file proxy stored in the database by primary key.

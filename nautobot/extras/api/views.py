@@ -35,7 +35,6 @@ from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.filters import RoleFilterSet
-from nautobot.extras.jobs import ScriptVariable
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -540,10 +539,7 @@ def _run_job(request, job_model):
     cleaned_data = None
     try:
         cleaned_data = job_class().validate_data(data, files=files)
-        for key in list(cleaned_data.keys()):
-            attr = getattr(job_model.job_class, key, None)
-            if not isinstance(attr, ScriptVariable):
-                cleaned_data.pop(key)
+        cleaned_data = job_model.job_class.prepare_job_kwargs(cleaned_data)
 
     except FormsValidationError as e:
         # message_dict can only be accessed if ValidationError got a dict
@@ -882,11 +878,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job
-        job_kwargs = scheduled_job.kwargs.get("data", {})
-        for key in list(job_kwargs.keys()):
-            attr = getattr(job_model.job_class, key, None)
-            if not isinstance(attr, ScriptVariable):
-                job_kwargs.pop(key)
+        job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
