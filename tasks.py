@@ -54,7 +54,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.7",
+            "python_ver": "3.8",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
@@ -339,7 +339,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.7":
+    if context.nautobot.python_ver == "3.8":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
