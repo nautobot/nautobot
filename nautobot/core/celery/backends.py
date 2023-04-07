@@ -11,11 +11,11 @@ class NautobotDatabaseBackend(DatabaseBackend):
     TaskModel = JobResult
 
     def encode_content(self, data):
-        """Overload default behavior since we store as JSONFields on the JobResult."""
+        """Pass through encoding since we're storing as JSON explicitly."""
         return "application/x-nautobot-json", "utf-8", data
 
     def decode_content(self, obj, content):
-        """Overload default behavior since we store as JSONFields on the JobResult."""
+        """Pass through decoding since we're storing as JSON explicitly."""
         return content
 
     def _get_extended_properties(self, request, traceback):
