@@ -5,7 +5,7 @@ import { store } from "@utils/store";
 import { PersistGate } from "redux-persist/integration/react";
 import { persistStore } from "redux-persist";
 
-import reportWebVitals from "src/reportWebVitals";
+import reportWebVitals from "./reportWebVitals";
 import App from "./App";
 
 import "@fontsource/ubuntu/400.css";
