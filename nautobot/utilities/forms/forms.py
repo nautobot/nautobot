@@ -327,6 +327,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
     def _get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
         from nautobot.extras.filters.mixins import RelationshipFilter  # Avoid circular import
+
         filterset_without_lookup = (
             (
                 name,
