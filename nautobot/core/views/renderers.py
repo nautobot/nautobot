@@ -39,9 +39,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         factory_formset_params = {}
         if filterset:
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, filterset()
-            )
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset())
         return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
