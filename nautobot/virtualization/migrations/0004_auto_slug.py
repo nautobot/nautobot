@@ -5,7 +5,6 @@ import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0003_vminterface_verbose_name"),
     ]

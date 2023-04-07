@@ -245,7 +245,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
     def test_get_available_prefixes(self):
-
         prefixes = Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
@@ -267,7 +266,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(available_prefixes, missing_prefixes)
 
     def test_get_available_ips(self):
-
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/28"))
         IPAddress.objects.bulk_create(
             (
@@ -296,7 +294,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(available_ips, missing_ips)
 
     def test_get_first_available_prefix(self):
-
         prefixes = Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
@@ -311,7 +308,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.4.0/22"))
 
     def test_get_first_available_ip(self):
-
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"))
         IPAddress.objects.bulk_create(
             (
@@ -326,7 +322,6 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
 
     def test_get_utilization(self):
-
         # Container Prefix
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), type=PrefixTypeChoices.TYPE_CONTAINER)
         Prefix.objects.bulk_create(
@@ -529,7 +524,6 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
         self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_get_next_available_vid(self):
-
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
         VLAN.objects.bulk_create(
             (

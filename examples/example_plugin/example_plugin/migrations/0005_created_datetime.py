@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("example_plugin", "0004_example_plugin_dynamicgroup"),
     ]

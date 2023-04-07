@@ -246,7 +246,6 @@ class DynamicGroup(OrganizationalModel):
 
         # Filter out unwanted fields from the filterform
         for filterset_field_name, filterset_field in filterset_fields.items():
-
             # Skip filter fields that have methods defined. They are not reversible.
             if skip_method_filters and filterset_field.method is not None:
                 # Don't skip method fields that also have a "generate_query_" method

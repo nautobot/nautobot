@@ -23,7 +23,6 @@ def reverse_rename_scheduled_job_kwargs_request_user(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0053_relationship_required_on"),
     ]

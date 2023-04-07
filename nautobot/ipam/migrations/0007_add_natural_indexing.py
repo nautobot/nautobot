@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0006_ipaddress_nat_outside_list"),
     ]

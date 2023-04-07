@@ -6,7 +6,6 @@ import nautobot.core.models.tree_queries
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("circuits", "0009_circuittermination_location"),
         ("dcim", "0028_rename_foreignkey_fields"),

@@ -281,7 +281,6 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
     model = Rack
 
     def setUp(self):
-
         self.status = Status.objects.get_for_model(Rack).first()
         self.location_type_a = LocationType.objects.create(name="Location Type A")
         self.location_type_a.content_types.add(
@@ -321,7 +320,6 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         self.device_roles = Role.objects.get_for_model(Device)
 
     def test_rack_device_outside_height(self):
-
         rack1 = Rack(
             name="TestRack2",
             facility_id="A102",
@@ -346,7 +344,6 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             rack1.clean()
 
     def test_mount_single_device(self):
-
         device1 = Device(
             name="TestSwitch1",
             device_type=self.device_type["ff2048"],
@@ -763,7 +760,6 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         DeviceBay.objects.get(device=self.device, name="Device Bay 1")
 
     def test_multiple_unnamed_devices(self):
-
         device1 = Device(
             location=self.location_3,
             device_type=self.device_type,
@@ -786,7 +782,6 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(Device.objects.filter(name="").count(), 2)
 
     def test_device_duplicate_names(self):
-
         device2 = Device(
             location=self.device.location,
             device_type=self.device.device_type,
@@ -870,7 +865,6 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
     model = Cable
 
     def setUp(self):
-
         location = Location.objects.first()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(

@@ -12,14 +12,12 @@ from nautobot.extras.registry import registry
 
 class HomeViewTestCase(TestCase):
     def test_home(self):
-
         url = reverse("home")
 
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
     def test_search(self):
-
         url = reverse("search")
         params = {
             "q": "foo",

@@ -223,7 +223,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     }
 )
 def build_dependencies(context, poetry_parallel=True):
-
     # Determine preferred/default target architecture
     output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
     result = re.search(r"Platforms: ([^,\n]+)", output.stdout)

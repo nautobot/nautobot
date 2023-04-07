@@ -142,7 +142,6 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-
         entries = []
         for plugin in settings.PLUGINS:
             app_config = apps.get_app_config(plugin)

@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0019_vminterface_ip_addresses_m2m"),
     ]

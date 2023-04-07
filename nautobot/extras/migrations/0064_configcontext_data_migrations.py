@@ -32,7 +32,6 @@ def reverse_role_data_migrate(apps, schema):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0063_alter_configcontext_and_add_new_role"),
     ]

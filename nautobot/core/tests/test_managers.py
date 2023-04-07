@@ -12,7 +12,6 @@ class NaturalOrderByManagerTest(TestCase):
         return
 
     def evaluate_ordering(self, names):
-
         # Create the Racks
         location_type = models.LocationType.objects.get(name="Campus")
         location = models.Location.objects.filter(location_type=location_type).first()
@@ -27,7 +26,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_leading_digits(self):
-
         self.evaluate_ordering(
             [
                 "1Alpha",
@@ -52,7 +50,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_trailing_digits(self):
-
         self.evaluate_ordering(
             [
                 "Alpha1",
@@ -77,7 +74,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_leading_and_trailing_digits(self):
-
         self.evaluate_ordering(
             [
                 "1Alpha1",

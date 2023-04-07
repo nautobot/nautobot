@@ -683,7 +683,6 @@ class JobButtonReceiverTest(TransactionTestCase):
         self.assertFalse(job_model.hidden)
 
     def test_is_job_button(self):
-
         with self.subTest(expected=False):
             module = "test_pass"
             name = "TestPass"

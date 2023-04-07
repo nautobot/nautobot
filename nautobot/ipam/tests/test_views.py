@@ -85,7 +85,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.form_data = {
             "name": "RIR X",
             "is_private": True,
