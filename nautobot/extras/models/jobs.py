@@ -317,7 +317,7 @@ class Job(PrimaryModel):
                 except Exception as exc:
                     logger.error(f"Error during local clone/refresh of Git repository {self.git_repository}: {exc}")
                     return None
-            elif self.source == JobSourceChoices.SOURCE_PLUGIN:
+            elif self.source in [JobSourceChoices.SOURCE_PLUGIN, JobSourceChoices.SOURCE_SYSTEM]:
                 # pkgutil.resolve_name is only available in Python 3.9 and later
                 self._job_class = import_object(f"{self.module_name}.{self.job_class_name}")
 

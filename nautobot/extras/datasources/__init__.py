@@ -3,7 +3,6 @@ from .git import (
     enqueue_pull_git_repository_and_refresh_data,
     ensure_git_repository,
     git_repository_dry_run,
-    log_job_result_final_status,
 )
 from .registry import (
     get_datasource_contents,
@@ -18,6 +17,5 @@ __all__ = (
     "get_datasource_content_choices",
     "get_datasource_contents",
     "git_repository_dry_run",
-    "log_job_result_final_status",
     "refresh_datasource_content",
 )

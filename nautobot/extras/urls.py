@@ -348,11 +348,6 @@ urlpatterns = [
         kwargs={"model": GitRepository},
     ),
     path(
-        "git-repositories/<str:slug>/result/",
-        views.GitRepositoryResultView.as_view(),
-        name="gitrepository_result",
-    ),
-    path(
         "git-repositories/<str:slug>/sync/",
         views.GitRepositorySyncView.as_view(),
         name="gitrepository_sync",

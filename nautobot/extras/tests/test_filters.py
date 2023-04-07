@@ -810,7 +810,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_search(self):
         params = {"q": "file"}
         expected_matches = (
-            Q(name__icontains="file")
+            Q(name__icontains="file")  # pylint: disable=unsupported-binary-operation
             | Q(slug__icontains="file")
             | Q(grouping__icontains="file")
             | Q(description__icontains="file")

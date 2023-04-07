@@ -1,6 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
-import importlib
 import inspect
 import json
 import logging
@@ -301,14 +300,14 @@ class BaseJob(Task):
 
         Examples:
         local/my_script/MyScript
+        system/nautobot.core.jobs/MySystemJob
         plugins/my_plugin.jobs/MyPluginJob
         git.my-repository/myjob/MyJob
         """
         # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
         if cls in registry["plugin_jobs"]:
             source_grouping = "plugins"
-        # TODO(jathan): I know this is a hack but I'm just trying to get it working right now.
-        elif cls.name.lower().startswith("gitrepo"):
+        elif cls in registry["system_jobs"]:
             source_grouping = "system"
         elif cls.file_path.startswith(settings.JOBS_ROOT):
             source_grouping = "local"
@@ -1091,6 +1090,12 @@ def get_jobs():
                 jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
             jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
 
+    # Add jobs from system (which were already imported at startup)
+    for cls in registry["system_jobs"]:
+        module = inspect.getmodule(cls)
+        jobs.setdefault("system", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
+        jobs["system"][module.__name__]["jobs"][cls.__name__] = cls
+
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry["plugin_jobs"]:
         module = inspect.getmodule(cls)
@@ -1112,14 +1117,6 @@ def _get_job_source_paths():
     # Locally installed jobs
     if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
         paths["local"] = settings.JOBS_ROOT
-
-    # TOD(jathan): System jobs. Hack. Temp. Blah blah blah.
-    if getattr(settings, "CELERY_IMPORTS", None):
-
-        for path in settings.CELERY_IMPORTS:
-            pkg, mod = path.rsplit(".", 1)
-            mod = importlib.import_module(mod, package=pkg)
-            paths["system"] = os.path.dirname(mod.__file__)
 
     # Jobs derived from Git repositories
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
@@ -1210,7 +1207,6 @@ def scheduled_job_handler(*args, **kwargs):
     is responsible for enqueuing the actual job for execution and this method is the task executed
     by the scheduler to kick off the job execution on a recurring interval.
     """
-    from nautobot.extras.models import JobResult  # avoid circular import
 
     user_pk = kwargs.pop("user")
     user = User.objects.get(pk=user_pk)
@@ -1227,7 +1223,6 @@ def enqueue_job_hooks(object_change):
     Find job hook(s) assigned to this changed object type + action and enqueue them
     to be processed
     """
-    from nautobot.extras.models import JobResult  # avoid circular import
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:

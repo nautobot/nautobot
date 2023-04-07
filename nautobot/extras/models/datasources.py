@@ -68,6 +68,7 @@ class GitRepository(PrimaryModel):
 
     def __init__(self, *args, **kwargs):
         # If instantiated from the REST API, the originating Request will be passed as a kwarg:
+        # FIXME(jathan); Replace this with user instead; make request go away.
         self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
 
@@ -130,9 +131,9 @@ class GitRepository(PrimaryModel):
                 # NOTE: if dry_run is True, there would be no need to trigger a resync
                 # regardless of the trigger_resync value (True/False)
                 if dry_run:
-                    enqueue_git_repository_diff_origin_and_local(self, self.request)
+                    enqueue_git_repository_diff_origin_and_local(self, self.request.user)
                 else:
-                    enqueue_pull_git_repository_and_refresh_data(self, self.request)
+                    enqueue_pull_git_repository_and_refresh_data(self, self.request.user)
 
             # Update cached values
             self.__initial_slug = self.slug

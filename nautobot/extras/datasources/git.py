@@ -53,33 +53,24 @@ def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
     Wrapper for JobResult.enqueue_job() to enqueue one of several possible Git repository functions.
     """
     job_model = job_class().get_job_model()
-    # FIXME(jathan): There's something missing I haven't quite figured out yet that is preventing
-    # `job_model.job_class` from being automatically populated correctly. So this will do for this
-    # precise use-case for now.
-    job_model._job_class = job_class
-    JobResult.enqueue_job(
-        job_model,
-        user,
-        repository_pk=repository.pk,
-    )
+
+    return JobResult.enqueue_job(job_model, user, repository=repository.pk)
 
 
 def enqueue_git_repository_diff_origin_and_local(repository, user):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    from nautobot.extras.jobs import get_job
+    from nautobot.core.jobs import GitRepositoryDiffOriginalAndLocal
 
-    job_class = get_job("system/git/GitRepositoryDiffOriginalAndLocal")
-    enqueue_git_repository_helper(repository, user, job_class)
+    return enqueue_git_repository_helper(repository, user, GitRepositoryDiffOriginalAndLocal)
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, user):
     """
     Convenience wrapper for JobResult.enqueue_job() to enqueue the pull_git_repository_and_refresh_data job.
     """
-    from nautobot.extras.jobs import get_job
+    from nautobot.core.jobs import GitRepositoryPullAndRefreshData
 
-    job_class = get_job("system/git/GitRepositoryPullAndRefreshData")
-    enqueue_git_repository_helper(repository, user, job_class)
+    return enqueue_git_repository_helper(repository, user, GitRepositoryPullAndRefreshData)
 
 
 def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):  # pylint: disable=redefined-outer-name
@@ -104,22 +95,6 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
         return GitJobResult(job_result=job_result, repository_record=None)
 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
-
-
-# TODO(jathan): This should likely be deleted since it's coercing state and this
-# should be managed by the database backend.
-def log_job_result_final_status(job_result, job_type, logger):
-    """Check Job status and save log to DB
-    Args:
-        job_result (JobResult): JobResult Instance
-        job_type (str): job type which is used in log message, e.g dry run/synchronization etc.
-        logger (logger): Logger instance
-    """
-    job_result.log(
-        f"Repository {job_type} completed in {job_result.duration}",
-        level_choice=LogLevelChoices.LOG_INFO,
-        logger=logger,
-    )
 
 
 def get_repo_from_url_to_path_and_from_branch(repository_record):

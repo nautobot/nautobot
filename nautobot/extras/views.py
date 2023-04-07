@@ -900,9 +900,9 @@ def check_and_call_git_repository_function(request, slug, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
     else:
         repository = get_object_or_404(GitRepository, slug=slug)
-        func(repository, request.user)
+        job_result = func(repository, request.user)
 
-    return redirect("extras:gitrepository_result", slug=slug)
+    return redirect(job_result.get_absolute_url())
 
 
 class GitRepositorySyncView(View):
@@ -913,33 +913,6 @@ class GitRepositorySyncView(View):
 class GitRepositoryDryRunView(View):
     def post(self, request, slug):
         return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
-
-
-class GitRepositoryResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    queryset = GitRepository.objects.all()
-    template_name = "extras/gitrepository_result.html"
-
-    def get_required_permission(self):
-        return "extras.view_gitrepository"
-
-    def get_extra_context(self, request, instance):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
-        job_result = (
-            JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
-            .order_by("-date_created")
-            .first()
-        )
-
-        return {
-            "result": job_result,
-            "base_template": "extras/gitrepository.html",
-            "object": instance,
-            "active_tab": "result",
-        }
 
 
 #
