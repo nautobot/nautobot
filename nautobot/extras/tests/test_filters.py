@@ -801,7 +801,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_approval_required(self):
         params = {"approval_required": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_search(self):
         params = {"q": "file"}

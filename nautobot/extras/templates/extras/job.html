@@ -175,7 +175,7 @@
             $("#id__schedule_type").val("immediately");
             $(".job_execution").hide();
         {% endif %}
-        $("#id_dryrun").click(toggleExecutionType);
+        $("#id_dryrun").change(toggleExecutionType);
         toggleExecutionType();
     });
 </script>

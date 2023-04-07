@@ -1395,7 +1395,7 @@ class JobTest(
         self.assertHttpStatus(response, self.run_success_response_status)
 
         schedule = ScheduledJob.objects.last()
-        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
+        self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
@@ -1449,7 +1449,7 @@ class JobTest(
         self.assertIsNotNone(schedule)
         self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
         self.assertEqual(schedule.approval_required, self.job_model.approval_required)
-        self.assertEqual(schedule.kwargs["data"]["var4"], str(device_role.pk))
+        self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

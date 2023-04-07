@@ -946,7 +946,7 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -954,7 +954,7 @@ class ScheduledJobTestCase(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -962,7 +962,7 @@ class ScheduledJobTestCase(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -976,7 +976,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -994,7 +994,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="nautobot.extras.jobs.scheduled_job_handler",
+                task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
                 job_class="local/test_pass/TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
@@ -1026,7 +1026,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
@@ -1057,12 +1057,12 @@ class ApprovalQueueTestCase(
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        self.job_model = Job.objects.get_for_class_path("local/test_dry_run/TestDryRun")
         self.job_model_2 = Job.objects.get_for_class_path("local/test_fail/TestFail")
 
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_dry_run.TestDryRun",
             job_model=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1072,7 +1072,7 @@ class ApprovalQueueTestCase(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_fail.TestFail",
             job_model=self.job_model_2,
             job_class=self.job_model_2.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1086,7 +1086,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_model=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1230,10 +1230,30 @@ class ApprovalQueueTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_post_dry_run_not_supported(self, _):
+        """Request a dry run on a job that doesn't support dryrun."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance = ScheduledJob.objects.filter(name="test2").first()
+        instance.job_model.enabled = True
+        instance.job_model.save()
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        data = {"_dry_run": True}
+
+        response = self.client.post(self._get_url("view", instance), data)
+        # Job was not submitted
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.class_path).exists())
+        print(response.content)
+        self.assertContains(response, "This job does not support dryrun")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_post_dry_run_success(self, _):
         """Successfully request a dry run based on object-based run_job permissions."""
         self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
+        instance = ScheduledJob.objects.filter(name="test1").first()
         instance.job_model.enabled = True
         instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
