@@ -10,9 +10,18 @@ class NautobotDatabaseBackend(DatabaseBackend):
 
     TaskModel = JobResult
 
+    def encode_content(self, data):
+        """Overload default behavior since we store as JSONFields on the JobResult."""
+        return "application/x-nautobot-json", "utf-8", data
+
+    def decode_content(self, obj, content):
+        """Overload default behavior since we store as JSONFields on the JobResult."""
+        return content
+
     def _get_extended_properties(self, request, traceback):
         """
         Overload default so that `argsrepr` and `kwargsrepr` aren't used to construct `args` and `kwargs`.
+        Also adds `user` passed in on `apply_async` calls.
         """
         extended_props = {
             "periodic_task_name": None,
@@ -20,6 +29,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
             "task_kwargs": None,
             "task_name": None,
             "traceback": None,
+            "user": None,
             "worker": None,
         }
         if request and self.app.conf.find_value_for_key("extended", "result"):
@@ -29,14 +39,14 @@ class NautobotDatabaseBackend(DatabaseBackend):
             task_kwargs = getattr(request, "kwargs", None)
 
             properties = getattr(request, "properties", {}) or {}
-            periodic_task_name = properties.get("periodic_task_name", None)
             extended_props.update(
                 {
-                    "periodic_task_name": periodic_task_name,
+                    "periodic_task_name": properties.get("periodic_task_name", None),
                     "task_args": task_args,
                     "task_kwargs": task_kwargs,
                     "task_name": getattr(request, "task", None),
                     "traceback": traceback,
+                    "user": properties.get("user", None),
                     "worker": getattr(request, "hostname", None),
                 }
             )
