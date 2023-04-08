@@ -47,7 +47,6 @@ class TaggedItemTest(APITestCase):
         cls.location_type = LocationType.objects.get(name="Campus")
 
     def test_create_tagged_item(self):
-
         data = {
             "name": "Test Location",
             "slug": "test-location",
@@ -111,6 +110,7 @@ class TaggedItemTest(APITestCase):
             "slug": "test-location",
             "status": Status.objects.get_for_model(Location).first().pk,
             "tags": [tag.id],
+            "location_type": self.location_type.pk,
         }
         url = reverse("dcim-api:location-list")
         self.add_permissions("dcim.add_location")

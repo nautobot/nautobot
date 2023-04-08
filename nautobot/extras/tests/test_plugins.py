@@ -443,7 +443,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.serializers.reverse")
+    @mock.patch("nautobot.core.api.serializers.reverse")
     def test_get_notes_url_on_object_raise_no_reverse_match(self, mock_reverse):
         # This test is to check the error handling when the user implemented a model without NotesMixin
         # But include the NotesSerializerMixin in the Model APIViewSet with NautobotModelViewSet
@@ -462,7 +462,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         url = self._get_detail_url(instance)
 
         # Check if log messages and API data is properly rendered
-        with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
+        with self.assertLogs(logger="nautobot.core.api", level="WARNING") as cm:
             response = self.client.get(url, **self.header)
             self.assertHttpStatus(response, 200)
             self.assertIn("notes_url", response.data)

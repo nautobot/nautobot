@@ -42,7 +42,10 @@ class WritableSerializerMixin:
     """
 
     def get_unique_object_from_data(self, data):
-        params = dict_to_filter_params(data)
+        if isinstance(data, dict):
+            params = dict_to_filter_params(data)
+        else:
+            params = {"id": uuid.UUID(data)}
         if hasattr(self, "fields"):
             for field_name, field_instance in self.fields.items():
                 if field_name in params and field_instance.source == "*":

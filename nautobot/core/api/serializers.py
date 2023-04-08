@@ -7,6 +7,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import AutoField, ManyToManyField
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -209,8 +210,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             "name": "Floor-02"
         }
         """
-        data = super().to_internal_value(data)
-        return data
+        return super().to_internal_value(data)
 
     def build_field(self, field_name, info, model_class, nested_depth):
         """
@@ -239,11 +239,14 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     def build_property_field(self, field_name, model_class):
         """
-        Create a read only field for model methods and properties.
+        Create a property field for model methods and properties.
         """
         if field_name == "tags":
             field_class = NautobotPrimaryKeyRelatedField
-            field_kwargs = {"queryset": Tag.objects.all(), "required": False}
+            field_kwargs = {
+                "queryset": Tag.objects.filter(content_types=ContentType.objects.get_for_model(model_class)),
+                "required": False,
+            }
 
             return field_class, field_kwargs
         return super().build_property_field(field_name, model_class)
@@ -313,7 +316,6 @@ class ValidatedModelSerializer(BaseModelSerializer):
             for k, v in attrs.items():
                 setattr(instance, k, v)
         instance.full_clean()
-
         return data
 
 
@@ -484,6 +486,7 @@ class CustomFieldModelSerializer(CustomFieldModelSerializerMixin):
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     """Extend ValidatedModelSerializer with a `relationships` field."""
 
+    # TODO # 3024 need to change this as well to show just pks in depth=0
     relationships = RelationshipsDataField(required=False, source="*")
 
     def create(self, validated_data):
@@ -529,12 +532,12 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
                 other_type = getattr(relationship, f"{other_side}_type")
                 other_side_model = other_type.model_class()
-                other_side_serializer = get_serializer_for_model(other_side_model)
-                serializer_instance = other_side_serializer(context={"request": self.context.get("request")})
+                # other_side_serializer = get_serializer_for_model(other_side_model)
+                # serializer_instance = other_side_serializer(context={"request": self.context.get("request")})
 
                 expected_objects_data = relationship_data[other_side]
                 expected_objects = [
-                    serializer_instance.to_internal_value(object_data) for object_data in expected_objects_data
+                    other_side_model.objects.get(**object_data) for object_data in expected_objects_data
                 ]
 
                 this_side = RelationshipSideChoices.OPPOSITE[other_side]

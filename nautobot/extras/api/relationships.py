@@ -5,12 +5,16 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.fields import JSONField
 from rest_framework.reverse import reverse
-from rest_framework.serializers import ValidationError
+from rest_framework.serializers import ModelSerializer, ValidationError
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import Relationship
+import uuid
+from nautobot.core.api.mixins import WritableSerializerMixin
+from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 
 logger = logging.getLogger(__name__)
@@ -53,7 +57,7 @@ side_data_schema = {
         },
     }
 )
-class RelationshipsDataField(JSONField):
+class RelationshipsDataField(WritableSerializerMixin, JSONField):
     """
     Represent the set of all Relationships defined for a given model,
     and all RelationshipAssociations per Relationship that apply to a specific instance of that model.
@@ -62,6 +66,8 @@ class RelationshipsDataField(JSONField):
     including the ability to make point updates to individual relationships of an existing instance without needing
     to provide the entire dict of all relationships and associations.
     """
+
+    queryset = None
 
     def to_representation(self, value):
         """
@@ -130,7 +136,6 @@ class RelationshipsDataField(JSONField):
                 from nautobot.core.api.utils import get_relation_info_for_nested_serializers
 
                 other_objects = [assoc.get_peer(value) for assoc in associations if assoc.get_peer(value) is not None]
-
                 if other_side_model is not None:
                     try:
                         depth = int(self.context.get("depth", 0))
@@ -146,7 +151,9 @@ class RelationshipsDataField(JSONField):
 
                 if other_side_serializer is not None:
                     data[relationship.slug][other_side]["objects"] = [
-                        other_side_serializer(other_obj, context=self.context, **field_kwargs).data
+                        other_side_serializer(
+                            other_obj, context={"request": self.context.get("request")}, **field_kwargs
+                        ).data
                         for other_obj in other_objects
                     ]
                 else:
@@ -159,10 +166,6 @@ class RelationshipsDataField(JSONField):
         return data
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
-        import uuid
-        from nautobot.core.api.mixins import WritableSerializerMixin
-        from rest_framework.utils.field_mapping import get_nested_relation_kwargs
-
         field = get_serializer_for_model(relation_info.related_model)
 
         class NautobotNestedSerializer(field, WritableSerializerMixin):
@@ -275,6 +278,7 @@ class RelationshipsDataField(JSONField):
                 # Object lookup time!
                 other_type = getattr(relationship, f"{other_side}_type")
                 other_side_model = other_type.model_class()
+                self.queryset = other_side_model.objects
                 other_side_serializer = None
                 if other_side_model is None:
                     raise ValidationError(f"Model {other_type} is not currently installed, cannot look it up")
@@ -285,14 +289,20 @@ class RelationshipsDataField(JSONField):
                         f"No Nested{other_side_model}Serializer found, cannot deserialize it"
                     ) from exc
 
-                for object_data in objects_data:
-                    serializer_instance = other_side_serializer(data=object_data, context=self.context)
-                    # may raise ValidationError, let it bubble up if so
-                    serializer_instance.is_valid()
+                depth = int(self.context.get("depth", 0))
+                print(depth)
+                if depth != 0:
+                    for object_data in objects_data:
+                        serializer_instance = other_side_serializer(data=object_data, context=self.context)
+                        # may raise ValidationError, let it bubble up if so
+                        serializer_instance.is_valid()
 
-                    # We don't check/enforce relationship source_filter/destination_filter here, as that'll be handled
-                    # later by `RelationshipAssociation.validated_save()` in RelationshipModelSerializerMixin.
-                    output_data[relationship][other_side].append(serializer_instance.data)
-
+                        # We don't check/enforce relationship source_filter/destination_filter here, as that'll be handled
+                        # later by `RelationshipAssociation.validated_save()` in RelationshipModelSerializerMixin.
+                        output_data[relationship][other_side].append(serializer_instance.data)
+                else:
+                    for object_data in objects_data:
+                        instance = super().to_internal_value(object_data)
+                        output_data[relationship][other_side].append({"id": instance.id})
         logger.debug("to_internal_value(%s) -> %s", data, output_data)
         return {self.field_name: output_data}
