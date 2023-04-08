@@ -1,9 +1,12 @@
 from django.test import TestCase
+from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.utilities import check_filter_for_display
+from nautobot.core.utilities import check_filter_for_display, get_filter_field_label, field_name_to_display
 
 from nautobot.dcim.filters import DeviceFilterSet
-from nautobot.dcim.models import DeviceType, DeviceRedundancyGroup
+from nautobot.dcim.models import Device, DeviceType, DeviceRedundancyGroup
+from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.models import Relationship, CustomField
 
 
 class CheckFilterForDisplayTest(TestCase):
@@ -42,7 +45,7 @@ class CheckFilterForDisplayTest(TestCase):
         with self.subTest("Test get field label, none exists (fallback)"):
             expected_output = {
                 "name": "id",
-                "display": "id",
+                "display": "Id",
                 "values": [{"name": "example_field_value", "display": "example_field_value"}],
             }
 
@@ -100,3 +103,73 @@ class CheckFilterForDisplayTest(TestCase):
             self.assertEqual(
                 check_filter_for_display(device_filter_set_filters, "manufacturer", ["fake_slug"]), expected_output
             )
+
+
+class GetFilterFieldLabelTest(TestCase):
+    """
+    Validate the operation of get_filter_field_label().
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        device_ct = ContentType.objects.get_for_model(Device)
+        cls.peer_relationship = Relationship(
+            name="HA Device Peer",
+            slug="ha-device-peer",
+            source_type=device_ct,
+            destination_type=device_ct,
+            source_label="Peer",
+            destination_label="Peer",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+        cls.peer_relationship.validated_save()
+
+        cls.custom_field = CustomField(slug="labeled_custom_field", label="Moo!", type="text")
+        cls.custom_field.validated_save()
+        cls.custom_field.content_types.add(device_ct)
+
+    def test_get_filter_field_label(self):
+
+        device_filter_set_filters = DeviceFilterSet().filters
+
+        print(device_filter_set_filters)
+
+        with self.subTest("Simple field name"):
+            self.assertEqual(get_filter_field_label(device_filter_set_filters["id"]), "Id")
+
+        with self.subTest("Semi-complex field name"):
+            self.assertEqual(get_filter_field_label(device_filter_set_filters["has_interfaces"]), "Has interfaces")
+
+        with self.subTest("Relationship field name"):
+            self.assertEqual(
+                get_filter_field_label(device_filter_set_filters[f"cr_{self.peer_relationship.slug}__peer"]),
+                self.peer_relationship.source_label,
+            )
+
+        with self.subTest("Custom field with label"):
+            self.assertEqual(
+                get_filter_field_label(device_filter_set_filters[f"cf_{self.custom_field.slug}"]),
+                "Moo!",
+            )
+
+
+class FieldNameToDisplayTest(TestCase):
+    """
+    Validate the operation of field_name_to_display().
+    """
+
+    def test_field_name_to_display(self):
+
+        with self.subTest("id => Id"):
+            self.assertEqual(field_name_to_display("id"), "Id")
+
+        with self.subTest("device_type => Device Type"):
+            self.assertEqual(field_name_to_display("device_type"), "Device type")
+
+        with self.subTest("_custom_field_data__site_type => Site Type"):
+            self.assertEqual(field_name_to_display("_custom_field_data__site_type"), "Site type")
+
+        with self.subTest("cr_sister_sites__peer => Peer"):
+            # This shouldn't ever be an input because get_filter_field_label
+            # will use the label from the custom field instead of the field name
+            self.assertEqual(field_name_to_display("cr_sister_sites__peer"), "Cr_sister_sites peer")

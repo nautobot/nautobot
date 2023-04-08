@@ -856,14 +856,14 @@ def get_all_lookup_expr_for_field(model, field_name):
     return lookup_expr_choices
 
 
-def get_filterset_field(filterset_class, field_name):
-    field = filterset_class().filters.get(field_name)
+def get_filterset_field(filterset, field_name):
+    field = filterset.filters.get(field_name)
     if field is None:
-        raise FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+        raise FilterSetFieldNotFound(f"{field_name} is not a valid {type(filterset).__name__} field")
     return field
 
 
-def get_filterset_parameter_form_field(model, parameter):
+def get_filterset_parameter_form_field(model, parameter, filterset=None):
     """
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
@@ -885,8 +885,9 @@ def get_filterset_parameter_form_field(model, parameter):
         MultiValueCharInput,
     )
 
-    filterset_class = get_filterset_for_model(model)
-    field = get_filterset_field(filterset_class, parameter)
+    if filterset is None or filterset.Meta.model != model:
+        filterset = get_filterset_for_model(model)()
+    field = get_filterset_field(filterset, parameter)
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
@@ -1006,13 +1007,13 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     return query_dict
 
 
-def is_single_choice_field(filterset_class, field_name):
+def is_single_choice_field(filterset, field_name):
     # Some filter parameters do not accept multiple values, e.g DateTime, Boolean, Int fields and the q field, etc.
-    field = get_filterset_field(filterset_class, field_name)
+    field = get_filterset_field(filterset, field_name)
     return not isinstance(field, django_filters.MultipleChoiceFilter)
 
 
-def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
+def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset):
     """
     Remove any `non_filter_params` and fields that are not a part of the filterset from  `filter_params`
     to return only queryset filterable parameters.
@@ -1034,7 +1035,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             # If an exception is thrown, instead of throwing an exception, set `_is_single_choice_field` to 'False'
             # because the fields that were not discovered are still necessary.
             try:
-                _is_single_choice_field = is_single_choice_field(filterset_class, field)
+                _is_single_choice_field = is_single_choice_field(filterset, field)
             except FilterSetFieldNotFound:
                 _is_single_choice_field = False
 

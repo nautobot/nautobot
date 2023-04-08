@@ -171,7 +171,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset)
+        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset())
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
