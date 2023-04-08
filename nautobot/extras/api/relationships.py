@@ -1,21 +1,19 @@
 import logging
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.fields import JSONField
 from rest_framework.reverse import reverse
-from rest_framework.serializers import ModelSerializer, ValidationError
-
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.api.mixins import WritableSerializerMixin
-from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.models import Relationship
-import uuid
-from nautobot.core.api.mixins import WritableSerializerMixin
+from rest_framework.serializers import ValidationError
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.mixins import WritableSerializerMixin
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.extras.choices import RelationshipSideChoices
+from nautobot.extras.models import Relationship
 
 logger = logging.getLogger(__name__)
 
