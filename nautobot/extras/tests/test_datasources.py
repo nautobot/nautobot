@@ -10,7 +10,13 @@ import yaml
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
-from nautobot.core.testing import TransactionTestCase
+from nautobot.core.jobs import GitRepositoryDiffOriginalAndLocal, GitRepositoryPullAndRefreshData
+from nautobot.core.testing import (
+    TransactionTestCase,
+    create_job_result_and_run_job,
+    get_job_class_and_model,
+    run_job_for_testing,
+)
 from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import (
@@ -19,7 +25,6 @@ from nautobot.extras.choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
-from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data, git_repository_diff_origin_and_local
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
     ConfigContext,
@@ -275,19 +280,24 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
+                # pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
+                job_result = create_job_result_and_run_job(
+                    module="nautobot.core.jobs",
+                    name="GitRepositoryPullAndRefreshData",
+                    source="system",
+                    repository=self.repo.pk,
+                )
 
                 self.assertEqual(
-                    self.job_result.status,
+                    job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
+                    job_result.data,
                 )
                 self.repo.refresh_from_db()
-                self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, self.job_result.data)
+                self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, job_result.data)
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
 
-                log_entries = JobLogEntry.objects.filter(job_result=self.job_result)
+                log_entries = JobLogEntry.objects.filter(job_result=job_result)
                 warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
                 warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
 
@@ -339,21 +349,20 @@ class GitTest(TransactionTestCase):
                 self.repo.save(trigger_resync=False)
 
                 self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
-                )
 
-                # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
+                job_result = create_job_result_and_run_job(
+                    module="nautobot.core.jobs",
+                    name="GitRepositoryPullAndRefreshData",
+                    source="system",
+                    repository=self.repo.pk,
+                )
 
                 self.assertEqual(
-                    self.job_result.status,
+                    job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
+                    job_result.data,
                 )
+                self.repo.refresh_from_db()
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
                     "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
