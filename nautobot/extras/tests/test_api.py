@@ -2931,7 +2931,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(relationship_data["destination"]["object_type"], "dcim.device")
 
         objects = response.data["relationships"][self.relationship.slug]["destination"]["objects"]
-        for i in range(len(objects)):
+        for i in enumerate(objects):
             self.assertEqual(objects[i]["id"], str(self.devices[i].pk))
             self.assertEqual(
                 objects[i]["url"],

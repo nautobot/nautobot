@@ -189,29 +189,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             fields.append("object_type")
         return fields
 
-    def to_internal_value(self, data):
-        """
-        Find the object using the combination of fields passed to NautobotNestedSerializer or NautobotPrimaryKeyRelatedField.
-        Replace the entry in `data` with the found object.
-        e.g.
-        Data passed in:
-        {
-            "location_type": {"name": "Floor"},
-            "parent": { "location_type__parent": {"name": "Campus"}, "parent__name": "Campus-29" },
-            "status": {"name": "Retired"},
-            "name": "Floor-02"
-        }
-        vs
-        Data returned:
-        {
-            "location_type": LocationType.objects.get(name="Floor"),
-            "parent": Location.objects.get(location_type__parent__name="Campus", parent__name="Campus-29"),
-            "status": Status.objects.get(name="Retired"),
-            "name": "Floor-02"
-        }
-        """
-        return super().to_internal_value(data)
-
     def build_field(self, field_name, info, model_class, nested_depth):
         """
         Return a two tuple of (cls, kwargs) to build a serializer field with.
