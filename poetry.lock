@@ -2342,7 +2342,7 @@ attrs = ">=19.2.0"
 name = "packaging"
 version = "23.0"
 description = "Core utilities for Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -3992,4 +3992,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.11"
-content-hash = "526d0268d447a9116d789a094eaf07f83dd4cbbf69ecdd7454313fcbdd2f0b2b"
+content-hash = "673c2b8d154d3cfab49509986f6a10a24d981e0a413868284a25cf508c422b86"
