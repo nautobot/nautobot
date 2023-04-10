@@ -32,7 +32,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8.1,<3.11"
+python = ">=3.8,<3.11"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
@@ -153,7 +153,7 @@ example-plugin-with-view-override = { path = "examples/example_plugin_with_view_
 # Random data generation
 factory-boy = "~3.2.1"
 # Code style checking and limited static analysis
-flake8 = "~6.0.0"
+flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.0.0"
 # Code style checking for python import statements
@@ -174,7 +174,7 @@ mkdocstrings-python = "~0.9.0"
 # Code static analysis
 pylint = "~2.17.2"
 # Pylint extensions for Django
-pylint-django = {version = "~2.5.3", python = "^3.7.2"}
+pylint-django = "~2.5.3"
 # Integration Tests
 requests = "~2.28.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
