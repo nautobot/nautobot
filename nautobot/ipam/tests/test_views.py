@@ -99,6 +99,10 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "RIR 7,Seventh RIR",
         )
 
+    def setUp(self):
+        super().setUp()
+        # Ensure that we have at least one RIR with no prefixes that can be used for the "delete_object" tests.
+        RIR.objects.create(name="RIR XYZ")
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
