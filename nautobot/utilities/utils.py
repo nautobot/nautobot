@@ -972,8 +972,6 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ...     'form-1-value': ['site']
         ... }
     """
-    from nautobot.extras.filters import RelationshipFilter
-
     query_dict = QueryDict(mutable=True)
     filterset_class_fields = filterset.filters.keys()
 
@@ -992,9 +990,16 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         # Discard fields without values
         if value:
             if filter_field_name in filterset_class_fields:
-                if isinstance(filterset.filters[filter_field_name], RelationshipFilter):
+                if hasattr(filterset.filters[filter_field_name], "relationship"):
                     lookup_field = filter_field_name
                 else:
+                    # convert_querydict_to_factory_formset_acceptable_querydict expects to have a QueryDict as input
+                    # which means we may not have the exact field name as defined in the filterset class
+                    # it may contain a lookup expression (e.g. `name__ic`), so we need to strip it
+                    # this is so we can select the correct field in the formset for the "field" column
+                    # TODO: Since we likely need to instantiate the filterset class early in the request anyway
+                    # the filterset can handle the QueryDict conversion and we can just pass the QueryDict to the filterset
+                    # then use the FilterSet to de-dupe the field names
                     lookup_field = re.sub(r"__\w+", "", filter_field_name)
                 lookup_value = request_querydict.getlist(filter_field_name)
 

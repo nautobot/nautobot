@@ -57,20 +57,18 @@ def get_filter_field_label(filter_field):
     Returns:
         (str): The label for the given field
     """
-    from nautobot.extras.filters.mixins import RelationshipFilter
-    from nautobot.extras.filters.customfields import CustomFieldFilterMixin
 
     if filter_field.label:
         return filter_field.label
-    elif isinstance(filter_field, RelationshipFilter):
+    elif hasattr(filter_field, "relationship"):
         return filter_field.relationship.get_label(side=filter_field.side)
-    elif isinstance(filter_field, CustomFieldFilterMixin):
+    elif hasattr(filter_field, "custom_field"):
         return filter_field.custom_field.label
     else:
-        return field_name_to_display(filter_field.field_name)
+        return _field_name_to_display(filter_field.field_name)
 
 
-def field_name_to_display(field_name):
+def _field_name_to_display(field_name):
     """
     Return a more human readable version of a field name.
     """

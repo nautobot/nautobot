@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.utilities import check_filter_for_display, get_filter_field_label, field_name_to_display
+from nautobot.core.utilities import check_filter_for_display, get_filter_field_label, _field_name_to_display
 
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import Device, DeviceType, DeviceRedundancyGroup
@@ -115,7 +115,7 @@ class GetFilterFieldLabelTest(TestCase):
         device_ct = ContentType.objects.get_for_model(Device)
         cls.peer_relationship = Relationship(
             name="HA Device Peer",
-            slug="ha-device-peer",
+            slug="ha_device_peer",
             source_type=device_ct,
             destination_type=device_ct,
             source_label="Peer",
@@ -131,8 +131,6 @@ class GetFilterFieldLabelTest(TestCase):
     def test_get_filter_field_label(self):
 
         device_filter_set_filters = DeviceFilterSet().filters
-
-        print(device_filter_set_filters)
 
         with self.subTest("Simple field name"):
             self.assertEqual(get_filter_field_label(device_filter_set_filters["id"]), "Id")
@@ -155,21 +153,21 @@ class GetFilterFieldLabelTest(TestCase):
 
 class FieldNameToDisplayTest(TestCase):
     """
-    Validate the operation of field_name_to_display().
+    Validate the operation of _field_name_to_display().
     """
 
-    def test_field_name_to_display(self):
+    def test__field_name_to_display(self):
 
         with self.subTest("id => Id"):
-            self.assertEqual(field_name_to_display("id"), "Id")
+            self.assertEqual(_field_name_to_display("id"), "Id")
 
         with self.subTest("device_type => Device Type"):
-            self.assertEqual(field_name_to_display("device_type"), "Device type")
+            self.assertEqual(_field_name_to_display("device_type"), "Device type")
 
         with self.subTest("_custom_field_data__site_type => Site Type"):
-            self.assertEqual(field_name_to_display("_custom_field_data__site_type"), "Site type")
+            self.assertEqual(_field_name_to_display("_custom_field_data__site_type"), "Site type")
 
         with self.subTest("cr_sister_sites__peer => Peer"):
             # This shouldn't ever be an input because get_filter_field_label
             # will use the label from the custom field instead of the field name
-            self.assertEqual(field_name_to_display("cr_sister_sites__peer"), "Cr_sister_sites peer")
+            self.assertEqual(_field_name_to_display("cr_sister_sites__peer"), "Cr_sister_sites peer")
