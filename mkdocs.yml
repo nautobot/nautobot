@@ -227,6 +227,7 @@ nav:
       - Overview: "apps/index.md"
       - Network to Code App Docs:
           - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
+          - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
           - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
           - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
           - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
