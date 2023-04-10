@@ -398,15 +398,15 @@ class LookupRelatedFunctionTest(TestCase):
     def test_is_single_choice_field(self):
         # Assert function returns True for any field starting with create or has_
         # Cause these fields are either boolean fields or date time fields which one accepts single values
-        filterset_class = SiteFilterSet
+        site_filter_set = SiteFilterSet()
 
         single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters", "q")
         for field in single_choice_fields:
-            self.assertTrue(is_single_choice_field(filterset_class, field))
+            self.assertTrue(is_single_choice_field(site_filter_set, field))
 
         multi_choice_fields = ("status", "tenant", "tag")
         for field in multi_choice_fields:
-            self.assertFalse(is_single_choice_field(filterset_class, field))
+            self.assertFalse(is_single_choice_field(site_filter_set, field))
 
     def test_build_lookup_label(self):
         with self.subTest():
@@ -442,13 +442,14 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(str(err.exception), "field_name not found")
 
     def test_get_filterset_field(self):
+        site_filter_set = SiteFilterSet()
         with self.subTest():
-            field = get_filterset_field(SiteFilterSet, "name")
-            self.assertEqual(field.__class__, SiteFilterSet().filters.get("name").__class__)
+            field = get_filterset_field(site_filter_set, "name")
+            self.assertEqual(field.__class__, site_filter_set.filters.get("name").__class__)
 
         with self.subTest("Test invalid field"):
             with self.assertRaises(FilterSetFieldNotFound) as err:
-                get_filterset_field(SiteFilterSet, "unknown")
+                get_filterset_field(site_filter_set, "unknown")
             self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
 
     def test_get_filterset_parameter_form_field(self):
@@ -527,6 +528,8 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(form_field.queryset.count(), ChangeLoggedModelsQuery().as_queryset().count())
 
     def test_convert_querydict_to_factory_formset_dict(self):
+        site_filter_set = SiteFilterSet()
+
         with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):
             request_querydict = QueryDict(mutable=True)
             request_querydict.setlistdefault("status", ["active", "decommissioning"])
@@ -534,7 +537,7 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict.setlistdefault("invalid_field", ["invalid"])  # Should be ignored
             request_querydict.setlistdefault("name__iew", [""])  # Should be ignored since it has no value
 
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, site_filter_set)
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
@@ -552,7 +555,7 @@ class LookupRelatedFunctionTest(TestCase):
         with self.subTest("Convert an empty QueryDict to an acceptable factory formset QueryDict"):
             request_querydict = QueryDict(mutable=True)
 
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, site_filter_set)
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
@@ -566,7 +569,7 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict.setlistdefault("status", ["active"])
             request_querydict.setlistdefault("q", "site")  # Should be ignored
 
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, site_filter_set)
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
@@ -584,8 +587,7 @@ class LookupRelatedFunctionTest(TestCase):
         filter_params.setlistdefault("status", ["active", "planned"])
 
         non_filter_params = ["page", "per_page"]
-        filterset_class = SiteFilterSet
-        data = get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
+        data = get_filterable_params_from_filter_params(filter_params, non_filter_params, SiteFilterSet())
 
         self.assertEqual(data, {"name": ["Site 1"], "status": ["active", "planned"]})
 

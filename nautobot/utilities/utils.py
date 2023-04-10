@@ -812,9 +812,10 @@ def build_lookup_label(field_name, _verbose_name):
     """
     verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
     label = ""
-    search = CONTAINS_LOOKUP_EXPR_RE.search(field_name)
-    if search:
-        label = f" ({search.group()})"
+    if not ("__destination" in field_name or "__source" in field_name):
+        search = CONTAINS_LOOKUP_EXPR_RE.search(field_name)
+        if search:
+            label = f" ({search.group()})"
 
     verbose_name = "not " + verbose_name if label.startswith(" (n") else verbose_name
 
@@ -844,18 +845,25 @@ def get_all_lookup_expr_for_field(model, field_name):
                     "name": build_lookup_label(name, field.lookup_expr),
                 }
             )
+        elif name == field_name and not name.startswith("has_"):
+            lookup_expr_choices.append(
+                {
+                    "id": name,
+                    "name": "exact",
+                }
+            )
 
     return lookup_expr_choices
 
 
-def get_filterset_field(filterset_class, field_name):
-    field = filterset_class().filters.get(field_name)
+def get_filterset_field(filterset, field_name):
+    field = filterset.filters.get(field_name)
     if field is None:
-        raise FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+        raise FilterSetFieldNotFound(f"{field_name} is not a valid {type(filterset).__name__} field")
     return field
 
 
-def get_filterset_parameter_form_field(model, parameter):
+def get_filterset_parameter_form_field(model, parameter, filterset=None):
     """
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
@@ -877,8 +885,9 @@ def get_filterset_parameter_form_field(model, parameter):
         MultiValueCharInput,
     )
 
-    filterset_class = get_filterset_for_model(model)
-    field = get_filterset_field(filterset_class, parameter)
+    if filterset is None or filterset.Meta.model != model:
+        filterset = get_filterset_for_model(model)()
+    field = get_filterset_field(filterset, parameter)
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
@@ -939,7 +948,7 @@ def get_filterset_parameter_form_field(model, parameter):
     return form_field
 
 
-def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
+def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict
     while discarding `querydict` params which are not part of `filterset_class` params
@@ -964,7 +973,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ... }
     """
     query_dict = QueryDict(mutable=True)
-    filterset_class_fields = filterset_class().filters.keys()
+    filterset_class_fields = filterset.filters.keys()
 
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)
@@ -977,15 +986,25 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     num = 0
     request_querydict = request_querydict.copy()
     request_querydict.pop("q", None)
-    for lookup_type, value in request_querydict.items():
+    for filter_field_name, value in request_querydict.items():
         # Discard fields without values
         if value:
-            if lookup_type in filterset_class_fields:
-                lookup_field = re.sub(r"__\w+", "", lookup_type)
-                lookup_value = request_querydict.getlist(lookup_type)
+            if filter_field_name in filterset_class_fields:
+                if hasattr(filterset.filters[filter_field_name], "relationship"):
+                    lookup_field = filter_field_name
+                else:
+                    # convert_querydict_to_factory_formset_acceptable_querydict expects to have a QueryDict as input
+                    # which means we may not have the exact field name as defined in the filterset class
+                    # it may contain a lookup expression (e.g. `name__ic`), so we need to strip it
+                    # this is so we can select the correct field in the formset for the "field" column
+                    # TODO: Since we likely need to instantiate the filterset class early in the request anyway
+                    # the filterset can handle the QueryDict conversion and we can just pass the QueryDict to the filterset
+                    # then use the FilterSet to de-dupe the field names
+                    lookup_field = re.sub(r"__\w+", "", filter_field_name)
+                lookup_value = request_querydict.getlist(filter_field_name)
 
                 query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
-                query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
+                query_dict.setlistdefault(lookup_type_placeholder % num, [filter_field_name])
                 query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
                 num += 1
 
@@ -993,13 +1012,13 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     return query_dict
 
 
-def is_single_choice_field(filterset_class, field_name):
+def is_single_choice_field(filterset, field_name):
     # Some filter parameters do not accept multiple values, e.g DateTime, Boolean, Int fields and the q field, etc.
-    field = get_filterset_field(filterset_class, field_name)
+    field = get_filterset_field(filterset, field_name)
     return not isinstance(field, django_filters.MultipleChoiceFilter)
 
 
-def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
+def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset):
     """
     Remove any `non_filter_params` and fields that are not a part of the filterset from  `filter_params`
     to return only queryset filterable parameters.
@@ -1021,7 +1040,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             # If an exception is thrown, instead of throwing an exception, set `_is_single_choice_field` to 'False'
             # because the fields that were not discovered are still necessary.
             try:
-                _is_single_choice_field = is_single_choice_field(filterset_class, field)
+                _is_single_choice_field = is_single_choice_field(filterset, field)
             except FilterSetFieldNotFound:
                 _is_single_choice_field = False
 
