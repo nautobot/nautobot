@@ -5,7 +5,6 @@ import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0013_default_fallback_value_computedfield"),
     ]

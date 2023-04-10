@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenancy", "0005_rename_foreign_keys_and_related_names"),
         ("dcim", "0031_rename_path_end_point_related_name"),

@@ -9,11 +9,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-# NOTE: This mimics the version required by core, although any version 1.0+ is sufficient for example_plugin
-#       As a direct dependency on importlib-metadata it should be specified here and in most cases a plugin can
-#       benefit from a transient dependency from core.
-importlib-metadata = {version = "^4.4", python = "<3.8"}
+python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 
@@ -23,7 +19,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ['py37', 'py38', 'py39', 'py310']
+target-version = ['py38', 'py39', 'py310']
 include = '\.pyi?$'
 exclude = '''
 (

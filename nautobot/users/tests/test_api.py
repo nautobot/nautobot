@@ -18,7 +18,6 @@ User = get_user_model()
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("users-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -46,7 +45,6 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         User.objects.create(username="User_1")
         User.objects.create(username="User_2")
         User.objects.create(username="User_3")
@@ -78,7 +76,6 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
@@ -284,7 +281,6 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),

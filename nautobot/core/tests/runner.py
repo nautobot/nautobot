@@ -22,7 +22,6 @@ class NautobotTestRunner(DiscoverRunner):
     exclude_tags = ["integration"]
 
     def __init__(self, cache_test_fixtures=False, **kwargs):
-
         self.cache_test_fixtures = cache_test_fixtures
 
         # Assert "integration" hasn't been provided w/ --tag

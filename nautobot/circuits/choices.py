@@ -7,7 +7,6 @@ from nautobot.core.choices import ChoiceSet
 
 
 class CircuitStatusChoices(ChoiceSet):
-
     STATUS_DEPROVISIONING = "deprovisioning"
     STATUS_ACTIVE = "active"
     STATUS_PLANNED = "planned"
@@ -31,7 +30,6 @@ class CircuitStatusChoices(ChoiceSet):
 
 
 class CircuitTerminationSideChoices(ChoiceSet):
-
     SIDE_A = "A"
     SIDE_Z = "Z"
 

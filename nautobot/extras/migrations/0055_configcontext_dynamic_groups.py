@@ -5,7 +5,6 @@ import nautobot.extras.models.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0054_scheduledjob_kwargs_request_user_change"),
     ]

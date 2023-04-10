@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0013_migrate_virtualmachine_role_data"),
     ]

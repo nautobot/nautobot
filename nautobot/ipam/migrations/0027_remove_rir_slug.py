@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0026_ipaddress_remove_assigned_object"),
     ]

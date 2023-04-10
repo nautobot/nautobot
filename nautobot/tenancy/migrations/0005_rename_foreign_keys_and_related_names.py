@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenancy", "0004_change_tree_manager_on_tree_models"),
     ]

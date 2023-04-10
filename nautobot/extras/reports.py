@@ -33,7 +33,7 @@ class Report(Job):
         super().__init__()
 
         if not self.test_methods:
-            raise Exception("A report must contain at least one test method.")
+            raise Exception("A report must contain at least one test method.")  # pylint: disable=broad-exception-raised
 
     def log_success(self, obj, message=None):
         """

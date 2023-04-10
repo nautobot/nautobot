@@ -162,7 +162,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.8", "3.9", "3.10" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -205,7 +205,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.8", "3.9", "3.10" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -302,7 +302,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.8", "3.9", "3.10" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
@@ -330,9 +330,9 @@ jobs:
           tags: |
             type=raw,value={{branch}}-py${{ matrix.python-version }}
             type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.7 && github.ref == 'refs/heads/develop' }}
+            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
           labels: |
             org.opencontainers.image.title=Nautobot
@@ -362,9 +362,9 @@ jobs:
           tags: |
             type=raw,value={{branch}}-py${{ matrix.python-version }}
             type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.7 && github.ref == 'refs/heads/develop' }}
+            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
           labels: |
             org.opencontainers.image.title=Nautobot

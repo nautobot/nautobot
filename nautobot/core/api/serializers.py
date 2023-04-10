@@ -159,7 +159,6 @@ class ValidatedModelSerializer(BaseModelSerializer):
     """
 
     def validate(self, data):
-
         # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
         attrs.pop("custom_fields", None)
@@ -207,7 +206,6 @@ class WritableNestedSerializer(BaseModelSerializer):
         return self.Meta.model.objects
 
     def to_internal_value(self, data):
-
         if data is None:
             return None
 

@@ -5,7 +5,6 @@ import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0004_fixup_p2p_broadcast"),
     ]

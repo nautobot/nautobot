@@ -199,7 +199,7 @@ class VLANFactory(PrimaryModelFactory):
     has_location = NautobotBoolIterator()
     location = factory.Maybe(
         "has_vlan_group",
-        factory.LazyAttribute(lambda l: l.vlan_group.location),
+        factory.LazyAttribute(lambda vlan: vlan.vlan_group.location),
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 

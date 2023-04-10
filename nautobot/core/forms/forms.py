@@ -36,7 +36,6 @@ class AddressFieldMixin(forms.ModelForm):
     address = formfields.IPNetworkFormField()
 
     def __init__(self, *args, **kwargs):
-
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
@@ -159,7 +158,6 @@ class PrefixFieldMixin(forms.ModelForm):
     prefix = formfields.IPNetworkFormField()
 
     def __init__(self, *args, **kwargs):
-
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
