@@ -10,11 +10,8 @@ from nautobot.extras.models import Relationship, CustomField
 
 
 class CheckFilterForDisplayTest(TestCase):
-    """
-    Validate the operation of check_filter_for_display().
-    """
-
     def test_check_filter_for_display(self):
+        """Validate the operation of check_filter_for_display()."""
 
         device_filter_set_filters = DeviceFilterSet().get_filters()
 
@@ -106,10 +103,6 @@ class CheckFilterForDisplayTest(TestCase):
 
 
 class GetFilterFieldLabelTest(TestCase):
-    """
-    Validate the operation of get_filter_field_label().
-    """
-
     @classmethod
     def setUpTestData(cls):
         device_ct = ContentType.objects.get_for_model(Device)
@@ -129,6 +122,7 @@ class GetFilterFieldLabelTest(TestCase):
         cls.custom_field.content_types.add(device_ct)
 
     def test_get_filter_field_label(self):
+        """Validate the operation of get_filter_field_label()."""
 
         device_filter_set_filters = DeviceFilterSet().filters
 
@@ -152,11 +146,8 @@ class GetFilterFieldLabelTest(TestCase):
 
 
 class FieldNameToDisplayTest(TestCase):
-    """
-    Validate the operation of _field_name_to_display().
-    """
-
     def test__field_name_to_display(self):
+        """Validate the operation of _field_name_to_display()."""
 
         with self.subTest("id => Id"):
             self.assertEqual(_field_name_to_display("id"), "Id")
