@@ -1,4 +1,4 @@
-Dropped support for Python 3.7. Python 3.8.1 is now the minimum version required by Nautobot.
+Dropped support for Python 3.7. Python 3.8 is now the minimum version required by Nautobot.
 Updated `django-auth-ldap` dependency to `~4.2.0`.
 Updated `django-cors-headers` dependency to `~3.14.0`.
 Updated `django-filter` dependency to `~23.1`.
