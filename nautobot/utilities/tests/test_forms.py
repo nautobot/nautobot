@@ -684,15 +684,9 @@ class DynamicFilterFormTest(TestCase):
     #     self.assertEqual("'DynamicFilterForm' object requires `filterset_class` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
-        form = DynamicFilterForm(filterset_class=StatusFilterSet)
-        site_form = DynamicFilterForm(filterset_class=SiteFilterSet)
+        form = DynamicFilterForm(filterset=StatusFilterSet())
+        site_form = DynamicFilterForm(filterset=SiteFilterSet())
         self.maxDiff = None
-
-        with self.subTest("Assert capitalize"):
-            self.assertEqual(form.capitalize("test"), "Test")
-            self.assertEqual(form.capitalize("test_one"), "Test one")
-            self.assertEqual(form.capitalize("tenant__group"), "Tenant group")
-            self.assertEqual(form.capitalize("_custom_field_data__example_field"), "Example field")
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
@@ -826,23 +820,26 @@ class DynamicFilterFormTest(TestCase):
         request_querydict.setdefault("created", "2022-09-05")
         request_querydict.setlistdefault("asn", ["4"])
 
+        site_filter_set = SiteFilterSet()
+
         with self.subTest("Test for lookup_value with a CharField"):
             # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
             # `lookup_value` field should be a CharField
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
-            form = DynamicFilterForm(filterset_class=SiteFilterSet, data=data, prefix="form-0")
+
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, site_filter_set)
+            form = DynamicFilterForm(filterset=site_filter_set, data=data, prefix="form-0")
             self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains (ic)")])
             # Assert lookup_value is a CharField
             self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
-            form = DynamicFilterForm(filterset_class=SiteFilterSet, data=data, prefix="form-1")
+            form = DynamicFilterForm(filterset=site_filter_set, data=data, prefix="form-1")
             self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
             self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
         with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
             # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with APISelectMultiple widget
-            form = DynamicFilterForm(filterset_class=SiteFilterSet, data=data, prefix="form-2")
+            form = DynamicFilterForm(filterset=site_filter_set, data=data, prefix="form-2")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -869,7 +866,7 @@ class DynamicFilterFormTest(TestCase):
         with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
             # If `lookup_field` value is a ChoiceField and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
-            form = DynamicFilterForm(filterset_class=SiteFilterSet, data=data, prefix="form-3")
+            form = DynamicFilterForm(filterset=site_filter_set, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -889,7 +886,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateField"):
-            form = DynamicFilterForm(filterset_class=SiteFilterSet, data=data, prefix="form-4")
+            form = DynamicFilterForm(filterset=site_filter_set, data=data, prefix="form-4")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -903,7 +900,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertIsInstance(form.fields["lookup_value"].widget, DatePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
-            form = DynamicFilterForm(filterset_class=SiteFilterSet, data=data, prefix="form-5")
+            form = DynamicFilterForm(filterset=site_filter_set, data=data, prefix="form-5")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
