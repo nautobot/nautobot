@@ -11,7 +11,6 @@ name = "ExamplePlugin jobs"
 
 
 class ExampleJob(Job):
-
     # specify template_name to override the default job scheduling template
     template_name = "example_plugin/example_with_custom_template.html"
 

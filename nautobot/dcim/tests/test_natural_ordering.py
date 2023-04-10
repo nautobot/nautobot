@@ -13,7 +13,6 @@ from nautobot.extras.models import Role
 
 class NaturalOrderingTestCase(TestCase):
     def setUp(self):
-
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
@@ -27,7 +26,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_numeric(self):
-
         INTERFACES = [
             "0",
             "0.0",
@@ -73,7 +71,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_linux(self):
-
         INTERFACES = [
             "eth0",
             "eth0.1",
@@ -97,7 +94,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_junos(self):
-
         INTERFACES = [
             "xe-0/0/0",
             "xe-0/0/1",
@@ -150,7 +146,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_ios(self):
-
         INTERFACES = [
             "GigabitEthernet0/1",
             "GigabitEthernet0/2",

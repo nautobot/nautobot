@@ -105,7 +105,6 @@ def add_button(url):
 
 @register.inclusion_tag("buttons/import.html")
 def import_button(url):
-
     return {
         "import_url": url,
     }

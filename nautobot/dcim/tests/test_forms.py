@@ -27,7 +27,6 @@ class DeviceTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
 

@@ -26,7 +26,6 @@ class TenantGroupView(generic.ObjectView):
     queryset = TenantGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Tenants
         tenants = Tenant.objects.restrict(request.user, "view").filter(
             tenant_group__in=instance.descendants(include_self=True)

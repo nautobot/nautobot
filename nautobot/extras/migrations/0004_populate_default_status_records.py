@@ -25,7 +25,6 @@ def populate_status_choices(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("circuits", "0002_initial_part_2"),
         ("dcim", "0004_initial_part_4"),

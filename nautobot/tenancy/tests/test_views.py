@@ -27,7 +27,6 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenant_groups = TenantGroup.objects.all()[:2]
         Tenant.objects.create(name="New Tenant", tenant_group=tenant_groups[0])
 

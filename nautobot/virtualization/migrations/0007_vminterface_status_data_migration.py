@@ -36,7 +36,6 @@ def clear_vminterface_status(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0006_vminterface_status"),
     ]

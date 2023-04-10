@@ -43,7 +43,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ClusterType.objects.create(name="Cluster Type 1")
         ClusterType.objects.create(name="Cluster Type 2")
         ClusterType.objects.create(name="Cluster Type 3")
@@ -68,7 +67,6 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location_type = LocationType.objects.get(name="Campus")
         locations = (
             Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
@@ -129,7 +127,6 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
         location_type = LocationType.objects.get(name="Campus")
         locations = (
@@ -261,7 +258,6 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location_type = LocationType.objects.get(name="Campus")
         location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
         devicerole = Role.objects.get_for_model(Device).first()

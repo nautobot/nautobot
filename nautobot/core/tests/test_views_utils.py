@@ -12,7 +12,6 @@ class CheckFilterForDisplayTest(TestCase):
     """
 
     def test_check_filter_for_display(self):
-
         device_filter_set_filters = DeviceFilterSet().get_filters()
 
         with self.subTest("Test invalid filter case (field_name not found)"):

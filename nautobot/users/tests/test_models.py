@@ -8,7 +8,6 @@ User = get_user_model()
 
 class UserConfigTest(TestCase):
     def setUp(self):
-
         user = User.objects.create_user(username="testuser")
         user.config_data = {
             "a": True,

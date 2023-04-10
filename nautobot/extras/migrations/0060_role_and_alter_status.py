@@ -10,7 +10,6 @@ import nautobot.extras.utils
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0059_alter_joblogentry_scheduledjob_webhook_fields"),

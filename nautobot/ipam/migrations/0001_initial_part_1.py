@@ -14,7 +14,6 @@ import nautobot.ipam.fields
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [

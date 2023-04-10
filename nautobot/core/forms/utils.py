@@ -92,7 +92,7 @@ def expand_ipaddress_pattern(string, family):
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
     if family not in [4, 6]:
-        raise Exception(f"Invalid IP address family: {family}")
+        raise ValueError(f"Invalid IP address family: {family}")
     if family == 4:
         regex = forms.IP4_EXPANSION_PATTERN
         base = 10

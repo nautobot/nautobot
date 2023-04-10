@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenancy", "0005_rename_foreign_keys_and_related_names"),
     ]

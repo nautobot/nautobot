@@ -41,7 +41,6 @@ def migrate_ipaddress_to_m2m(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0024_interface_to_ipaddress_m2m"),
     ]

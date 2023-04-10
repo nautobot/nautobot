@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0032_remove_site_foreign_key_from_dcim_models"),
         ("ipam", "0017_prefix_remove_is_pool"),

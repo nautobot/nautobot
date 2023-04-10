@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0026_rename_device_and_rack_role"),
         ("ipam", "0012_rename_ipam_roles"),

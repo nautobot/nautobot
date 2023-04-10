@@ -13,7 +13,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenancy", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),

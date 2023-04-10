@@ -182,4 +182,4 @@ def add(x, y):
 
 @nautobot_task
 def fail():
-    raise Exception("You have failed.")
+    raise Exception("You have failed.")  # pylint: disable=broad-exception-raised

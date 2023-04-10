@@ -112,12 +112,12 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
     choices = []
 
     for _, value in choiceset.CHOICES:
-        choice_kwargs = dict(
-            name=value,
-            description=description_map[value],
-            slug=slugify(value),
-            color=color_map[value],
-        )
+        choice_kwargs = {
+            "name": value,
+            "description": description_map[value],
+            "slug": slugify(value),
+            "color": color_map[value],
+        }
         choices.append(choice_kwargs)
 
     return choices
