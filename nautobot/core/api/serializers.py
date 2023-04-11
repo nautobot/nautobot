@@ -231,11 +231,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     def build_nested_field(self, field_name, relation_info, nested_depth):
         field = get_serializer_for_model(relation_info.related_model)
 
-        class NautobotNestedSerializer(field, WritableSerializerMixin):
-            def to_internal_value(self, data):
-                # We need to specify which to_internal_value() to use here.
-                return super(WritableSerializerMixin).to_internal_value(data)
-
+        class NautobotNestedSerializer(field):
             class Meta:
                 model = relation_info.related_model
                 depth = nested_depth - 1

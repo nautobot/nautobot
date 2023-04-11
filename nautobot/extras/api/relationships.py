@@ -187,7 +187,6 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
         NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
         field_class = NautobotNestedSerializer
         field_kwargs = get_nested_relation_kwargs(relation_info)
-
         return field_class, field_kwargs
 
     def to_internal_value(self, data):
@@ -288,7 +287,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                     ) from exc
 
                 depth = int(self.context.get("depth", 0))
-                print(depth)
+
                 if depth != 0:
                     for object_data in objects_data:
                         serializer_instance = other_side_serializer(data=object_data, context=self.context)

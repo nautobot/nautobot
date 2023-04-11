@@ -223,16 +223,6 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     address = IPFieldSerializer()
     nat_outside_list = NestedIPAddressSerializer(read_only=True, many=True)
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     for field in self._writable_fields:
-    #         print(field)
-
-    def to_internal_value(self, data):
-        for field in self._writable_fields:
-            print(field.field_name)
-        return super().to_internal_value(data)
-
     class Meta:
         model = IPAddress
         read_only_fields = ["family"]
