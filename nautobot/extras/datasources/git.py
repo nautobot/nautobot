@@ -183,8 +183,14 @@ def ensure_git_repository(
             level_choice=LogLevelChoices.LOG_SUCCESS,
             logger=logger,
         )
+        job_result.log(
+            f'The current Git repository hash is "{repository_record.current_head}"',
+            level_choice=LogLevelChoices.LOG_SUCCESS,
+            logger=logger,
+        )
     elif logger:
         logger.info("Repository successfully refreshed")
+        logger.info(f'The current Git repository hash is "{repository_record.current_head}"')
 
 
 def git_repository_dry_run(repository_record, job_result=None, logger=None):  # pylint: disable=redefined-outer-name
@@ -276,7 +282,6 @@ def update_git_config_contexts(repository_record, job_result):
                 grouping="config contexts",
                 logger=logger,
             )
-            raise
 
     # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
     for filter_type in (
@@ -330,7 +335,6 @@ def update_git_config_contexts(repository_record, job_result):
                     grouping="config contexts",
                     logger=logger,
                 )
-                raise
 
     # Finally, handle device- and virtual-machine-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
     for local_type in ("devices", "virtual_machines"):
@@ -374,7 +378,6 @@ def update_git_config_contexts(repository_record, job_result):
                     grouping="local config contexts",
                     logger=logger,
                 )
-                raise
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_contexts(
@@ -705,7 +708,6 @@ def update_git_config_context_schemas(repository_record, job_result):
                 grouping="config context schemas",
                 logger=logger,
             )
-            job_result.save()
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_context_schemas(
@@ -1002,7 +1004,6 @@ def update_git_export_templates(repository_record, job_result):
                 grouping="export templates",
                 logger=logger,
             )
-            raise
 
     # Delete any prior templates that are owned by this repository but were not discovered above
     delete_git_export_templates(repository_record, job_result, preserve=managed_export_templates)

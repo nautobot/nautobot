@@ -5,20 +5,17 @@ import tempfile
 from unittest import mock
 import uuid
 
-import yaml
-
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
+import yaml
 
 from nautobot.core.jobs import GitRepositoryDiffOriginalAndLocal, GitRepositoryPullAndRefreshData
 from nautobot.core.testing import (
     TransactionTestCase,
     create_job_result_and_run_job,
-    get_job_class_and_model,
     run_job_for_testing,
 )
-from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer
-from nautobot.ipam.models import VLAN
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
@@ -39,6 +36,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
 )
+from nautobot.ipam.models import VLAN
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
@@ -121,6 +119,7 @@ class GitTest(TransactionTestCase):
 
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
+
         # TODO(Glenn): populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
@@ -379,13 +378,13 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
+                job_model = GitRepositoryPullAndRefreshData().get_job_model()
+                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result.refresh_from_db()
                 self.assertEqual(
-                    self.job_result.status,
+                    job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
+                    job_result.data,
                 )
 
                 # Make sure explicit ConfigContext was successfully loaded from file
@@ -411,22 +410,17 @@ class GitTest(TransactionTestCase):
 
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 MockGitRepo.side_effect = self.empty_repo
+
                 # For verisimilitude, don't re-use the old request and job_result
                 self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
-                )
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
+                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result.refresh_from_db()
                 self.assertEqual(
-                    self.job_result.status,
+                    job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
+                    job_result.data,
                 )
 
                 # Verify that objects have been removed from the database
@@ -503,19 +497,23 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
+                job_model = GitRepositoryPullAndRefreshData().get_job_model()
                 logging.disable(logging.ERROR)
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
+                job_result = run_job_for_testing(
+                    job=job_model,
+                    repository=self.repo.pk,
+                )
                 logging.disable(logging.NOTSET)
-                self.job_result.refresh_from_db()
+                job_result.refresh_from_db()
 
                 self.assertEqual(
-                    self.job_result.status,
+                    job_result.status,
                     JobResultStatusChoices.STATUS_FAILURE,
-                    self.job_result.data,
+                    job_result.data,
                 )
 
                 # Check for specific log messages
-                log_entries = JobLogEntry.objects.filter(job_result=self.job_result)
+                log_entries = JobLogEntry.objects.filter(job_result=job_result)
                 warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
                 failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_FAILURE)
 
@@ -622,13 +620,17 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
+                job_model = GitRepositoryPullAndRefreshData().get_job_model()
+                job_result = run_job_for_testing(
+                    job=job_model,
+                    repository=self.repo.pk,
+                )
+                job_result.refresh_from_db()
 
                 self.assertEqual(
-                    self.job_result.status,
+                    job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
+                    job_result.data,
                 )
 
                 # Make sure ConfigContext was successfully loaded from file
@@ -711,16 +713,15 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.side_effect = create_empty_repo
 
                 self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
+
+                job_model = GitRepositoryDiffOriginalAndLocal().get_job_model()
+                job_result = run_job_for_testing(
+                    job=job_model,
+                    repository=self.repo.pk,
                 )
+                job_result.refresh_from_db()
 
-                git_repository_diff_origin_and_local(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS, self.job_result.data)
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.data)
 
                 MockGitRepo.return_value.checkout.assert_not_called()
                 MockGitRepo.assert_called_with(

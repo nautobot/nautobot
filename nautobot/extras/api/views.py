@@ -349,7 +349,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
             raise CeleryWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
-        enqueue_pull_git_repository_and_refresh_data(repository, request)
+        enqueue_pull_git_repository_and_refresh_data(repository, request.user)
         return Response({"message": f"Repository {repository} sync job added to queue."})
 
 

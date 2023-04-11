@@ -725,6 +725,8 @@ class JobResult(BaseModel, CustomFieldModel):
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
 
+    # FIXME(jathan): This needs to go away. Need to think about that the impact
+    # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
         """
         Helper method to change the status of the job result. If the target status is terminal, the  completion

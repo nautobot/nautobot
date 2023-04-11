@@ -1,17 +1,8 @@
-import os
-
-from django.conf import settings
-
 from nautobot.core.celery import register_jobs
 from nautobot.extras.choices import LogLevelChoices
-from nautobot.extras.datasources import (
-    ensure_git_repository,
-    git_repository_dry_run,
-    refresh_datasource_content,
-)
+from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
 from nautobot.extras.jobs import Job, ObjectVar
 from nautobot.extras.models import GitRepository
-
 
 name = "System Jobs"
 
@@ -41,8 +32,9 @@ class GitRepositoryPullAndRefreshData(Job):
         )
 
         try:
-            if not os.path.exists(settings.GIT_ROOT):
-                os.makedirs(settings.GIT_ROOT)
+            # TODO(jathan): Rip this out.
+            # if not os.path.exists(settings.GIT_ROOT):
+            #     os.makedirs(settings.GIT_ROOT)
 
             ensure_git_repository(
                 repository,
@@ -50,19 +42,7 @@ class GitRepositoryPullAndRefreshData(Job):
                 logger=self.logger,
             )
 
-            job_result.log(
-                f'The current Git repository hash is "{repository.current_head}"',
-            )
-
             refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
-
-        except Exception as exc:
-            job_result.log(
-                f"Error while refreshing {repository.name}: {exc}",
-                level_choice=LogLevelChoices.LOG_FAILURE,
-                logger=self.logger,
-            )
-            raise
 
         finally:
             job_result.log(
@@ -87,21 +67,14 @@ class GitRepositoryDiffOriginalAndLocal(Job):
 
     def run(self, repository):
         job_result = self.get_job_result()
-
-        job_result.log(f'Running a Dry Run on Git repository "{repository.name}"...', logger=self.logger)
+        job_result.log(f'Performing a Dry Run on Git repository "{repository.name}"...', logger=self.logger)
 
         try:
-            if not os.path.exists(settings.GIT_ROOT):
-                os.makedirs(settings.GIT_ROOT)
+            # TODO(jathan): Rip this out.
+            # if not os.path.exists(settings.GIT_ROOT):
+            #     os.makedirs(settings.GIT_ROOT)
 
             git_repository_dry_run(repository, job_result=job_result, logger=self.logger)
-
-        except Exception as exc:
-            job_result.log(
-                f"Error while running a dry run on {repository.name}: {exc}",
-                level_choice=LogLevelChoices.LOG_FAILURE,
-            )
-            raise
 
         finally:
             job_result.log(

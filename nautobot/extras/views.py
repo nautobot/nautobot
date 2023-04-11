@@ -12,7 +12,6 @@ from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import TemplateDoesNotExist, get_template
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import is_safe_url
@@ -834,7 +833,9 @@ class GitRepositoryEditView(generic.ObjectEditView):
 
     def get_return_url(self, request, obj):
         if request.method == "POST":
-            return reverse("extras:gitrepository_result", kwargs={"slug": obj.slug})
+            git_ct = ContentType.objects.get(app_label="extras", model="gitrepository")
+            job_result = JobResult.objects.filter(obj_type=git_ct, name=obj.name).latest()
+            return job_result.get_absolute_url()
         return super().get_return_url(request, obj)
 
 
@@ -1352,7 +1353,7 @@ class JobApprovalRequestView(generic.ObjectView):
 
 
 class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
+    queryset = ScheduledJob.objects.enabled()
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -1366,7 +1367,7 @@ class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     table = tables.ScheduledJobApprovalQueueTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm

@@ -210,10 +210,6 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.READY_STATES:
-        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
-    job_result.save()
-
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
     # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
