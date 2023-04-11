@@ -272,6 +272,9 @@ DATABASES = {
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
         "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
+        "TEST": {
+            "NAME": os.getenv("NAUTOBOT_DB_TEST_NAME", "test_nautobot"),
+        },
     }
 }
 

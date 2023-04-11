@@ -172,11 +172,14 @@ def run_command(context, command, **kwargs):
             print_command(command, env=env)
         context.run(command, pty=True, env=env, **kwargs)
     else:
+        test_db_name = kwargs.pop("test_db_name", "")
+        if test_db_name:
+            test_db_name = f"-e NAUTOBOT_DB_TEST_NAME={test_db_name}"
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
         if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
+            compose_command = f"exec {test_db_name} nautobot {command}"
         else:
             compose_command = f"run --entrypoint '{command}' nautobot"
 
@@ -666,7 +669,7 @@ def unittest(
     keepdb=False,
     label="nautobot",
     failfast=False,
-    buffer=True,
+    buffer=False,
     exclude_tag=None,
     tag=None,
     verbose=False,
@@ -674,6 +677,7 @@ def unittest(
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
+    test_db_name=None,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -709,7 +713,39 @@ def unittest(
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
 
-    run_command(context, command)
+    if test_db_name:
+        run_command(context, command, test_db_name=test_db_name)
+    else:
+        run_command(context, command)
+
+
+def unittest_forked(fork_context):
+    unittest(
+        fork_context[0],
+        failfast=True,
+        label=f"nautobot.{fork_context[1]}",
+        skip_docs_build=True,
+        test_db_name=f"test_nautobot_{fork_context[1]}",
+        cache_test_fixtures=True,
+    )
+
+
+@task
+def unittest_fork(context):
+    from multiprocessing import Pool
+
+    apps = [
+        (context, "core"),
+        (context, "dcim"),
+        (context, "extras"),
+        (context, "ipam"),
+        (context, "tenancy"),
+        (context, "users"),
+        (context, "virtualization"),
+    ]
+
+    with Pool(len(apps)) as p:
+        print(p.map(unittest_forked, apps))
 
 
 @task
