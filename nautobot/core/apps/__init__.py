@@ -69,9 +69,6 @@ class NautobotConfig(AppConfig):
         if menu_items is not None:
             register_menu_items(menu_items)
 
-        jobs = import_string("nautobot.core.jobs.jobs")
-        register_jobs(jobs)
-
 
 def create_or_check_entry(grouping, record, key, path):
     if key not in grouping:
@@ -721,6 +718,10 @@ class CoreConfig(NautobotConfig):
         from taggit.managers import TaggableManager
 
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
+
+        # Register jobs last after everything else has been done.
+        jobs = import_string("nautobot.core.jobs.jobs")
+        register_jobs(jobs)
 
 
 class NautobotConstanceConfig(ConstanceConfig):
