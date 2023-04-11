@@ -2931,18 +2931,18 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(relationship_data["destination"]["object_type"], "dcim.device")
 
         objects = response.data["relationships"][self.relationship.slug]["destination"]["objects"]
-        for i in enumerate(objects):
-            self.assertEqual(objects[i]["id"], str(self.devices[i].pk))
+        for i, obj in enumerate(objects):
+            self.assertEqual(obj["id"], str(self.devices[i].pk))
             self.assertEqual(
-                objects[i]["url"],
+                obj["url"],
                 ("http://nautobot.example.com" + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[i].pk})),
             )
             self.assertEqual(
-                objects[i]["display"],
+                obj["display"],
                 self.devices[i].display,
             )
             self.assertEqual(
-                objects[i]["name"],
+                obj["name"],
                 self.devices[i].name,
             )
 

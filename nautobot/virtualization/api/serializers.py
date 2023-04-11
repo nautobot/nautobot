@@ -8,7 +8,6 @@ from nautobot.core.api import (
 from nautobot.dcim.api.serializers import InterfaceCommonSerializer
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.api.mixins import (
-    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
@@ -62,9 +61,7 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 #
 
 
-class VirtualMachineSerializer(
-    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
-):
+class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     location = serializers.SerializerMethodField(read_only=True)
     # TODO #3024 How to get rid of this?

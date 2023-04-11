@@ -8,17 +8,13 @@ from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxyS
 from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.extras import choices, models
-from nautobot.users.api.nested_serializers import NestedUserSerializer
 
 __all__ = [
     "NestedDynamicGroupSerializer",
     "NestedDynamicGroupMembershipSerializer",
-    "NestedNoteSerializer",
-    "NestedRoleSerializer",
     "NestedScheduledJobCreationSerializer",
     "NestedSecretsGroupAssociationSerializer",
     "NestedSecretSerializer",
-    "NestedStatusSerializer",
 ]
 
 
@@ -41,45 +37,6 @@ class NestedDynamicGroupMembershipSerializer(WritableNestedSerializer):
     class Meta:
         model = models.DynamicGroupMembership
         fields = ["id", "url", "group", "parent_group", "operator", "weight"]
-
-
-class NestedNoteSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
-    user = NestedUserSerializer(read_only=True)
-    assigned_object = serializers.SerializerMethodField()
-
-    class Meta:
-        model = models.Note
-        fields = ["assigned_object", "id", "url", "note", "user", "slug"]
-
-    @extend_schema_field(
-        PolymorphicProxySerializer(
-            component_name="NoteAssignedObject",
-            resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(
-                get_all_concrete_models(models.NotesMixin),
-                prefix="Nested",
-            ),
-            allow_null=True,
-        )
-    )
-    def get_assigned_object(self, obj):
-        if obj.assigned_object is None:
-            return None
-        try:
-            serializer = get_serializer_for_model(obj.assigned_object)
-            context = {"request": self.context["request"]}
-            return serializer(obj.assigned_object, context=context).data
-        except SerializerNotFound:
-            return None
-
-
-class NestedRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
-
-    class Meta:
-        model = models.Role
-        fields = ["id", "url", "name"]
 
 
 class NestedScheduledJobCreationSerializer(BaseModelSerializer):
@@ -141,11 +98,3 @@ class NestedSecretsGroupAssociationSerializer(WritableNestedSerializer):
     class Meta:
         model = models.SecretsGroupAssociation
         fields = ["id", "url", "access_type", "secret_type", "secret"]
-
-
-class NestedStatusSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:status-detail")
-
-    class Meta:
-        model = models.Status
-        fields = ["id", "url", "name"]

@@ -8,9 +8,9 @@ from rest_framework.validators import UniqueTogetherValidator
 from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
+    WritableNestedSerializer,
 )
 from nautobot.extras.api.mixins import (
-    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
@@ -120,9 +120,7 @@ class VLANGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class VLANSerializer(
-    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
-):
+class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     prefix_count = serializers.IntegerField(read_only=True)
 
@@ -150,7 +148,7 @@ class VLANSerializer(
 #
 
 
-class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, RoleModelSerializerMixin):
+class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -209,15 +207,36 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class NestedIPAddressSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+    family = serializers.IntegerField(read_only=True)
     address = IPFieldSerializer()
 
     class Meta:
         model = IPAddress
-        fields = "__all__"
+        fields = ["id", "url", "family", "address"]
+
+
+class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
+    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+    address = IPFieldSerializer()
+    nat_outside_list = NestedIPAddressSerializer(read_only=True, many=True)
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     for field in self._writable_fields:
+    #         print(field)
+
+    def to_internal_value(self, data):
+        for field in self._writable_fields:
+            print(field.field_name)
+        return super().to_internal_value(data)
+
+    class Meta:
+        model = IPAddress
         read_only_fields = ["family"]
+        exclude = ["prefix_length"]
 
 
 class AvailableIPSerializer(serializers.Serializer):

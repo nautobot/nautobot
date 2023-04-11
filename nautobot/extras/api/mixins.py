@@ -7,16 +7,9 @@ from nautobot.core.api import (
     ContentTypeField,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.extras.api.fields import RoleSerializerField
 from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
-
-
-class RoleModelSerializerMixin(BaseModelSerializer):
-    """Mixin to add `role` choice field to model serializers."""
-
-    role = RoleSerializerField(required=False)
 
 
 class StatusModelSerializerMixin(BaseModelSerializer):
