@@ -17,7 +17,7 @@ class TestAtomicDecorator(Job):
         try:
             Status.objects.create(name="Test database atomic rollback 1")
             if fail:
-                raise Exception("simulated failure")
+                raise Exception("simulated failure")  # pylint: disable=broad-exception-raised
         except Exception:
             self.log_failure("Job failed, all database changes have been rolled back.")
         self.log_success("Job succeeded.")
@@ -35,7 +35,7 @@ class TestAtomicContextManager(Job):
             with transaction.atomic():
                 Status.objects.create(name="Test database atomic rollback 2")
                 if fail:
-                    raise Exception("simulated failure")
+                    raise Exception("simulated failure")  # pylint: disable=broad-exception-raised
         except Exception:
             self.log_failure("Job failed, all database changes have been rolled back.")
         self.log_success("Job succeeded.")
