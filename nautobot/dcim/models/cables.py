@@ -259,7 +259,6 @@ class Cable(PrimaryModel, StatusModel):
             self.length_unit = ""
 
     def save(self, *args, **kwargs):
-
         # Store the given length (if any) in meters for use in database ordering
         if self.length and self.length_unit:
             self._abs_length = to_meters(self.length, self.length_unit)

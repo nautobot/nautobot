@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0007_configcontextschema"),
         ("dcim", "0004_initial_part_4"),

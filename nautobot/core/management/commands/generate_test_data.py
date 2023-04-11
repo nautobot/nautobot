@@ -37,7 +37,6 @@ class Command(BaseCommand):
         )
 
     def _generate_factory_data(self, seed):
-
         try:
             import factory.random
 
@@ -115,15 +114,17 @@ class Command(BaseCommand):
         self.stdout.write("Creating Prefixes and IP Addresses...")
         PrefixFactory.create_batch(30)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
+        ManufacturerFactory.create_batch(8)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False)
-        self.stdout.write("Creating Manufacturers without platforms...")
-        ManufacturerFactory.create_batch(4)  # Remaining 4 hard-coded Manufacturers
+        self.stdout.write("Creating Manufacturers without Platforms...")
+        ManufacturerFactory.create_batch(4)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
         DeviceTypeFactory.create_batch(20)
+        self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
+        ManufacturerFactory.create_batch(2)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(10)
         self.stdout.write("Creating CircuitTypes...")

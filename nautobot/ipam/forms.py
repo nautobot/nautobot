@@ -295,7 +295,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
@@ -343,7 +342,6 @@ class PrefixCSVForm(
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned location and vlan_group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
@@ -527,7 +525,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         ]
 
     def __init__(self, *args, **kwargs):
-
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
@@ -781,7 +778,6 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned group
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)

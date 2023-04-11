@@ -6,7 +6,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0010_change_cf_validation_max_min_field_to_bigint"),
     ]

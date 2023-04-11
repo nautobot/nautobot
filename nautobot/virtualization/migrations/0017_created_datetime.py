@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0016_remove_site_foreign_key_from_cluster_class"),
     ]

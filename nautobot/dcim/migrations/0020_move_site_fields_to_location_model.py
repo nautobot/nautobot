@@ -6,7 +6,6 @@ import timezone_field.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0019_device_redundancy_group_data_migration"),
     ]

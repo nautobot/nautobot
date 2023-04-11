@@ -49,14 +49,12 @@ class TokenPermissions(DjangoObjectPermissions):
     }
 
     def _verify_write_permission(self, request):
-
         # If token authentication is in use, verify that the token allows write operations (for unsafe methods).
         if request.method in SAFE_METHODS or request.auth.write_enabled:
             return True
         return False
 
     def has_permission(self, request, view):
-
         # Enforce Token write ability
         if isinstance(request.auth, Token) and not self._verify_write_permission(request):
             return False
@@ -64,7 +62,6 @@ class TokenPermissions(DjangoObjectPermissions):
         return super().has_permission(request, view)
 
     def has_object_permission(self, request, view, obj):
-
         # Enforce Token write ability
         if isinstance(request.auth, Token) and not self._verify_write_permission(request):
             return False

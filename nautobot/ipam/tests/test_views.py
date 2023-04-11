@@ -85,7 +85,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.form_data = {
             "name": "RIR X",
             "is_private": True,
@@ -99,6 +98,11 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "RIR 6,Sixth RIR",
             "RIR 7,Seventh RIR",
         )
+
+    def setUp(self):
+        super().setUp()
+        # Ensure that we have at least one RIR with no prefixes that can be used for the "delete_object" tests.
+        RIR.objects.create(name="RIR XYZ")
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):

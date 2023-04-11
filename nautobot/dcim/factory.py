@@ -196,7 +196,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
-    nestable = factory.LazyAttribute(lambda l: bool(l.name in ["Campus", "Root"]))
+    nestable = factory.LazyAttribute(lambda loc_type: bool(loc_type.name in ["Campus", "Root"]))
 
     @factory.lazy_attribute
     def parent(self):
@@ -278,7 +278,7 @@ class LocationFactory(PrimaryModelFactory):
             "_parent",
         )
 
-    name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
+    name = factory.LazyAttributeSequence(lambda loc, num: f"{loc.location_type.name}-{num:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
 
     has_asn = NautobotBoolIterator()

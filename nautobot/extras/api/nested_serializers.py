@@ -1,12 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from nautobot.core.api import ContentTypeField
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.serializers import BaseModelSerializer, PolymorphicProxySerializer, WritableNestedSerializer
-from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
-from nautobot.core.models.utils import get_all_concrete_models
+from nautobot.core.api.serializers import BaseModelSerializer, WritableNestedSerializer
 from nautobot.extras import choices, models
 
 __all__ = [
