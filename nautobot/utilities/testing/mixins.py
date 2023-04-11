@@ -220,10 +220,9 @@ class NautobotTestCaseMixin:
     # Convenience methods
     #
 
-    def standardize_json(self, jsonText):
-        obj = json.loads(jsonText)
-        newJsonText = json.dumps(obj, sort_keys=True)
-        return newJsonText
+    def standardize_json(self, data):
+        obj = json.loads(data)
+        return json.dumps(obj, sort_keys=True)
 
     @classmethod
     def create_tags(cls, *names):
