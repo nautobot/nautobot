@@ -77,6 +77,7 @@ def run_job_for_testing(job, username="test-user", **kwargs):
 def create_job_result_and_run_job(module, name, source="local", *args, **kwargs):
     """Test helper function to call get_job_class_and_model() then call run_job_for_testing()."""
     _job_class, job_model = get_job_class_and_model(module, name, source)
+    job_result = run_job_for_testing(job=job_model, **kwargs)
     job_result.refresh_from_db()
     return job_result
 
