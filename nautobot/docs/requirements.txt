@@ -4,9 +4,6 @@ mkdocs==1.4.2
 mkdocs-gen-files==0.4.0
 mkdocs-include-markdown-plugin==4.0.4
 mkdocs-material==9.1.6
-mkdocs-table-reader-plugin==2.0
 mkdocs-version-annotations==1.0.0
 mkdocstrings==0.21.2
 mkdocstrings-python==0.9.0
-# Make Snyk happy - mkdocs-table-reader-plugin can use older, insecure versions of numpy otherwise
-numpy==1.24.2
