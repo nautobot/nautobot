@@ -543,7 +543,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             queryset = None
 
         field_class = None
-        if queryset:
+        if queryset is not None:
             if self.has_many(peer_side):
                 field_class = DynamicModelMultipleChoiceField
             else:
