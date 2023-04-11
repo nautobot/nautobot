@@ -167,7 +167,6 @@ mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
 mkdocs-material = "~9.1.6"
 # Allow docs to include tables as structured data files like YAML and CSV
-mkdocs-table-reader-plugin = "~2.0"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
@@ -185,6 +184,8 @@ rich = "~13.3.3"
 selenium = "~4.7.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
+# Rendering of data to Markdown table format
+tabulate = "~0.9.0"
 # Change log management and generation
 towncrier = "~22.12.0"
 # Watch files for celery and mkdocs reload

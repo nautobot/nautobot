@@ -71,6 +71,7 @@ markdown_extensions:
   - "toc":
       permalink: true
   - "attr_list"
+  - "nautobot.docs.include_data_tables"
   - "md_in_html"
   - "pymdownx.details"
   - "pymdownx.highlight":
@@ -95,7 +96,6 @@ plugins:
             heading_level: 1
             show_root_heading: true
             show_root_members_full_path: true
-  - "table-reader"
 
 nav:
   - Overview: "index.md"
