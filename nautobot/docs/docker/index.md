@@ -1,6 +1,9 @@
 # Nautobot Docker Images
 
-Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.7-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
+Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.8-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
+
++/- 2.0.0
+    The base image was changed from `python:3.7-slim` to `python:3.8-slim` due to the end-of-life of Python 3.7.
 
 ## Platforms
 
@@ -28,31 +31,30 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
-| `${NAUTOBOT_VER}`                                             | As specified          | 3.7            | `1.2.7`        |
-| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `1.2.7-py3.8`  |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.7            | `1.2`          |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `1.2-py3.8`    |
-| `stable`                                                      | Latest stable release | 3.7            | `stable`       |
+| `${NAUTOBOT_VER}`                                             | As specified          | 3.8            | `2.0.0`        |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.0.0-py3.8`  |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.8            | `2.0`          |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.0-py3.8`    |
+| `stable`                                                      | Latest stable release | 3.8            | `stable`       |
 | `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.8` |
 
 The following additional tags are only available from the GitHub Container Registry:
 
 | Tag                                                  | Nautobot Branch              | Python Version |
 | ---------------------------------------------------- | ---------------------------- | -------------- |
-| `latest`                                             | `develop`, the latest commit | 3.7            |
+| `latest`                                             | `develop`, the latest commit | 3.8            |
 | `latest-py${PYTHON_VER}`                             | `develop`, the latest commit | As specified   |
-| `develop`                                            | `develop`, the latest commit | 3.7            |
+| `develop`                                            | `develop`, the latest commit | 3.8            |
 | `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
-| `develop-${GIT_SHA:0:7}-$(date +%s)`                 | `develop`, a specific commit | 3.7            |
+| `develop-${GIT_SHA:0:7}-$(date +%s)`                 | `develop`, a specific commit | 3.8            |
 | `develop-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}` | `develop`, a specific commit | As specified   |
-| `next`                                               | `next`, the latest commit    | 3.7            |
+| `next`                                               | `next`, the latest commit    | 3.8            |
 | `next-py${PYTHON_VER}`                               | `next`, the latest commit    | As specified   |
-| `next-${GIT_SHA:0:7}-$(date +%s)`                    | `next`, a specific commit    | 3.7            |
+| `next-${GIT_SHA:0:7}-$(date +%s)`                    | `next`, a specific commit    | 3.8            |
 | `next-${GIT_SHA:0:7}-$(date +%s)-py${PYTHON_VER}`    | `next`, a specific commit    | As specified   |
 
 Currently images are pushed for the following python versions:
 
-* 3.7
 * 3.8
 * 3.9
 * 3.10
@@ -224,7 +226,7 @@ Example output:
 
 ```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
-local/nautobot-dev                               local-py3.7                      0d93eec7dfea   5 minutes ago    1.31GB
+local/nautobot-dev                               local-py3.8                      0d93eec7dfea   5 minutes ago    1.31GB
 ```
 
 If you need to build or test the `final` image, you must set your `invoke.yml` to use `docker-compose.final.yml` in place of `docker-compose.dev.yml`:
@@ -259,7 +261,7 @@ Example output:
 
 ```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
-local/nautobot-final                             local-py3.7                      e03e752fcc6b   27 minutes ago   629MB
+local/nautobot-final                             local-py3.8                      e03e752fcc6b   27 minutes ago   629MB
 ```
 
 Similarly, you can use `docker-compose.final-dev.yml` if you wish to build and test the `final-dev` image.

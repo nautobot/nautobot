@@ -101,7 +101,6 @@ def register_menu_items(tab_list):
 
                 group_perms = set()
                 for item in group.items:
-
                     # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
                     try:
                         item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)

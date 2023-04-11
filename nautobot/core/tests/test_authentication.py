@@ -240,7 +240,6 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.location_type = LocationType.objects.get(name="Campus")
         cls.locations = Location.objects.filter(location_type=cls.location_type)[:3]
 
@@ -268,7 +267,6 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object(self):
-
         # Attempt to retrieve object without permission
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.get(url, **self.header)
@@ -351,7 +349,6 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_edit_object(self):
-
         # Attempt to edit an object without permission
         data = {"location": self.locations[0].pk}
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
@@ -387,7 +384,6 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_delete_object(self):
-
         # Attempt to delete an object without permission
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.delete(url, format="json", **self.header)

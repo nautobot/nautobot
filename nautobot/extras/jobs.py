@@ -760,7 +760,6 @@ class ScriptVariable:
     form_field = forms.CharField
 
     def __init__(self, label="", description="", default=None, required=True, widget=None):
-
         # Initialize field attributes
         if not hasattr(self, "field_attrs"):
             self.field_attrs = {}

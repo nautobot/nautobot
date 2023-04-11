@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0027_remove_rir_slug"),
         ("dcim", "0039_remove_slug"),

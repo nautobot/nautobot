@@ -15,7 +15,6 @@ def clear_location_status(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0013_location_location_type"),
     ]

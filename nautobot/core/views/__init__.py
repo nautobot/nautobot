@@ -111,7 +111,6 @@ class HomeView(AccessMixin, TemplateView):
 
 class SearchView(View):
     def get(self, request):
-
         # No query
         if "q" not in request.GET:
             return render(
@@ -126,7 +125,6 @@ class SearchView(View):
         results = []
 
         if form.is_valid():
-
             # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
             # based on the `app_config.searchable_models` list (if any) defined by each app
             searchable_models = []

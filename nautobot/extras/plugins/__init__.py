@@ -697,7 +697,6 @@ def register_custom_validators(class_list):
 
 
 def register_override_views(override_views, plugin):
-
     validation_error = (
         "Plugin '{}' tried to override view '{}' but did not contain a valid app name "
         "(e.g. `dcim:device`, `plugins:myplugin:myview`)."

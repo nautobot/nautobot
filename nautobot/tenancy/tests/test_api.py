@@ -6,7 +6,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("tenancy-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 

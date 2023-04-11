@@ -5,7 +5,6 @@ import nautobot.core.models.tree_queries
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenancy", "0003_mptt_to_tree_queries"),
     ]

@@ -47,7 +47,6 @@ class TaggedItemTest(APITestCase):
         cls.location_type = LocationType.objects.get(name="Campus")
 
     def test_create_tagged_item(self):
-
         data = {
             "name": "Test Location",
             "slug": "test-location",

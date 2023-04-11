@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.8", "3.9", "3.10" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
@@ -86,10 +86,10 @@ jobs:
             latest=false
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.7 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.8 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.7 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.8 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
@@ -117,10 +117,10 @@ jobs:
             latest=false
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.7 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.8 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.7 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.8 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot

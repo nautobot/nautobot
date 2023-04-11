@@ -729,7 +729,6 @@ class DeviceSerializer(
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
         if data.get("rack") and data.get("position") and data.get("face"):
             validator = UniqueTogetherValidator(
@@ -895,7 +894,6 @@ class PowerPortSerializer(
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     def validate(self, data):
-
         # Validate many-to-many VLAN assignments
         mode = data.get("mode", getattr(self.instance, "mode", None))
 

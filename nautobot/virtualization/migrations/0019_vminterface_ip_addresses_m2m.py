@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0024_interface_to_ipaddress_m2m"),
         ("virtualization", "0018_related_name_changes"),

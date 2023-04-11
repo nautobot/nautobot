@@ -34,7 +34,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
         }
         if request and self.app.conf.find_value_for_key("extended", "result"):
 
-            # do not encode args/kwargs as we store these in a JSONField instead of TextField
+            # Let's not dump/encode args/kwargs at all in fact.
             task_args = getattr(request, "args", None)
             task_kwargs = getattr(request, "kwargs", None)
 
