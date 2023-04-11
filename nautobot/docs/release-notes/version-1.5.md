@@ -148,6 +148,20 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.16 (2023-04-10)
+
+### Added
+
+- [#3557](https://github.com/nautobot/nautobot/issues/3557) - Added docs page for Circuit Maintenance.
+
+### Fixed
+
+- [#2944](https://github.com/nautobot/nautobot/issues/2944) - Fixed slow performance of relationships on ObjectListView.
+- [#3345](https://github.com/nautobot/nautobot/issues/3345) - Fixed missing Relationships in DynamicFilterForm.
+- [#3477](https://github.com/nautobot/nautobot/issues/3477) - Added a note under heading Setting ViewSet Attributes to mention the caveat of not using `slug` or `pk`.
+- [#3502](https://github.com/nautobot/nautobot/issues/3502) - Updated upstream workflow to support testing apps `next-2.0` branches against `next`.
+- [#3550](https://github.com/nautobot/nautobot/issues/3550) - Fixed display name of filtered relationships on ObjectListView.
+
 ## v1.5.15 (2023-04-04)
 
 ### Added

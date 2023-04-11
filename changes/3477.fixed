@@ -1,1 +1,0 @@
-Added a note under heading Setting ViewSet Attributes to mention the caveat of not using `slug` or `pk`. 
