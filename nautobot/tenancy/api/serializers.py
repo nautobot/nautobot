@@ -16,7 +16,6 @@ class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = TenantGroup
         fields = "__all__"
-        extra_fields = ["tenant_count"]
 
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -34,14 +33,3 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Tenant
         fields = "__all__"
-        extra_fields = [
-            "circuit_count",
-            "device_count",
-            "ipaddress_count",
-            "prefix_count",
-            "rack_count",
-            "virtualmachine_count",
-            "vlan_count",
-            "vrf_count",
-            "cluster_count",
-        ]

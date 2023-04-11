@@ -179,10 +179,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 self.extend_field_names(fields, "created")
             if hasattr(self.Meta.model, "last_updated"):
                 self.extend_field_names(fields, "last_updated")
-        # append non-default model api fields to display in Nautobot API
-        # e.g. for annotated fields `circuit_count`, `device_count` and etc.
-        if getattr(self.Meta, "extra_fields", None):
-            return fields + self.Meta.extra_fields
         # This is here for the PolymorphicProxySerializers which
         # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
         if "object_type" not in fields:

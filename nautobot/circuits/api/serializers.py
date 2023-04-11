@@ -23,7 +23,6 @@ class ProviderSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Provider
         fields = "__all__"
-        extra_fields = ["circuit_count"]
 
 
 #
@@ -51,7 +50,6 @@ class CircuitTypeSerializer(NautobotModelSerializer):
     class Meta:
         model = CircuitType
         fields = "__all__"
-        extra_fields = ["circuit_count"]
 
 
 class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):

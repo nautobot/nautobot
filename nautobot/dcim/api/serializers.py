@@ -198,7 +198,6 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = LocationType
         fields = "__all__"
-        extra_fields = ["url"]
 
 
 class LocationSerializer(
@@ -219,15 +218,6 @@ class LocationSerializer(
     class Meta:
         model = Location
         fields = "__all__"
-        extra_fields = [
-            "url",
-            "circuit_count",
-            "device_count",
-            "prefix_count",
-            "rack_count",
-            "virtual_machine_count",
-            "vlan_count",
-        ]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
@@ -254,7 +244,6 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = RackGroup
         fields = "__all__"
-        extra_fields = ["rack_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -288,7 +277,6 @@ class RackSerializer(
     class Meta:
         model = Rack
         fields = "__all__"
-        extra_fields = ["device_count", "power_feed_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
         # This prevents facility_id from being interpreted as a required field.
         validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
@@ -359,11 +347,6 @@ class ManufacturerSerializer(NautobotModelSerializer):
     class Meta:
         model = Manufacturer
         fields = "__all__"
-        extra_fields = [
-            "device_type_count",
-            "inventory_item_count",
-            "platform_count",
-        ]
 
 
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -374,7 +357,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = DeviceType
         fields = "__all__"
-        extra_fields = ["device_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -478,7 +460,6 @@ class PlatformSerializer(NautobotModelSerializer):
     class Meta:
         model = Platform
         fields = "__all__"
-        extra_fields = ["device_count", "virtual_machine_count"]
 
 
 class DeviceSerializer(
@@ -667,7 +648,6 @@ class InterfaceSerializer(
     class Meta:
         model = Interface
         fields = "__all__"
-        extra_fields = ["ip_address_count"]
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments
@@ -938,7 +918,6 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     class Meta:
         model = VirtualChassis
         fields = "__all__"
-        extra_fields = ["member_count"]
 
 
 #
@@ -953,7 +932,6 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = PowerPanel
         fields = "__all__"
-        extra_fields = ["power_feed_count"]
 
 
 class PowerFeedSerializer(

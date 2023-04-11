@@ -56,10 +56,6 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = VRF
         fields = "__all__"
-        extra_fields = [
-            "ipaddress_count",
-            "prefix_count",
-        ]
 
 
 #
@@ -87,7 +83,6 @@ class RIRSerializer(NautobotModelSerializer):
     class Meta:
         model = RIR
         fields = "__all__"
-        extra_fields = ["assigned_prefix_count"]
 
 
 #
@@ -102,7 +97,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
     class Meta:
         model = VLANGroup
         fields = "__all__"
-        extra_fields = ["vlan_count"]
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
 
@@ -127,7 +121,6 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
     class Meta:
         model = VLAN
         fields = "__all__"
-        extra_fields = ["prefix_count"]
         validators = []
 
     def validate(self, data):

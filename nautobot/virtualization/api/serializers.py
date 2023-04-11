@@ -32,7 +32,6 @@ class ClusterTypeSerializer(NautobotModelSerializer):
     class Meta:
         model = ClusterType
         fields = "__all__"
-        extra_fields = ["cluster_count"]
 
 
 class ClusterGroupSerializer(NautobotModelSerializer):
@@ -42,7 +41,6 @@ class ClusterGroupSerializer(NautobotModelSerializer):
     class Meta:
         model = ClusterGroup
         fields = "__all__"
-        extra_fields = ["cluster_count"]
 
 
 class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -53,7 +51,6 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Cluster
         fields = "__all__"
-        extra_fields = ["device_count", "virtualmachine_count"]
 
 
 #
