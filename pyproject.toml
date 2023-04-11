@@ -107,6 +107,8 @@ netaddr = "~0.8.0"
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
 netutils = "^1.4.1"
+# Handling of version numbers
+packaging = "~23.0"
 # Image processing library
 Pillow = "~9.5.0"
 # Custom prometheus metrics
