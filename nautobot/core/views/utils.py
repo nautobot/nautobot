@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_form_for_model
 
 
@@ -156,34 +157,3 @@ def prepare_cloned_fields(instance):
     param_string = "&".join([f"{k}={v}" for k, v in params])
 
     return param_string
-
-
-def get_filter_field_label(filter_field):
-    """
-    Return a label for a given field name and value.
-
-    Args:
-        field (Filter): The filter to get a label for
-
-    Returns:
-        (str): The label for the given field
-    """
-
-    if filter_field.label:
-        return filter_field.label
-    elif hasattr(filter_field, "relationship"):
-        return filter_field.relationship.get_label(side=filter_field.side)
-    elif hasattr(filter_field, "custom_field"):
-        return filter_field.custom_field.label
-    else:
-        return _field_name_to_display(filter_field.field_name)
-
-
-def _field_name_to_display(field_name):
-    """
-    Return a more human readable version of a field name.
-    """
-    field_name = field_name.replace("_custom_field_data__", "")
-    split_field = field_name.split("__") if "__" in field_name else field_name.split("_")
-    words = " ".join(split_field)
-    return words[0].upper() + words[1:]

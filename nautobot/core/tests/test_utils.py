@@ -20,6 +20,7 @@ from nautobot.dcim import models as dcim_models
 from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
+from nautobot.extras.choices import RelationshipTypeChoices
 
 
 class DictToFilterParamsTest(TestCase):
@@ -376,17 +377,17 @@ class LookupRelatedFunctionTest(TestCase):
         """
         Assert that is_single_choice_field() correctly distinguishes between single-value and multi-value filter fields.
         """
-        filterset_class = dcim_filters.LocationFilterSet
+        location_filterset = dcim_filters.LocationFilterSet()
 
         single_choice_fields = ("has_vlans", "has_clusters")
         for field in single_choice_fields:
             with self.subTest(f"Single choice field: {field}"):
-                self.assertTrue(requests.is_single_choice_field(filterset_class, field))
+                self.assertTrue(requests.is_single_choice_field(location_filterset, field))
 
         multi_choice_fields = ("created", "status", "tenant", "tags")
         for field in multi_choice_fields:
             with self.subTest(f"Multi choice field: {field}"):
-                self.assertFalse(requests.is_single_choice_field(filterset_class, field))
+                self.assertFalse(requests.is_single_choice_field(location_filterset, field))
 
     def test_build_lookup_label(self):
         with self.subTest():
@@ -422,13 +423,14 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(str(err.exception), "field_name not found")
 
     def test_get_filterset_field(self):
+        location_filterset = dcim_filters.LocationFilterSet()
         with self.subTest():
-            field = filtering.get_filterset_field(dcim_filters.LocationFilterSet, "name")
-            self.assertEqual(field.__class__, dcim_filters.LocationFilterSet().filters.get("name").__class__)
+            field = filtering.get_filterset_field(location_filterset, "name")
+            self.assertEqual(field.__class__, location_filterset.filters.get("name").__class__)
 
         with self.subTest("Test invalid field"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_filterset_field(dcim_filters.LocationFilterSet, "unknown")
+                filtering.get_filterset_field(location_filterset, "unknown")
             self.assertEqual(str(err.exception), "unknown is not a valid LocationFilterSet field")
 
     def test_get_filterset_parameter_form_field(self):
@@ -647,3 +649,67 @@ class NautobotFakeRequestTest(testing.TestCase):
         # It should then be cached and not require re-lookup from the DB
         with self.assertNumQueries(0):
             new_fake_request.user
+
+
+class GetFilterFieldLabelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        device_ct = ContentType.objects.get_for_model(dcim_models.Device)
+        cls.peer_relationship = extras_models.Relationship(
+            name="HA Device Peer",
+            slug="ha_device_peer",
+            source_type=device_ct,
+            destination_type=device_ct,
+            source_label="Peer",
+            destination_label="Peer",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+        cls.peer_relationship.validated_save()
+
+        cls.custom_field = extras_models.CustomField(key="labeled_custom_field", label="Moo!", type="text")
+        cls.custom_field.validated_save()
+        cls.custom_field.content_types.add(device_ct)
+
+    def test_get_filter_field_label(self):
+        """Validate the operation of get_filter_field_label()."""
+
+        device_filter_set_filters = dcim_filters.DeviceFilterSet().filters
+
+        with self.subTest("Simple field name"):
+            self.assertEqual(filtering.get_filter_field_label(device_filter_set_filters["id"]), "Id")
+
+        with self.subTest("Semi-complex field name"):
+            self.assertEqual(
+                filtering.get_filter_field_label(device_filter_set_filters["has_interfaces"]), "Has interfaces"
+            )
+
+        with self.subTest("Relationship field name"):
+            self.assertEqual(
+                filtering.get_filter_field_label(device_filter_set_filters[f"cr_{self.peer_relationship.slug}__peer"]),
+                self.peer_relationship.source_label,
+            )
+
+        with self.subTest("Custom field with label"):
+            self.assertEqual(
+                filtering.get_filter_field_label(device_filter_set_filters[f"cf_{self.custom_field.key}"]),
+                "Moo!",
+            )
+
+
+class FieldNameToDisplayTest(TestCase):
+    def test__field_name_to_display(self):
+        """Validate the operation of _field_name_to_display()."""
+
+        with self.subTest("id => Id"):
+            self.assertEqual(filtering._field_name_to_display("id"), "Id")
+
+        with self.subTest("device_type => Device Type"):
+            self.assertEqual(filtering._field_name_to_display("device_type"), "Device type")
+
+        with self.subTest("_custom_field_data__site_type => Site Type"):
+            self.assertEqual(filtering._field_name_to_display("_custom_field_data__site_type"), "Site type")
+
+        with self.subTest("cr_sister_sites__peer => Peer"):
+            # This shouldn't ever be an input because get_filter_field_label
+            # will use the label from the custom field instead of the field name
+            self.assertEqual(filtering._field_name_to_display("cr_sister_sites__peer"), "Cr_sister_sites peer")
