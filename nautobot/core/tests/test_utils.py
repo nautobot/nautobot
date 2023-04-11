@@ -508,6 +508,8 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(form_field.queryset.count(), extras_utils.ChangeLoggedModelsQuery().as_queryset().count())
 
     def test_convert_querydict_to_factory_formset_dict(self):
+        location_filter_set = dcim_filters.LocationFilterSet()
+
         with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):
             request_querydict = QueryDict(mutable=True)
             request_querydict.setlistdefault("status", ["active", "decommissioning"])
@@ -516,7 +518,7 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict.setlistdefault("name__iew", [""])  # Should be ignored since it has no value
 
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.LocationFilterSet
+                request_querydict, location_filter_set
             )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
@@ -536,7 +538,7 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict = QueryDict(mutable=True)
 
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.LocationFilterSet
+                request_querydict, location_filter_set
             )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
@@ -552,7 +554,7 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict.setlistdefault("q", "location")  # Should be ignored
 
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.LocationFilterSet
+                request_querydict, location_filter_set
             )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
@@ -571,8 +573,9 @@ class LookupRelatedFunctionTest(TestCase):
         filter_params.setlistdefault("status", ["active", "planned"])
 
         non_filter_params = ["page", "per_page"]
-        filterset_class = dcim_filters.LocationFilterSet
-        data = requests.get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
+        data = requests.get_filterable_params_from_filter_params(
+            filter_params, non_filter_params, dcim_filters.LocationFilterSet()
+        )
 
         self.assertEqual(data, {"name": ["Location 1"], "status": ["active", "planned"]})
 

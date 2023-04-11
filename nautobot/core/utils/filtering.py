@@ -64,6 +64,13 @@ def get_all_lookup_expr_for_field(model, field_name):
                     "name": build_lookup_label(name, field.lookup_expr),
                 }
             )
+        elif name == field_name and not name.startswith("has_"):
+            lookup_expr_choices.append(
+                {
+                    "id": name,
+                    "name": "exact",
+                }
+            )
 
     return lookup_expr_choices
 

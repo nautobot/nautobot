@@ -38,11 +38,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
         factory_formset_params = {}
+        filterset = None
         if filterset_class:
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, filterset_class
-            )
-        return DynamicFilterFormSet(filterset_class=view.filterset_class, data=factory_formset_params)
+            filterset = filterset_class()
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+        return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
@@ -158,7 +158,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if view.action == "list":
                 if view.filterset_class is not None:
                     view.queryset = view.filter_queryset(view.get_queryset())
-                    filterset_filters = view.filterset.get_filters()
+                    if view.filterset is not None:
+                        filterset_filters = view.filterset.filters
+                    else:
+                        filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
