@@ -45,8 +45,7 @@ def run_job_for_testing(job, username="test-user", **kwargs):
 
     Args:
       job (Job): Job model instance (not Job class) to run
-      username (str): Username of existing or to-be-created User account to own the JobResult. Ignored if `request.user`
-        exists.
+      username (str): Username of existing or to-be-created User account to own the JobResult.
       **kwargs: Input keyword arguments for Job run method.
 
     Returns:
