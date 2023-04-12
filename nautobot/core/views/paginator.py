@@ -24,7 +24,6 @@ class EnhancedPaginator(Paginator):
 
 class EnhancedPage(Page):
     def smart_pages(self):
-
         # When dealing with five or fewer pages, simply return the whole list.
         if self.paginator.num_pages <= 5:
             return self.paginator.page_range

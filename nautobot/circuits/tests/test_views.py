@@ -18,7 +18,6 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.form_data = {
             "name": "Provider X",
             "asn": 65123,

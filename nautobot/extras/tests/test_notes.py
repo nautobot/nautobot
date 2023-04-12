@@ -15,7 +15,6 @@ class NoteModelTest(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         location_ct = ContentType.objects.get_for_model(Location)
 
         user = User.objects.first()

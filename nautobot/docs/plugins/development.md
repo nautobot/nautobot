@@ -84,7 +84,7 @@ Version [0.1.0]:
 Description []:  An example Nautobot app
 Author [, n to skip]:  Bob Jones
 License []:  Apache 2.0
-Compatible Python versions [^3.8]:  ^3.7
+Compatible Python versions [^3.8]:  ^3.8
 
 Would you like to define your main dependencies interactively? (yes/no) [yes] no
 Would you like to define your development dependencies interactively? (yes/no) [yes] no
@@ -98,7 +98,7 @@ authors = ["Bob Jones"]
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 
@@ -1047,6 +1047,9 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
     lookup_field = "pk"
     ...
 ```
+
+!!! note
+    Using a field other than the default `slug` or the alternative field `pk` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id.
 
 #### View Template Context
 

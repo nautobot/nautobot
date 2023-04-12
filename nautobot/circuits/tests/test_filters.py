@@ -34,7 +34,6 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = Provider.objects.all()[:2]
         providers[0].tags.set(Tag.objects.get_for_model(Provider))
         circuit_types = CircuitType.objects.all()[:2]

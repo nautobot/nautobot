@@ -2657,7 +2657,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(name="Connected")
         )
 
-        url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
+        url = reverse("dcim:powerfeed", kwargs={"pk": powerfeed.pk})
         self.assertHttpStatus(self.client.get(url), 200)
 
 

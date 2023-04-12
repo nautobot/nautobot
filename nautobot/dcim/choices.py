@@ -7,7 +7,6 @@ from nautobot.core.choices import ChoiceSet
 
 
 class LocationStatusChoices(ChoiceSet):
-
     STATUS_PLANNED = "planned"
     STATUS_STAGING = "staging"
     STATUS_ACTIVE = "active"
@@ -29,7 +28,6 @@ class LocationStatusChoices(ChoiceSet):
 
 
 class RackTypeChoices(ChoiceSet):
-
     TYPE_2POST = "2-post-frame"
     TYPE_4POST = "4-post-frame"
     TYPE_CABINET = "4-post-cabinet"
@@ -52,7 +50,6 @@ class RackTypeChoices(ChoiceSet):
 
 
 class RackWidthChoices(ChoiceSet):
-
     WIDTH_10IN = 10
     WIDTH_19IN = 19
     WIDTH_21IN = 21
@@ -67,7 +64,6 @@ class RackWidthChoices(ChoiceSet):
 
 
 class RackStatusChoices(ChoiceSet):
-
     STATUS_RESERVED = "reserved"
     STATUS_AVAILABLE = "available"
     STATUS_PLANNED = "planned"
@@ -84,7 +80,6 @@ class RackStatusChoices(ChoiceSet):
 
 
 class RackDimensionUnitChoices(ChoiceSet):
-
     UNIT_MILLIMETER = "mm"
     UNIT_INCH = "in"
 
@@ -95,7 +90,6 @@ class RackDimensionUnitChoices(ChoiceSet):
 
 
 class RackElevationDetailRenderChoices(ChoiceSet):
-
     RENDER_JSON = "json"
     RENDER_SVG = "svg"
 
@@ -108,7 +102,6 @@ class RackElevationDetailRenderChoices(ChoiceSet):
 
 
 class SubdeviceRoleChoices(ChoiceSet):
-
     ROLE_PARENT = "parent"
     ROLE_CHILD = "child"
 
@@ -124,7 +117,6 @@ class SubdeviceRoleChoices(ChoiceSet):
 
 
 class DeviceFaceChoices(ChoiceSet):
-
     FACE_FRONT = "front"
     FACE_REAR = "rear"
 
@@ -135,7 +127,6 @@ class DeviceFaceChoices(ChoiceSet):
 
 
 class DeviceStatusChoices(ChoiceSet):
-
     STATUS_OFFLINE = "offline"
     STATUS_ACTIVE = "active"
     STATUS_PLANNED = "planned"
@@ -161,7 +152,6 @@ class DeviceStatusChoices(ChoiceSet):
 
 
 class ConsolePortTypeChoices(ChoiceSet):
-
     TYPE_DE9 = "de-9"
     TYPE_DB25 = "db-25"
     TYPE_RJ11 = "rj-11"
@@ -213,7 +203,6 @@ class ConsolePortTypeChoices(ChoiceSet):
 
 
 class PowerPortTypeChoices(ChoiceSet):
-
     # IEC 60320
     TYPE_IEC_C6 = "iec-60320-c6"
     TYPE_IEC_C8 = "iec-60320-c8"
@@ -474,7 +463,6 @@ class PowerPortTypeChoices(ChoiceSet):
 
 
 class PowerOutletTypeChoices(ChoiceSet):
-
     # IEC 60320
     TYPE_IEC_C5 = "iec-60320-c5"
     TYPE_IEC_C7 = "iec-60320-c7"
@@ -716,7 +704,6 @@ class PowerOutletTypeChoices(ChoiceSet):
 
 
 class PowerOutletFeedLegChoices(ChoiceSet):
-
     FEED_LEG_A = "A"
     FEED_LEG_B = "B"
     FEED_LEG_C = "C"
@@ -734,7 +721,6 @@ class PowerOutletFeedLegChoices(ChoiceSet):
 
 
 class InterfaceTypeChoices(ChoiceSet):
-
     # Virtual
     TYPE_VIRTUAL = "virtual"
     TYPE_BRIDGE = "bridge"
@@ -1038,7 +1024,6 @@ class InterfaceTypeChoices(ChoiceSet):
 
 
 class InterfaceModeChoices(ChoiceSet):
-
     MODE_ACCESS = "access"
     MODE_TAGGED = "tagged"
     MODE_TAGGED_ALL = "tagged-all"
@@ -1051,7 +1036,6 @@ class InterfaceModeChoices(ChoiceSet):
 
 
 class InterfaceStatusChoices(ChoiceSet):
-
     STATUS_PLANNED = "planned"
     STATUS_ACTIVE = "active"
     STATUS_DECOMMISSIONING = "decommissioning"
@@ -1073,7 +1057,6 @@ class InterfaceStatusChoices(ChoiceSet):
 
 
 class PortTypeChoices(ChoiceSet):
-
     TYPE_8P8C = "8p8c"
     TYPE_8P6C = "8p6c"
     TYPE_8P4C = "8p4c"
@@ -1181,7 +1164,6 @@ class PortTypeChoices(ChoiceSet):
 
 
 class CableTypeChoices(ChoiceSet):
-
     TYPE_CAT3 = "cat3"
     TYPE_CAT5 = "cat5"
     TYPE_CAT5E = "cat5e"
@@ -1244,7 +1226,6 @@ class CableTypeChoices(ChoiceSet):
 
 
 class CableStatusChoices(ChoiceSet):
-
     STATUS_CONNECTED = "connected"
     STATUS_PLANNED = "planned"
     STATUS_DECOMMISSIONING = "decommissioning"
@@ -1257,7 +1238,6 @@ class CableStatusChoices(ChoiceSet):
 
 
 class CableLengthUnitChoices(ChoiceSet):
-
     # Metric
     UNIT_KILOMETER = "km"
     UNIT_METER = "m"
@@ -1284,7 +1264,6 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 class PowerFeedStatusChoices(ChoiceSet):
-
     STATUS_OFFLINE = "offline"
     STATUS_ACTIVE = "active"
     STATUS_PLANNED = "planned"
@@ -1299,7 +1278,6 @@ class PowerFeedStatusChoices(ChoiceSet):
 
 
 class PowerFeedTypeChoices(ChoiceSet):
-
     TYPE_PRIMARY = "primary"
     TYPE_REDUNDANT = "redundant"
 
@@ -1315,7 +1293,6 @@ class PowerFeedTypeChoices(ChoiceSet):
 
 
 class PowerFeedSupplyChoices(ChoiceSet):
-
     SUPPLY_AC = "ac"
     SUPPLY_DC = "dc"
 
@@ -1326,7 +1303,6 @@ class PowerFeedSupplyChoices(ChoiceSet):
 
 
 class PowerFeedPhaseChoices(ChoiceSet):
-
     PHASE_SINGLE = "single-phase"
     PHASE_3PHASE = "three-phase"
 
@@ -1342,7 +1318,6 @@ class PowerFeedPhaseChoices(ChoiceSet):
 
 
 class DeviceRedundancyGroupStatusChoices(ChoiceSet):
-
     STATUS_PLANNED = "planned"
     STATUS_STAGING = "staging"
     STATUS_ACTIVE = "active"

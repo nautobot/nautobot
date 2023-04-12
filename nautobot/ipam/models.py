@@ -363,7 +363,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         if self.prefix:
-
             # /0 masks are not acceptable
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
@@ -377,16 +376,13 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
                 )
 
     def save(self, *args, **kwargs):
-
         if isinstance(self.prefix, netaddr.IPNetwork):
-
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
@@ -680,7 +676,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         super().clean()
 
         if self.address:
-
             # /0 masks are not acceptable
             if self.address.prefixlen == 0:
                 raise ValidationError({"address": "Cannot create IP address with /0 mask."})
@@ -723,7 +718,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         self.dns_name = self.dns_name.lower()
 
     def to_csv(self):
-
         # Determine if this IP is primary for a Device
         is_primary = False
         if self.address.version == 4 and getattr(self, "primary_ip4_for", False):
@@ -880,7 +874,6 @@ class VLANGroup(OrganizationalModel):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
@@ -1002,7 +995,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}

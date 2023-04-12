@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0058_joblogentry_scheduledjob_webhook_data_migration"),
     ]

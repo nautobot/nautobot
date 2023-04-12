@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0013_location_location_type"),
         ("extras", "0037_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),

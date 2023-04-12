@@ -224,7 +224,6 @@ class ModelViewSetMixin:
         return obj
 
     def get_serializer(self, *args, **kwargs):
-
         # If a list of objects has been provided, initialize the serializer with many=True
         if isinstance(kwargs.get("data", {}), list):
             kwargs["many"] = True
@@ -232,7 +231,6 @@ class ModelViewSetMixin:
         return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
-
         # If using 'brief' mode, find and return the nested serializer for this model, if one exists
         if self.brief:
             self.logger.debug("Request is for 'brief' format; initializing nested serializer")
@@ -383,7 +381,6 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-
         return Response(
             OrderedDict(
                 (

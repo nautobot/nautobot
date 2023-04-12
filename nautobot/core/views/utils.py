@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_form_for_model
 
 
@@ -37,13 +38,16 @@ def check_filter_for_display(filters, field_name, values):
     if field_name not in filters.keys():
         return resolved_filter
 
-    resolved_filter["display"] = filters[field_name].label or field_name
-    if len(values) == 0 or not hasattr(filters[field_name], "queryset") or not is_uuid(values[0]):
+    filter_field = filters[field_name]
+
+    resolved_filter["display"] = get_filter_field_label(filter_field)
+
+    if len(values) == 0 or not hasattr(filter_field, "queryset") or not is_uuid(values[0]):
         return resolved_filter
     else:
         try:
             new_values = []
-            for value in filters[field_name].queryset.filter(pk__in=values):
+            for value in filter_field.queryset.filter(pk__in=values):
                 new_values.append({"name": str(value.pk), "display": getattr(value, "display", str(value))})
             resolved_filter["values"] = new_values
         except (FieldError, AttributeError):
@@ -58,7 +62,6 @@ def csv_format(data):
     """
     csv = []
     for value in data:
-
         # Represent None or False with empty string
         if value is None or value is False:
             csv.append("")

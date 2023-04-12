@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0008_prefix_vlan_vlangroup_location"),
     ]

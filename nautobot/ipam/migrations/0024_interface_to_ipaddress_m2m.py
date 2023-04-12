@@ -6,7 +6,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0036_remove_region_and_site"),
         ("virtualization", "0018_related_name_changes"),

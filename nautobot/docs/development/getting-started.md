@@ -543,7 +543,7 @@ Example output:
 # Django version 3.2.16
 # Nautobot version 2.0.0a0
 # Example Nautobot App version 1.0.0
-Python 3.7.13 (default, May 11 2022, 08:57:12)
+Python 3.8.16 (default, Mar 23 2023, 04:48:11)
 [GCC 10.2.1 20210110] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)

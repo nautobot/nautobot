@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0013_location_location_type"),
         ("ipam", "0007_add_natural_indexing"),

@@ -7,11 +7,8 @@ from nautobot.dcim.models import DeviceRedundancyGroup
 
 
 class CheckFilterForDisplayTest(TestCase):
-    """
-    Validate the operation of check_filter_for_display().
-    """
-
     def test_check_filter_for_display(self):
+        """Validate the operation of check_filter_for_display()."""
 
         device_filter_set_filters = DeviceFilterSet().get_filters()
 
@@ -42,7 +39,7 @@ class CheckFilterForDisplayTest(TestCase):
         with self.subTest("Test get field label, none exists (fallback)"):
             expected_output = {
                 "name": "id",
-                "display": "id",
+                "display": "Id",
                 "values": [{"name": "example_field_value", "display": "example_field_value"}],
             }
 
@@ -98,6 +95,6 @@ class CheckFilterForDisplayTest(TestCase):
         #         "values": [{"name": "fake_slug", "display": "fake_slug"}],
         #     }
 
-        #     self.assertEqual(
-        #         check_filter_for_display(device_filter_set_filters, "manufacturer", ["fake_slug"]), expected_output
-        #     )
+        # with self.assertEqual(
+        #     check_filter_for_display(device_filter_set_filters, "manufacturer", ["fake_slug"]), expected_output
+        # )
