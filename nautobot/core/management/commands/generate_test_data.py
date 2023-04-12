@@ -61,6 +61,7 @@ class Command(BaseCommand):
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
+                NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
@@ -100,6 +101,8 @@ class Command(BaseCommand):
         LocationFactory.create_batch(7, has_parent=True)
         LocationFactory.create_batch(40)
         LocationFactory.create_batch(10, has_parent=False)
+        self.stdout.write("Creating Namespaces...")
+        NamespaceFactory.create_batch(1)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
