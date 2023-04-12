@@ -773,5 +773,11 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         except FilterSetFieldNotFound:
             return Response("field_name not found", 404)
 
+        print(" \n\n\n=====>",)
+        print(model_form)
+        print(form_field)
+        print(" \n\n\n=====>")
+
+
         field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
         return Response({"dom_element": field_dom_representation})
