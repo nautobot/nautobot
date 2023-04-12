@@ -290,10 +290,10 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.data,
+                    job_result.result,
                 )
                 self.repo.refresh_from_db()
-                self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, job_result.data)
+                self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, job_result.result)
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -359,7 +359,7 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.data,
+                    job_result.result,
                 )
                 self.repo.refresh_from_db()
                 MockGitRepo.assert_called_with(
@@ -383,7 +383,7 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.data,
+                    job_result.result,
                 )
 
                 # Make sure explicit ConfigContext was successfully loaded from file
@@ -419,7 +419,7 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.data,
+                    job_result.result,
                 )
 
                 # Verify that objects have been removed from the database
@@ -508,7 +508,7 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_FAILURE,
-                    job_result.data,
+                    job_result.result,
                 )
 
                 # Check for specific log messages
@@ -629,7 +629,7 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.data,
+                    job_result.result,
                 )
 
                 # Make sure ConfigContext was successfully loaded from file
@@ -720,7 +720,7 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.data)
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.result)
 
                 MockGitRepo.return_value.checkout.assert_not_called()
                 MockGitRepo.assert_called_with(

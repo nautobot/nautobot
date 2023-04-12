@@ -23,7 +23,7 @@ class GitRepositoryPullAndRefreshData(Job):
         has_sensitive_variables = False
 
     def run(self, repository):
-        job_result = self.get_job_result()
+        job_result = self.job_result
         user = job_result.user
 
         job_result.log(
@@ -56,7 +56,7 @@ class GitRepositoryDiffOriginalAndLocal(Job):
         has_sensitive_variables = False
 
     def run(self, repository):
-        job_result = self.get_job_result()
+        job_result = self.job_result
         job_result.log(f'Performing a Dry Run on Git repository "{repository.name}"...', logger=self.logger)
 
         try:
