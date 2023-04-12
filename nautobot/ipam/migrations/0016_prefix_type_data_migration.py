@@ -8,7 +8,6 @@ from nautobot.ipam import choices
 
 
 def set_prefix_type(apps, schema_editor):
-
     Prefix = apps.get_model("ipam", "Prefix")
     Status = apps.get_model("extras", "Status")
     ContentType = apps.get_model("contenttypes", "ContentType")
@@ -43,7 +42,6 @@ def set_prefix_type(apps, schema_editor):
 
 
 def revert_prefix_type(apps, schema_editor):
-
     Prefix = apps.get_model("ipam", "Prefix")
     Status = apps.get_model("extras", "Status")
     ContentType = apps.get_model("contenttypes", "ContentType")
@@ -66,7 +64,6 @@ def revert_prefix_type(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0015_prefix_add_type"),
     ]

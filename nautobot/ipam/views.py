@@ -158,7 +158,6 @@ class RIRView(generic.ObjectView):
     queryset = RIR.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Prefixes
         assigned_prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
 
@@ -475,7 +474,6 @@ class IPAddressEditView(generic.ObjectEditView):
     template_name = "ipam/ipaddress_edit.html"
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
-
         # TODO: update to work with interface M2M
         if "interface" in request.GET:
             try:
@@ -501,7 +499,6 @@ class IPAddressAssignView(generic.ObjectView):
     queryset = IPAddress.objects.all()
 
     def dispatch(self, request, *args, **kwargs):
-
         # Redirect user if an interface has not been provided
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect("ipam:ipaddress_add")
@@ -525,7 +522,6 @@ class IPAddressAssignView(generic.ObjectView):
         table = None
 
         if form.is_valid():
-
             addresses = self.queryset.select_related("vrf", "tenant")
             # Limit to 100 results
             addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]

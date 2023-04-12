@@ -195,7 +195,6 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_annotation_same_as_get_for_object_device_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
@@ -228,7 +227,6 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
@@ -1421,7 +1419,6 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         )
 
     def test_log_entry_creation(self):
-
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
             job_result=self.job_result,

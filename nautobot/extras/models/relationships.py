@@ -174,7 +174,6 @@ class RelationshipModel(models.Model):
         }
         for side, relationships in relationships_by_side.items():
             for relationship, queryset in relationships.items():
-
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
 
                 resp[side][relationship] = {
@@ -238,7 +237,6 @@ class RelationshipModel(models.Model):
         required_relationships = Relationship.objects.get_required_for_model(cls)
         relationships_field_errors = {}
         for relation in required_relationships:
-
             opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
 
             if relation.skip_required(cls, opposite_side):
@@ -269,7 +267,6 @@ class RelationshipModel(models.Model):
             field_errors = {field_key: []}
 
             if not required_model_class.objects.exists():
-
                 hint = (
                     f"You need to create {num_required_verbose} {required_model_meta.verbose_name} "
                     f"before instantiating a {cls._meta.verbose_name}."
@@ -300,7 +297,6 @@ class RelationshipModel(models.Model):
                 field_errors[field_key].append(error_message)
 
             if initial_data is not None:
-
                 supplied_data = []
 
                 if output_for == "ui":
@@ -350,7 +346,6 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-
     name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
     slug = AutoSlugField(
         populate_from="name",
@@ -548,7 +543,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             queryset = None
 
         field_class = None
-        if queryset:
+        if queryset is not None:
             if self.has_many(peer_side):
                 field_class = DynamicModelMultipleChoiceField
             else:
@@ -567,7 +562,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         return field
 
     def clean(self):
-
         # Check if source and destination filters are valid
         for side in ["source", "destination"]:
             if not getattr(self, f"{side}_filter"):
@@ -762,7 +756,6 @@ class RelationshipAssociation(BaseModel):
         return None
 
     def clean(self):
-
         if self.source_type != self.relationship.source_type:
             raise ValidationError(
                 {"source_type": f"source_type has a different value than defined in {self.relationship}"}

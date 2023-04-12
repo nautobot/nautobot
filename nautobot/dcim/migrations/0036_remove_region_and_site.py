@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("circuits", "0011_remove_site_foreign_key_from_circuit_termination_class"),
         ("dcim", "0035_related_name_changes"),

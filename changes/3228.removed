@@ -1,2 +1,2 @@
 Removed atomic transaction from Jobs.
-Removed support for test_* and post_run methods in Jobs.
+Removed support for `test_*` and `post_run` methods in Jobs.

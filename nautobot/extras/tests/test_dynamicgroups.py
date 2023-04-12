@@ -590,10 +590,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         with self.assertRaises(ValidationError):
             parent.children.add(
                 child,
-                through_defaults=dict(
-                    operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
-                    weight=10,
-                ),
+                through_defaults={"operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE, "weight": 10},
             )
 
     def test_remove_child(self):

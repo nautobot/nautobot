@@ -38,13 +38,11 @@ class WebRequestContextTestCase(TestCase):
         app.control.purge()  # Begin each test with an empty queue
 
     def test_user_object_type_error(self):
-
         with self.assertRaises(TypeError):
             with web_request_context("a string is not a user object"):
                 pass
 
     def test_change_log_created(self):
-
         with web_request_context(self.user):
             location_type = LocationType.objects.get(name="Campus")
             location = Location(name="Test Location 1", location_type=location_type)
@@ -57,7 +55,6 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
     def test_change_log_context(self):
-
         with web_request_context(self.user, context_detail="test_change_log_context"):
             location_type = LocationType.objects.get(name="Campus")
             location = Location(name="Test Location 1", location_type=location_type)

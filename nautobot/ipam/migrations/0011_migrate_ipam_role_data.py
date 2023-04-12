@@ -50,7 +50,6 @@ def reverse_role_data_migrate(apps, schema):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0010_alter_ipam_role_add_new_role"),
     ]

@@ -58,10 +58,10 @@ from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, Wh
 from django.utils import timezone
 from django.urls import reverse
 from django.db.models import Exists, OuterRef, Subquery
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 3.2.18
+# Nautobot version 2.0.0a2
 # Example Nautobot App version 1.0.0
-Python 3.7.13 (default, May 11 2022, 08:57:12)
+Python 3.8.16 (default, Mar 23 2023, 04:48:11)
 [GCC 10.2.1 20210110] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)

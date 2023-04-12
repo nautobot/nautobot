@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("example_plugin", "0003_anotherexamplemodel__custom_field_data"),
     ]

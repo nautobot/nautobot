@@ -109,7 +109,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.browser.find_by_xpath(f"//button[text()='{button_text}']").first.click()
 
         if self.browser.is_text_present("Please enter a correct username and password."):
-            raise Exception(f"Unable to login in with username {username}")
+            self.fail(f"Unable to login in with username {username}")
 
     def logout(self):
         self.browser.visit(f"{self.live_server_url}/logout")

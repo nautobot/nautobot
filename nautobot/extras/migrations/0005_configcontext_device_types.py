@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0004_initial_part_4"),
         ("extras", "0004_populate_default_status_records"),

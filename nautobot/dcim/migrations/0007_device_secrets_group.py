@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0016_secret"),
         ("dcim", "0006_auto_slug"),

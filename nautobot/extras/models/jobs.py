@@ -728,11 +728,13 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def apply_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
         a limitation in Celery where some of the fields in the job result are not updated when running synchronously so
-        they are extracted from the returned EagerResult.
+        they are added here.
+
+        Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` should be used instead.
 
         Args:
             job_model (Job): The Job to be enqueued for execution
@@ -767,6 +769,8 @@ class JobResult(BaseModel, CustomFieldModel):
         job_result.status = eager_result.status
         job_result.result = eager_result.result
         job_result.traceback = eager_result.traceback
+        # user must be re-added because celery Task.apply() does not keep track of properties like apply_async()
+        job_result.user = user
         job_result.worker = eager_result.worker
         job_result.save()
         return job_result
@@ -798,14 +802,12 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is None:
             celery_kwargs = {}
 
+        celery_kwargs["user_id"] = getattr(user, "pk", None)
+
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:
             celery_kwargs["time_limit"] = job_model.time_limit
-
-        # Set argsrepr and kwargsrepr to sanitize sensitive variables
-        if job_model.has_sensitive_variables:
-            celery_kwargs.update({"argsrepr": [], "kwargsrepr": {}})
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
         transaction.on_commit(
@@ -834,7 +836,7 @@ class JobResult(BaseModel, CustomFieldModel):
         logger (logging.logger): Optional logger to also output the message to
         """
         if level_choice not in LogLevelChoices.as_dict():
-            raise Exception(f"Unknown logging level: {level_choice}")
+            raise ValueError(f"Unknown logging level: {level_choice}")
 
         message = sanitize(str(message))
 

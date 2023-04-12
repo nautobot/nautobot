@@ -13,7 +13,6 @@ class IPAddressQuerySet(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.queryset.delete()
 
         cls.ips = {
@@ -436,7 +435,6 @@ class PrefixQuerysetTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.queryset.delete()
 
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"))

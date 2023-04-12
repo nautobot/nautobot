@@ -1,2 +1,0 @@
-Removed all remaining instances of `block sidebar` from page templates (`aggregate_list.html` and `objectchange_list.html`).
-Removed documentation about `block sidebar` from `docs/development/templates.md`.

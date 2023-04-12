@@ -6,7 +6,6 @@ import nautobot.extras.models.statuses
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0033_add__optimized_indexing"),
         ("virtualization", "0005_add_natural_indexing"),

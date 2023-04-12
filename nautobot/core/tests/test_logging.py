@@ -3,7 +3,6 @@ from nautobot.core.utils import logging
 
 
 class LoggingUtilitiesTest(testing.TestCase):
-
     DIRTY_CLEAN = (
         # should match first default pattern
         ("http://user:password@localhost", "http://(redacted)@localhost"),

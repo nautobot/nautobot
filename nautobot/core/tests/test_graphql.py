@@ -118,7 +118,6 @@ class GraphQLTestCase(TestCase):
 
 class GraphQLUtilsTestCase(TestCase):
     def test_str_to_var_name(self):
-
         self.assertEqual(str_to_var_name("IP Addresses"), "ip_addresses")
         self.assertEqual(str_to_var_name("My New VAR"), "my_new_var")
         self.assertEqual(str_to_var_name("My-VAR"), "my_var")
@@ -126,14 +125,12 @@ class GraphQLUtilsTestCase(TestCase):
 
 class GraphQLGenerateSchemaTypeTestCase(TestCase):
     def test_model_w_filterset(self):
-
         schema = generate_schema_type(app_name="dcim", model=Device)
         self.assertEqual(schema.__bases__[0], DjangoObjectType)
         self.assertEqual(schema._meta.model, Device)
         self.assertEqual(schema._meta.filterset_class, DeviceFilterSet)
 
     def test_model_wo_filterset(self):
-
         schema = generate_schema_type(app_name="wrong_app", model=ChangeLoggedModel)
         self.assertEqual(schema.__bases__[0], DjangoObjectType)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
@@ -142,7 +139,6 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
 
 class GraphQLExtendSchemaType(TestCase):
     def setUp(self):
-
         self.datas = (
             {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
             {
@@ -180,7 +176,6 @@ class GraphQLExtendSchemaType(TestCase):
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX="pr")
     def test_extend_custom_field_w_prefix(self):
-
         schema = extend_schema_type_custom_field(self.schema, Location)
 
         for data in self.datas:
@@ -189,7 +184,6 @@ class GraphQLExtendSchemaType(TestCase):
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX="")
     def test_extend_custom_field_wo_prefix(self):
-
         schema = extend_schema_type_custom_field(self.schema, Location)
 
         for data in self.datas:
@@ -198,7 +192,6 @@ class GraphQLExtendSchemaType(TestCase):
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX=None)
     def test_extend_custom_field_prefix_none(self):
-
         schema = extend_schema_type_custom_field(self.schema, Location)
 
         for data in self.datas:
@@ -206,19 +199,16 @@ class GraphQLExtendSchemaType(TestCase):
             self.assertIn(field_name, schema._meta.fields.keys())
 
     def test_extend_tags_enabled(self):
-
         schema = extend_schema_type_tags(self.schema, Location)
 
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
     def test_extend_config_context(self):
-
         schema = extend_schema_type_config_context(DeviceTypeGraphQL, Device)
         self.assertIn("config_context", schema._meta.fields.keys())
 
     def test_extend_schema_device(self):
-
         # The below *will* log an error as DeviceTypeGraphQL has already been extended automatically...?
         schema = extend_schema_type(DeviceTypeGraphQL)
         self.assertIn("config_context", schema._meta.fields.keys())
@@ -226,14 +216,12 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
     def test_extend_schema_location(self):
-
         schema = extend_schema_type(self.schema)
         self.assertNotIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
     def test_extend_schema_null_field_choices(self):
-
         schema = extend_schema_type_null_field_choice(self.schema, Interface)
 
         self.assertTrue(hasattr(schema, "resolve_mode"))
@@ -242,7 +230,6 @@ class GraphQLExtendSchemaType(TestCase):
 
 class GraphQLExtendSchemaRelationship(TestCase):
     def setUp(self):
-
         location_ct = ContentType.objects.get_for_model(Location)
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -369,11 +356,9 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
 class GraphQLSearchParameters(TestCase):
     def setUp(self):
-
         self.schema = generate_schema_type(app_name="dcim", model=Location)
 
     def test_search_parameters(self):
-
         fields = LocationFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
         exclude_filters = ["type"]
@@ -928,7 +913,6 @@ class GraphQLQueryTest(TestCase):
         cls.schema = graphene_settings.SCHEMA
 
     def execute_query(self, query, variables=None):
-
         document = self.backend.document_from_string(self.schema, query)
         if variables:
             return document.execute(context_value=self.request, variable_values=variables)
@@ -1005,7 +989,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
-
         query = (
             # pylint: disable=consider-using-f-string
             """
@@ -1201,7 +1184,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):
-
         query = (
             # pylint: disable=consider-using-f-string
             """
@@ -1223,7 +1205,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_with_bad_filter(self):
-
         query = """
             query {
                 devices(role: "EXPECT NO ENTRIES") {
@@ -1239,7 +1220,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_locations_filter(self):
-
         filters = (
             ('name: "Location-1"', 1),
             ('name: ["Location-1"]', 1),
@@ -1277,7 +1257,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_devices_filter(self):
-
         filterset_class = DeviceFilterSet
         queryset = Device.objects.all()
 
@@ -1337,7 +1316,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_ip_addresses_filter(self):
-
         filters = (
             (
                 'address: "10.0.1.1"',
@@ -1442,7 +1420,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_cables_filter(self):
-
         filters = (
             (f'device_id: "{self.device1.id}"', 2),
             ('device: "Device 3"', 1),
@@ -1900,7 +1877,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
-
         query_pagination = """\
 query {
     interfaces(limit: 2, offset: 3) {

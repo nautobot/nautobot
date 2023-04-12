@@ -94,7 +94,6 @@ class NautobotTestCaseMixin:
 
             # Handle ManyToManyFields
             if value and isinstance(field, (ManyToManyField, TaggableManager)):
-
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
@@ -103,7 +102,6 @@ class NautobotTestCaseMixin:
                     model_dict[key] = sorted([obj.pk for obj in value])
 
             if api:
-
                 # Replace ContentType primary keys with <app_label>.<model>
                 if isinstance(getattr(instance, key), ContentType):
                     ct = ContentType.objects.get(pk=value)
@@ -114,7 +112,6 @@ class NautobotTestCaseMixin:
                     model_dict[key] = str(value)
 
             else:
-
                 # Convert ArrayFields to CSV strings
                 if isinstance(field, core_fields.JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
