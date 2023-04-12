@@ -132,93 +132,62 @@
 
 ### Removed Database Fields
 
-<<<<<<< HEAD
-| Model              | Removed Field    |
-|--------------------|------------------|
-| CircuitTermination | `site`           |
-| Cluster            | `site`           |
-| ConfigContext      | `sites`          |
-|                    | `regions`        |
-| CustomField        | `name`           |
-| Device             | `site`           |
-| GitRepository      | `_token`         |
-|                    | `username`       |
-| InventoryItem      | `lft`            |
-|                    | `rght`           |
-|                    | `tree_id`        |
-| IPAddress          | `vrf`            |
-| Location           | `site`           |
-| Rack               | `site`           |
-| RackGroup          | `lft`            |
-|                    | `rght`           |
-|                    | `tree_id`        |
-| PowerFeed          | `site`           |
-| PowerPanel         | `site`           |
-| Prefix             | `is_pool`        |
-|                    | `site`           |
-| Region             | `lft`            |
-|                    | `rght`           |
-|                    | `tree_id`        |
-| TenantGroup        | `lft`            |
-|                    | `rght`           |
-|                    | `tree_id`        |
-| VLAN               | `site`           |
-| VLANGroup          | `site`           |
-| VRF                | `enforce_unique` |
-=======
-| Model                   | Removed Field |
-|-------------------------|---------------|
-| CircuitTermination      | `site`        |
-| CircuitType             | `slug`        |
-| Cluster                 | `site`        |
-| ClusterGroup            | `slug`        |
-| ClusterType             | `slug`        |
-| ConfigContext           | `sites`       |
-| CustomLink              | `slug`        |
-|                         | `regions`     |
-| CustomField             | `name`        |
-| Device                  | `site`        |
-| DeviceRedundancyGroup   | `slug`        |
-| DynamicGroup            | `slug`        |
-| GitRepository           | `_token`      |
-| GraphQLQuery            | `slug`        |
-|                         | `username`    |
-| InventoryItem           | `lft`         |
-|                         | `rght`        |
-|                         | `tree_id`     |
-| JobHook                 | `slug`        |
-| Location                | `site`        |
-| Manufacturer            | `slug`        |
-| Platform                | `slug`        |
-| Provider                | `slug`        |
-| PowerFeed               | `site`        |
-| PowerPanel              | `site`        |
-| Prefix                  | `is_pool`     |
-|                         | `site`        |
-| Rack                    | `site`        |
-| RackGroup               | `lft`         |
-|                         | `rght`        |
-|                         | `tree_id`     |
-| Region                  | `lft`         |
-|                         | `rght`        |
-|                         | `tree_id`     |
-| RIR                     | `slug`        |
-| RelationshipAssociation | `slug`        |
-| Role                    | `slug`        |
-| RouteTarget             | `slug`        |
-| Secret                  | `slug`        |
-| SecretsGroup            | `slug`        |
-| SecretsGroupAssociation | `slug`        |
-| Status                  | `slug`        |
-| Tenant                  | `slug`        |
-| TenantGroup             | `lft`         |
-|                         | `rght`        |
-|                         | `slug`        |
-|                         | `tree_id`     |
-| VLAN                    | `site`        |
-| VLANGroup               | `site`        |
-| Webhook                 | `slug`        |
->>>>>>> next
+| Model                   | Removed Field    |
+|-------------------------|------------------|
+| CircuitTermination      | `site`           |
+| CircuitType             | `slug`           |
+| Cluster                 | `site`           |
+| ClusterGroup            | `slug`           |
+| ClusterType             | `slug`           |
+| ConfigContext           | `sites`          |
+|                         | `regions`        |
+| CustomLink              | `slug`           |
+|                         | `regions`        |
+| CustomField             | `name`           |
+| Device                  | `site`           |
+| DeviceRedundancyGroup   | `slug`           |
+| DynamicGroup            | `slug`           |
+| GitRepository           | `_token`         |
+|                         | `username`       |
+| GraphQLQuery            | `slug`           |
+|                         | `username`       |
+| InventoryItem           | `lft`            |
+|                         | `rght`           |
+|                         | `tree_id`        |
+| IPAddress               | `vrf`            |
+| JobHook                 | `slug`           |
+| Location                | `site`           |
+| Manufacturer            | `slug`           |
+| Platform                | `slug`           |
+| Provider                | `slug`           |
+| PowerFeed               | `site`           |
+| PowerPanel              | `site`           |
+| Prefix                  | `is_pool`        |
+|                         | `site`           |
+| Rack                    | `site`           |
+| RackGroup               | `lft`            |
+|                         | `rght`           |
+|                         | `tree_id`        |
+| Region                  | `lft`            |
+|                         | `rght`           |
+|                         | `tree_id`        |
+| RIR                     | `slug`           |
+| RelationshipAssociation | `slug`           |
+| Role                    | `slug`           |
+| RouteTarget             | `slug`           |
+| Secret                  | `slug`           |
+| SecretsGroup            | `slug`           |
+| SecretsGroupAssociation | `slug`           |
+| Status                  | `slug`           |
+| Tenant                  | `slug`           |
+| TenantGroup             | `lft`            |
+|                         | `rght`           |
+|                         | `slug`           |
+|                         | `tree_id`        |
+| VLAN                    | `site`           |
+| VLANGroup               | `site`           |
+| Webhook                 | `slug`           |
+| VRF                     | `enforce_unique` |
 
 ### Replaced Models
 
@@ -279,7 +248,6 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 | Removed                | Replaced With   |
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
-
 
 ## GraphQL and REST API Changes
 
@@ -352,27 +320,6 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 
 ### Removed Serializer Fields
 
-<<<<<<< HEAD
-| Model/Endpoint                    | Removed Field        | Comments                                              |
-|-----------------------------------|----------------------|-------------------------------------------------------|
-| `/api/status/`                    | `rq-workers-running` | Removed as RQ is no longer supported                  |
-| `/circuits/circuit-terminations/` | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/virtualization/clusters/`       | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/extras/config-contexts/`        | `regions`            | `Site` and `Region` models are replaced by `Location` |
-|                                   | `sites`              | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/devices/`                  | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/locations/`                | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/power-feeds/`              | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/power-panels/`             | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/racks/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/dcim/rack-groups/`              | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/ip-addresses/`             | `vrf`                | VRFs are now inherited from parent `Prefix`           |
-| `/ipam/prefixes/`                 | `is_pool`            | Functionality replaced by `type` field                |
-| `/ipam/prefixes/`                 | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/vlans/`                    | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/vlangroups/`               | `site`               | `Site` and `Region` models are replaced by `Location` |
-| `/ipam/vrfs/`                     | `enforce_unique`     | VRFs are no longer a boundary of IP uniqueness        |
-=======
 | Model/Endpoint                       | Removed Field        | Comments                                              |
 |--------------------------------------|----------------------|-------------------------------------------------------|
 | `/api/status/`                       | `rq-workers-running` | Removed as RQ is no longer supported                  |
@@ -402,16 +349,17 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 | `/extras/webhooks/`                  | `slug`               | `slug` field no longer supported                      |
 | `/ipam/prefixes/`                    | `is_pool`            | Functionality replaced by `type` field                |
 |                                      | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/ipam/ip-addresses/`                | `vrf`                | VRFs are now inherited from parent `Prefix`           |
 | `/ipam/rirs/`                        | `slug`               | `slug` field no longer supported                      |
 | `/ipam/route-targets/`               | `slug`               | `slug` field no longer supported                      |
 | `/ipam/vlans/`                       | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/ipam/vlangroups/`                  | `site`               | `Site` and `Region` models are replaced by `Location` |
+| `/ipam/vrfs/`                        | `enforce_unique`     | VRFs are no longer a boundary of IP uniqueness        |
 | `/virtualization/clusters/`          | `site`               | `Site` and `Region` models are replaced by `Location` |
 | `/tenancy/tenants/`                  | `slug`               | `slug` field no longer supported                      |
 | `/tenancy/tenant-groups/`            | `slug`               | `slug` field no longer supported                      |
 | `/virtualization/cluster-groups/`    | `slug`               | `slug` field no longer supported                      |
 | `/virtualization/cluster-types/`     | `slug`               | `slug` field no longer supported                      |
->>>>>>> next
 
 ### Removed 1.X Version Endpoints and Serializer Representations
 
