@@ -83,7 +83,7 @@ class GitTest(TransactionTestCase):
             # Provide everything we know we can provide
             provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
         )
-        self.repo.save(trigger_resync=False)
+        self.repo.save()
 
         self.job_result = JobResult.objects.create(
             name=self.repo.name,
@@ -345,7 +345,7 @@ class GitTest(TransactionTestCase):
                 )
 
                 self.repo.secrets_group = secrets_group
-                self.repo.save(trigger_resync=False)
+                self.repo.save()
 
                 self.mock_request.id = uuid.uuid4()
 

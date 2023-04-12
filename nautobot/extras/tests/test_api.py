@@ -852,7 +852,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
             GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
         )
         for repo in cls.repos:
-            repo.save(trigger_resync=False)
+            repo.save()
 
         cls.create_data = [
             {

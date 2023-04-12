@@ -177,7 +177,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
+        repo.save()
 
         nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
         nonduplicate_context.validated_save()
@@ -649,7 +649,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
+        repo.save()
         nonduplicate_template = ExportTemplate(
             content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
         )
@@ -700,7 +700,7 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        self.repo.save(trigger_resync=False)
+        self.repo.save()
 
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
@@ -713,7 +713,7 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
                 os.makedirs(initial_path)
 
                 self.repo.slug = "a-new-location"
-                self.repo.save(trigger_resync=False)
+                self.repo.save()
 
                 self.assertFalse(os.path.exists(initial_path))
                 new_path = self.repo.filesystem_path
@@ -901,7 +901,7 @@ class JobResultTest(TestCase):
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
+        repo.save()
 
         job_result = JobResult(
             name=repo.name,

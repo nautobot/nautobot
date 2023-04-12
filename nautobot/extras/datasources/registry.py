@@ -62,7 +62,7 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
     # exception.
     failure_logs = job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_FAILURE)
     if failure_logs.exists():
-        msg = "Failed to refresh data provided by {record}. Please see traceback."
+        msg = f"Failed to refresh data provided by {record}. Please see traceback."
         job_result.log(msg, level_choice=LogLevelChoices.LOG_FAILURE)
         raise RuntimeError(msg)
 

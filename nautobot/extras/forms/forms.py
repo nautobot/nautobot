@@ -611,12 +611,14 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "tags",
         ]
 
-    def clean(self):
-        super().clean()
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
 
-        # set dryrun after a successful clean
-        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
-            self.instance.set_dryrun()
+        # Set dryrun if that button was clicked in the UI, otherwise perform a normal sync.
+        dry_run = "_dryrun_create" in self.data or "_dryrun_update" in self.data
+        instance.sync(dry_run=dry_run)
+
+        return instance
 
 
 class GitRepositoryCSVForm(CSVModelForm):

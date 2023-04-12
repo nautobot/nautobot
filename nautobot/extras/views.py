@@ -12,6 +12,7 @@ from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import TemplateDoesNotExist, get_template
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import is_safe_url
@@ -828,14 +829,13 @@ class GitRepositoryEditView(generic.ObjectEditView):
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
+        obj.user = request.user
         return super().alter_obj(obj, request, url_args, url_kwargs)
 
     def get_return_url(self, request, obj):
         if request.method == "POST":
-            git_ct = ContentType.objects.get(app_label="extras", model="gitrepository")
-            job_result = JobResult.objects.filter(obj_type=git_ct, name=obj.name).latest()
-            return job_result.get_absolute_url()
+            return reverse("extras:gitrepository_result", kwargs={"slug": obj.slug})
+
         return super().get_return_url(request, obj)
 
 
@@ -914,6 +914,28 @@ class GitRepositorySyncView(View):
 class GitRepositoryDryRunView(View):
     def post(self, request, slug):
         return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
+
+
+class GitRepositoryResultView(generic.ObjectView):
+    """
+    Display a JobResult and its Job data.
+    """
+
+    queryset = GitRepository.objects.all()
+    template_name = "extras/gitrepository_result.html"
+
+    def get_required_permission(self):
+        return "extras.view_gitrepository"
+
+    def get_extra_context(self, request, instance):
+        job_result = instance.get_latest_sync()
+
+        return {
+            "result": job_result,
+            "base_template": "extras/gitrepository.html",
+            "object": instance,
+            "active_tab": "result",
+        }
 
 
 #

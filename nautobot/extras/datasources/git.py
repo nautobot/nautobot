@@ -167,8 +167,7 @@ def ensure_git_repository(
         head = repo_helper.checkout(from_branch, head)
         if repository_record.current_head != head:
             repository_record.current_head = head
-            # Make sure we don't recursively trigger a new resync of the repository!
-            repository_record.save(trigger_resync=False)
+            repository_record.save()
 
     except Exception as exc:
         if job_result:

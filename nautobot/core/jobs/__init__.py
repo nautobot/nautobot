@@ -32,18 +32,8 @@ class GitRepositoryPullAndRefreshData(Job):
         )
 
         try:
-            # TODO(jathan): Rip this out.
-            # if not os.path.exists(settings.GIT_ROOT):
-            #     os.makedirs(settings.GIT_ROOT)
-
-            ensure_git_repository(
-                repository,
-                job_result=job_result,
-                logger=self.logger,
-            )
-
+            ensure_git_repository(repository, job_result=job_result, logger=self.logger)
             refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
-
         finally:
             job_result.log(
                 f"Repository synchronization completed in {job_result.duration}",
@@ -70,12 +60,7 @@ class GitRepositoryDiffOriginalAndLocal(Job):
         job_result.log(f'Performing a Dry Run on Git repository "{repository.name}"...', logger=self.logger)
 
         try:
-            # TODO(jathan): Rip this out.
-            # if not os.path.exists(settings.GIT_ROOT):
-            #     os.makedirs(settings.GIT_ROOT)
-
             git_repository_dry_run(repository, job_result=job_result, logger=self.logger)
-
         finally:
             job_result.log(
                 f"Repository dry run completed in {job_result.duration}",

@@ -81,6 +81,7 @@
         <div class="panel-body">
             {% render_field form.enabled %}
             {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
+            {{ form.slug.as_hidden }}
             {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
             {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
         </div>

@@ -631,7 +631,7 @@ class GitRepositorySerializer(NautobotModelSerializer):
         """
         Add the originating Request as a parameter to be passed when creating/updating a GitRepository.
         """
-        data["request"] = self.context["request"]
+        data["user"] = self.context["request"].user
         return super().validate(data)
 
 
