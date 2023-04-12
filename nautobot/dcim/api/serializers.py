@@ -10,7 +10,6 @@ from nautobot.core.api import (
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
     ValidatedModelSerializer,
-    WritableNestedSerializer,
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
@@ -87,7 +86,6 @@ from nautobot.ipam.api.serializers import IPAddressSerializer
 
 from .nested_serializers import (
     NestedDeviceSerializer,
-    NestedInterfaceSerializer,
 )
 
 
@@ -675,23 +673,9 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
         fields = "__all__"
 
 
-class FrontPortRearPortSerializer(WritableNestedSerializer):
-    """
-    NestedRearPortSerializer but with parent device omitted (since front and rear ports must belong to same device)
-    """
-
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearport-detail")
-
-    class Meta:
-        model = RearPort
-        fields = "__all__"
-
-
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontport-detail")
     type = ChoiceField(choices=PortTypeChoices)
-    # TODO #3024: How to get rid of this?
-    rear_port = FrontPortRearPortSerializer()
 
     class Meta:
         model = FrontPort
@@ -886,7 +870,7 @@ class CablePathSerializer(serializers.ModelSerializer):
 
 class InterfaceConnectionSerializer(ValidatedModelSerializer):
     interface_a = serializers.SerializerMethodField()
-    interface_b = NestedInterfaceSerializer(source="connected_endpoint")
+    interface_b = InterfaceSerializer(source="connected_endpoint")
     connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -894,10 +878,10 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
         fields = ["interface_a", "interface_b", "connected_endpoint_reachable"]
 
     # TODO #3024: How to get rid of this?
-    @extend_schema_field(NestedInterfaceSerializer)
+    @extend_schema_field(InterfaceSerializer)
     def get_interface_a(self, obj):
         context = {"request": self.context["request"]}
-        return NestedInterfaceSerializer(instance=obj, context=context).data
+        return InterfaceSerializer(instance=obj, context=context).data
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):

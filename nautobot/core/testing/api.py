@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
@@ -10,6 +11,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
@@ -213,25 +215,119 @@ class APIViewTestCases:
                 self.assertIn("results", response.data)
                 self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
-        # @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        # def test_list_objects_brief(self):
-        #     """
-        #     GET a list of objects using the "brief" parameter.
-        #     """
-        #     self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-        #     url = f"{self._get_list_url()}?brief=1"
-        #     response = self.client.get(url, **self.header)
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_0(self):
+            """
+            GET a list of objects using the "?depth=0" parameter.
+            """
+            depth_fields = []
+            for field in self.model._meta.fields:
+                if type(field) == ForeignKey and field.related_model != ContentType:
+                    depth_fields.append(field.name)
+                elif field.name == "tags":
+                    depth_fields.append(field.name)
+                elif field.name == "status" and type(field) == extras_models.StatusField:
+                    depth_fields.append(field.name)
 
-        #     self.assertHttpStatus(response, status.HTTP_200_OK)
-        #     self.assertIsInstance(response.data, dict)
-        #     self.assertIn("results", response.data)
-        #     self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-        #     self.assertEqual(
-        #         sorted(response.data["results"][0]),
-        #         self.brief_fields,
-        #         "In order to test the brief API parameter the brief fields need to be manually added to "
-        #         "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
-        #     )
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            url = f"{self._get_list_url()}?depth=0"
+            response = self.client.get(url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+
+            response_data = response.data["results"][0]
+            for field in depth_fields:
+                self.assertEqual(field in response_data, True)
+                if isinstance(response_data[field], list):
+                    for entry in response_data[field]:
+                        try:
+                            uuid.UUID(str(entry))
+                        except ValueError:
+                            self.fail(f"Response data field {field} contains invalid UUID")
+                else:
+                    if response_data[field] is not None:
+                        try:
+                            uuid.UUID(str(response_data[field]))
+                        except ValueError:
+                            self.fail(f"Response data field {field} contains invalid UUID")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_1(self):
+            """
+            GET a list of objects using the "?depth=1" parameter.
+            """
+            depth_fields = []
+            for field in self.model._meta.fields:
+                if type(field) == ForeignKey and field.related_model != ContentType:
+                    depth_fields.append(field.name)
+                elif field.name == "tags":
+                    depth_fields.append(field.name)
+                elif field.name == "status" and type(field) == extras_models.StatusField:
+                    depth_fields.append(field.name)
+
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            url = f"{self._get_list_url()}?depth=1"
+            response = self.client.get(url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+
+            response_data = response.data["results"][0]
+            for field in depth_fields:
+                self.assertEqual(field in response_data, True)
+                if isinstance(response_data[field], list):
+                    for entry in response_data[field]:
+                        try:
+                            uuid.UUID(str(entry["id"]))
+                        except ValueError:
+                            self.fail(f"Response data field {field} contains invalid UUID")
+                else:
+                    if response_data[field] is not None:
+                        try:
+                            uuid.UUID(str(response_data[field]["id"]))
+                        except ValueError:
+                            self.fail(f"Response data field {field} contains invalid UUID")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_2(self):
+            """
+            GET a list of objects using the "?depth=2" parameter.
+            TreeModel Only
+            """
+            if not issubclass(self.model, TreeModel):
+                self.skipTest(f"Model {self.model._meta.model_name} is not a TreeModel")
+            field = "parent"
+
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            url = f"{self._get_list_url()}?depth=1"
+            response = self.client.get(url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+
+            response_data = response.data["results"]
+            for data in response_data:
+                # First Level Parent
+                self.assertEqual(field in data, True)
+                if data[field] is not None:
+                    try:
+                        uuid.UUID(str(data[field]["id"]))
+                    except ValueError:
+                        self.fail(f"Response data field {field} contains invalid UUID")
+                    # Second Level Parent
+                    self.assertEqual(field in data[field], True)
+                    if data[field][field] is not None:
+                        try:
+                            uuid.UUID(str(data[field][field]))
+                        except ValueError:
+                            self.fail(f"Response data field {field} contains invalid UUID")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
