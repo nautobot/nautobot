@@ -21,7 +21,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
     def _get_extended_properties(self, request, traceback):
         """
         Overload default so that `argsrepr` and `kwargsrepr` aren't used to construct `args` and `kwargs`.
-        Also adds `user` passed in on `apply_async` calls.
+        Also adds `user_id` passed in on `apply_async` calls.
         """
         extended_props = {
             "periodic_task_name": None,
@@ -29,7 +29,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
             "task_kwargs": None,
             "task_name": None,
             "traceback": None,
-            "user": None,
+            "user_id": None,
             "worker": None,
         }
         if request and self.app.conf.find_value_for_key("extended", "result"):
@@ -46,7 +46,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
                     "task_kwargs": task_kwargs,
                     "task_name": getattr(request, "task", None),
                     "traceback": traceback,
-                    "user": properties.get("user", None),
+                    "user_id": properties.get("user_id", None),
                     "worker": getattr(request, "hostname", None),
                 }
             )

@@ -51,20 +51,20 @@ class Command(BaseCommand):
         except json.decoder.JSONDecodeError as error:
             raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
-        job = Job.objects.get_for_class_path(job_class.class_path)
+        job_model = Job.objects.get_for_class_path(job_class.class_path)
 
         # Run the job and create a new JobResult
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
             job_result = JobResult.apply_job(
-                job_model=job,
+                job_model=job_model,
                 user=user,
                 **data,
             )
 
         else:
-            job_result = JobResult.enqueue_job(job, user, **data)
+            job_result = JobResult.enqueue_job(job_model, user, **data)
 
             # Wait on the job to finish
             while job_result.status not in JobResultStatusChoices.READY_STATES:
