@@ -21,7 +21,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         task_args=None,
         task_kwargs=None,
         worker=None,
-        user=None,
+        user_id=None,
         using=None,
         content_type=None,
         content_encoding=None,
@@ -49,6 +49,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             status (str): Task status. See `JobResultStatusChoices` for a list of possible status
                 values.
             worker (str): Worker that executes the task.
+            user_id (uuid): UUID of the user that initiated the task.
             using (str): Django database connection to use.
             traceback (str): Traceback string taken at the point of exception (only passed if the
                 task failed).
@@ -71,7 +72,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             "task_name": task_name,
             "task_args": task_args,
             "task_kwargs": task_kwargs,
-            "user_id": user,
+            "user_id": user_id,
             "worker": worker,
         }
 

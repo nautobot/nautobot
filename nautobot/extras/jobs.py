@@ -19,6 +19,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
+from django.core.exceptions import ObjectDoesNotExist
 from django.forms import ValidationError
 from django.utils.functional import classproperty
 import netaddr
@@ -109,7 +110,6 @@ class BaseJob(Task):
 
         self.active_test = "main"
         self.failed = False
-        self.job_result = None
 
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
@@ -123,7 +123,7 @@ class BaseJob(Task):
             self.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
         self.active_test = "run"
         context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
-        change_context = context_class(user=self.job_result.user, context_detail=self.class_path)
+        change_context = context_class(user=self.user, context_detail=self.class_path)
         with change_logging(change_context):
             return self.run(*args, **deserialized_kwargs)
 
@@ -149,8 +149,6 @@ class BaseJob(Task):
         """Override for custom task name in worker logs/monitoring.
 
         Example:
-            .. code-block:: python
-
                 from celery.utils.imports import qualname
 
                 def shadow_name(task, args, kwargs, options):
@@ -169,8 +167,6 @@ class BaseJob(Task):
     def before_start(self, task_id, args, kwargs):
         """Handler called before the task starts.
 
-        .. versionadded:: 5.2
-
         Arguments:
             task_id (str): Unique id of the task to execute.
             args (Tuple): Original arguments for the task to execute.
@@ -180,15 +176,16 @@ class BaseJob(Task):
             None: The return value of this handler is ignored.
         """
         self.active_test = "initialization"
+        try:
+            self.job_result
+        except ObjectDoesNotExist as err:
+            raise RunJobTaskFailed(f"Unable to find associated job result for job {task_id}") from err
 
         try:
-            self.job_result = self.get_job_result()
-        except TypeError as err:
-            raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}") from err
-        except Exception as err:
-            raise RunJobTaskFailed(f"Unexpected failure in job {self.name}") from err
+            job_model = self.job_model
+        except ObjectDoesNotExist as err:
+            raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
-        job_model = self.get_job_model()
         if not job_model.enabled:
             self.log_failure(
                 message=f"Job {job_model} is not enabled to be run!",
@@ -206,7 +203,7 @@ class BaseJob(Task):
 
         self.log_info("Running job")
 
-    def run(self, *args, **kwargs):  # pylint: disable=arguments-differ
+    def run(self, *args, **kwargs):
         """
         Method invoked when this Job is run.
         """
@@ -483,13 +480,17 @@ class BaseJob(Task):
 
         return form
 
-    def get_job_model(self):
-        return getattr(self.job_result, "job_model", None) or JobModel.objects.get(
-            module_name=self.__module__, job_class_name=self.__name__
-        )
+    @property
+    def job_model(self):
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
 
-    def get_job_result(self):
+    @property
+    def job_result(self):
         return JobResult.objects.get(task_id=self.request.id)
+
+    @property
+    def user(self):
+        return getattr(self.job_result, "user", None)
 
     @staticmethod
     def serialize_data(data):
