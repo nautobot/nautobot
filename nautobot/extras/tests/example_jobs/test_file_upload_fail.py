@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, FileVar
 
 
@@ -18,10 +19,11 @@ class TestFileUploadFail(Job):
         description="File to upload",
     )
 
-    def run(self, data, commit):
-        blob = data["file"]
-
-        contents = str(blob.read())
+    def run(self, file):
+        contents = str(file.read())
         self.log_warning(message=f"File contents: {contents}")
 
         raise self.exception("Test failure")
+
+
+register_jobs(TestFileUploadFail)

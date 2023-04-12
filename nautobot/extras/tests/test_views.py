@@ -1046,7 +1046,6 @@ class ApprovalQueueTestCase(
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
         self.job_model_2 = Job.objects.get_for_class_path("local/test_fail/TestFail")
-        self.job_model_3 = Job.objects.get_for_class_path("local/test_read_only_pass/TestReadOnlyPass")
 
         ScheduledJob.objects.create(
             name="test1",
@@ -1063,16 +1062,6 @@ class ApprovalQueueTestCase(
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_model=self.job_model_2,
             job_class=self.job_model_2.class_path,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model_3,
-            job_class=self.job_model_3.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -1769,25 +1758,6 @@ class JobTestCase(
             scheduled = ScheduledJob.objects.last()
             self.assertEqual(scheduled.name, "test")
             self.assertEqual(scheduled.start_time, start_time)
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_later_sets_scheduled_job_kwargs_pk(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        start_time = timezone.now() + timedelta(minutes=1)
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(start_time),
-        }
-
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
-
-            scheduled = ScheduledJob.objects.last()
-            self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_for_future(self, _):

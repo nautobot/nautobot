@@ -32,7 +32,7 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
+from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.models import (
@@ -66,8 +66,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import run_job
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_worker_count
 from . import nested_serializers, serializers
 
 
@@ -397,7 +396,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs=dict, task_queue=None):
+def _create_schedule(serializer, data, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -407,15 +406,14 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
         "data": data,
         "request": copy_safe_request(request),
         "user": request.user.pk,
-        "commit": commit,
-        "name": job.class_path,
+        "name": job_model.class_path,
         "celery_kwargs": celery_kwargs,
         "task_queue": task_queue,
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
         time = timezone.now()
-        name = serializer.get("name") or f"{job.name} - {time}"
+        name = serializer.get("name") or f"{job_model.name} - {time}"
     elif type_ == JobExecutionType.TYPE_CUSTOM:
         time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
         if time is None:
@@ -438,7 +436,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
     scheduled_job = ScheduledJob(
         name=name,
         task="nautobot.extras.jobs.scheduled_job_handler",
-        job_class=job.class_path,
+        job_class=job_model.class_path,
         job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {request.user} on {time}",
@@ -454,7 +452,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_k
     return scheduled_job
 
 
-def _run_job(request, job_model, legacy_response=False):
+def _run_job(request, job_model):
     """An internal function providing logic shared between JobModelViewSet.run() and JobViewSet.run()."""
     if not request.user.has_perm("extras.run_job"):
         raise PermissionDenied("This user does not have permission to run jobs.")
@@ -481,7 +479,6 @@ def _run_job(request, job_model, legacy_response=False):
     job_class = job_model.job_class
     if job_class is None:
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
-    job = job_class()
 
     valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
     # Get a default queue from either the job model's specified task queue or system default to fall back on if request doesn't provide one
@@ -495,7 +492,6 @@ def _run_job(request, job_model, legacy_response=False):
     # We must extract from the request:
     # - Job Form data (for submission to the job itself)
     # - Schedule data
-    # - Commit flag state
     # - Desired task queue
     # Depending on request content type (largely for backwards compatibility) the keys at which these are found are different
     if "multipart/form-data" in request.content_type:
@@ -506,10 +502,9 @@ def _run_job(request, job_model, legacy_response=False):
         input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
         input_serializer.is_valid(raise_exception=True)
 
-        commit = input_serializer.validated_data.get("_commit", None)
         task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
 
-        # JobMultiPartInputSerializer only has keys for executing job (commit, task_queue, etc),
+        # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
         # everything else is a candidate for the job form's data.
         # job_class.validate_data will throw an error for any unexpected key/value pairs.
         non_job_keys = input_serializer.validated_data.keys()
@@ -534,22 +529,16 @@ def _run_job(request, job_model, legacy_response=False):
         input_serializer.is_valid(raise_exception=True)
 
         data = input_serializer.validated_data.get("data", {})
-        commit = input_serializer.validated_data.get("commit", None)
         task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
         schedule_data = input_serializer.validated_data.get("schedule", None)
-
-    if commit is None:
-        commit = job_model.commit_default
 
     if task_queue not in valid_queues:
         raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     cleaned_data = None
     try:
-        cleaned_data = job.validate_data(data, files=files)
-        cleaned_data.pop(
-            "_commit", None
-        )  # We don't get commit from the form, instead it's part of the serializer's validated data
+        cleaned_data = job_class().validate_data(data, files=files)
+        cleaned_data = job_model.job_class.prepare_job_kwargs(cleaned_data)
 
     except FormsValidationError as e:
         # message_dict can only be accessed if ValidationError got a dict
@@ -559,8 +548,6 @@ def _run_job(request, job_model, legacy_response=False):
 
     if not get_worker_count(queue=task_queue):
         raise CeleryWorkerNotRunningException(queue=task_queue)
-
-    job_content_type = get_job_content_type()
 
     # Default to a null JobResult.
     job_result = None
@@ -583,8 +570,6 @@ def _run_job(request, job_model, legacy_response=False):
         schedule = _create_schedule(
             schedule_data,
             job_class.serialize_data(cleaned_data),
-            commit,
-            job,
             job_model,
             request,
             celery_kwargs={"queue": task_queue},
@@ -596,34 +581,21 @@ def _run_job(request, job_model, legacy_response=False):
     # ... If we can't create one, create a JobResult instead.
     if schedule is None:
         job_result = JobResult.enqueue_job(
-            run_job,
-            job.class_path,
-            job_content_type,
+            job_model,
             request.user,
             celery_kwargs={"queue": task_queue},
-            data=job_class.serialize_data(cleaned_data),
-            request=copy_safe_request(request),
-            commit=commit,
-            task_queue=input_serializer.validated_data.get("task_queue", None),
+            **job_class.serialize_data(cleaned_data),
         )
-        job.result = job_result
 
-    if legacy_response:
-        # Old-style JobViewSet response - serialize the Job class in the response for some reason?
-        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
-        return Response(serializer.data)
-    else:
-        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"scheduled_job": None, "job_result": None}
-        if schedule:
-            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
-                schedule, context={"request": request}
-            ).data
-        if job_result:
-            data["job_result"] = nested_serializers.NestedJobResultSerializer(
-                job_result, context={"request": request}
-            ).data
-        return Response(data, status=status.HTTP_201_CREATED)
+    # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
+    data = {"scheduled_job": None, "job_result": None}
+    if schedule:
+        data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
+            schedule, context={"request": request}
+        ).data
+    if job_result:
+        data["job_result"] = nested_serializers.NestedJobResultSerializer(job_result, context={"request": request}).data
+    return Response(data, status=status.HTTP_201_CREATED)
 
 
 class JobViewSet(
@@ -641,43 +613,6 @@ class JobViewSet(
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
-
-    @extend_schema(
-        deprecated=True,
-        operation_id="extras_jobs_read_deprecated",
-        responses={"200": serializers.JobClassDetailSerializer()},
-    )
-    @action(
-        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
-        methods=["get"],
-        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)",  # /api/extras/jobs/<class_path>/
-        url_name="detail",
-    )
-    def retrieve_deprecated(self, request, class_path):
-        """
-        Get details of a Job as identified by its class-path.
-
-        This API endpoint is deprecated; it is recommended to use the extras_jobs_read endpoint instead.
-        """
-        if not request.user.has_perm("extras.view_job"):
-            raise PermissionDenied("This user does not have permission to view jobs.")
-        try:
-            job_model = Job.objects.restrict(request.user, "view").get_for_class_path(class_path)
-        except Job.DoesNotExist:
-            raise Http404
-        if not job_model.installed or job_model.job_class is None:
-            raise Http404
-        job_content_type = get_job_content_type()
-        job = job_model.job_class()  # TODO: why do we need to instantiate the job_class?
-        job.result = JobResult.objects.filter(
-            obj_type=job_content_type,
-            name=job.class_path,
-            status__in=JobResultStatusChoices.READY_STATES,
-        ).first()
-
-        serializer = serializers.JobClassDetailSerializer(job, context={"request": request})
-
-        return Response(serializer.data)
 
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True, filterset_class=None)
@@ -745,35 +680,6 @@ class JobViewSet(
         """Run the specified Job."""
         job_model = self.get_object()
         return _run_job(request, job_model)
-
-    @extend_schema(
-        deprecated=True,
-        methods=["post"],
-        request=serializers.JobInputSerializer,
-        responses={"200": serializers.JobClassDetailSerializer()},
-        operation_id="extras_jobs_run_deprecated",
-    )
-    @action(
-        detail=False,  # a /jobs/... URL, not a /jobs/<pk>/... URL
-        methods=["post"],
-        permission_classes=[JobRunTokenPermissions],
-        url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",  # /api/extras/jobs/<class_path>/run/
-        url_name="run",
-        parser_classes=[JSONParser, MultiPartParser],
-    )
-    def run_deprecated(self, request, class_path):
-        """
-        Run a Job as identified by its class-path.
-
-        This API endpoint is deprecated; it is recommended to use the extras_jobs_run endpoint instead.
-        """
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied("This user does not have permission to run jobs.")
-        try:
-            job_model = Job.objects.restrict(request.user, "run").get_for_class_path(class_path)
-        except Job.DoesNotExist:
-            raise Http404
-        return _run_job(request, job_model, legacy_response=True)
 
 
 #
@@ -970,18 +876,13 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         if not Job.objects.check_perms(request.user, instance=job_model, action="run"):
             raise PermissionDenied("You do not have permission to run this job.")
 
-        # Immediately enqueue the job with commit=False
-        job_content_type = get_job_content_type()
+        # Immediately enqueue the job
+        job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
         job_result = JobResult.enqueue_job(
-            run_job,
-            job_model.class_path,
-            job_content_type,
+            job_model,
             request.user,
             celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
-            data=scheduled_job.kwargs.get("data", {}),
-            request=copy_safe_request(request),
-            commit=False,  # force a dry-run
-            task_queue=scheduled_job.kwargs.get("task_queue", None),
+            **job_model.job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 

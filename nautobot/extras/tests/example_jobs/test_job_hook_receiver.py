@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import JobHookReceiver
 from nautobot.dcim.models import Location, LocationType
 
@@ -6,7 +7,7 @@ class TestJobHookReceiverLog(JobHookReceiver):
     def receive_job_hook(self, change, action, changed_object):
         self.log_info(f"change: {change}")
         self.log_info(f"action: {action}")
-        self.log_info(f"request.user: {self.request.user.username}")
+        self.log_info(f"jobresult.user: {self.job_result.user.username}")
         self.log_success(changed_object.name)
 
 
@@ -18,3 +19,6 @@ class TestJobHookReceiverChange(JobHookReceiver):
 
 class TestJobHookReceiverFail(JobHookReceiver):
     pass
+
+
+register_jobs(TestJobHookReceiverChange, TestJobHookReceiverFail, TestJobHookReceiverLog)

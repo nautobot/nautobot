@@ -1,5 +1,6 @@
 import json
 
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, IPAddressVar, IPAddressWithMaskVar
 
 
@@ -29,16 +30,21 @@ class TestIPAddresses(Job):
         description="IPv6 network",
     )
 
-    def run(self, data, commit):
-        ipv4_address = data["ipv4_address"]
-        ipv4_with_mask = data["ipv4_with_mask"]
-        ipv4_network = data["ipv4_network"]
-        ipv6_address = data["ipv6_address"]
-        ipv6_with_mask = data["ipv6_with_mask"]
-        ipv6_network = data["ipv6_network"]
-
+    def run(self, ipv4_address, ipv4_with_mask, ipv4_network, ipv6_address, ipv6_with_mask, ipv6_network):
         # Log the data as JSON so we can pull it back out for testing.
-        self.log_info(obj=json.dumps({k: str(v) for k, v in data.items()}), message="IP Address Test")
+        self.log_info(
+            obj=json.dumps(
+                {
+                    "ipv4_address": str(ipv4_address),
+                    "ipv4_with_mask": str(ipv4_with_mask),
+                    "ipv4_network": str(ipv4_network),
+                    "ipv6_address": str(ipv6_address),
+                    "ipv6_with_mask": str(ipv6_with_mask),
+                    "ipv6_network": str(ipv6_network),
+                }
+            ),
+            message="IP Address Test",
+        )
 
         self.log_warning(f"IPv4: {ipv4_address}")
         self.log_warning(f"IPv4: {ipv4_with_mask}")
@@ -50,3 +56,6 @@ class TestIPAddresses(Job):
         self.log_success(message="Job didn't crash!")
 
         return "Nice IPs, bro."
+
+
+register_jobs(TestIPAddresses)

@@ -18,7 +18,7 @@ from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
-from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.celery import app, NautobotKombuJSONEncoder
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -347,6 +347,10 @@ class Job(PrimaryModel):
             and self.job_class is not None
             and not (self.has_sensitive_variables and self.approval_required)
         )
+
+    @property
+    def job_task(self):
+        return app.tasks.get(self.job_class.registered_name, None)
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -738,68 +742,92 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
         """
-        Create a JobResult instance and enqueue a job using the given callable
+        Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
+        a limitation in Celery where some of the fields in the job result are not updated when running synchronously so
+        they are added here.
 
-        func: The callable object to be enqueued for execution
-        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute,
-            if obj_type is extras.Job; for other funcs and obj_types it may differ.
-        obj_type: ContentType to link to the JobResult instance obj_type
-        user: User object to link to the JobResult instance
-        celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
-        args: additional args passed to the callable
-        schedule: Optional ScheduledJob instance to link to the JobResult
-        kwargs: additional kwargs passed to the callable
+        Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` should be used instead.
+
+        Args:
+            job_model (Job): The Job to be enqueued for execution
+            user (User): User object to link to the JobResult instance
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            *job_args: positional args passed to the job task
+            **job_kwargs: keyword args passed to the job task
+
+        Returns:
+            JobResult instance
         """
-        # Discard "request" parameter from the kwargs that we save in the job_result, as it's not relevant to re-runs,
-        # and will likely go away in the future.
-        job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
         job_result = cls.objects.create(
-            name=name,
-            obj_type=obj_type,
-            user=user,
+            job_model=job_model,
+            name=job_model.class_path,
+            obj_type=ContentType.objects.get_for_model(job_model),
             task_id=uuid.uuid4(),
-            scheduled_job=schedule,
+            user=user,
         )
 
-        kwargs["job_result_pk"] = job_result.pk
-
-        # Prepare kwargs that will be sent to Celery
         if celery_kwargs is None:
             celery_kwargs = {}
 
-        if obj_type.app_label == "extras" and obj_type.model.lower() == "job":
-            try:
-                job_model = Job.objects.get_for_class_path(name)
-                if job_model.soft_time_limit > 0:
-                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-                if job_model.time_limit > 0:
-                    celery_kwargs["time_limit"] = job_model.time_limit
-                if not job_model.has_sensitive_variables:
-                    job_result.task_kwargs = job_result_kwargs
-                job_result.job_model = job_model
-                job_result.save()
-            except Job.DoesNotExist:
-                # 2.0 TODO: remove this fallback logic, database records should always exist
-                from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+        if job_model.soft_time_limit > 0:
+            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            celery_kwargs["time_limit"] = job_model.time_limit
+        eager_result = job_model.job_task.apply(
+            args=job_args, kwargs=job_kwargs, task_id=job_result.task_id, **celery_kwargs
+        )
+        job_result.refresh_from_db()
+        job_result.date_done = timezone.now()
+        job_result.status = eager_result.status
+        job_result.result = eager_result.result
+        job_result.traceback = eager_result.traceback
+        # user must be re-added because celery Task.apply() does not keep track of properties like apply_async()
+        job_result.user = user
+        job_result.worker = eager_result.worker
+        job_result.save()
+        return job_result
 
-                job_class = get_job(name)
-                if job_class is not None:
-                    logger.error("No Job instance found in the database corresponding to %s", name)
-                    if hasattr(job_class.Meta, "soft_time_limit"):
-                        celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
-                    if hasattr(job_class.Meta, "time_limit"):
-                        celery_kwargs["time_limit"] = job_class.Meta.time_limit
-                    if not job_class.has_sensitive_variables:
-                        job_result.task_kwargs = job_result_kwargs
-                        job_result.save()
-                else:
-                    logger.error("Neither a Job database record nor a Job source class were found for %s", name)
+    @classmethod
+    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, schedule=None, **job_kwargs):
+        """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+
+        Args:
+            job_model (Job): The Job to be enqueued for execution
+            user (User): User object to link to the JobResult instance
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult
+            *job_args: positional args passed to the job task
+            **job_kwargs: keyword args passed to the job task
+
+        Returns:
+            JobResult instance
+        """
+        job_result = cls.objects.create(
+            job_model=job_model,
+            name=job_model.class_path,
+            obj_type=ContentType.objects.get_for_model(job_model),
+            scheduled_job=schedule,
+            task_id=uuid.uuid4(),
+            user=user,
+        )
+
+        if celery_kwargs is None:
+            celery_kwargs = {}
+
+        celery_kwargs["user_id"] = getattr(user, "pk", None)
+
+        if job_model.soft_time_limit > 0:
+            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            celery_kwargs["time_limit"] = job_model.time_limit
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
         transaction.on_commit(
-            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.task_id), **celery_kwargs)
+            lambda: job_model.job_task.apply_async(
+                args=job_args, kwargs=job_kwargs, task_id=str(job_result.task_id), **celery_kwargs
+            )
         )
 
         return job_result
@@ -1066,8 +1094,6 @@ class ScheduledJob(BaseModel):
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""
-        # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
-        self.kwargs["scheduled_job_pk"] = self.pk
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:

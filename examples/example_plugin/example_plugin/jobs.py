@@ -2,6 +2,7 @@ import time
 
 from django.conf import settings
 
+from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver, JobButtonReceiver
@@ -42,8 +43,7 @@ class ExampleLoggingJob(Job):
             "bulk",
         ]
 
-    def run(self, data, commit):
-        interval = data["interval"]
+    def run(self, interval):
         self.log_debug(message=f"Running for {interval} seconds.")
         for step in range(1, interval + 1):
             time.sleep(1)
@@ -129,3 +129,4 @@ jobs = (
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
 )
+register_jobs(*jobs)

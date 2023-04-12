@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 from nautobot.extras.models import Status
 
@@ -7,7 +8,7 @@ class TestModifyDB(Job):
     Job that modifies the database.
     """
 
-    def test_modify_db(self):
+    def run(self):
         """
         Job function.
         """
@@ -16,3 +17,6 @@ class TestModifyDB(Job):
         )
         obj.save()
         self.log_success(obj=obj, message="Status created successfully.")
+
+
+register_jobs(TestModifyDB)

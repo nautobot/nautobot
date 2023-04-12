@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 
 
@@ -15,5 +16,8 @@ class TestWorkerQueues(Job):
             "nonexistent",  # This queue doesn't exist and should have zero workers
         ]
 
-    def run(self, data, commit):
+    def run(self):
         pass
+
+
+register_jobs(TestWorkerQueues)

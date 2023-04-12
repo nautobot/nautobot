@@ -1,17 +1,13 @@
 import json
 import time
-import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.test.client import RequestFactory
 from django.utils import timezone
 
-from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import Job, JobLogEntry, JobResult
-from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.utils import get_job_content_type
+from nautobot.extras.jobs import get_job
 
 
 class Command(BaseCommand):
@@ -20,14 +16,10 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("job", help="Job in the class path form: `<grouping_name>/<module_name>/<JobClassName>`")
         parser.add_argument(
-            "--commit",
-            action="store_true",
-            help="Commit changes to DB (defaults to dry-run if unset). --username is mandatory if using this argument",
-        )
-        parser.add_argument(
             "-u",
             "--username",
             help="User account to impersonate as the requester of this job",
+            required=True,
         )
         parser.add_argument(
             "-l",
@@ -46,22 +38,11 @@ class Command(BaseCommand):
         if not job_class:
             raise CommandError(f'Job "{options["job"]}" not found')
 
-        user = None
-        request = None
-        if options["commit"] and not options["username"]:
-            # Job execution with commit=True uses change_logging(), which requires a user as the author of any changes
-            raise CommandError("--username is mandatory when --commit is used")
-
-        if options["username"]:
-            User = get_user_model()
-            try:
-                user = User.objects.get(username=options["username"])
-            except User.DoesNotExist as exc:
-                raise CommandError("No such user") from exc
-
-            request = RequestFactory().request(SERVER_NAME="nautobot_server_runjob")
-            request.id = uuid.uuid4()
-            request.user = user
+        User = get_user_model()
+        try:
+            user = User.objects.get(username=options["username"])
+        except User.DoesNotExist as exc:
+            raise CommandError("No such user") from exc
 
         data = {}
         try:
@@ -70,38 +51,20 @@ class Command(BaseCommand):
         except json.decoder.JSONDecodeError as error:
             raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
-        job_content_type = get_job_content_type()
+        job_model = Job.objects.get_for_class_path(job_class.class_path)
 
         # Run the job and create a new JobResult
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
-            job = Job.objects.get_for_class_path(job_class.class_path)
-            job_result = JobResult.objects.create(
-                name=job.class_path,
-                obj_type=job_content_type,
+            job_result = JobResult.execute_job(
+                job_model=job_model,
                 user=user,
-                job_model=job,
-                task_id=uuid.uuid4(),
+                **data,
             )
-            run_job(
-                data=data,
-                request=copy_safe_request(request) if request else None,
-                commit=options["commit"],
-                job_result_pk=job_result.pk,
-            )
-            job_result.refresh_from_db()
 
         else:
-            job_result = JobResult.enqueue_job(
-                run_job,
-                job_class.class_path,
-                job_content_type,
-                user,
-                data=data,
-                request=copy_safe_request(request) if request else None,
-                commit=options["commit"],
-            )
+            job_result = JobResult.enqueue_job(job_model, user, **data)
 
             # Wait on the job to finish
             while job_result.status not in JobResultStatusChoices.READY_STATES:
@@ -137,8 +100,8 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(f"\t\t{status}: {log_entry.message}")
 
-        if job_result.data["output"]:
-            self.stdout.write(job_result.data["output"])
+        if job_result.result:
+            self.stdout.write(job_result.result)
 
         if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
             status = self.style.ERROR("FAILURE")

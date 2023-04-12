@@ -36,7 +36,7 @@ class FileProxyAdmin(NautobotModelAdmin):
 
 
 #
-# Job results (jobs, scripts, reports, Git repository sync, etc.)
+# Job results (jobs and Git repository sync)
 #
 
 

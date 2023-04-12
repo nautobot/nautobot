@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, ObjectVar
 from nautobot.dcim.models import Location
 
@@ -9,6 +10,9 @@ class TestOptionalObjectVar(Job):
         required=False,
     )
 
-    def run(self, data, commit):
-        self.log_info(obj=data["location"], message="The Location if any that the user provided.")
+    def run(self, location=None):
+        self.log_info(obj=location, message="The Location if any that the user provided.")
         return "Nice Location (or not)!"
+
+
+register_jobs(TestOptionalObjectVar)
