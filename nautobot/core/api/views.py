@@ -2,7 +2,7 @@ import logging
 import platform
 from collections import OrderedDict
 
-from django import __version__ as DJANGO_VERSION
+from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -757,27 +757,15 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
         except ValidationError as err:
             return Response(err.args[0], status=err.code)
-        model_form = get_form_for_model(model)
-        if model_form is None:
-            logger = logging.getLogger(__name__)
-
-            logger.warning(f"Form for {model} model not found")
-            # Because the DOM Representation cannot be derived from a CharField without a Form, the DOM Representation must be hardcoded.
-            return Response(
-                {
-                    "dom_element": f"<input type='text' name='{field_name}' class='form-control lookup_value-input' id='id_{field_name}'>"
-                }
-            )
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", 404)
 
-        print(" \n\n\n=====>",)
-        print(model_form)
-        print(form_field)
-        print(" \n\n\n=====>")
-
-
-        field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
+        # Create a temporary form and get a BoundField for the specified field
+        # This is necessary to generate the HTML representation using as_widget()
+        TempForm = type("TempForm", (forms.Form,), {field_name: form_field})
+        temp_form = TempForm()
+        bound_field = temp_form[field_name]
+        field_dom_representation = bound_field.as_widget()
         return Response({"dom_element": field_dom_representation})
