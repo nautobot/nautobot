@@ -4,9 +4,8 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ("extras", "0076_remove_name_field_and_make_label_field_non_nullable"),
+        ("extras", "0077_remove_slug"),
     ]
 
     operations = [
