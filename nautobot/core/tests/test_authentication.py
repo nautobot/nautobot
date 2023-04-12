@@ -247,15 +247,60 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         cls.statuses = Status.objects.get_for_model(Prefix)
 
         cls.prefixes = [
-            Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), namespace=cls.namespace, location=cls.locations[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.1.0/24"), namespace=cls.namespace, location=cls.locations[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.2.0/24"), namespace=cls.namespace, location=cls.locations[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.3.0/24"), namespace=cls.namespace, location=cls.locations[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.4.0/24"), namespace=cls.namespace, location=cls.locations[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.5.0/24"), namespace=cls.namespace, location=cls.locations[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.6.0/24"), namespace=cls.namespace, location=cls.locations[2], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.7.0/24"), namespace=cls.namespace, location=cls.locations[2], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.8.0/24"), namespace=cls.namespace, location=cls.locations[2], status=cls.statuses[0]),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.0.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.1.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.2.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.3.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.4.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.5.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.6.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.7.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.8.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
         ]
 
     def setUp(self):
