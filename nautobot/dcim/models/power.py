@@ -205,7 +205,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
             raise ValidationError({"voltage": "Voltage cannot be negative for AC supply"})
 
     def save(self, *args, **kwargs):
-
         # Cache the available_power property on the instance
         kva = abs(self.voltage) * self.amperage * (self.max_utilization / 100)
         if self.phase == PowerFeedPhaseChoices.PHASE_3PHASE:

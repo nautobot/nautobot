@@ -34,7 +34,6 @@ class ClusterTypeView(generic.ObjectView):
     queryset = ClusterType.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Clusters
         clusters = (
             Cluster.objects.restrict(request.user, "view")
@@ -94,7 +93,6 @@ class ClusterGroupView(generic.ObjectView):
     queryset = ClusterGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Clusters
         clusters = (
             Cluster.objects.restrict(request.user, "view")
@@ -226,10 +224,8 @@ class ClusterAddDevicesView(generic.ObjectEditView):
         form = self.form(cluster, request.POST)
 
         if form.is_valid():
-
             device_pks = form.cleaned_data["devices"]
             with transaction.atomic():
-
                 # Assign the selected Devices to the Cluster
                 for device in Device.objects.filter(pk__in=device_pks):
                     device.cluster = cluster
@@ -258,16 +254,13 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
     template_name = "generic/object_bulk_remove.html"
 
     def post(self, request, *args, **kwargs):
-
         cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
 
         if "_confirm" in request.POST:
             form = self.form(request.POST)
             if form.is_valid():
-
                 device_pks = form.cleaned_data["pk"]
                 with transaction.atomic():
-
                     # Remove the selected Devices from the Cluster
                     for device in Device.objects.filter(pk__in=device_pks):
                         device.cluster = None

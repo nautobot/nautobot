@@ -11,7 +11,6 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     address = graphene.String()
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
-    nat_outside = graphene.Field(lambda: IPAddressType)
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     class Meta:

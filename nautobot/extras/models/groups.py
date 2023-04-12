@@ -15,7 +15,6 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
@@ -37,7 +36,6 @@ class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
     name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
@@ -88,9 +86,6 @@ class DynamicGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def natural_key(self):
-        return (self.slug,)
 
     @property
     def model(self):
@@ -251,7 +246,6 @@ class DynamicGroup(OrganizationalModel):
 
         # Filter out unwanted fields from the filterform
         for filterset_field_name, filterset_field in filterset_fields.items():
-
             # Skip filter fields that have methods defined. They are not reversible.
             if skip_method_filters and filterset_field.method is not None:
                 # Don't skip method fields that also have a "generate_query_" method
@@ -329,7 +323,7 @@ class DynamicGroup(OrganizationalModel):
         return self.members.count()
 
     def get_absolute_url(self):
-        return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
+        return reverse("extras:dynamicgroup", kwargs={"pk": self.pk})
 
     def get_group_members_url(self):
         """Get URL to group members."""

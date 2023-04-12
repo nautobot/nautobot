@@ -12,10 +12,10 @@ from nautobot.circuits.filters import (
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Role, Status, Tag
 
 
-class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 
@@ -34,8 +34,8 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = Provider.objects.all()[:2]
+        providers[0].tags.set(Tag.objects.get_for_model(Provider))
         circuit_types = CircuitType.objects.all()[:2]
         cls.locations = Location.objects.filter(children__isnull=True)[:2]
 
@@ -59,14 +59,13 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
-class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
+class CircuitTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = CircuitType.objects.all()
     filterset = CircuitTypeFilterSet
 
     generic_filter_tests = (
         ["description"],
         ["name"],
-        ["slug"],
     )
 
 
@@ -82,12 +81,12 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["install_date"],
         ["commit_rate"],
         ["provider", "provider__id"],
-        ["provider", "provider__slug"],
+        ["provider", "provider__name"],
         ["provider_network", "circuit_terminations__provider_network__id"],
         ["provider_network", "circuit_terminations__provider_network__slug"],
         ["circuit_type", "circuit_type__id"],
-        ["circuit_type", "circuit_type__slug"],
-        ["status", "status__slug"],
+        ["circuit_type", "circuit_type__name"],
+        ["status", "status__name"],
         ["circuit_termination_a"],
         ["circuit_termination_z"],
         ["circuit_terminations"],
@@ -155,9 +154,10 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         interface2 = Interface.objects.create(device=device2, name="eth0")
 
         circuit_terminations = CircuitTermination.objects.all()
+        circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(slug="connected")
+        status_connected = cable_statuses.get(name="Connected")
 
         Cable.objects.create(
             termination_a=circuit_terminations[0],
@@ -199,6 +199,5 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["description"],
         ["name"],
         ["provider", "provider__id"],
-        ["provider", "provider__slug"],
-        ["slug"],
+        ["provider", "provider__name"],
     )

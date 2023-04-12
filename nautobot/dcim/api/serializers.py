@@ -455,7 +455,6 @@ class ManufacturerSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "device_type_count",
             "inventory_item_count",
@@ -664,7 +663,6 @@ class PlatformSerializer(NautobotModelSerializer):
         fields = [
             "url",
             "name",
-            "slug",
             "manufacturer",
             "napalm_driver",
             "napalm_args",
@@ -731,7 +729,6 @@ class DeviceSerializer(
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
         if data.get("rack") and data.get("position") and data.get("face"):
             validator = UniqueTogetherValidator(
@@ -897,7 +894,6 @@ class PowerPortSerializer(
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     def validate(self, data):
-
         # Validate many-to-many VLAN assignments
         mode = data.get("mode", getattr(self.instance, "mode", None))
 
@@ -1075,7 +1071,6 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerial
         fields = [
             "url",
             "name",
-            "slug",
             "description",
             "failover_strategy",
             "secrets_group",

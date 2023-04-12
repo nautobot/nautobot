@@ -105,7 +105,7 @@ class NestedManufacturerSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Manufacturer
-        fields = ["id", "url", "name", "slug", "device_type_count"]
+        fields = ["id", "url", "name", "device_type_count"]
 
 
 class NestedDeviceTypeSerializer(WritableNestedSerializer):
@@ -201,7 +201,7 @@ class NestedPlatformSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.Platform
-        fields = ["id", "url", "name", "slug", "device_count", "virtual_machine_count"]
+        fields = ["id", "url", "name", "device_count", "virtual_machine_count"]
 
 
 class NestedDeviceSerializer(WritableNestedSerializer):
@@ -331,7 +331,7 @@ class NestedDeviceRedundancyGroupSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.DeviceRedundancyGroup
-        fields = ["id", "url", "name", "slug", "failover_strategy"]
+        fields = ["id", "url", "name", "failover_strategy"]
 
 
 #

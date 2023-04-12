@@ -142,7 +142,7 @@ class Cable(PrimaryModel, StatusModel):
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, "__status_connected", None) is None:
             try:
-                cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+                cls.__status_connected = Status.objects.get_for_model(Cable).get(name="Connected")
             except Status.DoesNotExist:
                 logger.warning("Status 'connected' not found for dcim.cable")
                 return None
@@ -259,7 +259,6 @@ class Cable(PrimaryModel, StatusModel):
             self.length_unit = ""
 
     def save(self, *args, **kwargs):
-
         # Store the given length (if any) in meters for use in database ordering
         if self.length and self.length_unit:
             self._abs_length = to_meters(self.length, self.length_unit)

@@ -50,7 +50,7 @@ from nautobot.extras.models import (
 from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -115,17 +115,16 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     model = ConfigContext
 
     def setUp(self):
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
         self.devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.create(name="Location Type 1")
         self.location = Location.objects.create(name="Location 1", location_type=location_type)
-        self.platform = Platform.objects.create(name="Platform")
-        self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
-        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
+        self.platform = Platform.objects.first()
+        self.tenant = Tenant.objects.first()
+        self.tenantgroup = self.tenant.tenant_group
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
         self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
@@ -196,7 +195,6 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_annotation_same_as_get_for_object_device_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
@@ -229,7 +227,6 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
@@ -424,9 +421,9 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
 
         # Device
-        status = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
@@ -439,7 +436,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
             name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data
@@ -954,25 +951,21 @@ class SecretTest(ModelTestCases.BaseModelTestCase):
     def setUp(self):
         self.environment_secret = Secret.objects.create(
             name="Environment Variable Secret",
-            slug="env-var",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
         )
         self.environment_secret_templated = Secret.objects.create(
             name="Environment Variable Templated Secret",
-            slug="env-var-templated",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_{{ obj.slug | upper }}"},
         )
         self.text_file_secret = Secret.objects.create(
             name="Text File Secret",
-            slug="text",
             provider="text-file",
             parameters={"path": os.path.join(tempfile.gettempdir(), "secret-file.txt")},
         )
         self.text_file_secret_templated = Secret.objects.create(
             name="Text File Templated Secret",
-            slug="text-templated",
             provider="text-file",
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
@@ -1118,7 +1111,6 @@ class SecretTest(ModelTestCases.BaseModelTestCase):
     def test_text_file_clean_validation(self):
         secret = Secret.objects.create(
             name="Path shenanigans",
-            slug="path-shenanigans",
             provider="text-file",
             parameters={"path": "relative/path/to/file"},
         )
@@ -1271,12 +1263,11 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
     model = SecretsGroup
 
     def setUp(self):
-        self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
+        self.secrets_group = SecretsGroup(name="Secrets Group 1")
         self.secrets_group.validated_save()
 
         self.environment_secret = Secret.objects.create(
             name="Environment Variable Secret",
-            slug="env-var",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
         )
@@ -1348,7 +1339,7 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
         self.status = Status.objects.create(name="New Device Status")
         self.status.content_types.add(ContentType.objects.get_for_model(Device))
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1430,7 +1421,6 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         )
 
     def test_log_entry_creation(self):
-
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
             job_result=self.job_result,

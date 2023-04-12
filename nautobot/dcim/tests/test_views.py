@@ -97,7 +97,7 @@ def create_test_device(name):
     location, _ = Location.objects.get_or_create(
         name="Test Location 1", slug="test-location-1", location_type=location_type
     )
-    manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
+    manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")
     device_ct = ContentType.objects.get_for_model(Device)
@@ -163,13 +163,13 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for lt in [lt1, lt2, lt3]:
             lt.validated_save()
 
-        active = Status.objects.get(name="Active")
+        status = Status.objects.get_for_model(Location).first()
         tenant = Tenant.objects.first()
 
-        loc1 = Location.objects.create(name="Root 1", location_type=lt1, status=active)
-        loc2 = Location.objects.create(name="Root 2", location_type=lt1, status=active, tenant=tenant)
-        loc3 = Location.objects.create(name="Intermediate 1", location_type=lt2, parent=loc2, status=active)
-        loc4 = Location.objects.create(name="Leaf 1", location_type=lt3, parent=loc3, status=active, description="Hi!")
+        loc1 = Location.objects.create(name="Root 1", location_type=lt1, status=status)
+        loc2 = Location.objects.create(name="Root 2", location_type=lt1, status=status, tenant=tenant)
+        loc3 = Location.objects.create(name="Intermediate 1", location_type=lt2, parent=loc2, status=status)
+        loc4 = Location.objects.create(name="Leaf 1", location_type=lt3, parent=loc3, status=status, description="Hi!")
         for loc in [loc1, loc2, loc3, loc4]:
             loc.validated_save()
 
@@ -178,7 +178,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "parent": None,
             "name": "Root 3",
             "slug": "root-3",
-            "status": active.pk,
+            "status": status.pk,
             "tenant": tenant.pk,
             "facility": "Facility X",
             "asn": 65001,
@@ -197,9 +197,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,location_type,parent,status,tenant,description",
-            f'Root 3,root-3,"{lt1.name}",,active,,',
-            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",active,"{tenant.name}",Hello world!',
-            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",active,"{tenant.name}",',
+            f'Root 3,root-3,"{lt1.name}",,{status.name},,',
+            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",{status.name},"{tenant.name}",Hello world!',
+            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
@@ -207,7 +207,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             # Because we have a mix of root and non-root LocationTypes,
             # we can't bulk-edit the parent in this generic test
             "tenant": tenant.pk,
-            "status": Status.objects.get(name="Planned").pk,
+            "status": Status.objects.get_for_model(Location).last().pk,
             "asn": 65009,
             "time_zone": pytz.timezone("US/Eastern"),
         }
@@ -309,10 +309,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         rackroles = Role.objects.get_for_model(Rack)[:2]
 
         statuses = Status.objects.get_for_model(Rack)
-        cls.status_active = statuses.get(slug="active")
+        cls.status = statuses[0]
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        cls.cable_connected = cable_statuses.get(slug="connected")
+        cls.cable_connected = cable_statuses.get(name="Connected")
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="Rack Colors", default=[]),
@@ -328,19 +328,19 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Rack.objects.create(
                 name="Rack 1",
                 location=cls.locations[0],
-                status=cls.status_active,
+                status=cls.status,
                 _custom_field_data={"rack_colors": ["red"]},
             ),
             Rack.objects.create(
                 name="Rack 2",
                 location=cls.locations[0],
-                status=cls.status_active,
+                status=cls.status,
                 _custom_field_data={"rack_colors": ["green"]},
             ),
             Rack.objects.create(
                 name="Rack 3",
                 location=cls.locations[0],
-                status=cls.status_active,
+                status=cls.status,
                 _custom_field_data={"rack_colors": ["blue"]},
             ),
         )
@@ -373,7 +373,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "location": cls.locations[1].pk,
             "rack_group": rackgroups[1].pk,
             "tenant": None,
-            "status": statuses.get(slug="planned").pk,
+            "status": statuses[2].pk,
             "role": rackroles[1].pk,
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "asset_tag": "ABCDEF",
@@ -392,16 +392,16 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "location,rack_group,name,width,u_height,status",
-            f"{cls.locations[0].name},,Rack 4,19,42,planned",
-            f"{cls.locations[0].name},Rack Group 1,Rack 5,19,42,active",
-            f"{cls.locations[1].name},Rack Group 2,Rack 6,19,42,reserved",
+            f"{cls.locations[0].name},,Rack 4,19,42,{statuses[0].name}",
+            f"{cls.locations[0].name},Rack Group 1,Rack 5,19,42,{statuses[1].name}",
+            f"{cls.locations[1].name},Rack Group 2,Rack 6,19,42,{statuses[2].name}",
         )
 
         cls.bulk_edit_data = {
             "location": cls.locations[1].pk,
             "rack_group": rackgroups[1].pk,
             "tenant": None,
-            "status": statuses.get(slug="deprecated").pk,
+            "status": statuses[3].pk,
             "role": rackroles[1].pk,
             "serial": "654321-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
             "type": RackTypeChoices.TYPE_4POST,
@@ -425,7 +425,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_powerports(self):
         # Create Devices
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
 
         device_types = (
             DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
@@ -433,7 +433,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         device_roles = Role.objects.get_for_model(Device)[:1]
 
-        platforms = (Platform.objects.create(name="Platform 1", slug="platform-1"),)
+        platforms = Platform.objects.all()[:1]
 
         devices = (
             Device.objects.create(
@@ -443,7 +443,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_types[0],
                 role=device_roles[0],
                 platform=platforms[0],
-                status=self.status_active,
+                status=self.status,
             ),
             Device.objects.create(
                 name="Dev 1",
@@ -452,7 +452,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 device_type=device_types[0],
                 role=device_roles[0],
                 platform=platforms[0],
-                status=self.status_active,
+                status=self.status,
             ),
         )
 
@@ -534,8 +534,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.first()
-
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
@@ -544,18 +542,15 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "Manufacturer X",
-            "slug": "manufacturer-x",
             "description": "A new manufacturer",
         }
         cls.csv_data = (
-            "name,slug,description",
-            "Manufacturer 4,manufacturer-4,Fourth manufacturer",
-            "Manufacturer 5,manufacturer-5,Fifth manufacturer",
-            "Manufacturer 6,manufacturer-6,Sixth manufacturer",
-            "Manufacturer 7,,Seventh manufacturer",
+            "name,description",
+            "Manufacturer 4,Fourth manufacturer",
+            "Manufacturer 5,Fifth manufacturer",
+            "Manufacturer 6,Sixth manufacturer",
+            "Manufacturer 7,Seventh manufacturer",
         )
-        cls.slug_test_object = manufacturer.name
-        cls.slug_source = "name"
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -574,10 +569,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        manufacturers = (
-            Manufacturer.objects.first(),
-            Manufacturer.objects.last(),
-        )
+        manufacturers = Manufacturer.objects.all()[:2]
 
         DeviceType.objects.create(model="Test Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
         DeviceType.objects.create(model="Test Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
@@ -631,8 +623,9 @@ class DeviceTypeTestCase(
         # TODO: Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
         #       (not "rear_port_template"). This is intentional as we are testing for backwards compatibility with
         #       the netbox/devicetype-library repository.
-        IMPORT_DATA = """
-manufacturer: Generic
+        manufacturer = Manufacturer.objects.first()
+        IMPORT_DATA = f"""
+manufacturer: {manufacturer.name}
 model: TEST-1000
 slug: test-1000
 u_height: 2
@@ -704,7 +697,7 @@ device-bays:
 """
 
         # Create the manufacturer
-        Manufacturer.objects.create(name="Generic", slug="generic")
+        Manufacturer.objects.first()
 
         # Add all required permissions to the test user
         self.add_permissions(
@@ -830,7 +823,7 @@ class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetypes = (
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
@@ -862,7 +855,7 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateVie
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetypes = (
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
@@ -894,7 +887,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetypes = (
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
@@ -932,7 +925,7 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
 
         PowerOutletTemplate.objects.create(device_type=devicetype, name="Power Outlet Template 1")
@@ -968,7 +961,7 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetypes = (
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
@@ -1005,7 +998,7 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
 
         rearports = (
@@ -1061,7 +1054,7 @@ class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetypes = (
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
@@ -1095,7 +1088,7 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetypes = (
             DeviceType.objects.create(
                 manufacturer=manufacturer,
@@ -1136,11 +1129,9 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        platform = Platform.objects.first()
 
         cls.form_data = {
             "name": "Platform X",
-            "slug": "platform-x",
             "manufacturer": manufacturer.pk,
             "napalm_driver": "junos",
             "napalm_args": None,
@@ -1148,15 +1139,12 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Platform 4,platform-4,Fourth platform",
-            "Platform 5,platform-5,Fifth platform",
-            "Platform 6,platform-6,Sixth platform",
-            "Platform 7,,Seventh platform",
+            "name,description",
+            "Platform 4,Fourth platform",
+            "Platform 5,Fifth platform",
+            "Platform 6,Sixth platform",
+            "Platform 7,Seventh platform",
         )
-
-        cls.slug_test_object = platform.name
-        cls.slug_source = "name"
 
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1173,7 +1161,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Rack.objects.create(name="Rack 2", location=locations[1]),
         )
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
 
         devicetypes = (
             DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
@@ -1182,18 +1170,18 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         deviceroles = Role.objects.get_for_model(Device)[:2]
 
-        platforms = (
-            Platform.objects.create(name="Platform 1", slug="platform-1"),
-            Platform.objects.create(name="Platform 2", slug="platform-2"),
-        )
+        platforms = Platform.objects.all()[:2]
+        for platform in platforms:
+            platform.manufacturer = manufacturer
+            platform.save()
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         statuses = Status.objects.get_for_model(Device)
-        status_active = statuses.get(slug="active")
+        status_active = statuses[0]
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Crash Counter", default=0),
@@ -1271,7 +1259,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "rack": racks[1].pk,
             "position": 1,
             "face": DeviceFaceChoices.FACE_FRONT,
-            "status": statuses.get(slug="planned").pk,
+            "status": statuses[1].pk,
             "primary_ip4": None,
             "primary_ip6": None,
             "cluster": None,
@@ -1288,9 +1276,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "role,manufacturer,device_type,status,name,location,rack_group,rack,position,face,secrets_group",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 4,{locations[0].name},Rack Group 1,Rack 1,10,front,",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 5,{locations[0].name},Rack Group 1,Rack 1,20,front,",
-            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 6,{locations[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
+            f"{deviceroles[0].name},{manufacturer.name},Device Type 1,{statuses[0].name},Device 4,{locations[0].name},Rack Group 1,Rack 1,10,front,",
+            f"{deviceroles[0].name},{manufacturer.name},Device Type 1,{statuses[0].name},Device 5,{locations[0].name},Rack Group 1,Rack 1,20,front,",
+            f"{deviceroles[0].name},{manufacturer.name},Device Type 1,{statuses[0].name},Device 6,{locations[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -1299,7 +1287,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "platform": platforms[1].pk,
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
-            "status": statuses.get(slug="decommissioning").pk,
+            "status": statuses[2].pk,
             "location": locations[1].pk,
             "rack": racks[1].pk,
             "position": None,
@@ -1715,7 +1703,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         device = create_test_device("Device 1")
 
         statuses = Status.objects.get_for_model(Interface)
-        status_active = statuses.get(slug="active")
+        status_active = statuses[0]
 
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1"),
@@ -1801,9 +1789,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name,type,status",
-            "Device 1,Interface 4,1000base-t,active",
-            "Device 1,Interface 5,1000base-t,active",
-            "Device 1,Interface 6,1000base-t,active",
+            f"Device 1,Interface 4,1000base-t,{statuses[0].name}",
+            f"Device 1,Interface 5,1000base-t,{statuses[0].name}",
+            f"Device 1,Interface 6,1000base-t,{statuses[0].name}",
         )
 
 
@@ -1967,7 +1955,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         device = create_test_device("Device 1")
-        manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
 
         inventory_items = (
             InventoryItem.objects.create(device=device, name="Inventory Item 1"),
@@ -2033,7 +2021,7 @@ class CableTestCase(
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
 
@@ -2154,7 +2142,7 @@ class CableTestCase(
             # 'termination_b_type': interface_ct.pk,
             # 'termination_b_id': interfaces[3].pk,
             "type": CableTypeChoices.TYPE_CAT6,
-            "status": statuses.get(slug="planned").pk,
+            "status": statuses[1].pk,
             "label": "Label",
             "color": "c0c0c0",
             "length": 100,
@@ -2164,14 +2152,14 @@ class CableTestCase(
 
         cls.csv_data = (
             "side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name,status",
-            "Device 3,dcim.interface,Interface 1,Device 4,dcim.interface,Interface 1,planned",
-            "Device 3,dcim.interface,Interface 2,Device 4,dcim.interface,Interface 2,planned",
-            "Device 3,dcim.interface,Interface 3,Device 4,dcim.interface,Interface 3,planned",
+            f"Device 3,dcim.interface,Interface 1,Device 4,dcim.interface,Interface 1,{statuses[0].name}",
+            f"Device 3,dcim.interface,Interface 2,Device 4,dcim.interface,Interface 2,{statuses[0].name}",
+            f"Device 3,dcim.interface,Interface 3,Device 4,dcim.interface,Interface 3,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {
             "type": CableTypeChoices.TYPE_CAT5E,
-            "status": statuses.get(slug="connected").pk,
+            "status": statuses[0].pk,
             "label": "New label",
             "color": "00ff00",
             "length": 50,
@@ -2190,8 +2178,8 @@ class CableTestCase(
             Interface.objects.create(device=device, name="eth1"),
         ]
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        provider = Provider.objects.first()
+        circuittype = CircuitType.objects.first()
         circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
 
         circuit_terminations = [
@@ -2203,10 +2191,10 @@ class CableTestCase(
             ),
         ]
 
-        connected = Status.objects.get(slug="connected")
+        status = Status.objects.get_for_model(Cable).get(name="Connected")
         cables = [
-            Cable.objects.create(termination_a=circuit_terminations[0], termination_b=interfaces[0], status=connected),
-            Cable.objects.create(termination_a=circuit_terminations[1], termination_b=interfaces[1], status=connected),
+            Cable.objects.create(termination_a=circuit_terminations[0], termination_b=interfaces[0], status=status),
+            Cable.objects.create(termination_a=circuit_terminations[1], termination_b=interfaces[1], status=status),
         ]
 
         request = {
@@ -2277,16 +2265,11 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             ConsolePort.objects.create(device=device_1, name="Console Port 2"),
             ConsolePort.objects.create(device=device_1, name="Console Port 3"),
         )
+        status_connected = Status.objects.get(name="Connected")
 
-        Cable.objects.create(
-            termination_a=consoleports[0], termination_b=serverports[0], status=Status.objects.get(slug="connected")
-        )
-        Cable.objects.create(
-            termination_a=consoleports[1], termination_b=serverports[1], status=Status.objects.get(slug="connected")
-        )
-        Cable.objects.create(
-            termination_a=consoleports[2], termination_b=rearport, status=Status.objects.get(slug="connected")
-        )
+        Cable.objects.create(termination_a=consoleports[0], termination_b=serverports[0], status=status_connected)
+        Cable.objects.create(termination_a=consoleports[1], termination_b=serverports[1], status=status_connected)
+        Cable.objects.create(termination_a=consoleports[2], termination_b=rearport, status=status_connected)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
@@ -2342,16 +2325,12 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         powerpanel = PowerPanel.objects.create(location=location, name="Power Panel 1")
         powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1")
 
-        Cable.objects.create(
-            termination_a=powerports[2], termination_b=powerfeed, status=Status.objects.get(slug="connected")
-        )
+        status_connected = Status.objects.get(name="Connected")
+
+        Cable.objects.create(termination_a=powerports[2], termination_b=powerfeed, status=status_connected)
         # Creating a PowerOutlet with a PowerPort via the ORM does *not* automatically cable the two together. Bug?
-        Cable.objects.create(
-            termination_a=powerports[0], termination_b=poweroutlets[0], status=Status.objects.get(slug="connected")
-        )
-        Cable.objects.create(
-            termination_a=powerports[1], termination_b=poweroutlets[1], status=Status.objects.get(slug="connected")
-        )
+        Cable.objects.create(termination_a=powerports[0], termination_b=poweroutlets[0], status=status_connected)
+        Cable.objects.create(termination_a=powerports[1], termination_b=poweroutlets[1], status=status_connected)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
@@ -2404,14 +2383,14 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
         rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
+        provider = Provider.objects.first()
+        circuittype = CircuitType.objects.first()
         circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
         circuittermination = CircuitTermination.objects.create(
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
         )
 
-        connected = Status.objects.get(slug="connected")
+        connected = Status.objects.get(name="Connected")
 
         Cable.objects.create(termination_a=cls.interfaces[0], termination_b=cls.device_2_interface, status=connected)
         Cable.objects.create(termination_a=cls.interfaces[1], termination_b=circuittermination, status=connected)
@@ -2477,7 +2456,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -2619,8 +2598,8 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.powerfeeds = (powerfeed_1, powerfeed_2)
 
         statuses = Status.objects.get_for_model(PowerFeed)
-        cls.statuses = statuses
-        status_planned = statuses.get(slug="planned")
+        cls.status = statuses
+        status_planned = statuses[0]
 
         cls.form_data = {
             "name": "Power Feed X",
@@ -2639,9 +2618,9 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "location,power_panel,name,voltage,amperage,max_utilization,status",
-            f"{location.name},Power Panel 1,Power Feed 4,120,20,80,active",
-            f"{location.name},Power Panel 1,Power Feed 5,120,20,80,failed",
-            f"{location.name},Power Panel 1,Power Feed 6,120,20,80,offline",
+            f"{location.name},Power Panel 1,Power Feed 4,120,20,80,{statuses[0].name}",
+            f"{location.name},Power Panel 1,Power Feed 5,120,20,80,{statuses[0].name}",
+            f"{location.name},Power Panel 1,Power Feed 6,120,20,80,{statuses[1].name}",
         )
 
         cls.bulk_edit_data = {
@@ -2660,7 +2639,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_power_feed_detail(self):
         self.add_permissions("dcim.view_powerfeed")
         # Setup base device info
-        manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
         device = Device.objects.create(
@@ -2675,10 +2654,10 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         powerfeed = self.powerfeeds[0]
 
         Cable.objects.create(
-            termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected")
+            termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(name="Connected")
         )
 
-        url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
+        url = reverse("dcim:powerfeed", kwargs={"pk": powerfeed.pk})
         self.assertHttpStatus(self.client.get(url), 200)
 
 
@@ -2690,9 +2669,9 @@ class PathTraceViewTestCase(ModelViewTestCase):
         (https://github.com/nautobot/nautobot/issues/1741)
         """
         self.add_permissions("dcim.view_cable", "dcim.view_rearport")
-        active = Status.objects.get(slug="active")
-        connected = Status.objects.get(slug="connected")
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        active = Status.objects.get(name="Active")
+        connected = Status.objects.get(name="Connected")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.get(name="Campus")
@@ -2723,7 +2702,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "DRG χ",
-            "slug": "region-chi",
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": statuses[3].pk,
             "local_config_context_data": None,
@@ -2731,10 +2709,10 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,failover_strategy,status",
-            "DRG δ,,active",
-            "DRG ε,,planned",
-            "DRG ζ,active-active,staging",
-            "DRG 7,active-passive,retired",
+            f"DRG δ,,{statuses[0].name}",
+            f"DRG ε,,{statuses[0].name}",
+            f"DRG ζ,active-active,{statuses[1].name}",
+            f"DRG 7,active-passive,{statuses[1].name}",
         )
 
         cls.bulk_edit_data = {

@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
-from nautobot.dcim.models import Device, LocationType
+from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
     ConfigContextForm,
@@ -232,7 +232,7 @@ class NoteModelFormTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Location).first()
         cls.user = User.objects.create(username="formuser1")
         cls.location_type = LocationType.objects.get(name="Campus")
 
@@ -240,12 +240,11 @@ class NoteModelFormTestCase(TestCase):
             "name": "Location 1",
             "slug": "location-1",
             "location_type": cls.location_type.pk,
-            "status": active.pk,
+            "status": status.pk,
         }
 
     def test_note_object_edit_form(self):
-
-        form = LocationForm(data=dict(**self.location_form_base_data, **{"object_note": "This is a test."}))
+        form = LocationForm(data={**self.location_form_base_data, "object_note": "This is a test."})
         self.assertTrue(form.is_valid())
         obj = form.save()
         form.save_note(
@@ -299,18 +298,20 @@ class RelationshipModelFormTestCase(TestCase):
         cls.location = dcim_models.Location.objects.filter(
             location_type=LocationType.objects.get(name="Campus")
         ).first()
-        cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        cls.manufacturer = dcim_models.Manufacturer.objects.first()
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
         cls.device_role = Role.objects.get_for_model(Device).first()
-        cls.platform = dcim_models.Platform.objects.create(name="Platform 1", slug="platform-1")
-        cls.status_active = Status.objects.get(slug="active")
+        cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.ipaddress_status = Status.objects.get_for_model(ipam_models.IPAddress).first()
+        cls.vlangroup_status = Status.objects.get_for_model(ipam_models.VLANGroup).first()
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
             location=cls.location,
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
-            status=cls.status_active,
+            status=cls.device_status,
         )
         cls.device_2 = dcim_models.Device.objects.create(
             name="Device 2",
@@ -318,7 +319,7 @@ class RelationshipModelFormTestCase(TestCase):
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
-            status=cls.status_active,
+            status=cls.device_status,
         )
         cls.device_3 = dcim_models.Device.objects.create(
             name="Device 3",
@@ -326,11 +327,11 @@ class RelationshipModelFormTestCase(TestCase):
             device_type=cls.device_type,
             role=cls.device_role,
             platform=cls.platform,
-            status=cls.status_active,
+            status=cls.device_status,
         )
 
-        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.status_active)
-        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.status_active)
+        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.ipaddress_status)
+        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.ipaddress_status)
 
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
             name="VLAN Group 1", slug="vlan-group-1", location=cls.location
@@ -375,11 +376,11 @@ class RelationshipModelFormTestCase(TestCase):
             "face": None,
             "position": None,
             "platform": cls.platform.pk,
-            "status": cls.status_active.pk,
+            "status": cls.device_status.pk,
         }
         cls.ipaddress_form_base_data = {
             "address": "10.3.3.3/24",
-            "status": cls.status_active.pk,
+            "status": cls.ipaddress_status.pk,
         }
         cls.vlangroup_form_base_data = {
             "location": cls.location.pk,
@@ -394,14 +395,12 @@ class RelationshipModelFormTestCase(TestCase):
         It can also create ONE_TO_ONE_SYMMETRIC associations where it is a "peer" object.
         """
         form = DeviceForm(
-            data=dict(
+            data={
                 **self.device_form_base_data,
-                **{
-                    f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk,
-                    f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
-                    f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
-                },
-            )
+                f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk,
+                f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
+                f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
+            }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
@@ -429,12 +428,10 @@ class RelationshipModelFormTestCase(TestCase):
         A new record can create ONE_TO_ONE associations where it is the "destination" object.
         """
         form = IPAddressForm(
-            data=dict(
+            data={
                 **self.ipaddress_form_base_data,
-                **{
-                    f"cr_{self.relationship_1.slug}__source": self.device_1.pk,
-                },
-            )
+                f"cr_{self.relationship_1.slug}__source": self.device_1.pk,
+            }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
@@ -448,12 +445,10 @@ class RelationshipModelFormTestCase(TestCase):
         A new record can create ONE_TO_MANY associations where it is the "destination" object.
         """
         form = VLANGroupForm(
-            data=dict(
+            data={
                 **self.vlangroup_form_base_data,
-                **{
-                    f"cr_{self.relationship_2.slug}__source": self.device_1.pk,
-                },
-            )
+                f"cr_{self.relationship_2.slug}__source": self.device_1.pk,
+            }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
@@ -477,9 +472,7 @@ class RelationshipModelFormTestCase(TestCase):
 
         # Can't associate New Device with IP Address 1 (already associated to Device 1)
         form = DeviceForm(
-            data=dict(
-                **self.device_form_base_data, **{f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk}
-            )
+            data={**self.device_form_base_data, f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk}
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(
@@ -489,7 +482,7 @@ class RelationshipModelFormTestCase(TestCase):
 
         # Can't associate new IP address with Device 1 (already associated with IP Address 1)
         form = IPAddressForm(
-            data=dict(**self.ipaddress_form_base_data, **{f"cr_{self.relationship_1.slug}__source": self.device_1.pk})
+            data={**self.ipaddress_form_base_data, f"cr_{self.relationship_1.slug}__source": self.device_1.pk}
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(
@@ -512,10 +505,10 @@ class RelationshipModelFormTestCase(TestCase):
 
         # Can't associate New Device with VLAN Group 1 (already associated to Device 1)
         form = DeviceForm(
-            data=dict(
+            data={
                 **self.device_form_base_data,
-                **{f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk]},
-            )
+                f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
+            }
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(
@@ -537,9 +530,7 @@ class RelationshipModelFormTestCase(TestCase):
         ).validated_save()
 
         # Peer is already a source for this relationship
-        form = DeviceForm(
-            data=dict(**self.device_form_base_data, **{f"cr_{self.relationship_3.slug}__peer": self.device_1.pk})
-        )
+        form = DeviceForm(data={**self.device_form_base_data, f"cr_{self.relationship_3.slug}__peer": self.device_1.pk})
         self.assertFalse(form.is_valid())
         self.assertEqual(
             "Device 1 is already involved in a HA Device Peer relationship",
@@ -547,9 +538,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
 
         # Peer is already a destination for this relationship
-        form = DeviceForm(
-            data=dict(**self.device_form_base_data, **{f"cr_{self.relationship_3.slug}__peer": self.device_2.pk})
-        )
+        form = DeviceForm(data={**self.device_form_base_data, f"cr_{self.relationship_3.slug}__peer": self.device_2.pk})
         self.assertFalse(form.is_valid())
         self.assertEqual(
             "Device 2 is already involved in a HA Device Peer relationship",
@@ -591,7 +580,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
-                "status": self.status_active,
+                "status": self.device_status,
                 f"cr_{self.relationship_1.slug}__destination": self.ipaddress_2.pk,
                 f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_2.pk],
                 f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
@@ -640,7 +629,7 @@ class RelationshipModelFormTestCase(TestCase):
             instance=self.ipaddress_1,
             data={
                 "address": self.ipaddress_1.address,
-                "status": self.status_active,
+                "status": self.ipaddress_status,
                 f"cr_{self.relationship_1.slug}__source": self.device_2.pk,
             },
         )
@@ -708,7 +697,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
-                "status": self.status_active,
+                "status": self.device_status,
                 f"cr_{self.relationship_3.slug}__peer": self.device_2.pk,
             },
         )
@@ -734,7 +723,7 @@ class RelationshipModelFormTestCase(TestCase):
                 "location": self.location,
                 "role": self.device_role,
                 "device_type": self.device_type,
-                "status": self.status_active,
+                "status": self.device_status,
                 f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
             },
         )
@@ -752,11 +741,11 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(ipam_models.IPAddress).first()
         cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         cls.ipaddresses = [
-            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
-            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),
+            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status),
+            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status),
         ]
 
         cls.rel_1to1 = Relationship(

@@ -649,11 +649,16 @@ class RelationshipModelFilterFormMixin(forms.Form):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
-        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE)
+        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
+            destination_type=self.obj_type, destination_hidden=False
+        )
+        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
 
-        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
-        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION)
+        for rel in relationships.iterator():
+            if rel.source_type == self.obj_type and not rel.source_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE)
+            if rel.destination_type == self.obj_type and not rel.destination_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION)
 
     def _append_relationships_side(self, relationships, initial_side):
         """
@@ -710,7 +715,7 @@ class RoleModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Role.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -755,7 +760,7 @@ class StatusModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -765,7 +770,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
     status = CSVModelChoiceField(
         queryset=Status.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         help_text="Operational status",
     )
 

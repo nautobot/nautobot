@@ -22,7 +22,7 @@ class NestedClusterTypeSerializer(WritableNestedSerializer):
 
     class Meta:
         model = ClusterType
-        fields = ["id", "url", "name", "slug", "cluster_count"]
+        fields = ["id", "url", "name", "cluster_count"]
 
 
 class NestedClusterGroupSerializer(WritableNestedSerializer):
@@ -31,7 +31,7 @@ class NestedClusterGroupSerializer(WritableNestedSerializer):
 
     class Meta:
         model = ClusterGroup
-        fields = ["id", "url", "name", "slug", "cluster_count"]
+        fields = ["id", "url", "name", "cluster_count"]
 
 
 class NestedClusterSerializer(WritableNestedSerializer):

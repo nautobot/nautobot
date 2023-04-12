@@ -230,13 +230,10 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
 
 
 class RIRForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = RIR
         fields = [
             "name",
-            "slug",
             "is_private",
             "description",
         ]
@@ -369,7 +366,6 @@ class PrefixCSVForm(
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned location and vlan_group
             params = {
                 f"location__{self.fields['location'].to_field_name}": data.get("location"),
@@ -571,7 +567,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         setattr(self.instance, "_namespace", namespace)
 
     def __init__(self, *args, **kwargs):
-
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
@@ -830,7 +825,6 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned group
             params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)

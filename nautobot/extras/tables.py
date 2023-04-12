@@ -273,7 +273,7 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
+    actions = ButtonsColumn(DynamicGroup)
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
@@ -377,7 +377,7 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
     """
 
     name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
 
     class Meta(DynamicGroupTable.Meta):
         fields = ["name", "members", "description", "actions"]
@@ -496,7 +496,6 @@ class GraphQLQueryTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
         )
 
 
@@ -878,14 +877,14 @@ class RoleTable(BaseTable):
     """Table for list view of `Role` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:role", args=[Accessor("slug")])
+    name = tables.Column(linkify=True)
     color = ColorColumn()
-    actions = ButtonsColumn(Role, pk_field="slug")
+    actions = ButtonsColumn(Role)
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
         model = Role
-        fields = ["pk", "name", "slug", "color", "weight", "content_types", "description"]
+        fields = ["pk", "name", "color", "weight", "content_types", "description"]
 
 
 class RoleTableMixin(BaseTable):
@@ -956,14 +955,14 @@ class StatusTable(BaseTable):
     """Table for list view of `Status` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
+    name = tables.Column(linkify=True)
     color = ColorColumn()
-    actions = ButtonsColumn(Status, pk_field="slug")
+    actions = ButtonsColumn(Status)
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ["pk", "name", "slug", "color", "content_types", "description"]
+        fields = ["pk", "name", "color", "content_types", "description"]
 
 
 class StatusTableMixin(BaseTable):

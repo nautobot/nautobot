@@ -67,7 +67,6 @@ class ProviderFilterSet(NautobotFilterSet):
             "name",
             "noc_contact",
             "portal_url",
-            "slug",
             "tags",
         ]
 
@@ -102,7 +101,8 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="provider",
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        to_field_name="name",
+        label="Provider (name or ID)",
     )
 
     class Meta:
@@ -123,7 +123,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = CircuitType
-        fields = ["id", "description", "name", "slug"]
+        fields = ["id", "description", "name"]
 
 
 class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
@@ -139,7 +139,8 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        to_field_name="name",
+        label="Provider (name or ID)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuit_terminations__provider_network",
@@ -148,8 +149,8 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
     circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
-        to_field_name="slug",
-        label="Circuit type (slug or ID)",
+        to_field_name="name",
+        label="Circuit type (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuit_terminations__location",

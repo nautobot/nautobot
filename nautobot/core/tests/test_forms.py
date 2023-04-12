@@ -685,15 +685,9 @@ class DynamicFilterFormTest(TestCase):
     #     self.assertEqual("'DynamicFilterForm' object requires `filterset_class` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
-        form = forms.DynamicFilterForm(filterset_class=extras_filters.StatusFilterSet)
-        location_form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet)
+        form = forms.DynamicFilterForm(filterset=extras_filters.StatusFilterSet())
+        location_form = forms.DynamicFilterForm(filterset=dcim_filters.LocationFilterSet())
         self.maxDiff = None
-
-        with self.subTest("Assert capitalize"):
-            self.assertEqual(form.capitalize("test"), "Test")
-            self.assertEqual(form.capitalize("test_one"), "Test one")
-            self.assertEqual(form.capitalize("tenant__group"), "Tenant group")
-            self.assertEqual(form.capitalize("_custom_field_data__example_field"), "Example field")
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
@@ -705,7 +699,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("slug", "Slug"),
                 ],
             )
             self.assertEqual(
@@ -753,7 +746,7 @@ class DynamicFilterFormTest(TestCase):
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
-                    ("tenant", "Tenant (slug or ID)"),
+                    ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (slug or ID)"),
                     ("time_zone", "Time zone"),
                     ("vlan_groups", "Vlan groups (slug or ID)"),
@@ -792,7 +785,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("slug", "Slug"),
                 ],
             )
             self.assertEqual(
@@ -827,25 +819,27 @@ class DynamicFilterFormTest(TestCase):
         request_querydict.setlistdefault("created__gte", ["2022-09-05 11:22:33"])
         request_querydict.setlistdefault("asn", ["4"])
 
+        location_filterset = dcim_filters.LocationFilterSet()
+
         with self.subTest("Test for lookup_value with a CharField"):
             # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
             # `lookup_value` field should be a CharField
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.LocationFilterSet
+                request_querydict, location_filterset
             )
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-0")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-0")
             self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains (ic)")])
             # Assert lookup_value is a CharField
             self.assertIsInstance(form.fields["lookup_value"], django_forms.CharField)
 
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-1")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-1")
             self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
             self.assertIsInstance(form.fields["lookup_value"], django_forms.CharField)
 
         with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
             # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with APISelectMultiple widget
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-2")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-2")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -865,14 +859,14 @@ class DynamicFilterFormTest(TestCase):
                     "data-multiple": 1,
                     "data-query-param-content_types": '["dcim.location"]',
                     "display-field": "display",
-                    "value-field": "slug",
+                    "value-field": "name",
                 },
             )
 
         with self.subTest("Test for lookup_value with a NullBooleanField and StaticSelect2 widget"):
             # If `lookup_field` value is a boolean filter and `lookup_type` lookup expr is `exact`, then
             # `lookup_value` field should be a NullBooleanField with StaticSelect2 widget
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-3")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -892,7 +886,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(form.fields["lookup_value"].widget.choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateTimeField"):
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-4")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-4")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -906,7 +900,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.DateTimePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.LocationFilterSet, data=data, prefix="form-5")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-5")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {

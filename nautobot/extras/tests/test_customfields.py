@@ -25,11 +25,11 @@ from nautobot.virtualization.models import VirtualMachine
 class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we have some baseline custom-field records
     def setUp(self):
         super().setUp()
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        location_status = Status.objects.get_for_model(Location).first()
         lt = LocationType.objects.get(name="Campus")
-        Location.objects.create(name="Location A", slug="location-a", status=active_status, location_type=lt)
-        Location.objects.create(name="Location B", slug="location-b", status=active_status, location_type=lt)
-        Location.objects.create(name="Location C", slug="location-c", status=active_status, location_type=lt)
+        Location.objects.create(name="Location A", slug="location-a", status=location_status, location_type=lt)
+        Location.objects.create(name="Location B", slug="location-b", status=location_status, location_type=lt)
+        Location.objects.create(name="Location C", slug="location-c", status=location_status, location_type=lt)
 
     def test_immutable_fields(self):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
@@ -446,12 +446,8 @@ class CustomFieldDataAPITest(APITestCase):
         # Create some locations
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
-            Location.objects.create(
-                name="Location 1", slug="location-1", status=cls.statuses.get(slug="active"), location_type=cls.lt
-            ),
-            Location.objects.create(
-                name="Location 2", slug="location-2", status=cls.statuses.get(slug="active"), location_type=cls.lt
-            ),
+            Location.objects.create(name="Location 1", slug="location-1", status=cls.statuses[0], location_type=cls.lt),
+            Location.objects.create(name="Location 2", slug="location-2", status=cls.statuses[0], location_type=cls.lt),
         )
 
         # Assign custom field values for location 2
@@ -518,7 +514,7 @@ class CustomFieldDataAPITest(APITestCase):
             "name": "Location 3",
             "slug": "location-3",
             "location_type": self.lt.pk,
-            "status": self.statuses.get(slug="active").pk,
+            "status": self.statuses[0].pk,
         }
         url = reverse("dcim-api:location-list")
         self.add_permissions("dcim.add_location")
@@ -557,7 +553,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Location 3",
             "slug": "location-3",
-            "status": self.statuses.get(slug="active").pk,
+            "status": self.statuses[0].pk,
             "location_type": self.lt.pk,
             "custom_fields": {
                 "text_cf": "bar",
@@ -616,19 +612,19 @@ class CustomFieldDataAPITest(APITestCase):
                 "name": "Location 3",
                 "slug": "location-3",
                 "location_type": self.lt.pk,
-                "status": self.statuses.get(slug="active").pk,
+                "status": self.statuses[0].pk,
             },
             {
                 "name": "Location 4",
                 "slug": "location-4",
                 "location_type": self.lt.pk,
-                "status": self.statuses.get(slug="active").pk,
+                "status": self.statuses[0].pk,
             },
             {
                 "name": "Location 5",
                 "slug": "location-5",
                 "location_type": self.lt.pk,
-                "status": self.statuses.get(slug="active").pk,
+                "status": self.statuses[0].pk,
             },
         )
         url = reverse("dcim-api:location-list")
@@ -884,7 +880,7 @@ class CustomFieldDataAPITest(APITestCase):
         data = {
             "name": "Location 4",
             "slug": "location-4",
-            "status": self.statuses.get(slug="active").pk,
+            "status": self.statuses[0].pk,
             "location_type": self.lt.pk,
             "custom_fields": {
                 "text_cf": ["I", "am", "a", "disallowed", "type"],
@@ -956,6 +952,7 @@ class CustomFieldImportTest(TestCase):
         Import a Location in CSV format, including a value for each CustomField.
         """
         LocationType.objects.create(name="Test Root")
+        location_status = Status.objects.get_for_model(Location).first()
         data = (
             [
                 "name",
@@ -974,7 +971,7 @@ class CustomFieldImportTest(TestCase):
                 "Location 1",
                 "location-1",
                 "Test Root",
-                "active",
+                location_status.name,
                 "ABC",
                 "123",
                 "True",
@@ -987,7 +984,7 @@ class CustomFieldImportTest(TestCase):
                 "Location 2",
                 "location-2",
                 "Test Root",
-                "active",
+                location_status.name,
                 "DEF",
                 "456",
                 "False",
@@ -996,7 +993,7 @@ class CustomFieldImportTest(TestCase):
                 "Choice B",
                 '"Choice A,Choice B"',
             ],
-            ["Location 3", "location-3", "Test Root", "active", "", "", "", "", "", "", ""],
+            ["Location 3", "location-3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
         )
         if "example_plugin" in settings.PLUGINS:
             data[0].append("cf_example_plugin_auto_custom_field")
@@ -1089,7 +1086,7 @@ class CustomFieldModelTest(TestCase):
         cls.lt = LocationType.objects.get(name="Campus")
 
     def setUp(self):
-        self.active_status = Status.objects.get_for_model(Location).get(slug="active")
+        self.location_status = Status.objects.get_for_model(Location).first()
         self.location1 = Location.objects.create(name="NYC", location_type=self.lt)
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
@@ -1140,7 +1137,7 @@ class CustomFieldModelTest(TestCase):
         from the database.
         """
         location = Location(
-            name="Test Location", slug="test-location", status=self.active_status, location_type=self.lt
+            name="Test Location", slug="test-location", status=self.location_status, location_type=self.lt
         )
 
         # Check custom field data on new instance
@@ -1729,7 +1726,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
         self.choice = CustomFieldChoice(custom_field=self.cf, value="Foo")
         self.choice.save()
 
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        location_status = Status.objects.get_for_model(Location).first()
         self.location_type = LocationType.objects.get(name="Campus")
         self.location = Location(
             name="Location 1",
@@ -1738,7 +1735,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
             _custom_field_data={
                 "cf1": "Foo",
             },
-            status=active_status,
+            status=location_status,
         )
         self.location.validated_save()
 
@@ -1944,7 +1941,7 @@ class CustomFieldTableTest(TestCase):
         # Create a location
         location_type = LocationType.objects.create(name="Root Type 4")
         self.location = Location.objects.create(
-            name="Location Custom", slug="location-1", status=statuses.get(slug="active"), location_type=location_type
+            name="Location Custom", slug="location-1", status=statuses.first(), location_type=location_type
         )
 
         # Assign custom field values for location 2

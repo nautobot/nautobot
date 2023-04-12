@@ -2,7 +2,6 @@ from nautobot.core.choices import ChoiceSet
 
 
 class IPAddressVersionChoices(ChoiceSet):
-
     VERSION_4 = 4
     VERSION_6 = 6
 
@@ -18,7 +17,6 @@ class IPAddressVersionChoices(ChoiceSet):
 
 
 class PrefixStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -31,7 +29,6 @@ class PrefixStatusChoices(ChoiceSet):
 
 
 class PrefixTypeChoices(ChoiceSet):
-
     TYPE_CONTAINER = "container"
     TYPE_NETWORK = "network"
     TYPE_POOL = "pool"
@@ -49,7 +46,6 @@ class PrefixTypeChoices(ChoiceSet):
 
 
 class IPAddressStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -66,7 +62,6 @@ class IPAddressStatusChoices(ChoiceSet):
 
 
 class IPAddressRoleChoices(ChoiceSet):
-
     ROLE_LOOPBACK = "loopback"
     ROLE_SECONDARY = "secondary"
     ROLE_ANYCAST = "anycast"
@@ -105,7 +100,6 @@ class IPAddressRoleChoices(ChoiceSet):
 
 
 class VLANStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -123,7 +117,6 @@ class VLANStatusChoices(ChoiceSet):
 
 
 class ServiceProtocolChoices(ChoiceSet):
-
     PROTOCOL_TCP = "tcp"
     PROTOCOL_UDP = "udp"
 

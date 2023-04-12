@@ -30,7 +30,6 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
             fields = []
 
     def setUp(self):
-
         super().setUp()
 
         self.location_type = dcim_models.LocationType.objects.get(name="Campus")
@@ -82,21 +81,18 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.queryset = dcim_models.Location.objects.filter(name__icontains="Test Child Location")
 
     def test_filter_single_slug(self):
-
         kwargs = {"parent": [self.parent_location_1.slug]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_1])
 
     def test_filter_single_pk(self):
-
         kwargs = {"parent": [self.parent_location_1.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_1])
 
     def test_filter_multiple_slug(self):
-
         kwargs = {"parent": [self.parent_location_1.slug, self.parent_location_2.slug]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
@@ -105,21 +101,18 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         )
 
     def test_filter_null(self):
-
         kwargs = {"parent": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_0])
 
     def test_filter_combined_slug(self):
-
         kwargs = {"parent": [self.parent_location_1.slug, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1])
 
     def test_filter_combined_pk(self):
-
         kwargs = {"parent": [self.parent_location_2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
@@ -128,7 +121,6 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         )
 
     def test_filter_single_slug_exclude(self):
-
         kwargs = {"parent__n": [self.parent_location_1.slug]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
@@ -137,21 +129,18 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         )
 
     def test_filter_single_pk_exclude(self):
-
         kwargs = {"parent__n": [self.parent_location_2.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1])
 
     def test_filter_multiple_slug_exclude(self):
-
         kwargs = {"parent__n": [self.parent_location_1.slug, self.parent_location_2.slug]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_0])
 
     def test_filter_null_exclude(self):
-
         kwargs = {"parent__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
@@ -160,14 +149,12 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         )
 
     def test_filter_combined_slug_exclude(self):
-
         kwargs = {"parent__n": [self.parent_location_1.slug, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_2, self.child_location_2a, self.child_location_2ab])
 
     def test_filter_combined_pk_exclude(self):
-
         kwargs = {"parent__n": [self.parent_location_2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
@@ -198,7 +185,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
     filterset = LocationFilterSet
 
     def setUp(self):
-
         super().setUp()
         self.location_types = dcim_models.LocationType.objects.filter(
             content_types__in=ContentType.objects.filter(FeatureQuery("locations").get_query())
@@ -217,35 +203,30 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.power_panel3a = dcim_models.PowerPanel.objects.create(location=self.locations[1], name="test-power-panel3")
 
     def test_filter_single_name(self):
-
         kwargs = {"power_panels": ["test-power-panel1"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0]])
 
     def test_filter_single_pk(self):
-
         kwargs = {"power_panels": [self.power_panel1.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0]])
 
     def test_filter_multiple_name(self):
-
         kwargs = {"power_panels": ["test-power-panel1", "test-power-panel2"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
 
     def test_filter_duplicate_name(self):
-
         kwargs = {"power_panels": ["test-power-panel3"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
 
     def test_filter_null(self):
-
         kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.filter(power_panels__isnull=True)
@@ -253,7 +234,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_name(self):
-
         kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.filter(
@@ -263,7 +243,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_pk(self):
-
         kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.filter(
@@ -273,7 +252,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel1"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel1"])
@@ -281,7 +259,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_pk_exclude(self):
-
         kwargs = {"power_panels__n": [self.power_panel2.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__pk__in=[self.power_panel2.pk])
@@ -289,7 +266,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_multiple_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel1"]).exclude(
@@ -299,7 +275,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_duplicate_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
         expected_result = dcim_models.Location.objects.exclude(power_panels__name__in=["test-power-panel3"])
@@ -307,21 +282,18 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_null_exclude(self):
-
         kwargs = {"power_panels__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[0], self.locations[1]])
 
     def test_filter_combined_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.locations[1]])
 
     def test_filter_combined_pk_exclude(self):
-
         kwargs = {"power_panels__n": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
@@ -781,13 +753,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturers = (
-            dcim_models.Manufacturer(name="Manufacturer 1", slug="manufacturer-1"),
-            dcim_models.Manufacturer(name="Manufacturer 2", slug="manufacturer-2"),
-            dcim_models.Manufacturer(name="Manufacturer 3", slug="manufacturer-3"),
-        )
-        dcim_models.Manufacturer.objects.bulk_create(manufacturers)
+        manufacturers = dcim_models.Manufacturer.objects.all()[:3]
 
         device_types = (
             dcim_models.DeviceType(
@@ -814,14 +780,8 @@ class DynamicFilterLookupExpressionTest(TestCase):
         device_roles = extras_models.Role.objects.get_for_model(Device)
 
         device_statuses = extras_models.Status.objects.get_for_model(dcim_models.Device)
-        device_status_map = {ds.slug: ds for ds in device_statuses.all()}
 
-        platforms = (
-            dcim_models.Platform(name="Platform 1", slug="platform-1"),
-            dcim_models.Platform(name="Platform 2", slug="platform-2"),
-            dcim_models.Platform(name="Platform 3", slug="platform-3"),
-        )
-        dcim_models.Platform.objects.bulk_create(platforms)
+        platforms = dcim_models.Platform.objects.all()[:3]
         cls.location_type = dcim_models.LocationType.objects.filter(parent__isnull=False).first()
         cls.location_type.content_types.add(
             ContentType.objects.get_for_model(dcim_models.Rack), ContentType.objects.get_for_model(dcim_models.Device)
@@ -850,7 +810,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[0],
                 position=1,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
-                status=device_status_map["active"],
+                status=device_statuses[0],
                 local_config_context_data={"foo": 123},
                 comments="Device 1 comments",
             ),
@@ -865,7 +825,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[1],
                 position=2,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
-                status=device_status_map["staged"],
+                status=device_statuses[2],
                 comments="Device 2 comments",
             ),
             dcim_models.Device(
@@ -879,7 +839,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 rack=racks[2],
                 position=3,
                 face=dcim_choices.DeviceFaceChoices.FACE_REAR,
-                status=device_status_map["failed"],
+                status=device_statuses[1],
                 comments="Device 3 comments",
             ),
         )
@@ -1186,7 +1146,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
-        cls.status_active = statuses.get(slug="active")
+        cls.status = statuses[0]
 
     def test_empty_queryset(self):
         with self.assertRaisesMessage(ValueError, self.exception_message):
@@ -1197,7 +1157,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
         for n in range(1, 11):
             dcim_models.Location.objects.create(
                 name=f"getfiltersettestLocation{n}",
-                status=self.status_active,
+                status=self.status,
                 description=f"description {n}",
                 location_type=location_type,
             )
@@ -1213,10 +1173,10 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
         dcim_models.Location.objects.create(
-            name="getfiltersettestLocation1", status=self.status_active, location_type=location_type
+            name="getfiltersettestLocation1", status=self.status, location_type=location_type
         )
         dcim_models.Location.objects.create(
-            name="getfiltersettestLocation2", status=self.status_active, location_type=location_type
+            name="getfiltersettestLocation2", status=self.status, location_type=location_type
         )
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
@@ -1225,7 +1185,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
         location_type = dcim_models.LocationType.objects.get(name="Campus")
         for n in range(1, 11):
             dcim_models.Location.objects.create(
-                name=f"getfiltersettestLocation{n}", status=self.status_active, location_type=location_type
+                name=f"getfiltersettestLocation{n}", status=self.status, location_type=location_type
             )
         for location in self.queryset:
             location.delete()
@@ -1239,7 +1199,6 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     filterset_class = dcim_filters.LocationFilterSet
 
     def setUp(self):
-
         super().setUp()
         self.lt = dcim_models.LocationType.objects.get(name="Campus")
         self.parent_location_1 = dcim_models.Location.objects.create(

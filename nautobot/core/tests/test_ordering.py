@@ -9,7 +9,6 @@ class NaturalizationTestCase(TestCase):
     """
 
     def test_naturalize(self):
-
         # Original, naturalized
         data = (
             ("abc", "abc"),
@@ -28,7 +27,6 @@ class NaturalizationTestCase(TestCase):
         self.assertEqual(ordering.naturalize("abc123def456", max_length=10), "abc0000012")
 
     def test_naturalize_interface(self):
-
         # Original, naturalized
         data = (
             # IOS/JunOS-style

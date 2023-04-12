@@ -58,10 +58,10 @@ from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, Wh
 from django.utils import timezone
 from django.urls import reverse
 from django.db.models import Exists, OuterRef, Subquery
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 3.2.18
+# Nautobot version 2.0.0a2
 # Example Nautobot App version 1.0.0
-Python 3.7.13 (default, May 11 2022, 08:57:12)
+Python 3.8.16 (default, Mar 23 2023, 04:48:11)
 [GCC 10.2.1 20210110] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
@@ -116,7 +116,7 @@ To retrieve a particular object (typically by its primary key or other unique fi
 In most cases, you will want to retrieve only a specific subset of objects. To filter a queryset, replace `all()` with `filter()` and pass one or more keyword arguments. For example:
 
 ```python
->>> Device.objects.filter(status__slug="active")
+>>> Device.objects.filter(status__name="Active")
 <QuerySet [<Device: TestDevice1>, <Device: TestDevice2>, <Device: TestDevice3>,
 <Device: TestDevice8>, <Device: TestDevice9>, '...(remaining elements truncated)...']>
 ```
@@ -124,14 +124,14 @@ In most cases, you will want to retrieve only a specific subset of objects. To f
 Querysets support slicing to return a specific range of objects.
 
 ```python
->>> Device.objects.filter(status__slug="active")[:3]
+>>> Device.objects.filter(status__name="Active")[:3]
 <QuerySet [<Device: TestDevice1>, <Device: TestDevice2>, <Device: TestDevice3>]>
 ```
 
 The `count()` method can be appended to the queryset to return a count of objects rather than the full list.
 
 ```python
->>> Device.objects.filter(status__slug="active").count()
+>>> Device.objects.filter(status__name="Active").count()
 982
 ```
 

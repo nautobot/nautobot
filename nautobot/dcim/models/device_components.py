@@ -540,11 +540,11 @@ class BaseInterface(RelationshipModel, StatusModel):
             raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
 
     def save(self, *args, **kwargs):
-
         if not self.status:
             query = Status.objects.get_for_model(self)
             try:
-                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+                status_as_dict = InterfaceStatusChoices.as_dict()
+                status = query.get(name=status_as_dict.get(InterfaceStatusChoices.STATUS_ACTIVE))
             except Status.DoesNotExist:
                 raise ValidationError({"status": "Default status 'active' does not exist"})
             self.status = status
@@ -671,7 +671,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # LAG validation
         if self.lag is not None:
-
             # A LAG interface cannot be its own parent
             if self.lag_id == self.pk:
                 raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
@@ -711,7 +710,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # Parent validation
         if self.parent_interface is not None:
-
             # An interface cannot be its own parent
             if self.parent_interface_id == self.pk:
                 raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
@@ -759,7 +757,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # Bridge validation
         if self.bridge is not None:
-
             # An interface cannot be bridged to itself
             if self.bridge_id == self.pk:
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})

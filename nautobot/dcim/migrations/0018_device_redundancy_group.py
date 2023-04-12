@@ -12,7 +12,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0051_add_job_task_queues"),
         ("dcim", "0017_locationtype_nestable"),

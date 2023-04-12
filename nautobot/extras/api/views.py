@@ -236,7 +236,6 @@ class CustomFieldModelViewSet(ModelViewSet):
     """
 
     def get_serializer_context(self):
-
         # Gather all custom fields for the model
         content_type = ContentType.objects.get_for_model(self.queryset.model)
         custom_fields = content_type.custom_fields.all()
@@ -373,7 +372,7 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(

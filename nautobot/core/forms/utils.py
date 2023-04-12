@@ -92,7 +92,7 @@ def expand_ipaddress_pattern(string, ip_version):
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
     if ip_version not in [4, 6]:
-        raise Exception(f"Invalid IP address version: {ip_version}")
+        raise ValueError(f"Invalid IP address version: {ip_version}")
     if ip_version == 4:
         regex = forms.IP4_EXPANSION_PATTERN
         base = 10

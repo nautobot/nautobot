@@ -103,7 +103,6 @@ def _migrate_aggregate_relationships_to_prefix(apps, aggregate, aggregate_ct, pr
 
 
 def migrate_aggregate_to_prefix(apps, schema_editor):
-
     Aggregate = apps.get_model("ipam", "Aggregate")
     ContentType = apps.get_model("contenttypes", "ContentType")
     ComputedField = apps.get_model("extras", "ComputedField")
@@ -127,7 +126,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
     elif Status.objects.filter(content_types=prefix_ct).exists():
         prefix_default_status = Status.objects.filter(content_types=prefix_ct).first()
     else:
-        prefix_default_status = Status.objects.create(name="Active")
+        prefix_default_status = Status.objects.create(name="Active", slug="active")
         prefix_default_status.content_types.add(prefix_ct)
 
     # add prefix content type to any existing aggregate tags
@@ -224,7 +223,6 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0021_prefix_add_rir_and_date_allocated"),
         ("extras", "0039_objectchange__add_change_context"),

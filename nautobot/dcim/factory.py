@@ -2,6 +2,8 @@ import factory
 import logging
 import pytz
 import random
+
+from django.utils.text import slugify
 from faker import Faker
 
 from django.contrib.auth import get_user_model
@@ -72,6 +74,15 @@ NAPALM_DRIVERS = {
     "juniper": ["junos"],
     "palo-alto": ["panos"],
 }
+
+
+# Retrieve correct rack reservation units
+def get_rack_reservation_units(obj):
+    available_units = obj.rack.units
+    unavailable_units = []
+    for rack in obj.rack.rack_reservations.exclude(id=obj.id):
+        unavailable_units += rack.units
+    return [unit for unit in available_units if unit not in unavailable_units][:1]
 
 
 class DeviceTypeFactory(PrimaryModelFactory):
@@ -162,7 +173,7 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.slug, [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(slugify(o.manufacturer.name), [""]))),
         "",
     )
 
@@ -185,7 +196,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
-    nestable = factory.LazyAttribute(lambda l: bool(l.name in ["Campus", "Root"]))
+    nestable = factory.LazyAttribute(lambda loc_type: bool(loc_type.name in ["Campus", "Root"]))
 
     @factory.lazy_attribute
     def parent(self):
@@ -267,7 +278,7 @@ class LocationFactory(PrimaryModelFactory):
             "_parent",
         )
 
-    name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
+    name = factory.LazyAttributeSequence(lambda loc, num: f"{loc.location_type.name}-{num:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
 
     has_asn = NautobotBoolIterator()
@@ -414,7 +425,7 @@ class RackReservationFactory(PrimaryModelFactory):
         exclude = ("has_tenant",)
 
     rack = random_instance(Rack, allow_null=False)
-    units = factory.Sequence(lambda n: [n + 1])
+    units = factory.LazyAttribute(get_rack_reservation_units)
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)

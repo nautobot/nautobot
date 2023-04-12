@@ -6,7 +6,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("tenancy-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -15,28 +14,24 @@ class AppTest(APITestCase):
 
 class TenantGroupTest(APIViewTestCases.APIViewTestCase):
     model = TenantGroup
-    brief_fields = ["display", "id", "name", "slug", "tenant_count", "tree_depth", "url"]
+    brief_fields = ["display", "id", "name", "tenant_count", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
         cls.create_data = [
             {
                 "name": "Tenant Group 4",
-                "slug": "tenant-group-4",
                 "parent": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant Group 5",
-                "slug": "tenant-group-5",
                 "parent": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant Group 6",
-                "slug": "tenant-group-6",
             },
             {
                 "name": "Tenant Group 7",
@@ -46,11 +41,10 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
 
 class TenantTest(APIViewTestCases.APIViewTestCase):
     model = Tenant
-    brief_fields = ["display", "id", "name", "slug", "url"]
+    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -60,17 +54,14 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Tenant 4",
-                "slug": "tenant-4",
                 "tenant_group": TenantGroup.objects.first().pk,
             },
             {
                 "name": "Tenant 5",
-                "slug": "tenant-5",
                 "tenant_group": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant 6",
-                "slug": "tenant-6",
             },
             {
                 "name": "Tenant 7",

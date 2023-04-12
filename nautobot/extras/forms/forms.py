@@ -284,24 +284,24 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(
-        queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="slug", required=False
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
     )
     type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
-    platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
+    platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
-        queryset=ClusterGroup.objects.all(), to_field_name="slug", required=False
+        queryset=ClusterGroup.objects.all(), to_field_name="name", required=False
     )
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     tenant_group = DynamicModelMultipleChoiceField(
-        queryset=TenantGroup.objects.all(), to_field_name="slug", required=False
+        queryset=TenantGroup.objects.all(), to_field_name="name", required=False
     )
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     device_redundancy_group = DynamicModelMultipleChoiceField(
-        queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
+        queryset=DeviceRedundancyGroup.objects.all(), to_field_name="name", required=False
     )
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+        queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
 
     def __init__(self, *args, **kwargs):
@@ -464,7 +464,6 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 class DynamicGroupForm(NautobotModelForm):
     """DynamicGroup model form."""
 
-    slug = SlugField()
     content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         label="Content Type",
@@ -474,7 +473,6 @@ class DynamicGroupForm(NautobotModelForm):
         model = DynamicGroup
         fields = [
             "name",
-            "slug",
             "description",
             "content_type",
         ]
@@ -682,14 +680,12 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 
 
 class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
-    slug = SlugField()
     query = TextField()
 
     class Meta:
         model = GraphQLQuery
         fields = (
             "name",
-            "slug",
             "query",
         )
 
@@ -1228,7 +1224,6 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
 class RoleForm(NautobotModelForm):
     """Generic create/update form for `Role` objects."""
 
-    slug = SlugField()
     content_types = MultipleContentTypeField(
         required=False,
         label="Content Type(s)",
@@ -1238,7 +1233,7 @@ class RoleForm(NautobotModelForm):
     class Meta:
         model = Role
         widgets = {"color": ColorSelect()}
-        fields = ["name", "slug", "weight", "description", "content_types", "color"]
+        fields = ["name", "weight", "description", "content_types", "color"]
 
 
 class RoleBulkEditForm(NautobotBulkEditForm):
@@ -1270,7 +1265,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Role
-        fields = ["name", "slug", "weight", "color", "content_types", "description"]
+        fields = Role.csv_headers
         help_texts = {
             "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }
@@ -1288,8 +1283,6 @@ def provider_choices():
 class SecretForm(NautobotModelForm):
     """Create/update form for `Secret` objects."""
 
-    slug = SlugField()
-
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
@@ -1298,7 +1291,6 @@ class SecretForm(NautobotModelForm):
         model = Secret
         fields = [
             "name",
-            "slug",
             "description",
             "provider",
             "parameters",
@@ -1342,13 +1334,10 @@ SecretsGroupAssociationFormSet = inlineformset_factory(
 class SecretsGroupForm(NautobotModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
-    slug = SlugField()
-
     class Meta:
         model = SecretsGroup
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -1366,13 +1355,12 @@ class SecretsGroupFilterForm(NautobotFilterForm):
 class StatusForm(NautobotModelForm):
     """Generic create/update form for `Status` objects."""
 
-    slug = SlugField()
     content_types = MultipleContentTypeField(feature="statuses", label="Content Type(s)")
 
     class Meta:
         model = Status
         widgets = {"color": ColorSelect()}
-        fields = ["name", "slug", "description", "content_types", "color"]
+        fields = ["name", "description", "content_types", "color"]
 
 
 class StatusCSVForm(CustomFieldModelCSVForm):

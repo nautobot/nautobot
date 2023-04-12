@@ -148,7 +148,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
 class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = RIR
-        fields = ["id", "name", "slug", "is_private", "description"]
+        fields = ["id", "name", "is_private", "description"]
 
 
 class IPAMFilterSetMixin(django_filters.FilterSet):
@@ -231,7 +231,8 @@ class PrefixFilterSet(
     )
     rir = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RIR.objects.all(),
-        label="RIR (slug or ID)",
+        label="RIR (name or ID)",
+        to_field_name="name",
     )
     has_rir = RelatedMembershipBooleanFilter(
         field_name="rir",

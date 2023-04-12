@@ -338,7 +338,6 @@ class RIR(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
@@ -346,7 +345,7 @@ class RIR(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "is_private", "description"]
+    csv_headers = ["name", "is_private", "description"]
 
     objects = BaseManager.from_queryset(RIRQuerySet)()
 
@@ -358,16 +357,12 @@ class RIR(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def natural_key(self):
-        return (self.name,)
-
     def get_absolute_url(self):
-        return reverse("ipam:rir", args=[self.slug])
+        return reverse("ipam:rir", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             str(self.is_private),
             self.description,
         )
@@ -559,7 +554,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
@@ -597,9 +591,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             return super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-
         if isinstance(self.prefix, netaddr.IPNetwork):
-
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
@@ -1024,7 +1016,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         cls.__status_slaac = getattr(cls, "__status_slaac", None)
         if cls.__status_slaac is None:
             try:
-                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(slug="slaac")
+                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(name="SLAAC")
             except Status.DoesNotExist:
                 logger.error("SLAAC Status not found")
         return cls.__status_slaac
@@ -1074,7 +1066,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         super().save(*args, **kwargs)
 
     def to_csv(self):
-
         # Determine if this IP is primary for a Device
         is_primary = False
         if self.address.version == 4 and getattr(self, "primary_ip4_for", False):
@@ -1147,18 +1138,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
         def __str__(self):
             return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
-
-    @property
-    def nat_outside(self):
-        if self.nat_outside_list.count() > 1:
-            raise self.NATOutsideMultipleObjectsReturned(self)
-        return self.nat_outside_list.first()
-
-    @nat_outside.setter
-    def nat_outside(self, value):
-        if self.nat_outside_list.count() > 1:
-            raise self.NATOutsideMultipleObjectsReturned(self)
-        return self.nat_outside_list.set([value])
 
     def _set_mask_length(self, value):
         """
@@ -1269,7 +1248,6 @@ class VLANGroup(OrganizationalModel):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
@@ -1391,7 +1369,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Validate location
         if self.location is not None:
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}

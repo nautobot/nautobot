@@ -5,9 +5,8 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ("ipam", "0027_ipam__namespaces"),
+        ("ipam", "0028_ipam__namespaces"),
     ]
 
     operations = [

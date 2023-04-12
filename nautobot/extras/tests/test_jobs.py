@@ -241,14 +241,14 @@ class JobTest(TransactionTestCase):
         job_class, _job_model = get_job_class_and_model(module, name)
 
         # Fill out the form
-        form_data = dict(
-            ipv4_address="1.2.3.4",
-            ipv4_with_mask="1.2.3.4/32",
-            ipv4_network="1.2.3.0/24",
-            ipv6_address="2001:db8::1",
-            ipv6_with_mask="2001:db8::1/64",
-            ipv6_network="2001:db8::/64",
-        )
+        form_data = {
+            "ipv4_address": "1.2.3.4",
+            "ipv4_with_mask": "1.2.3.4/32",
+            "ipv4_network": "1.2.3.0/24",
+            "ipv6_address": "2001:db8::1",
+            "ipv6_with_mask": "2001:db8::1/64",
+            "ipv6_network": "2001:db8::/64",
+        }
         form = job_class().as_form(form_data)
         self.assertTrue(form.is_valid())
 
@@ -556,7 +556,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def test_runjob_db_change_no_commit(self):
         """A job that changes the DB, when run with commit=False, doesn't modify the database."""
         with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
+            Status.objects.get(name="test status")
 
         module = "test_modify_db"
         name = "TestModifyDB"
@@ -571,7 +571,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         self.assertEqual("", err)
 
         with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
+            Status.objects.get(name="test status")
 
         info_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_INFO).first()
         self.assertEqual("Database changes have been reverted automatically.", info_log.message)
@@ -610,7 +610,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
         self.assertEqual(success_log.message, "Status created successfully.")
 
-        status = Status.objects.get(slug="test-status")
+        status = Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
 
         status.delete()
@@ -683,7 +683,6 @@ class JobButtonReceiverTest(TransactionTestCase):
         self.assertFalse(job_model.hidden)
 
     def test_is_job_button(self):
-
         with self.subTest(expected=False):
             module = "test_pass"
             name = "TestPass"

@@ -31,7 +31,6 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     objects = []
     html = ""
     for template_extension in template_extensions:
-
         # If the class has not overridden the specified method, we can skip it (because we know it
         # will raise NotImplementedError).
         if getattr(template_extension, method) == getattr(TemplateExtension, method):

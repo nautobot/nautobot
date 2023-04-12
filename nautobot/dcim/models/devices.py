@@ -58,10 +58,9 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -70,10 +69,10 @@ class Manufacturer(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("dcim:manufacturer", args=[self.slug])
+        return reverse("dcim:manufacturer", args=[self.pk])
 
     def to_csv(self):
-        return (self.name, self.slug, self.description)
+        return (self.name, self.description)
 
 
 @extras_features(
@@ -334,7 +333,6 @@ class Platform(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -360,7 +358,6 @@ class Platform(OrganizationalModel):
 
     csv_headers = [
         "name",
-        "slug",
         "manufacturer",
         "napalm_driver",
         "napalm_args",
@@ -374,12 +371,11 @@ class Platform(OrganizationalModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("dcim:platform", args=[self.slug])
+        return reverse("dcim:platform", args=[self.pk])
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.manufacturer.name if self.manufacturer else None,
             self.napalm_driver,
             self.napalm_args,
@@ -569,7 +565,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         return reverse("dcim:device", args=[self.pk])
 
     def validate_unique(self, exclude=None):
-
         # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
@@ -628,7 +623,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             )
 
         if self.rack:
-
             try:
                 # Child devices cannot be assigned to a rack face/unit
                 if self.device_type.is_child_device and self.face:
@@ -751,7 +745,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             )
 
     def save(self, *args, **kwargs):
-
         is_new = not self.present_in_database
 
         super().save(*args, **kwargs)
@@ -946,7 +939,6 @@ class VirtualChassis(PrimaryModel):
             )
 
     def delete(self, *args, **kwargs):
-
         # Check for LAG interfaces split across member chassis
         interfaces = Interface.objects.filter(device__in=self.members.all(), lag__isnull=False).exclude(
             lag__device=F("device")
@@ -982,7 +974,6 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
     failover_strategy = models.CharField(
@@ -1022,7 +1013,7 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("dcim:deviceredundancygroup", args=[self.slug])
+        return reverse("dcim:deviceredundancygroup", args=[self.pk])
 
     def to_csv(self):
         return (

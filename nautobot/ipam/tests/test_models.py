@@ -40,7 +40,7 @@ class IPAddressToInterfaceTest(TestCase):
             status=int_status,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
-        cluster_type = ClusterType.objects.create(name="cluster_type1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
         vmint_status = Status.objects.get_for_model(VMInterface).first()
         cls.test_vm = VirtualMachine.objects.create(
@@ -169,6 +169,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
+        IPAddress.objects.all().delete()
         self.statuses = Status.objects.get_for_model(Prefix)
         self.status = self.statuses.first()
         self.root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status)
@@ -180,7 +181,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
-        prefix.status = self.statuses.get(slug="active")
+        prefix.status = self.statuses[0]
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
@@ -327,7 +328,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
     def test_get_available_prefixes(self):
-
         prefixes = Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
@@ -349,7 +349,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(available_prefixes, missing_prefixes)
 
     def test_get_available_ips(self):
-
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/28"))
         IPAddress.objects.bulk_create(
             (
@@ -378,7 +377,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(available_ips, missing_ips)
 
     def test_get_first_available_prefix(self):
-
         prefixes = Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
@@ -393,7 +391,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.4.0/22"))
 
     def test_get_first_available_ip(self):
-
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"))
         IPAddress.objects.bulk_create(
             (
@@ -408,7 +405,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
 
     def test_get_utilization(self):
-
         # Container Prefix
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), type=PrefixTypeChoices.TYPE_CONTAINER)
         Prefix.objects.bulk_create(
@@ -539,51 +535,24 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             role=roles[1],
         )
 
-    def test_multiple_nat_outside(self):
+    def test_multiple_nat_outside_list(self):
         """
-        Test suite to test supporing multiple nat_inside related fields.
-
-        Includes tests for legacy getter/setter for nat_outside.
+        Test suite to test supporing nat_outside_list.
         """
-
-        # Setup mimicked legacy data model relationships: 1-to-1
         nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"))
         nat_outside1 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside)
-        nat_inside.refresh_from_db()
-
-        # Assert legacy getter behaves as expected for backwards compatibility, and that FK relationship works
-        self.assertEqual(nat_inside.nat_outside, nat_outside1)
-        self.assertEqual(nat_inside.nat_outside_list.count(), 1)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside1)
-
-        # Create unassigned IPAddress
-        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"))
-        nat_inside.nat_outside = nat_outside2
-        nat_inside.refresh_from_db()
-
-        # Test legacy setter behaves as expected for backwards compatibility and that previous FK relationship removed
-        self.assertEqual(nat_inside.nat_outside, nat_outside2)
-        self.assertEqual(nat_inside.nat_outside_list.count(), 1)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
-
-        # Create IPAddress with nat_inside assigned, setting up current 1-to-many relationship
+        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"), nat_inside=nat_inside)
         nat_outside3 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.3/24"), nat_inside=nat_inside)
         nat_inside.refresh_from_db()
-
-        # Now ensure safeguards are in place when using legacy methods with 1-to-many relationships
-        with self.assertRaises(IPAddress.NATOutsideMultipleObjectsReturned):
-            nat_inside.nat_outside
-        with self.assertRaises(IPAddress.NATOutsideMultipleObjectsReturned):
-            nat_inside.nat_outside = nat_outside1
-
-        # Assert FK relationship behaves as expected
-        self.assertEqual(nat_inside.nat_outside_list.count(), 2)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
-        self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
+        self.assertEqual(nat_inside.nat_outside_list.count(), 3)
+        self.assertEqual(nat_inside.nat_outside_list.all()[0], nat_outside1)
+        self.assertEqual(nat_inside.nat_outside_list.all()[1], nat_outside2)
+        self.assertEqual(nat_inside.nat_outside_list.all()[2], nat_outside3)
 
     def test_create_ip_address_without_slaac_status(self):
-        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
-        Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
+        slaac_status_name = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
+        IPAddress.objects.filter(status__name=slaac_status_name).delete()
+        Status.objects.get(name=slaac_status_name).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 
@@ -600,7 +569,6 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
         self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_get_next_available_vid(self):
-
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
         VLAN.objects.bulk_create(
             (
@@ -625,7 +593,7 @@ class VLANTestCase(ModelTestCases.BaseModelTestCase):
         location_type.validated_save()
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
-        vlan.status = Status.objects.get_for_model(VLAN).get(slug="active")
+        vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
