@@ -742,11 +742,13 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def apply_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
         a limitation in Celery where some of the fields in the job result are not updated when running synchronously so
         they are added here.
+
+        Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` should be used instead.
 
         Args:
             job_model (Job): The Job to be enqueued for execution

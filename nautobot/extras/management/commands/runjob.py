@@ -57,7 +57,7 @@ class Command(BaseCommand):
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
-            job_result = JobResult.apply_job(
+            job_result = JobResult.execute_job(
                 job_model=job_model,
                 user=user,
                 **data,
