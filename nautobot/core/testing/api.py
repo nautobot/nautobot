@@ -222,11 +222,11 @@ class APIViewTestCases:
             """
             depth_fields = []
             for field in self.model._meta.fields:
-                if type(field) == ForeignKey and field.related_model != ContentType:
+                if isinstance(field, ForeignKey) and field.related_model != ContentType:
                     depth_fields.append(field.name)
                 elif field.name == "tags":
                     depth_fields.append(field.name)
-                elif field.name == "status" and type(field) == extras_models.StatusField:
+                elif field.name == "status" and isinstance(field, extras_models.StatusField):
                     depth_fields.append(field.name)
 
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
@@ -261,11 +261,11 @@ class APIViewTestCases:
             """
             depth_fields = []
             for field in self.model._meta.fields:
-                if type(field) == ForeignKey and field.related_model != ContentType:
+                if isinstance(field, ForeignKey) and field.related_model != ContentType:
                     depth_fields.append(field.name)
                 elif field.name == "tags":
                     depth_fields.append(field.name)
-                elif field.name == "status" and type(field) == extras_models.StatusField:
+                elif field.name == "status" and isinstance(field, extras_models.StatusField):
                     depth_fields.append(field.name)
 
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")

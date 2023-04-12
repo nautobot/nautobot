@@ -41,103 +41,52 @@ class WritableSerializerMixin:
     "parent": "10dff139-7333-46b0-bef6-f6a5a7b5497c"
     """
 
-    def get_unique_object_from_data(self, data):
-        if isinstance(data, dict):
-            params = dict_to_filter_params(data)
-        else:
-            params = {"id": uuid.UUID(data)}
+    def remove_non_filter_fields(self, filter_params):
         if hasattr(self, "fields"):
             for field_name, field_instance in self.fields.items():
-                if field_name in params and field_instance.source == "*":
+                if field_name in filter_params and field_instance.source == "*":
                     logger.debug("Discarding non-database field %s", field_name)
-                    del params[field_name]
+                    del filter_params[field_name]
+        return filter_params
 
-        if hasattr(self, "queryset"):
-            queryset = self.queryset
-        else:
-            queryset = self.Meta.model.objects
-        model_name = queryset.model._meta.model_name
+    def get_queryset_filter_params(self, data, queryset, model_name):
+        if isinstance(data, dict):
+            params = dict_to_filter_params(data)
+            return self.remove_non_filter_fields(params)
         try:
-            return queryset.get(**params)
-        except ObjectDoesNotExist:
+            pk = int(data) if isinstance(queryset.model._meta.pk, AutoField) else uuid.UUID(str(data))
+        except (TypeError, ValueError) as e:
             raise ValidationError(
-                {f"{model_name}": f"Related object not found using the provided attributes: {params}"}
-            )
-        except MultipleObjectsReturned:
-            raise ValidationError({f"{model_name}": f"Multiple objects match the provided attributes: {params}"})
+                {
+                    f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                    f"unrecognized value: {data}"
+                }
+            ) from e
+        return {"pk": pk}
+
+    def get_object(self, data, queryset, model_name):
+        filter_params = self.get_queryset_filter_params(data=data, queryset=queryset, model_name=model_name)
+        try:
+            return queryset.get(**filter_params)
+        except ObjectDoesNotExist as e:
+            raise ValidationError(
+                {f"{model_name}": f"Related object not found using the provided attributes: {filter_params}"}
+            ) from e
+        except MultipleObjectsReturned as e:
+            raise ValidationError(
+                {f"{model_name}": f"Multiple objects match the provided attributes: {filter_params}"}
+            ) from e
         except FieldError as e:
-            raise ValidationError({f"{model_name}": e})
+            raise ValidationError({f"{model_name}": e}) from e
 
     def to_internal_value(self, data):
-        """
-        Find the object using the combination of fields passed to NautobotNestedSerializer or NautobotPrimaryKeyRelatedField.
-        Replace the entry in `data` with the found object.
-        e.g.
-        Data passed in:
-        {
-            "location_type": {"name": "Floor"},
-            "parent": { "location_type__parent": {"name": "Campus"}, "parent__name": "Campus-29" },
-            "status": {"name": "Retired"},
-            "name": "Floor-02"
-        }
-        vs
-        Data returned:
-        {
-            "location_type": LocationType.objects.get(name="Floor"),
-            "parent": Location.objects.get(location_type__parent__name="Campus", parent__name="Campus-29"),
-            "status": Status.objects.get(name="Retired"),
-            "name": "Floor-02"
-        }
-        """
         if data is None:
             return None
-
-        # Dictionary of related object attributes
-        if isinstance(data, dict):
-            result = self.get_unique_object_from_data(data)
-            return result
-
-        # List of dictionary objects like tags or contenttypes
-        if isinstance(data, list):
-            result = []
-            for entry in data:
-                result.append(self.get_unique_object_from_data(entry))
-            return result
-
         if hasattr(self, "queryset"):
             queryset = self.queryset
         else:
             queryset = self.Meta.model.objects
         model_name = queryset.model._meta.model_name
-        pk = None
-
-        if isinstance(queryset.model._meta.pk, AutoField):
-            # PK is an int for this model. This is usually the User model
-            try:
-                pk = int(data)
-            except (TypeError, ValueError):
-                raise ValidationError(
-                    {
-                        f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                        f"unrecognized value: {data}"
-                    }
-                )
-
-        else:
-            # We assume a type of UUIDField for all other models
-
-            # PK of related object
-            try:
-                # Ensure the pk is a valid UUID
-                pk = uuid.UUID(str(data))
-            except (TypeError, ValueError):
-                raise ValidationError(
-                    {
-                        f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                        f"unrecognized value: {data}"
-                    }
-                )
-        try:
-            return queryset.get(pk=pk)
-        except ObjectDoesNotExist:
-            raise ValidationError({f"{model_name}": f"Related object not found using the provided ID: {pk}"})
+        if isinstance(data, list):
+            return [self.get_object(data=entry, queryset=queryset, model_name=model_name) for entry in data]
+        return self.get_object(data=data, model_name=model_name, queryset=queryset)
