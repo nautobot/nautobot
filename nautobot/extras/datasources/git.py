@@ -52,7 +52,7 @@ def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
     """
     Wrapper for JobResult.enqueue_job() to enqueue one of several possible Git repository functions.
     """
-    job_model = job_class().get_job_model()
+    job_model = job_class().job_model
 
     return JobResult.enqueue_job(job_model, user, repository=repository.pk)
 

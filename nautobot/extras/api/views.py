@@ -33,7 +33,6 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
-from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.models import (
     ComputedField,

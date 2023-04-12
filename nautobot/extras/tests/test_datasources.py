@@ -377,7 +377,7 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                job_model = GitRepositoryPullAndRefreshData().get_job_model()
+                job_model = GitRepositoryPullAndRefreshData().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
                 self.assertEqual(
@@ -496,7 +496,7 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                job_model = GitRepositoryPullAndRefreshData().get_job_model()
+                job_model = GitRepositoryPullAndRefreshData().job_model
                 logging.disable(logging.ERROR)
                 job_result = run_job_for_testing(
                     job=job_model,
@@ -619,7 +619,7 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                job_model = GitRepositoryPullAndRefreshData().get_job_model()
+                job_model = GitRepositoryPullAndRefreshData().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
                     repository=self.repo.pk,
@@ -713,7 +713,7 @@ class GitTest(TransactionTestCase):
 
                 self.mock_request.id = uuid.uuid4()
 
-                job_model = GitRepositoryDiffOriginalAndLocal().get_job_model()
+                job_model = GitRepositoryDiffOriginalAndLocal().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
                     repository=self.repo.pk,

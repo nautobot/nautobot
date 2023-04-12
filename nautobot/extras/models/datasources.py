@@ -4,7 +4,7 @@ import os
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
-from django.db import models, transaction
+from django.db import models
 from django.urls import reverse
 
 from nautobot.core.models.fields import AutoSlugField
