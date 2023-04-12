@@ -226,6 +226,7 @@ class NamespaceFactory(PrimaryModelFactory):
 
     name = factory.Faker("text", max_nb_chars=20)
 
+
 class PrefixFactory(PrimaryModelFactory):
     """Create random Prefix objects with randomized data.
 
