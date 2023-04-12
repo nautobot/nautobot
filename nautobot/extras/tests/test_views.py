@@ -1232,7 +1232,6 @@ class ApprovalQueueTestCase(
         response = self.client.post(self._get_url("view", instance), data)
         # Job was not submitted
         self.assertFalse(JobResult.objects.filter(name=instance.job_model.class_path).exists())
-        print(response.content)
         self.assertContains(response, "This job does not support dryrun")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
