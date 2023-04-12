@@ -19,6 +19,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
+from django.core.exceptions import ObjectDoesNotExist
 from django.forms import ValidationError
 from django.utils.functional import classproperty
 import netaddr
@@ -177,12 +178,14 @@ class BaseJob(Task):
         self.active_test = "initialization"
         try:
             self.job_result
-        except TypeError as err:
-            raise RunJobTaskFailed(f"Unable to serialize data for job {task_id}") from err
-        except Exception as err:
-            raise RunJobTaskFailed(f"Unexpected failure in job {self.name}") from err
+        except ObjectDoesNotExist as err:
+            raise RunJobTaskFailed(f"Unable to find associated job result for job {task_id}") from err
 
-        job_model = self.job_model
+        try:
+            job_model = self.job_model
+        except ObjectDoesNotExist as err:
+            raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
+
         if not job_model.enabled:
             self.log_failure(
                 message=f"Job {job_model} is not enabled to be run!",
