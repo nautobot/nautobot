@@ -476,11 +476,7 @@ class BaseJob(Task):
 
     @property
     def job_model(self):
-        return getattr(
-            self.job_result,
-            "job_model",
-            JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__),
-        )
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
 
     @property
     def job_result(self):
