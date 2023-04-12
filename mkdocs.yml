@@ -71,7 +71,8 @@ markdown_extensions:
   - "toc":
       permalink: true
   - "attr_list"
-  - "nautobot.docs.include_data_tables"
+  - "markdown_data_tables":
+      base_path: "nautobot/docs"
   - "md_in_html"
   - "pymdownx.details"
   - "pymdownx.highlight":

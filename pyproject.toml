@@ -160,6 +160,8 @@ flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 invoke = "~2.0.0"
 # Code style checking for python import statements
 isort = "~5.12.0"
+# Embedding YAML files into Markdown documents as tables
+markdown-data-tables = "~1.0.0"
 # Rendering docs to HTML
 mkdocs = "~1.4.2"
 # Automatically generate some files as part of mkdocs build
@@ -168,7 +170,6 @@ mkdocs-gen-files = "~0.4.0"
 mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
 mkdocs-material = "~9.1.6"
-# Allow docs to include tables as structured data files like YAML and CSV
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
@@ -186,8 +187,6 @@ rich = "~13.3.3"
 selenium = "~4.7.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
-# Rendering of data to Markdown table format
-tabulate = "~0.9.0"
 # Change log management and generation
 towncrier = "~22.12.0"
 # Watch files for celery and mkdocs reload
