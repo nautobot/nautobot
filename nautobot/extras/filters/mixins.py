@@ -28,6 +28,7 @@ from nautobot.extras.models import (
 )
 from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
@@ -75,6 +76,8 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         # Choose the lookup expression map based on the filter type
         if issubclass(filter_type, (CustomFieldMultiValueNumberFilter, CustomFieldMultiValueDateFilter)):
             lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
+        elif issubclass(filter_type, CustomFieldMultiSelectFilter):
+            lookup_map = FILTER_NEGATION_LOOKUP_MAP
         else:
             lookup_map = FILTER_CHAR_BASED_LOOKUP_MAP
 
@@ -93,7 +96,8 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         custom_field_type_to_filter_map = {
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldMultiValueDateFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldMultiValueNumberFilter,
-            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiValueCharFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
             CustomFieldTypeChoices.TYPE_TEXT: CustomFieldMultiValueCharFilter,
             CustomFieldTypeChoices.TYPE_URL: CustomFieldMultiValueCharFilter,
         }

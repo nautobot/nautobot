@@ -22,7 +22,6 @@ from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.forms import (
-    CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
     JSONField,
@@ -30,7 +29,6 @@ from nautobot.utilities.forms import (
     NullableDateField,
     StaticSelect2,
     StaticSelect2Multiple,
-    add_blank_choice,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.templatetags.helpers import render_markdown
