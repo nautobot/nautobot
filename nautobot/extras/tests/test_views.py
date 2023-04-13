@@ -1441,11 +1441,6 @@ class JobResultTestCase(
             task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
-        JobResult.objects.create(
-            name="local/test_read_only_fail/TestReadOnlyFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
 
 
 class JobTestCase(
@@ -1520,8 +1515,12 @@ class JobTestCase(
             "name": "Overridden Name",
             "description_override": True,
             "description": "This is an overridden description of a job.",
+            "dryrun_default_override": True,
+            "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
+            "read_only_override": True,
+            "read_only": False,
             "approval_required_override": True,
             "approval_required": True,
             "soft_time_limit_override": True,

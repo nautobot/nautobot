@@ -16,6 +16,9 @@
         </div>
     </div>
     <h1>{{ job_model }}</h1>
+    {% if job_model.read_only %}
+        <label class="label label-default">Read-only</label>
+    {% endif %}
     <p>{{ job_model.description | render_markdown }}</p>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
@@ -131,9 +134,15 @@
          * any of the scheduling related elements, else, show them.
          * If dryrun is selected, the job may run without approval.
          **/
+        var dryrun = false;
+        if ($("#id_dryrun").prop("type") === "checkbox") {
+            dryrun = $("#id_dryrun").prop("checked")
+        } else if ($("#id_dryrun").prop("type") === "hidden") {
+            dryrun = ($("#id_dryrun").val() === "True")
+        }
         if ($("#id__schedule_type").val() == "immediately") {
             // Toggle run button
-            if ($("#id_dryrun").prop("checked")){
+            if (dryrun){
                 $("#id__run").html('<i class="mdi mdi-play"></i> ' + dry_run_text);
             } else {
                 $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
@@ -147,7 +156,7 @@
             $("#id__schedule_start_time").parent().parent().hide();
         } else {
             // Toggle run button
-            if ($("#id_dryrun").prop("checked")){
+            if (dryrun){
                 $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_dry_run_text);
             } else {
                 $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);

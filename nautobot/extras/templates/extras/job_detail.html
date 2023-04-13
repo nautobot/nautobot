@@ -152,6 +152,22 @@
                 </td>
             </tr>
             <tr>
+                <td>Default to Dryrun</td>
+                <td>{{ object.dryrun_default | render_boolean }}</td>
+                <td>
+                    {% if object.dryrun_default_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.dryrun_default | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
                 <td>Hide from Default UI</td>
                 <td>{{ object.hidden | render_boolean }}</td>
                 <td>
@@ -160,6 +176,22 @@
                             overridden; default is
                             {% if object.installed %}
                                 {{ object.job_class.hidden | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Read-Only Execution</td>
+                <td>{{ object.read_only | render_boolean }}</td>
+                <td>
+                    {% if object.read_only_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.read_only | render_boolean }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}

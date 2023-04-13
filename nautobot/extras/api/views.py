@@ -624,9 +624,12 @@ class JobViewSet(
         # Default to a null JobResult.
         job_result = None
 
-        # approval is not required when dryrun is set
-        dryrun = data.get("dryrun", False)
-        approval_required = not dryrun and job_model.approval_required
+        # Approval is not required for dryrun
+        if job_class.supports_dryrun:
+            dryrun = data.get("dryrun", False)
+            approval_required = not dryrun and job_model.approval_required
+        else:
+            approval_required = job_model.approval_required
 
         # Assert that a job with `approval_required=True` has a schedule that enforces approval and
         # executes immediately.

@@ -161,12 +161,14 @@ class Job(PrimaryModel):
     approval_required = models.BooleanField(
         default=False, help_text="Whether the job requires approval from another user before running"
     )
+    dryrun_default = models.BooleanField(default=False, help_text="Whether the job defaults to running with dryrun set")
     hidden = models.BooleanField(
         default=False,
         db_index=True,
         help_text="Whether the job defaults to not being shown in the UI",
     )
     # Job.Meta.field_order is not overridable in this model
+    read_only = models.BooleanField(default=False, help_text="Whether the job is only allowed to run with dryrun set")
     soft_time_limit = models.FloatField(
         default=0,
         validators=[MinValueValidator(0)],
@@ -199,12 +201,19 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured description will remain even if the underlying Job source code changes",
     )
-
     approval_required_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
+    dryrun_default_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
     hidden_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    read_only_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )

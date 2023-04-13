@@ -15,7 +15,7 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
     Backwards compatibility with Netbox scripts and reports has been removed.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
 
 ## Writing Jobs
 
@@ -115,6 +115,21 @@ Default: `False`
 
 A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
+#### `dryrun_default`
+
++/- 2.0.0
+    The `commit_default` field was renamed to `dryrun_default` and the default value was changed from `True` to `False`.
+
+Default: `False`
+
+The checkbox to enable dryrun when executing a job is unchecked by default in the Nautobot UI. You can set `dryrun_default` to `True` under the `Meta` class if you want this option to instead be checked by default.
+
+```python
+class MyJob(Job):
+    class Meta:
+        dryrun_default = True
+```
+
 #### `field_order`
 
 Default: `[]`
@@ -149,6 +164,14 @@ Important notes about hidden jobs:
 * All Job UI and REST API endpoints still exist for hidden jobs and can be accessed by any user who is aware of their existence.
 * Hidden jobs can still be executed through the UI or the REST API given the appropriate URL.
 * Results for hidden jobs will still appear in the Job Results list after they are run.
+
+#### `read_only`
+
++++ 1.1.0
+
+Default: `False`
+
+A boolean that when set will only allow the job to run when the `dryrun` argument is set to `True`. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 #### `soft_time_limit`
 
@@ -484,8 +507,10 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `name`
 * `description`
 * `approval_required`
+* `dryrun_default`
 * `has_sensitive_variables`
 * `hidden`
+* `read_only`
 * `soft_time_limit`
 * `time_limit`
 * `task_queues`

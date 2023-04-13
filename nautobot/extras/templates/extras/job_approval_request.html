@@ -23,6 +23,9 @@
     </div>
     <h1>{{ object.name }}</h1>
     {% if object.job_model is not None %}
+        {% if object.job_model.read_only %}
+            <label class="label label-default">Read-only</label>
+        {% endif %}
         <p>{{ object.job_model.description | render_markdown }}</p>
     {% endif %}
     <ul class="nav nav-tabs" role="tablist">

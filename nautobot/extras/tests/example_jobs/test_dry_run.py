@@ -1,5 +1,5 @@
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import BooleanVar, Job
+from nautobot.extras.jobs import DryRunVar, Job
 from nautobot.extras.models import Status
 
 
@@ -8,7 +8,7 @@ class TestDryRun(Job):
     Job that modifies the database and supports dryrun
     """
 
-    dryrun = BooleanVar()
+    dryrun = DryRunVar()
 
     def run(self, dryrun):
         """

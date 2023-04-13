@@ -751,8 +751,12 @@ class JobEditForm(NautobotModelForm):
             "grouping",
             "description_override",
             "description",
+            "dryrun_default_override",
+            "dryrun_default",
             "hidden_override",
             "hidden",
+            "read_only_override",
+            "read_only",
             "approval_required_override",
             "approval_required",
             "soft_time_limit_override",
@@ -791,11 +795,13 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
     )
+    dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
         initial=False,
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     is_job_hook_receiver = forms.NullBooleanField(
         initial=False,

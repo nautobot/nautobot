@@ -1,5 +1,6 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
+import functools
 import inspect
 import json
 import logging
@@ -173,6 +174,8 @@ class BaseJob(Task):
         Returns:
             None: The return value of this handler is ignored.
         """
+        self.clear_cache()
+
         self.active_test = "initialization"
         try:
             self.job_result
@@ -180,18 +183,18 @@ class BaseJob(Task):
             raise RunJobTaskFailed(f"Unable to find associated job result for job {task_id}") from err
 
         try:
-            job_model = self.job_model
+            self.job_model
         except ObjectDoesNotExist as err:
             raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
-        if not job_model.enabled:
+        if not self.job_model.enabled:
             self.log_failure(
-                message=f"Job {job_model} is not enabled to be run!",
-                obj=job_model,
+                message=f"Job {self.job_model} is not enabled to be run!",
+                obj=self.job_model,
             )
 
-        soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-        time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
+        soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+        time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
         if time_limit <= soft_time_limit:
             self.log_warning(
                 f"The hard time limit of {time_limit} seconds is less than "
@@ -353,12 +356,20 @@ class BaseJob(Task):
         return ""
 
     @classproperty
+    def dryrun_default(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "dryrun_default", False)
+
+    @classproperty
     def hidden(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "hidden", False)
 
     @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "field_order", None)
+
+    @classproperty
+    def read_only(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "read_only", False)
 
     @classproperty
     def approval_required(cls):  # pylint: disable=no-self-argument
@@ -375,6 +386,10 @@ class BaseJob(Task):
     @classproperty
     def has_sensitive_variables(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "has_sensitive_variables", True)
+
+    @classproperty
+    def supports_dryrun(cls):  # pylint: disable=no-self-argument
+        return isinstance(getattr(cls, "dryrun", None), DryRunVar)
 
     @classproperty
     def task_queues(cls):  # pylint: disable=no-self-argument
@@ -451,10 +466,21 @@ class BaseJob(Task):
         form = self.as_form_class()(data, files, initial=initial)
 
         job_model = JobModel.objects.get_for_class_path(self.class_path)
+        read_only = job_model.read_only if job_model.read_only_override else self.read_only
+        dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else self.dryrun_default
         task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
+
+        if self.supports_dryrun:
+            if read_only:
+                # Hide the dryrun field for read only jobs
+                form.fields["dryrun"].widget = forms.HiddenInput()
+                form.fields["dryrun"].initial = True
+            elif not initial or "dryrun" not in initial:
+                # Set initial "dryrun" checkbox state based on the Meta parameter
+                form.fields["dryrun"].initial = dryrun_default
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
@@ -467,11 +493,25 @@ class BaseJob(Task):
 
         return form
 
-    @property
+    def clear_cache(self):
+        """
+        Clear all cached properties on this instance without accessing them. This is required because
+        celery reuses task instances for multiple runs.
+        """
+        try:
+            del self.job_result
+        except AttributeError:
+            pass
+        try:
+            del self.job_model
+        except AttributeError:
+            pass
+
+    @functools.cached_property
     def job_model(self):
         return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
 
-    @property
+    @functools.cached_property
     def job_result(self):
         return JobResult.objects.get(task_id=self.request.id)
 
@@ -842,6 +882,23 @@ class BooleanVar(ScriptVariable):
 
         # Boolean fields cannot be required
         self.field_attrs["required"] = False
+
+
+class DryRunVar(BooleanVar):
+    """
+    Special boolean variable that bypasses approval requirements if this is set to True on job execution.
+    """
+
+    description = "Check to run job in dryrun mode."
+
+    def __init__(self, *args, **kwargs):
+        # Default must be false unless overridden on job model
+        kwargs["default"] = False
+
+        # Default description if one was not provided
+        kwargs.setdefault("description", self.description)
+
+        super().__init__(*args, **kwargs)
 
 
 class ChoiceVar(ScriptVariable):

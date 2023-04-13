@@ -229,6 +229,20 @@ class JobTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
+    def test_read_only_no_dryrun_field(self):
+        """
+        Job read only test dryrun field is not shown.
+        """
+        module = "test_read_only_no_dryrun_field"
+        name = "TestReadOnlyNoDryRunField"
+        job_class = get_job(f"local/{module}/{name}")
+
+        form = job_class().as_form()
+        self.assertInHTML(
+            "<input id='id_dryrun' name='dryrun' type='hidden' value='True'>",
+            form.as_table(),
+        )
+
     def test_ip_address_vars(self):
         """
         Test that IPAddress variable fields behave as expected.

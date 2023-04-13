@@ -51,7 +51,7 @@ from .datasources import (
 from .filters import RoleFilterSet
 from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from .jobs import Job as JobClass
-from .jobs import BooleanVar, get_job
+from .jobs import get_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -1318,13 +1318,13 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
-            elif not isinstance(getattr(job_model.job_class, "dryrun", None), BooleanVar):
+            elif not job_model.job_class.supports_dryrun:
                 messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
                 job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
                 job_kwargs["dryrun"] = True
-                celery_kwargs = {"queue": scheduled_job.queue, "user": request.user}
+                celery_kwargs = {"queue": scheduled_job.queue}
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
