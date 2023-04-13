@@ -102,7 +102,7 @@
                             </div>
                         </div>
                         <div class="pull-right">
-                            {% if "dryrun" in job_form.fields %}
+                            {% if "dryrun" in job_form.fields and object.job_model.job_class.supports_dryrun %}
                                 <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"
                                     {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
                                         disabled="disabled"
