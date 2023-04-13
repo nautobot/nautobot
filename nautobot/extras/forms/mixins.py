@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
+    CustomFieldTypeChoices,
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
@@ -26,6 +27,7 @@ from nautobot.utilities.forms import (
     CSVModelForm,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    StaticSelect2Multiple,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,8 @@ class CustomFieldModelFilterFormMixin(forms.Form):
                 )
             else:
                 self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
+                if cf.type == CustomFieldTypeChoices.TYPE_SELECT:
+                    self.fields[field_name].widget = StaticSelect2Multiple(choices=self.fields[field_name].choices)
             self.custom_fields.append(field_name)
 
 

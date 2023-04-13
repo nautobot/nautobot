@@ -22,6 +22,8 @@ from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.forms import (
+    add_blank_choice,
+    CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
     JSONField,
@@ -557,11 +559,19 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             default_choice = self.choices.filter(value=self.default).first()
 
             # Set the initial value to the first available choice (if any)
-            if set_initial and default_choice:
-                initial = default_choice.value
-
-            field_class = CSVMultipleChoiceField if for_csv_import else forms.MultipleChoiceField
-            field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
+            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+                if not required or default_choice is None:
+                    choices = add_blank_choice(choices)
+                field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
+                field = field_class(
+                    choices=choices,
+                    required=required,
+                    initial=initial,
+                    widget=StaticSelect2(),
+                )
+            else:
+                field_class = CSVMultipleChoiceField if for_csv_import else forms.MultipleChoiceField
+                field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
 
         field.model = self
         if label is not None:

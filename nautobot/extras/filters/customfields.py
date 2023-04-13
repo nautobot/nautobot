@@ -47,7 +47,7 @@ class CustomFieldFilterMixin:
         # Return custom fields that don't match the value and null custom fields
         if self.exclude:
             qs_null_custom_fields = qs.filter(**{f"{self.field_name}__isnull": True}).distinct()
-            return super().filter(qs, value) | qs_null_custom_fields
+            return super().filter(qs, value).distinct() | qs_null_custom_fields
 
         return super().filter(qs, value)
 
