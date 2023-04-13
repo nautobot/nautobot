@@ -6,14 +6,15 @@ from django.db import transaction
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import BooleanVar, IntegerVar, Job, JobHookReceiver, JobButtonReceiver
+from nautobot.extras.jobs import DryRunVar, IntegerVar, Job, JobHookReceiver, JobButtonReceiver
 
 
 name = "ExamplePlugin jobs"
 
 
 class ExampleDryRunJob(Job):
-    dryrun = BooleanVar(default=True, description="Do not make any changes to Nautobot database or external systems.")
+    # TODO(gary): assert that only one DryRunVar is defined on Job classes
+    dryrun = DryRunVar()
 
     class Meta:
         approval_required = True
