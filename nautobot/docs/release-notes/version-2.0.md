@@ -297,7 +297,6 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#3439](https://github.com/nautobot/nautobot/issues/3439) - Removed `slug` field from many database models.
 - [#3523](https://github.com/nautobot/nautobot/issues/3523) - Removed `nat_outside` getter-setter in IPAddress model.
 
-
 ## v2.0.0-alpha.2 (2023-03-29)
 
 ### Added
