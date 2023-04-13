@@ -228,7 +228,6 @@ class APIViewTestCases:
                     depth_fields.append(field.name)
                 elif field.name == "status" and isinstance(field, extras_models.StatusField):
                     depth_fields.append(field.name)
-            print(depth_fields)
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
             url = f"{self._get_list_url()}?depth=0"
             response = self.client.get(url, **self.header)
@@ -239,9 +238,7 @@ class APIViewTestCases:
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
             response_data = response.data["results"][0]
-            print(response_data)
             for field in depth_fields:
-                print(field)
                 self.assertEqual(field in response_data, True)
                 if isinstance(response_data[field], list):
                     for entry in response_data[field]:

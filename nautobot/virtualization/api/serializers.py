@@ -60,7 +60,6 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
-    location = serializers.SerializerMethodField(read_only=True)
     # TODO #3024 How to get rid of this?
     primary_ip = IPAddressSerializer(read_only=True)
 
@@ -71,7 +70,6 @@ class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMix
             "url",
             "name",
             "status",
-            "location",
             "cluster",
             "role",
             "tenant",
@@ -88,9 +86,8 @@ class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMix
         ]
         validators = []
 
-    @extend_schema_field(str)
-    def get_location(self, obj):
-        return obj.cluster.location
+    # TODO #3024 I would argue you do not need this anymore because you can obtain a more comprehensive
+    # location field on cluster with ?depth=2
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
