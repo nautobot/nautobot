@@ -562,19 +562,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             if set_initial and default_choice:
                 initial = default_choice.value
 
-            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if not required or default_choice is None:
-                    choices = add_blank_choice(choices)
-                field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
-                field = field_class(
-                    choices=choices,
-                    required=required,
-                    initial=initial,
-                    widget=StaticSelect2(),
-                )
-            else:
-                field_class = CSVMultipleChoiceField if for_csv_import else forms.MultipleChoiceField
-                field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
+            field_class = CSVMultipleChoiceField if for_csv_import else forms.MultipleChoiceField
+            field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
 
         field.model = self
         if label is not None:

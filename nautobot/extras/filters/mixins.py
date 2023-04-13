@@ -48,6 +48,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
         }
 
         custom_fields = CustomField.objects.filter(
