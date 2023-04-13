@@ -41,6 +41,7 @@ from nautobot.utilities.utils import (
     get_filterset_parameter_form_field,
     FilterSetFieldNotFound,
     ensure_content_type_and_field_name_inquery_params,
+    get_form_for_model,
 )
 from . import serializers
 
@@ -761,10 +762,22 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         except FilterSetFieldNotFound:
             return Response("field_name not found", 404)
 
-        # Create a temporary form and get a BoundField for the specified field
-        # This is necessary to generate the HTML representation using as_widget()
-        TempForm = type("TempForm", (forms.Form,), {field_name: form_field})
-        temp_form = TempForm()
-        bound_field = temp_form[field_name]
-        field_dom_representation = bound_field.as_widget(attrs={"id": f"id_for_{field_name}"})
-        return Response({"dom_element": field_dom_representation})
+        try:
+            model_form = get_form_for_model(model)
+            model_form_instance = model_form(auto_id="id_for_%s")
+        except Exception as err:
+            # Cant determine the exceptions to handle because any exception could be raised,
+            # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
+            # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Exception: {err}",
+            )
+
+            # Create a temporary form and get a BoundField for the specified field
+            # This is necessary to generate the HTML representation using as_widget()
+            TempForm = type("TempForm", (forms.Form,), {field_name: form_field})
+            model_form_instance = TempForm(auto_id="id_for_%s")
+
+        bound_field = model_form_instance[field_name]
+        return Response({"dom_element": bound_field.as_widget()})
