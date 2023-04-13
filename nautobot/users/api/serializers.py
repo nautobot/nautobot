@@ -45,10 +45,7 @@ class TokenSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = Token
-        fields = "__all__"
-        # TODO #3024 user is required in the UI but not in the API?
-        # Previously user is not a field on the TokenSerialzier
-        extra_kwargs = {"user": {"required": False}}
+        exclude = ["user"]
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)

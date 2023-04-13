@@ -194,6 +194,23 @@ class APIViewTestCases:
         def get_filterset(self):
             return self.filterset or lookup.get_filterset_for_model(self.model)
 
+        def get_depth_fields(self):
+            """Get a list of model fields that could be tested with the ?depth query parameter"""
+            depth_fields = []
+            for field in self.model._meta.fields:
+                if isinstance(field, ForeignKey) and (
+                    field.related_model != ContentType
+                    # user is a model field on Token but not a field on TokenSerializer
+                    and not (field.name == "user" and self.model == users_models.Token)
+                ):
+                    depth_fields.append(field.name)
+                elif field.name == "tags":
+                    depth_fields.append(field.name)
+                elif field.name == "status" and isinstance(field, extras_models.StatusField):
+                    depth_fields.append(field.name)
+                # user is a model field but not a field on the TokenSerializer
+            return depth_fields
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             """
@@ -220,14 +237,7 @@ class APIViewTestCases:
             """
             GET a list of objects using the "?depth=0" parameter.
             """
-            depth_fields = []
-            for field in self.model._meta.fields:
-                if isinstance(field, ForeignKey) and field.related_model != ContentType:
-                    depth_fields.append(field.name)
-                elif field.name == "tags":
-                    depth_fields.append(field.name)
-                elif field.name == "status" and isinstance(field, extras_models.StatusField):
-                    depth_fields.append(field.name)
+            depth_fields = self.get_depth_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
             url = f"{self._get_list_url()}?depth=0"
             response = self.client.get(url, **self.header)
@@ -258,15 +268,7 @@ class APIViewTestCases:
             """
             GET a list of objects using the "?depth=1" parameter.
             """
-            depth_fields = []
-            for field in self.model._meta.fields:
-                if isinstance(field, ForeignKey) and field.related_model != ContentType:
-                    depth_fields.append(field.name)
-                elif field.name == "tags":
-                    depth_fields.append(field.name)
-                elif field.name == "status" and isinstance(field, extras_models.StatusField):
-                    depth_fields.append(field.name)
-
+            depth_fields = self.get_depth_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
             url = f"{self._get_list_url()}?depth=1"
             response = self.client.get(url, **self.header)
