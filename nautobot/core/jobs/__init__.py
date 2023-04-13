@@ -7,9 +7,9 @@ from nautobot.extras.models import GitRepository
 name = "System Jobs"
 
 
-class GitRepositoryPullAndRefreshData(Job):
+class GitRepositorySync(Job):
     """
-    System job to clone and/or pull a Git repository, then invoke refresh_datasource_content().
+    System job to clone and/or pull a Git repository, then invoke `refresh_datasource_content()`.
     """
 
     repository = ObjectVar(
@@ -42,7 +42,7 @@ class GitRepositoryPullAndRefreshData(Job):
             )
 
 
-class GitRepositoryDiffOriginalAndLocal(Job):
+class GitRepositoryDryRun(Job):
     """System Job to perform a dry run on a Git repository."""
 
     repository = ObjectVar(
@@ -69,5 +69,5 @@ class GitRepositoryDiffOriginalAndLocal(Job):
             )
 
 
-jobs = [GitRepositoryPullAndRefreshData, GitRepositoryDiffOriginalAndLocal]
+jobs = [GitRepositorySync, GitRepositoryDryRun]
 register_jobs(*jobs)

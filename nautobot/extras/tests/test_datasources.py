@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 import yaml
 
-from nautobot.core.jobs import GitRepositoryDiffOriginalAndLocal, GitRepositoryPullAndRefreshData
+from nautobot.core.jobs import GitRepositoryDryRun, GitRepositorySync
 from nautobot.core.testing import (
     TransactionTestCase,
     create_job_result_and_run_job,
@@ -282,7 +282,7 @@ class GitTest(TransactionTestCase):
                 # pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
                 job_result = create_job_result_and_run_job(
                     module="nautobot.core.jobs",
-                    name="GitRepositoryPullAndRefreshData",
+                    name="GitRepositorySync",
                     source="system",
                     repository=self.repo.pk,
                 )
@@ -351,7 +351,7 @@ class GitTest(TransactionTestCase):
 
                 job_result = create_job_result_and_run_job(
                     module="nautobot.core.jobs",
-                    name="GitRepositoryPullAndRefreshData",
+                    name="GitRepositorySync",
                     source="system",
                     repository=self.repo.pk,
                 )
@@ -377,7 +377,7 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                job_model = GitRepositoryPullAndRefreshData().job_model
+                job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
                 job_result.refresh_from_db()
                 self.assertEqual(
@@ -496,7 +496,7 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                job_model = GitRepositoryPullAndRefreshData().job_model
+                job_model = GitRepositorySync().job_model
                 logging.disable(logging.ERROR)
                 job_result = run_job_for_testing(
                     job=job_model,
@@ -619,7 +619,7 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
-                job_model = GitRepositoryPullAndRefreshData().job_model
+                job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
                     repository=self.repo.pk,
@@ -713,7 +713,7 @@ class GitTest(TransactionTestCase):
 
                 self.mock_request.id = uuid.uuid4()
 
-                job_model = GitRepositoryDiffOriginalAndLocal().job_model
+                job_model = GitRepositoryDryRun().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
                     repository=self.repo.pk,

@@ -21,4 +21,4 @@ class TestReadOnlyFail(Job):
         location = Location.objects.create(name="New Location", location_type=location_type)
 
         self.log_success(obj=location)
-        raise Exception("Test failure")  # pylint: disable=broad-exception-raised
+        self.log_failure("Test failure")

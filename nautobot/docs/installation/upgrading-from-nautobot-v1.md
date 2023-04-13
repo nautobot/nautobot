@@ -815,6 +815,17 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.
 
+`GitRepository` sync operations are now Jobs. As a result, when creating a new `GitRepository` it is not automatically synchronized. A `GitRepository.sync()` method has been implemented that will execute the sync job on a worker and return the `JobResult` for the operation. This method takes `dry_run` and `user` arguments. The `dry_run` argument defaults to `False`; if set to `True` will cause the sync to dry-run. The `user` argument is required if a sync is performed.
+
+Additionally, the `GitRepository.save()` method no longer takes a `trigger_resync=<True|False>` argument as it is no longer required. The act of creating a new `GitRepository` no longer has side effects.
+
+Below is a table documenting changes in names for Git-related Jobs. There should NOT be a need to ever manually execute the jobs due to the addition of `GitRepository.sync()`, but this is being provided for clarity.
+
+| Old Job Location                                                       | New Job Location                         |
+|------------------------------------------------------------------------|------------------------------------------|
+| `nautobot.extras.datasources.git.pull_git_repository_and_refresh_data` | `nautobot.core.jobs.GitRepositorySync`   |
+| `nautobot.extras.datasources.git.git_repository_diff_origin_and_local` | `nautobot.core.jobs.GitRepositoryDryRun` |
+
 ## Logging Changes
 
 Where applicable, `logging.getLogger("module_name")` is replaced with `logging.getLogger(__name__)` or `logging.getLogger(__name__ + ".MyFeature")`.
@@ -867,3 +878,9 @@ The Job `slug` has been updated to be derived from the `name` field instead of a
 
 !!! example
     The Nautobot Golden Config backup job's slug will change from `plugins-nautobot_golden_config-jobs-backupjob` to `backup-configurations`.
+
+## JobResult Database Model Changes
+
+The `JobResult` objects for which results from Job executions are stored are now automatically managed. Therefore job authors must never manipulate or `save()` these objects as they are now used internally for all state transitions and saving the objects yourself could interfere with and cause Job execution to fail or cause data loss.
+
+Therefore all code that is calling `JobResult.set_status()` (which has been removed) or `JobResult.save()` must be removed.

@@ -196,7 +196,8 @@ def git_repository_pre_delete(instance, **kwargs):
     from nautobot.extras.datasources import refresh_datasource_content
 
     # FIXME(jathan): In light of jobs overhaul and Git syncs as jobs, we need to rethink this. We
-    # might instead make "delete" another Job class and call it here.
+    # might instead make "delete" another Job class and call it here, but also think about how
+    # worker events will be such as firing the worker event here.
     job_result = JobResult.objects.create(
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),

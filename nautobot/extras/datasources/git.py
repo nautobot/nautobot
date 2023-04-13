@@ -59,18 +59,18 @@ def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
 
 def enqueue_git_repository_diff_origin_and_local(repository, user):
     """Convenience wrapper for JobResult.enqueue_job() to enqueue the git_repository_diff_origin_and_local job."""
-    from nautobot.core.jobs import GitRepositoryDiffOriginalAndLocal
+    from nautobot.core.jobs import GitRepositoryDryRun
 
-    return enqueue_git_repository_helper(repository, user, GitRepositoryDiffOriginalAndLocal)
+    return enqueue_git_repository_helper(repository, user, GitRepositoryDryRun)
 
 
 def enqueue_pull_git_repository_and_refresh_data(repository, user):
     """
     Convenience wrapper for JobResult.enqueue_job() to enqueue the pull_git_repository_and_refresh_data job.
     """
-    from nautobot.core.jobs import GitRepositoryPullAndRefreshData
+    from nautobot.core.jobs import GitRepositorySync
 
-    return enqueue_git_repository_helper(repository, user, GitRepositoryPullAndRefreshData)
+    return enqueue_git_repository_helper(repository, user, GitRepositorySync)
 
 
 def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):  # pylint: disable=redefined-outer-name
