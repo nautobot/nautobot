@@ -27,7 +27,7 @@ class NautobotJSONEncoder(JSONEncoder):
     """
 
     def default(self, obj):
-        if isinstance(obj, _NautobotTaggableManager) or isinstance(obj, _TaggableManager):
+        if isinstance(obj, (_NautobotTaggableManager, _TaggableManager)):
             obj = list(obj.values_list("id", flat=True))
         if isinstance(obj, NautobotFakeRequest):
             obj = obj.nautobot_serialize()
