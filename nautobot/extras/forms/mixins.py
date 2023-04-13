@@ -7,7 +7,6 @@ from django.db.models import Q
 
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
-    CustomFieldTypeChoices,
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
@@ -27,7 +26,6 @@ from nautobot.utilities.forms import (
     CSVModelForm,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
-    StaticSelect2Multiple,
 )
 
 logger = logging.getLogger(__name__)
