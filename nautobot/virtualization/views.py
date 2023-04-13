@@ -392,7 +392,7 @@ class VMInterfaceView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
         ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
+            data=instance.ip_addresses.restrict(request.user, "view").select_related("tenant"),
             orderable=False,
         )
 

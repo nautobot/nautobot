@@ -5,7 +5,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.models import IPAddress, VLAN, Service
+from nautobot.ipam.models import IPAddress, VLAN, Service, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
@@ -407,10 +407,13 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ),
         )
 
+        cls.namespace = Namespace.objects.first()
+        cls.prefix4 = Prefix.objects.create(prefix="192.0.2.0/24", namespace=cls.namespace)
+        cls.prefix6 = Prefix.objects.create(prefix="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace)
         # Assign primary IPs for filtering
         cls.ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24"),
-            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24"),
+            IPAddress.objects.create(address="192.0.2.1/24", namespace=cls.namespace),
+            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace),
         )
         cls.interfaces[0].add_ip_addresses(cls.ipaddresses[0])
         cls.interfaces[1].add_ip_addresses(cls.ipaddresses[1])
