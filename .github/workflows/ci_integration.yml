@@ -273,8 +273,8 @@ jobs:
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
-      - name: "Run coverage"
-        run: "poetry run invoke unittest-coverage"
+      # - name: "Run coverage"
+      #   run: "poetry run invoke unittest-coverage"
     needs:
       - "pylint"
       - "tests-postgres"

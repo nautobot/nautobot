@@ -7,7 +7,7 @@ on:
 jobs:
   # Ensure CI has passed
   ci:
-    uses: nautobot/nautobot/.github/workflows/ci_integration.yml@next
+    uses: nautobot/nautobot/.github/workflows/ci_integration.yml@prototype/jathanism-3337-ipam-namespace
 
   # Publish to GitHub followed by pypi
   publish_python:
