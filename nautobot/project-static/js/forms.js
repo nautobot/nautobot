@@ -193,6 +193,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                         q: params.term,
                         limit: 50,
                         offset: offset,
+                        depth: 0,
                     };
 
                     // Set api_version
@@ -203,7 +204,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
 
 
                     // Allow for controlling the depth setting from within APISelect
-                    parameters.depth = ( $(element).is('[data-full]') ? undefined : 0 );
+                    // parameters["depth"] = ($(element).attr('data-full') ?  undefined : true);
 
                     // Attach any extra query parameters
                     $.each(element.attributes, function(index, attr){

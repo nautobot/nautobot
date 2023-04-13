@@ -540,7 +540,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
-        params = {"brief": "true", "face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
+        params = {"face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
         response = self.client.get(url, params, **self.header)
         self.assertHttpStatus(response, 200)
 

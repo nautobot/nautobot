@@ -80,14 +80,14 @@ def get_api_version_serializer(serializer_choices, api_version):
 
 
 def versioned_serializer_selector(obj, serializer_choices, default_serializer):
-    """Returns appropriate serializer class depending on request api_version, brief and swagger_fake_view
+    """Returns appropriate serializer class depending on request api_version, and swagger_fake_view
 
     Args:
         obj (ViewSet instance):
         serializer_choices (tuple): Tuple of SerializerVersions
         default_serializer (Serializer): Default Serializer class
     """
-    if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
+    if not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
         api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
         serializer = get_api_version_serializer(serializer_choices, api_version)
         if serializer is not None:

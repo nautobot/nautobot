@@ -161,7 +161,7 @@ class ConfigContextQuerySetMixin:
         """
         Build the proper queryset based on the request context
 
-        If the `brief` query param equates to True or the `exclude` query param
+        If the `exclude` query param
         includes `config_context` as a value, return the base queryset.
 
         Else, return the queryset annotated with config context data
