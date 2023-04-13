@@ -70,7 +70,15 @@ class CustomFieldJSONFilter(CustomFieldFilterMixin, django_filters.Filter):
     """Custom field single value filter for backwards compatibility"""
 
 
-class CustomFieldMultiSelectFilter(CustomFieldFilterMixin, django_filters.Filter):
+class CustomFieldSelectFilter(CustomFieldFilterMixin, django_filters.Filter):
+    """Custom field single value filter for backwards compatibility"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("lookup_expr", "in")
+        super().__init__(*args, **kwargs)
+
+
+class CustomFieldMultiSelectFilter(CustomFieldSelectFilter):
     """Custom field single value filter for backwards compatibility"""
 
     def __init__(self, *args, **kwargs):

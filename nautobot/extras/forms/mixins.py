@@ -81,9 +81,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
                     set_initial=False, enforce_required=False, simple_json_filter=True
                 )
             else:
-                self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
-                if cf.type == CustomFieldTypeChoices.TYPE_SELECT:
-                    self.fields[field_name].widget = StaticSelect2Multiple(choices=self.fields[field_name].choices)
+                self.fields[field_name] = cf.to_filter_field(set_initial=False, enforce_required=False)
             self.custom_fields.append(field_name)
 
 

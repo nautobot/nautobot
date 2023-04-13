@@ -585,6 +585,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         return field
 
+    def to_filter_field(self, *args, **kwargs):
+        """Return a filter field suitable for filtering a CustomField's value for an object."""
+        form_field = self.to_form_field(*args, **kwargs)
+        if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+            # Remove the blank choice, as StaticSelect2Multiple do not need a blank choice
+            # Its blank by default
+            choices = form_field.choices[1:]
+            form_field.widget = StaticSelect2Multiple(choices=choices)
+        return form_field
+
     def validate(self, value):
         """
         Validate a value according to the field's type validation rules.

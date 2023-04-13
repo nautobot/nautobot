@@ -892,7 +892,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
     if isinstance(field, CustomFieldFilterMixin):
-        form_field = field.custom_field.to_form_field()
+        form_field = field.custom_field.to_filter_field()
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, filters.ModelMultipleChoiceFilter):

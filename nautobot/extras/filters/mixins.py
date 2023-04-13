@@ -18,6 +18,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueDateFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
+    CustomFieldSelectFilter,
 )
 from nautobot.extras.models import (
     ConfigContextSchema,
@@ -49,7 +50,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
-            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldSelectFilter,
         }
 
         custom_fields = CustomField.objects.filter(
