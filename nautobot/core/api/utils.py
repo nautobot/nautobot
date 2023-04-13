@@ -108,6 +108,9 @@ def get_serializer_for_model(model, prefix=""):
     # Serializers for Django's auth models are in the users app
     if app_name == "auth":
         app_name = "users"
+    # Special Case where users.Permission needs ObjectPermissionSerializer
+    if app_name == "users" and model_name == "Permission":
+        model_name = "ObjectPermission"
     serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
     if app_name not in settings.PLUGINS:
         serializer_name = f"nautobot.{serializer_name}"

@@ -790,12 +790,12 @@ http://nautobot/api/dcim/sites/ \
 
 +++ 2.0.0
 
-The `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` query offer a more dynamic API interface.
+The `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter offer a more dynamic and comprehensive browsable API.
 This parameter is an positive integer value that can range from 0 to 10. In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
 
 #### Default/?depth=0
 
-`?depth` parameter is default to 0 and offers a very simplistic view of the API where all object-related fields are represented by only their `UUIDs`:
+`?depth` parameter is default to 0 and offers a very simplistic view of the API where all object-related fields are represented by only their primary keys:
 
 ```no-highlight
 curl -s -X GET \
@@ -983,7 +983,7 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
 ### ?depth=2 and beyond
 
 For `TreeModels`, sometimes it is necessary to traverse up more than one tree level and to retrieve an ancestor's information that is not a direct parent of the object.
-In this case, `?depth=2` and beyond would become very useful
+In this case, `?depth=2` and beyond would become very useful.
 
 !!! note
     Notice that the location and its location_type's parent's parent's serializers are shown as well.

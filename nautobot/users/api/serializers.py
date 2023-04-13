@@ -15,19 +15,7 @@ class UserSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = (
-            "id",
-            "url",
-            "username",
-            "password",
-            "first_name",
-            "last_name",
-            "email",
-            "is_staff",
-            "is_active",
-            "date_joined",
-            "groups",
-        )
+        fields = "__all__"
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
@@ -48,7 +36,7 @@ class GroupSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = Group
-        fields = ("id", "url", "name", "user_count")
+        fields = "__all__"
 
 
 class TokenSerializer(ValidatedModelSerializer):
@@ -57,7 +45,10 @@ class TokenSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = Token
-        fields = ("id", "url", "display", "created", "expires", "key", "write_enabled", "description")
+        fields = "__all__"
+        # TODO #3024 user is required in the UI but not in the API?
+        # Previously user is not a field on the TokenSerialzier
+        extra_kwargs = {"user": {"required": False}}
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
@@ -73,15 +64,4 @@ class ObjectPermissionSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = ObjectPermission
-        fields = (
-            "id",
-            "url",
-            "name",
-            "description",
-            "enabled",
-            "object_types",
-            "groups",
-            "users",
-            "actions",
-            "constraints",
-        )
+        fields = "__all__"
