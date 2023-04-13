@@ -63,7 +63,6 @@ class CircuitTerminationViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.CircuitTerminationSerializer
     filterset_class = filters.CircuitTerminationFilterSet
-    brief_prefetch_fields = ["circuit"]
 
 
 #

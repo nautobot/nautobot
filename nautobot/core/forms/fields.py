@@ -531,7 +531,8 @@ class DynamicModelChoiceMixin:
             attrs["disabled-indicator"] = self.disabled_indicator
 
         # Toggle depth
-        attrs["data-full"] = self.depth
+        if self.depth != 0:
+            attrs["data-full"] = self.depth
 
         # Attach any static query parameters
         for key, value in self.query_params.items():

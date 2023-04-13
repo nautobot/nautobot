@@ -3,7 +3,6 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.fields import Field
 
-# from nautobot.core.api import ValidatedModelSerializer
 from nautobot.extras.models import CustomField
 
 

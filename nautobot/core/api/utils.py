@@ -186,6 +186,7 @@ def rest_api_server_error(request, *args, **kwargs):
 
 
 def get_relation_info_for_nested_serializers(model_class, related_model, field_name):
+    """Get the DRF RelationInfo object needed for build_nested_field()"""
     relation_info = RelationInfo(
         model_field=getattr(type(model_class), field_name),
         related_model=type(related_model),

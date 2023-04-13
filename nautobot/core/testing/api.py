@@ -187,7 +187,6 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
     class ListObjectsViewTestCase(APITestCase):
-        brief_fields = []
         choices_fields = None
         filterset = None
 
@@ -305,7 +304,7 @@ class APIViewTestCases:
             field = "parent"
 
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?depth=1"
+            url = f"{self._get_list_url()}?depth=2"
             response = self.client.get(url, **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -326,7 +325,7 @@ class APIViewTestCases:
                     self.assertEqual(field in data[field], True)
                     if data[field][field] is not None:
                         try:
-                            uuid.UUID(str(data[field][field]))
+                            uuid.UUID(str(data[field][field]["id"]))
                         except ValueError:
                             self.fail(f"Response data field {field} contains invalid UUID")
 

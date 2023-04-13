@@ -89,13 +89,6 @@ class AppTest(APITestCase):
 
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
-    brief_fields = [
-        "content_type",
-        "display",
-        "id",
-        "label",
-        "url",
-    ]
     choices_fields = ["content_type"]
     create_data = [
         {
@@ -181,7 +174,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "Config Context 4",
@@ -321,7 +313,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContextSchema
-    brief_fields = ["display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Schema 4",
@@ -482,7 +473,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     """Tests for the CustomField REST API."""
 
     model = CustomField
-    brief_fields = ["display", "id", "key", "url"]
     create_data = [
         {
             "content_types": ["dcim.location"],
@@ -555,7 +545,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
     model = CustomLink
-    brief_fields = ["content_type", "display", "id", "name", "url"]
     create_data = [
         {
             "content_type": "dcim.location",
@@ -680,7 +669,6 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    brief_fields = ["content_type", "display", "id", "name", "url"]
     choices_fields = ["content_type"]
     create_data = [
         {
@@ -713,7 +701,6 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
 
 class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroupMembership
-    brief_fields = ["display", "group", "id", "operator", "parent_group", "url", "weight"]
     choices_fields = ["operator"]
 
     @classmethod
@@ -775,7 +762,6 @@ class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIView
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ExportTemplate
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_type": "dcim.device",
@@ -821,7 +807,6 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "branch": "develop",
     }
@@ -942,8 +927,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
-    brief_fields = ["display", "id", "name", "url"]
-
     create_data = [
         {
             "name": "graphql-query-4",
@@ -1091,7 +1074,6 @@ class ImageAttachmentTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = ImageAttachment
-    brief_fields = ["display", "id", "image", "name", "url"]
     choices_fields = ["content_type"]
 
     @classmethod
@@ -1136,7 +1118,6 @@ class JobTest(
     """Test cases for the Jobs REST API."""
 
     model = Job
-    brief_fields = ["display", "grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
     update_data = {
         # source, module_name, job_class_name, installed are NOT editable
@@ -1851,7 +1832,6 @@ class JobTest(
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
     model = JobHook
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = []
     update_data = {
         "name": "Overridden name",
@@ -1958,7 +1938,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
 
 class JobButtonTest(APIViewTestCases.APIViewTestCase):
     model = JobButton
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = ["button_class"]
 
     @classmethod
@@ -2017,7 +1996,6 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["date_created", "date_done", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2068,18 +2046,6 @@ class JobLogEntryTest(
     APIViewTestCases.ListObjectsViewTestCase,
 ):
     model = JobLogEntry
-    brief_fields = [
-        "absolute_url",
-        "created",
-        "display",
-        "grouping",
-        "id",
-        "job_result",
-        "log_level",
-        "log_object",
-        "message",
-        "url",
-    ]
     choices_fields = []
 
     @classmethod
@@ -2111,7 +2077,6 @@ class ScheduledJobTest(
     APIViewTestCases.ListObjectsViewTestCase,
 ):
     model = ScheduledJob
-    brief_fields = ["crontab", "display", "id", "interval", "name", "start_time", "url"]
     choices_fields = []
 
     @classmethod
@@ -2308,15 +2273,6 @@ class JobApprovalTest(APITestCase):
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
-    brief_fields = [
-        "assigned_object",
-        "display",
-        "id",
-        "note",
-        "slug",
-        "url",
-        "user",
-    ]
     choices_fields = ["assigned_object_type"]
 
     @classmethod
@@ -2369,7 +2325,6 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
     model = Relationship
-    brief_fields = ["display", "id", "name", "slug", "url"]
 
     create_data = [
         {
@@ -2734,7 +2689,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
-    brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
 
     @classmethod
@@ -3074,7 +3028,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
     model = Secret
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     create_data = [
@@ -3128,7 +3081,6 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
 
 class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroup
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     @classmethod
@@ -3179,7 +3131,6 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
 class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroupAssociation
-    brief_fields = ["access_type", "display", "id", "secret", "secret_type", "url"]
     bulk_update_data = {}
     choices_fields = ["access_type", "secret_type"]
 
@@ -3246,7 +3197,6 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }
@@ -3277,7 +3227,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
 class TagTest(APIViewTestCases.APIViewTestCase):
     model = Tag
-    brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
         {"name": "Tag 4", "slug": "tag-4", "content_types": [Location._meta.label_lower]},
         {"name": "Tag 5", "slug": "tag-5", "content_types": [Location._meta.label_lower]},
@@ -3364,7 +3313,6 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
     model = Webhook
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_types": ["dcim.consoleport"],
@@ -3593,7 +3541,6 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class RoleTest(APIViewTestCases.APIViewTestCase):
     model = Role
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }

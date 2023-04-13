@@ -1,7 +1,7 @@
-from taggit.managers import _TaggableManager
 from rest_framework.renderers import BrowsableAPIRenderer
 from rest_framework.renderers import JSONRenderer
 from rest_framework.utils.encoders import JSONEncoder
+from taggit.managers import _TaggableManager
 
 from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.core.utils.requests import NautobotFakeRequest

@@ -114,7 +114,7 @@ class VLANGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class VLANSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     prefix_count = serializers.IntegerField(read_only=True)
 

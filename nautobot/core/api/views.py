@@ -49,7 +49,7 @@ HTTP_ACTIONS = {
     "DELETE": "delete",
 }
 
-
+logger = logging.getLogger(__name__)
 #
 # Mixins
 #
@@ -232,7 +232,7 @@ class ModelViewSetMixin:
         try:
             depth = int(self.request.query_params.get("depth", 0))
         except ValueError:
-            pass
+            logger.warning("The depth parameter must be an integer between 0 and 10")
 
         context["depth"] = depth
 

@@ -13,10 +13,10 @@ from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import serializers
-from rest_framework.reverse import reverse
 from rest_framework.fields import CreateOnlyDefault
-from rest_framework.serializers import SerializerMethodField
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.reverse import reverse
+from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 from nautobot.core.api.fields import ObjectTypeField
@@ -118,7 +118,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If it is not a NestedSerializer, we should set the depth argument to whatever is in the request's context
+        # If it is not a NautobotNestedSerializer, we should set the depth argument to whatever is in the request's context
         if "NautobotNestedSerializer" not in self.__class__.__name__:
             # We set our default depth value here to 1 because in OpenAPISchema
             # get_serializer_context() (where we get the depth from self.request.query_params) is not called
@@ -501,8 +501,6 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
                 other_type = getattr(relationship, f"{other_side}_type")
                 other_side_model = other_type.model_class()
-                # other_side_serializer = get_serializer_for_model(other_side_model)
-                # serializer_instance = other_side_serializer(context={"request": self.context.get("request")})
 
                 expected_objects_data = relationship_data[other_side]
                 expected_objects = [

@@ -105,7 +105,6 @@ class Mixins:
         """Mixin class for all `ComponentModel` model class tests."""
 
         model = None
-        brief_fields = ["device", "display", "id", "name", "url"]
         bulk_update_data = {
             "description": "New description",
         }
@@ -126,17 +125,13 @@ class Mixins:
         """Mixin class for all `FooPort` tests."""
 
         peer_termination_type = None
-        brief_fields = ["cable", "device", "display", "id", "name", "url"]
 
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
 
-        brief_fields = ["display", "id", "name", "url"]
-
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase):
     model = LocationType
-    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
         "nestable": True,
@@ -179,7 +174,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
 
 class LocationTest(APIViewTestCases.APIViewTestCase):
     model = Location
-    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     choices_fields = []
     slug_source = ["parent__slug", "name"]
 
@@ -339,7 +333,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
-    brief_fields = ["display", "id", "name", "rack_count", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -455,7 +448,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
-    brief_fields = ["device_count", "display", "id", "name", "url"]
     choices_fields = ["outer_unit", "type", "width"]
 
     @classmethod
@@ -600,7 +592,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
-    brief_fields = ["display", "id", "units", "url", "user"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -647,7 +638,6 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["device_type_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
@@ -677,15 +667,6 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     model = DeviceType
-    brief_fields = [
-        "device_count",
-        "display",
-        "id",
-        "manufacturer",
-        "model",
-        "slug",
-        "url",
-    ]
     bulk_update_data = {
         "part_number": "ABC123",
     }
@@ -1015,7 +996,6 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "url", "virtual_machine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
@@ -1037,7 +1017,6 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = ["face"]
 
     @classmethod
@@ -1805,7 +1784,6 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
 
 class InventoryItemTest(Mixins.BaseComponentTestMixin):
     model = InventoryItem
-    brief_fields = ["device", "display", "id", "name", "tree_depth", "url"]
     choices_fields = []
 
     @classmethod
@@ -1837,7 +1815,6 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin):
 
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
-    brief_fields = ["display", "id", "label", "url"]
     bulk_update_data = {
         "length": 100,
         "length_unit": "m",
@@ -1963,7 +1940,6 @@ class ConnectedDeviceTest(APITestCase):
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
-    brief_fields = ["display", "id", "master", "member_count", "name", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2153,7 +2129,6 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["display", "id", "name", "power_feed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2192,7 +2167,6 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    brief_fields = ["cable", "display", "id", "name", "url"]
     choices_fields = ["phase", "supply", "type"]
 
     @classmethod
@@ -2277,7 +2251,6 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
-    brief_fields = ["display", "failover_strategy", "id", "name", "url"]
     choices_fields = ["failover_strategy"]
 
     @classmethod

@@ -17,7 +17,6 @@ class AppTest(APITestCase):
 
 class ProviderTest(APIViewTestCases.APIViewTestCase):
     model = Provider
-    brief_fields = ["circuit_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Provider 4",
@@ -37,7 +36,6 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
 
 class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
     model = ProviderNetwork
-    brief_fields = ["display", "id", "name", "slug", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -76,7 +74,6 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     model = CircuitType
-    brief_fields = ["circuit_count", "display", "id", "name", "url"]
     create_data = (
         {
             "name": "Circuit Type 4",
@@ -103,7 +100,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTest(APIViewTestCases.APIViewTestCase):
     model = Circuit
-    brief_fields = ["cid", "display", "id", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -160,7 +156,6 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
     model = CircuitTermination
-    brief_fields = ["cable", "circuit", "display", "id", "term_side", "url"]
     choices_fields = ["term_side"]
 
     @classmethod

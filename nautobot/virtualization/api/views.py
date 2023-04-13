@@ -101,5 +101,3 @@ class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
     ).prefetch_related("tags", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["virtual_machine"]

@@ -284,8 +284,6 @@ class DeviceTypeViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.DeviceTypeSerializer
     filterset_class = filters.DeviceTypeFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["manufacturer"]
 
 
 #
@@ -554,8 +552,6 @@ class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -564,8 +560,6 @@ class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -574,8 +568,6 @@ class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -584,8 +576,6 @@ class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -599,8 +589,6 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
     ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses")
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
@@ -609,32 +597,24 @@ class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     ).prefetch_related("tags")
     serializer_class = serializers.FrontPortSerializer
     filterset_class = filters.FrontPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class RearPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     queryset = RearPort.objects.select_related("device__device_type__manufacturer", "cable").prefetch_related("tags")
     serializer_class = serializers.RearPortSerializer
     filterset_class = filters.RearPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class DeviceBayViewSet(NautobotModelViewSet):
     queryset = DeviceBay.objects.select_related("installed_device").prefetch_related("tags")
     serializer_class = serializers.DeviceBaySerializer
     filterset_class = filters.DeviceBayFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class InventoryItemViewSet(NautobotModelViewSet):
     queryset = InventoryItem.objects.select_related("device", "manufacturer").prefetch_related("tags")
     serializer_class = serializers.InventoryItemSerializer
     filterset_class = filters.InventoryItemFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 #
@@ -686,8 +666,6 @@ class VirtualChassisViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.VirtualChassisSerializer
     filterset_class = filters.VirtualChassisFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["master"]
 
 
 #

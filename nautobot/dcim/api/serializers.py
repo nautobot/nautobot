@@ -201,8 +201,8 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 class LocationSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
-    StatusModelSerializerMixin,
     TreeModelSerializerMixin,
+    StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
@@ -262,8 +262,8 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 
 class RackSerializer(
     NautobotModelSerializer,
-    TaggedModelSerializerMixin,
     StatusModelSerializerMixin,
+    TaggedModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)

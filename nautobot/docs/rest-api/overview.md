@@ -790,8 +790,11 @@ http://nautobot/api/dcim/sites/ \
 
 +++ 2.0.0
 
-The `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter offer a more dynamic and comprehensive browsable API.
+The the built-in DRF `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API.
 This parameter is an positive integer value that can range from 0 to 10. In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
+
+!!! important
+    The `?depth` query parameter should only be used for `GET` operations in the API. It should not be used in `POST`, `PATCH` and `DELETE` requests. For these requests, only `?depth=0` should be used.
 
 #### Default/?depth=0
 

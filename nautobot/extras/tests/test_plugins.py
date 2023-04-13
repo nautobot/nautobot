@@ -404,7 +404,6 @@ class PluginDetailViewTest(TestCase):
 )
 class PluginAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "number": 2600,
     }
