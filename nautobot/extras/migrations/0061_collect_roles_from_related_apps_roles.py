@@ -27,7 +27,7 @@ def create_equivalent_roles_of_virtualmachine_device_role(apps):
     """Create equivalent roles for the VirtualMachine DeviceRole."""
     DeviceRole = apps.get_model("dcim", "DeviceRole")
     roles_to_create = DeviceRole.objects.filter(vm_role=True)
-    bulk_create_roles(apps, roles_to_create, ["virtualization.virtualmachine"])
+    create_roles(apps, roles_to_create, ["virtualization.virtualmachine"])
 
 
 def create_equivalent_roles_of_related_role_model(apps):
@@ -43,7 +43,7 @@ def create_equivalent_roles_of_related_role_model(apps):
         related_role_model_class = apps.get_model(app_name, model_class)
 
         roles_to_create = related_role_model_class.objects.all()
-        bulk_create_roles(apps, roles_to_create, related_role_model.implemented_by)
+        create_roles(apps, roles_to_create, related_role_model.implemented_by)
 
 
 def create_equivalent_roles_of_ipaddress_role_choices(apps):
@@ -54,11 +54,11 @@ def create_equivalent_roles_of_ipaddress_role_choices(apps):
         color = IPAddressRoleChoices.CSS_CLASSES[value]
         choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="")
         roles_to_create.append(choiceset)
-    bulk_create_roles(apps, roles_to_create, ["ipam.ipaddress"])
+    create_roles(apps, roles_to_create, ["ipam.ipaddress"])
 
 
-def bulk_create_roles(apps, roles_to_create, content_types):
-    """Bulk create role and set its contenttypes"""
+def create_roles(apps, roles_to_create, content_types):
+    """Create/retrieve Role records as needed and set their contenttypes."""
     Role = apps.get_model("extras", "Role")
     ContentType = apps.get_model("contenttypes", "ContentType")
     ObjectChange = apps.get_model("extras", "ObjectChange")
@@ -71,35 +71,25 @@ def bulk_create_roles(apps, roles_to_create, content_types):
         # No sense fetching this if we don't have an old role content type
         new_role_ct = ContentType.objects.get_for_model(Role)
 
-    # Exclude roles whose names are already exists from bulk create.
-    existing_roles = Role.objects.values_list("name", flat=True)
-    roles_instances = [
-        (
-            data,
-            Role(
-                name=data.name,
-                slug=data.slug,
-                description=data.description,
-                color=getattr(data, "color", color_map["default"]),
-                weight=getattr(data, "weight", None),
-            ),
+    for old_role in roles_to_create:
+        new_role, created = Role.objects.get_or_create(
+            name=old_role.name,
+            defaults={
+                "description": old_role.description,
+                "color": getattr(old_role, "color", color_map["default"]),
+                "weight": getattr(old_role, "weight", None),
+            },
         )
-        for data in roles_to_create
-        if data.name not in existing_roles
-    ]
-    if roles_instances:
-        for old_role, new_role in roles_instances:
-            # TODO: We need to handle new role collisions
-            new_role.save()
-            if old_role_ct:
-                # Move over existing object change records to the new role we created
-                ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(
-                    changed_object_type=new_role_ct, changed_object_id=new_role.pk
-                )
+        if created:
+            print(f'    Created Role "{old_role.name}"')
+        if old_role_ct and hasattr(old_role, "pk"):
+            # Move over existing object change records to the new role we created
+            ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(
+                changed_object_type=new_role_ct, changed_object_id=new_role.pk
+            )
 
     # This is for all of the change records for roles which no longer exist
     if old_role_ct:
-        # TODO: Should we null out the changed_object_id?
         ObjectChange.objects.filter(changed_object_type=old_role_ct).update(changed_object_type=new_role_ct)
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])

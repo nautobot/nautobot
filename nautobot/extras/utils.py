@@ -602,10 +602,12 @@ def get_instances_to_pk_and_new_role(queryset, role_model, role_choiceset, legac
             else:
                 if not isinstance(legacy_role_field, str):
                     legacy_role_field = legacy_role_field.name
+                if legacy_role_field == "":  # Such as an IPAddress with no assigned role
+                    continue
                 try:
                     role_equivalent = role_model.objects.get(Q(name=legacy_role_field) | Q(slug=legacy_role_field))
                 except role_model.DoesNotExist:
-                    logger.error(f"Role with name {legacy_role_field} not found")
+                    logger.error('Role with name/slug "%s" not found', legacy_role_field)
         else:
             # ChoiceSet.CHOICES has to be inverted to obtain the value using its label
             # i.e {"vrf": "VRF"} --> {"VRF": "vrf"}
