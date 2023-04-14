@@ -1,0 +1,115 @@
+---
+- Model/Endpoint: "/api/status/"
+  Removed Field: "rq-workers-running"
+  Comments: "Django-RQ is no longer supported"
+- Model/Endpoint: "CircuitTermination"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "CircuitType"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Cluster"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "ClusterGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "ClusterType"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "ConfigContext"
+  Removed Field: "regions"
+  Comments: "Use `locations` instead"
+- Model/Endpoint: "ConfigContext"
+  Removed Field: "sites"
+  Comments: "Use `locations` instead"
+- Model/Endpoint: "CustomLink"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Device"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "DeviceRedundancyGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "DynamicGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "GitRepository"
+  Removed Field: "token"
+  Comments: "Use Secrets instead"
+- Model/Endpoint: "GitRepository"
+  Removed Field: "username"
+  Comments: "Use Secrets instead"
+- Model/Endpoint: "GraphQLQuery"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "JobHook"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Location"
+  Removed Field: "site"
+  Comments: "Use `parent` instead"
+- Model/Endpoint: "Manufacturer"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Platform"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "PowerFeed"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "PowerPanel"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "Prefix"
+  Removed Field: "is_pool"
+  Comments: "Use `type` instead"
+- Model/Endpoint: "Prefix"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "Provider"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Rack"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "RackGroup"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "RelationshipAssociation"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "RIR"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Role"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "RouteTarget"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Secret"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "SecretsGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Status"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Tenant"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "TenantGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "VLAN"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "VLANGroup"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "Webhook"
+  Removed Field: "slug"
+  Comments:

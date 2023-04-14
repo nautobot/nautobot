@@ -1,0 +1,550 @@
+---
+- Model: "Circuit"
+  Removed Filter: "provider_id"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "provider_network_id"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "region"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "site"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "Circuit"
+  Removed Filter: "type_id"
+  Comments:
+- Model: "CircuitTermination"
+  Removed Filter: "circuit_id"
+  Comments:
+- Model: "CircuitTermination"
+  Removed Filter: "provider_network_id"
+  Comments:
+- Model: "CircuitTermination"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "CircuitTermination"
+  Removed Filter: "region"
+  Comments:
+- Model: "CircuitTermination"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "CircuitTermination"
+  Removed Filter: "site"
+  Comments:
+- Model: "CircuitType"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Cluster"
+  Removed Filter: "region"
+  Comments:
+- Model: "Cluster"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Cluster"
+  Removed Filter: "site"
+  Comments:
+- Model: "Cluster"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Cluster"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "ClusterGroup"
+  Removed Filter: "slug"
+  Comments:
+- Model: "ClusterType"
+  Removed Filter: "slug"
+  Comments:
+- Model: "ConfigContext"
+  Removed Filter: "region"
+  Comments:
+- Model: "ConfigContext"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "ConfigContext"
+  Removed Filter: "role_id"
+  Comments:
+- Model: "ConfigContext"
+  Removed Filter: "site"
+  Comments:
+- Model: "ConfigContext"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "ConsolePort"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "ConsolePort"
+  Removed Filter: "region"
+  Comments:
+- Model: "ConsolePort"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "ConsolePort"
+  Removed Filter: "site"
+  Comments:
+- Model: "ConsolePort"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "ConsoleServerPort"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "ConsoleServerPort"
+  Removed Filter: "region"
+  Comments:
+- Model: "ConsoleServerPort"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "ConsoleServerPort"
+  Removed Filter: "site"
+  Comments:
+- Model: "ConsoleServerPort"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "ConsoleServerPort"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "CustomFieldChoice"
+  Removed Filter: "field_id"
+  Comments: "Use `custom_field` filter"
+- Model: "CustomLink"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Device"
+  Removed Filter: "manufacturer_id"
+  Comments:
+- Model: "Device"
+  Removed Filter: "model"
+  Comments: "Use `device_type` filter"
+- Model: "Device"
+  Removed Filter: "pass_through_ports"
+  Comments: "Use `has_front_ports` or `has_rear_ports` filters"
+- Model: "Device"
+  Removed Filter: "platform_id"
+  Comments:
+- Model: "Device"
+  Removed Filter: "region"
+  Comments:
+- Model: "Device"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Device"
+  Removed Filter: "role_id"
+  Comments:
+- Model: "Device"
+  Removed Filter: "secrets_group_id"
+  Comments:
+- Model: "Device"
+  Removed Filter: "site"
+  Comments:
+- Model: "Device"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Device"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "DeviceBay"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "DeviceBay"
+  Removed Filter: "region"
+  Comments:
+- Model: "DeviceBay"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "DeviceBay"
+  Removed Filter: "site"
+  Comments:
+- Model: "DeviceBay"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "DeviceType"
+  Removed Filter: "manufacturer_id"
+  Comments:
+- Model: "DeviceRedundancyGroup"
+  Removed Filter: "slug"
+  Comments:
+- Model: "DynamicGroup"
+  Removed Filter: "slug"
+  Comments:
+- Model: "FrontPort"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "FrontPort"
+  Removed Filter: "region"
+  Comments:
+- Model: "FrontPort"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "FrontPort"
+  Removed Filter: "site"
+  Comments:
+- Model: "FrontPort"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "GraphQLQuery"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "bridge_id"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "lag_id"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "parent_interface_id"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "region"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "site"
+  Comments:
+- Model: "Interface"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "manufacturer_id"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "parent_id"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "region"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "site"
+  Comments:
+- Model: "InventoryItem"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "IPAddress"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "JobHook"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Location"
+  Removed Filter: "region"
+  Comments:
+- Model: "Location"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Location"
+  Removed Filter: "site"
+  Comments:
+- Model: "Location"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Location"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "Manufacturer"
+  Removed Filter: "slug"
+  Comments:
+- Model: "ObjectPermission"
+  Removed Filter: "user_id"
+  Comments: "Use `users` filter"
+- Model: "Platform"
+  Removed Filter: "manufacturer_id"
+  Comments:
+- Model: "Platform"
+  Removed Filter: "slug"
+  Comments:
+- Model: "PowerFeed"
+  Removed Filter: "power_panel_id"
+  Comments:
+- Model: "PowerFeed"
+  Removed Filter: "rack_id"
+  Comments:
+- Model: "PowerFeed"
+  Removed Filter: "region"
+  Comments:
+- Model: "PowerFeed"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "PowerFeed"
+  Removed Filter: "site"
+  Comments:
+- Model: "PowerFeed"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "PowerOutlet"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "PowerOutlet"
+  Removed Filter: "region"
+  Comments:
+- Model: "PowerOutlet"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "PowerOutlet"
+  Removed Filter: "site"
+  Comments:
+- Model: "PowerOutlet"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "PowerPanel"
+  Removed Filter: "rack_group_id"
+  Comments:
+- Model: "PowerPanel"
+  Removed Filter: "region"
+  Comments:
+- Model: "PowerPanel"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "PowerPanel"
+  Removed Filter: "site"
+  Comments:
+- Model: "PowerPanel"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "PowerPort"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "PowerPort"
+  Removed Filter: "region"
+  Comments:
+- Model: "PowerPort"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "PowerPort"
+  Removed Filter: "site"
+  Comments:
+- Model: "PowerPort"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Prefix"
+  Removed Filter: "region"
+  Comments:
+- Model: "Prefix"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Prefix"
+  Removed Filter: "site"
+  Comments:
+- Model: "Prefix"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Provider"
+  Removed Filter: "region"
+  Comments:
+- Model: "Provider"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Provider"
+  Removed Filter: "site"
+  Comments:
+- Model: "Provider"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Provider"
+  Removed Filter: "slug"
+  Comments:
+- Model: "ProviderNetwork"
+  Removed Filter: "provider_id"
+  Comments:
+- Model: "Rack"
+  Removed Filter: "group_id"
+  Comments: "Use `rack_group` filter"
+- Model: "Rack"
+  Removed Filter: "region"
+  Comments:
+- Model: "Rack"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "Rack"
+  Removed Filter: "role_id"
+  Comments:
+- Model: "Rack"
+  Removed Filter: "site"
+  Comments:
+- Model: "Rack"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "Rack"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "RackGroup"
+  Removed Filter: "parent_id"
+  Comments:
+- Model: "RackGroup"
+  Removed Filter: "region"
+  Comments:
+- Model: "RackGroup"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "RackGroup"
+  Removed Filter: "site"
+  Comments:
+- Model: "RackGroup"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "RackReservation"
+  Removed Filter: "group_id"
+  Comments: "Use `rack_group` filter"
+- Model: "RackReservation"
+  Removed Filter: "rack_id"
+  Comments:
+- Model: "RackReservation"
+  Removed Filter: "site"
+  Comments:
+- Model: "RackReservation"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "RackReservation"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "RackReservation"
+  Removed Filter: "user_id"
+  Comments:
+- Model: "RearPort"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "RearPort"
+  Removed Filter: "region"
+  Comments:
+- Model: "RearPort"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "RearPort"
+  Removed Filter: "site"
+  Comments:
+- Model: "RearPort"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "RelationshipAssociation"
+  Removed Filter: "slug"
+  Comments:
+- Model: "RIR"
+  Removed Filter: "slug"
+  Comments:
+- Model: "RouteTarget"
+  Removed Filter: "slug"
+  Comments:
+- Model: "RouteTarget"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "Secret"
+  Removed Filter: "slug"
+  Comments:
+- Model: "SecretsGroup"
+  Removed Filter: "slug"
+  Comments:
+- Model: "SecretsGroupAssociation"
+  Removed Filter: "group_id"
+  Comments: "Use `secrets_group` filter"
+- Model: "SecretsGroupAssociation"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Status"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Tenant"
+  Removed Filter: "aggregates"
+  Comments: "Use `prefixes` filter"
+- Model: "Tenant"
+  Removed Filter: "group_id"
+  Comments: "Use `tenant_group` filter"
+- Model: "Tenant"
+  Removed Filter: "has_aggregates"
+  Comments: "Use `has_prefixes` filter"
+- Model: "Tenant"
+  Removed Filter: "has_sites"
+  Comments:
+- Model: "Tenant"
+  Removed Filter: "sites"
+  Comments:
+- Model: "Tenant"
+  Removed Filter: "slug"
+  Comments:
+- Model: "TenantGroup"
+  Removed Filter: "parent_id"
+  Comments:
+- Model: "TenantGroup"
+  Removed Filter: "slug"
+  Comments:
+- Model: "VirtualChassis"
+  Removed Filter: "master_id"
+  Comments:
+- Model: "VirtualChassis"
+  Removed Filter: "region"
+  Comments:
+- Model: "VirtualChassis"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "VirtualChassis"
+  Removed Filter: "site"
+  Comments:
+- Model: "VirtualChassis"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "VirtualChassis"
+  Removed Filter: "tenant_id"
+  Comments:
+- Model: "VirtualMachine"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "VLAN"
+  Removed Filter: "group_id"
+  Comments: "Use `vlan_group` filter"
+- Model: "VLAN"
+  Removed Filter: "region"
+  Comments:
+- Model: "VLAN"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "VLAN"
+  Removed Filter: "site"
+  Comments:
+- Model: "VLAN"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "VLAN"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "VLANGroup"
+  Removed Filter: "region"
+  Comments:
+- Model: "VLANGroup"
+  Removed Filter: "region_id"
+  Comments:
+- Model: "VLANGroup"
+  Removed Filter: "site"
+  Comments:
+- Model: "VLANGroup"
+  Removed Filter: "site_id"
+  Comments:
+- Model: "VMInterface"
+  Removed Filter: "bridge_id"
+  Comments:
+- Model: "VMInterface"
+  Removed Filter: "parent_interface_id"
+  Comments:
+- Model: "VRF"
+  Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "Webhook"
+  Removed Filter: "slug"
+  Comments:

@@ -592,6 +592,14 @@ def pylint(context, target=None, recursive=False):
 
 
 @task
+def yamllint(context):
+    """Run yamllint to validate formatting applies to YAML standards."""
+    # TODO: enable for directories other than nautobot/docs and fix all warnings
+    command = "yamllint nautobot/docs --format standard"
+    run_command(context, command)
+
+
+@task
 def serve_docs(context):
     """Runs local instance of mkdocs serve (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
@@ -841,6 +849,7 @@ def tests(context, lint_only=False, keepdb=False):
     flake8(context)
     hadolint(context)
     markdownlint(context)
+    yamllint(context)
     pylint(context)
     check_migrations(context)
     check_schema(context)
