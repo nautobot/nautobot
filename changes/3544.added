@@ -1,0 +1,1 @@
+Added the ability to change the `CACHES["default"]["BACKEND"]` via an environment variable `NAUTOBOT_CACHES_BACKEND`
