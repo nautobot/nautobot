@@ -110,9 +110,6 @@
 - Model: "ConsoleServerPort"
   Removed Filter: "site_id"
   Comments:
-- Model: "ConsoleServerPort"
-  Removed Filter: "site_id"
-  Comments:
 - Model: "CustomFieldChoice"
   Removed Filter: "field_id"
   Comments: "Use `custom_field` filter"
