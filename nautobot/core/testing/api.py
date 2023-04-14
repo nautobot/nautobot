@@ -3,7 +3,7 @@ from typing import Optional, Sequence, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import ForeignKey
+from django.db.models import ForeignKey, ManyToManyField
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.text import slugify
@@ -197,7 +197,7 @@ class APIViewTestCases:
             """Get a list of model fields that could be tested with the ?depth query parameter"""
             depth_fields = []
             for field in self.model._meta.fields:
-                if isinstance(field, ForeignKey) and (
+                if isinstance(field, (ForeignKey, ManyToManyField)) and (
                     field.related_model != ContentType
                     # user is a model field on Token but not a field on TokenSerializer
                     and not (field.name == "user" and self.model == users_models.Token)

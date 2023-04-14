@@ -78,7 +78,6 @@ from .fields import MultipleChoiceJSONField
 
 from .nested_serializers import (  # noqa: F401
     NestedScheduledJobCreationSerializer,
-    NestedSecretsGroupAssociationSerializer,
 )
 
 #
@@ -812,6 +811,16 @@ class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
 
 
+class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
+    """Serializer for `SecretsGroupAssociation` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = "__all__"
+
+
 class SecretsGroupSerializer(NautobotModelSerializer):
     """Serializer for `SecretsGroup` objects."""
 
@@ -823,20 +832,25 @@ class SecretsGroupSerializer(NautobotModelSerializer):
     # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
     # api/extras/secrets-group-associations/ REST endpoint as appropriate.
     # TODO #3024: How to get rid of this?
-    secrets = NestedSecretsGroupAssociationSerializer(source="secrets_group_associations", many=True, read_only=True)
+    secrets = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(SecretsGroupAssociationSerializer)
+    def get_secrets(self, obj):
+        depth = int(self.context.get("depth", 0))
+        if depth == 0:
+            return [secret.id for secret in obj.secrets_group_associations.all()]
+        else:
+            result = []
+            for secret in obj.secrets_group_associations.all():
+                relation_info = get_relation_info_for_nested_serializers(obj, secret, "secrets_group_associations")
+                field_class, field_kwargs = self.build_nested_field("secrets_group_associations", relation_info, depth)
+                result.append(
+                    field_class(secret, context={"request": self.context.get("request")}, **field_kwargs).data
+                )
+            return result
 
     class Meta:
         model = SecretsGroup
-        fields = "__all__"
-
-
-class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
-    """Serializer for `SecretsGroupAssociation` objects."""
-
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
-
-    class Meta:
-        model = SecretsGroupAssociation
         fields = "__all__"
 
 

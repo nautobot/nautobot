@@ -5,8 +5,6 @@ from nautobot.extras import choices, models
 
 __all__ = [
     "NestedScheduledJobCreationSerializer",
-    "NestedSecretsGroupAssociationSerializer",
-    "NestedSecretSerializer",
 ]
 
 
@@ -51,21 +49,3 @@ class NestedScheduledJobCreationSerializer(BaseModelSerializer):
                     raise serializers.ValidationError({"crontab": e})
 
         return data
-
-
-class NestedSecretSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
-
-    class Meta:
-        model = models.Secret
-        fields = ["id", "url", "name"]
-
-
-class NestedSecretsGroupAssociationSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
-
-    secret = NestedSecretSerializer()
-
-    class Meta:
-        model = models.SecretsGroupAssociation
-        fields = ["id", "url", "access_type", "secret_type", "secret"]

@@ -86,9 +86,6 @@ class VirtualMachineSerializer(NautobotModelSerializer, StatusModelSerializerMix
         ]
         validators = []
 
-    # TODO #3024 I would argue you do not need this anymore because you can obtain a more comprehensive
-    # location field on cluster with ?depth=2
-
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     config_context = serializers.SerializerMethodField()
