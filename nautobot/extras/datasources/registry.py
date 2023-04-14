@@ -1,7 +1,6 @@
 """Registry-related APIs for datasources."""
 
 from nautobot.extras.choices import LogLevelChoices
-from nautobot.extras.context_managers import change_logging, JobChangeContext
 from nautobot.extras.registry import registry
 
 
@@ -34,26 +33,14 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
         delete (bool): True if the record is being deleted; False if it is being created/updated.
     """
     job_result.log(f"Refreshing data provided by {record}...", level_choice=LogLevelChoices.LOG_INFO)
-    if user:
-        change_context = JobChangeContext(user=user)
-        with change_logging(change_context):
-            for entry in get_datasource_contents(model_name):
-                job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
-                try:
-                    entry.callback(record, job_result, delete=delete)
-                except Exception as exc:
-                    job_result.log(
-                        f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE
-                    )
-                    raise
-    else:
-        for entry in get_datasource_contents(model_name):
-            job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
-            try:
-                entry.callback(record, job_result, delete=delete)
-            except Exception as exc:
-                job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
-                raise
+
+    for entry in get_datasource_contents(model_name):
+        job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
+        try:
+            entry.callback(record, job_result, delete=delete)
+        except Exception as exc:
+            job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
+            raise
 
     # Now that any exception will fail a Job and Git Repository syncs are jobs,
     # and we also cannot micro-manage the JobResult state, we had to add a final

@@ -827,6 +827,9 @@ class GitRepositoryEditView(generic.ObjectEditView):
     model_form = forms.GitRepositoryForm
     template_name = "extras/gitrepository_object_edit.html"
 
+    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
+    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
+    # again, this will be moved to the API calls, so just something to keep in mind.
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
         obj.user = request.user

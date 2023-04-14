@@ -627,13 +627,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
             "provided_contents",
         ]
 
-    def validate(self, data):
-        """
-        Add the originating Request as a parameter to be passed when creating/updating a GitRepository.
-        """
-        data["user"] = self.context["request"].user
-        return super().validate(data)
-
 
 #
 # GraphQL Queries

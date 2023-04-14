@@ -89,10 +89,6 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             if fields["status"] in states.READY_STATES:
                 fields["date_done"] = timezone.now()
 
-            # Don't overload the user if it's already been set when the JobResult was created.
-            if obj.user_id is not None:
-                del fields["user_id"]
-
             # Always make sure the Job `name` is set.
             if not obj.name and fields["task_name"]:
                 fields["name"] = fields["task_name"]

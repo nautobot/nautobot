@@ -67,8 +67,6 @@ class GitRepository(PrimaryModel):
         verbose_name_plural = "Git repositories"
 
     def __init__(self, *args, **kwargs):
-        # If instantiated from the API/UI, the originating User will be passed as a kwarg:
-        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
         # Store the initial repo slug so we can check for changes on save().
@@ -81,6 +79,12 @@ class GitRepository(PrimaryModel):
         return reverse("extras:gitrepository", kwargs={"slug": self.slug})
 
     def get_latest_sync(self):
+        """
+        Return a `JobResult` for the latest sync operation.
+
+        Returns:
+            JobResult
+        """
         from nautobot.extras.models import JobResult
 
         # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
@@ -101,21 +105,17 @@ class GitRepository(PrimaryModel):
     def filesystem_path(self):
         return os.path.join(settings.GIT_ROOT, self.slug)
 
-    def sync(self, dry_run=False, user=None):
+    def sync(self, user, dry_run=False):
         """
         Perform a pull on the Git repository from the remote and return the sync result.
 
         Args:
-            dry_run (bool): If set, dry-run the Git sync
             user (User): The User that will perform the sync. If not set, will use `self.user`.
+            dry_run (bool): If set, dry-run the Git sync
 
         Returns:
             JobResult
         """
-        if user is None:
-            assert self.user is not None, "No user associated with this update!"
-            user = self.user
-
         from nautobot.extras.datasources import (
             enqueue_pull_git_repository_and_refresh_data,
             enqueue_git_repository_diff_origin_and_local,

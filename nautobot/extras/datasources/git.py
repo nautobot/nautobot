@@ -169,6 +169,10 @@ def ensure_git_repository(
             repository_record.current_head = head
             repository_record.save()
 
+    # FIXME(jathan): As a part of jobs overhaul, this error-handling should be removed since this
+    # should only ever be called in the context of a Git sync job. Also, all logging directly from a
+    # JobResult should also be replaced with just trusting the logger to do the correct thing (such
+    # as from the Job class).
     except Exception as exc:
         if job_result:
             job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)

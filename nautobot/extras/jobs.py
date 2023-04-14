@@ -302,6 +302,9 @@ class BaseJob(Task):
         git.my-repository/myjob/MyJob
         """
         # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
+        # TODO(jathan: Once we make all Jobs imported as modules, this may no longer be necessary as
+        # we can just trust that the import location and class_path can be derived from a single
+        # source.
         if cls in registry["plugin_jobs"]:
             source_grouping = "plugins"
         elif cls in registry["system_jobs"]:

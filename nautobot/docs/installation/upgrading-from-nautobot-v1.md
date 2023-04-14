@@ -815,7 +815,7 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.
 
-`GitRepository` sync operations are now Jobs. As a result, when creating a new `GitRepository` it is not automatically synchronized. A `GitRepository.sync()` method has been implemented that will execute the sync job on a worker and return the `JobResult` for the operation. This method takes `dry_run` and `user` arguments. The `dry_run` argument defaults to `False`; if set to `True` will cause the sync to dry-run. The `user` argument is required if a sync is performed.
+`GitRepository` sync operations are now Jobs. As a result, when creating a new `GitRepository` it **is not automatically synchronized**. A `GitRepository.sync()` method has been implemented that will execute the sync job on a worker and return the `JobResult` for the operation. This method takes `dry_run` and `user` arguments. The `dry_run` argument defaults to `False`; if set to `True` will cause the sync to dry-run. The `user` argument is required if a sync is performed.
 
 Additionally, the `GitRepository.save()` method no longer takes a `trigger_resync=<True|False>` argument as it is no longer required. The act of creating a new `GitRepository` no longer has side effects.
 
