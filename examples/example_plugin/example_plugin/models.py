@@ -40,6 +40,7 @@ class ExampleModel(OrganizationalModel):
     "export_templates",
     # "graphql", Not specified here as we have a custom type for this model, see example_plugin.graphql.types
     "webhooks",
+    "relationships",  # Defined here to ensure no clobbering: https://github.com/nautobot/nautobot/issues/3592
 )
 class AnotherExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20)
