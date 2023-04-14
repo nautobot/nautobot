@@ -859,7 +859,6 @@ class DynamicFilterFormTest(TestCase):
                 form.fields["lookup_value"].widget.attrs,
                 {
                     "class": "form-control nautobot-select2-api lookup_value-input form-control",
-                    "data-full": 0,
                     "data-multiple": 1,
                     "data-query-param-content_types": '["dcim.location"]',
                     "display-field": "display",

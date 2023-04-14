@@ -532,9 +532,7 @@ class DynamicModelChoiceMixin:
 
         # Toggle depth
         if self.depth != 0:
-            attrs["data-full"] = True
-        else:
-            attrs["data-full"] = False
+            attrs["data-depth"] = self.depth
 
         # Attach any static query parameters
         for key, value in self.query_params.items():

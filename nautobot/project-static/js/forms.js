@@ -193,7 +193,6 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                         q: params.term,
                         limit: 50,
                         offset: offset,
-                        depth: 0,
                     };
 
                     // Set api_version
@@ -204,7 +203,11 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
 
 
                     // Allow for controlling the depth setting from within APISelect
-                    // parameters["depth"] = ($(element).attr('data-full') ?  undefined : true);
+                    if ($(element).attr('data-depth') !== undefined){
+                        parameters.depth = parseInt($(element).attr('data-depth'))
+                    }else{
+                        parameters.depth = 0
+                    }
 
                     // Attach any extra query parameters
                     $.each(element.attributes, function(index, attr){
@@ -373,7 +376,6 @@ function initializeTags(context, dropdownParent=null){
                 var offset = (params.page - 1) * 50 || 0;
                 var parameters = {
                     q: params.term,
-                    depth: 0,
                     limit: 50,
                     offset: offset,
                 };
