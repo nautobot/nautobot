@@ -770,9 +770,7 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
             # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
             logger = logging.getLogger(__name__)
-            logger.warning(
-                f"Exception: {err}",
-            )
+            logger.debug(f"Handled expected exception when generating filter field: {err}")
 
             # Create a temporary form and get a BoundField for the specified field
             # This is necessary to generate the HTML representation using as_widget()
