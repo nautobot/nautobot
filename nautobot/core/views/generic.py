@@ -89,33 +89,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "active_tab": request.GET.get("tab", "main"),
         }
 
-    # 2.0 TODO: Remove this method in 2.0. Can be retrieved from instance itself now
-    # instance.get_changelog_url()
-    # Only available on models that support changelogs
-    def get_changelog_url(self, instance):
-        """Return the changelog URL for a given instance."""
-        meta = self.queryset.model._meta
-
-        # Don't try to generate a changelog_url for an ObjectChange.
-        if meta.model_name == "objectchange":
-            return None
-
-        route = get_route_for_model(instance, "changelog")
-
-        # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
-        for field in fields:
-            if not hasattr(instance, field):
-                continue
-
-            try:
-                return reverse(route, kwargs={field: getattr(instance, field)})
-            except NoReverseMatch:
-                continue
-
-        # This object likely doesn't have a changelog route defined.
-        return None
-
     def get(self, request, *args, **kwargs):
         """
         Generic GET handler for accessing an object by PK or slug
@@ -134,7 +107,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": changelog_url,  # 2.0 TODO: Remove in 2.0. This information can be retrieved from the object itself now.
                 **self.get_extra_context(request, instance),
             },
         )

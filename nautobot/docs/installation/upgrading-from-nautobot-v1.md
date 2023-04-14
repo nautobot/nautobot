@@ -130,6 +130,10 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 ## UI, GraphQL, and REST API Filter Changes
 
+### Removed Changelog URL from View Context
+
+`changelog_url` is no longer provided in the `ObjectView` context. To get a models' changelog URL, you can retrieve it from the model itself if it supports it: `model_instance.get_changelog_url()`.
+
 ### Renamed Filter Fields
 
 Most renamed filter fields in Nautobot 2.0 fall into the following general categories:
