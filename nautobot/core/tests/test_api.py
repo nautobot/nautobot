@@ -282,7 +282,7 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
     def test_get_lookup_value_dom_element(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
         with self.subTest("Assert correct lookup field dom element is generated"):
-            response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
+            response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
 
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
