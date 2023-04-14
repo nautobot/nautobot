@@ -132,7 +132,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 ### Removed Changelog URL from View Context
 
-`changelog_url` is no longer provided in the `ObjectView` context. To get a models' changelog URL, you can retrieve it from the model itself if it supports it: `model_instance.get_changelog_url()`.
+`changelog_url` is no longer provided in the `ObjectView` context. To get a model instance's changelog URL, you can retrieve it from the instance itself if it supports it: `model_instance.get_changelog_url()`.
 
 ### Renamed Filter Fields
 
