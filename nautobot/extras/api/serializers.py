@@ -18,7 +18,11 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import PolymorphicProxySerializer
-from nautobot.core.api.utils import get_serializer_for_model, get_serializers_for_models
+from nautobot.core.api.utils import (
+    get_relation_info_for_nested_serializers,
+    get_serializer_for_model,
+    get_serializers_for_models,
+)
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.serializers import (
     DeviceSerializer,
@@ -73,7 +77,6 @@ from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleMod
 from .fields import MultipleChoiceJSONField
 
 from .nested_serializers import (  # noqa: F401
-    NestedDynamicGroupMembershipSerializer,
     NestedScheduledJobCreationSerializer,
     NestedSecretsGroupAssociationSerializer,
 )
@@ -255,6 +258,14 @@ class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 #
 
 
+class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
+
+    class Meta:
+        model = DynamicGroupMembership
+        fields = "__all__"
+
+
 class DynamicGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
     content_type = ContentTypeField(
@@ -262,21 +273,28 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     )
     # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
     # using their own endpoint at /api/extras/dynamic-group-memberships/.
-    # TODO #3024: How to get rid of this?
-    children = NestedDynamicGroupMembershipSerializer(source="dynamic_group_memberships", read_only=True, many=True)
+    child_groups = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(DynamicGroupMembershipSerializer)
+    def get_child_groups(self, obj):
+        depth = int(self.context.get("depth", 0))
+        if depth == 0:
+            return [child.id for child in obj.dynamic_group_memberships.all()]
+        else:
+            result = []
+            for child in obj.dynamic_group_memberships.all():
+                relation_info = get_relation_info_for_nested_serializers(obj, child, "dynamic_group_memberships")
+                field_class, field_kwargs = self.build_nested_field("dynamic_group_memberships", relation_info, depth)
+                result.append(field_class(child, context={"request": self.context.get("request")}, **field_kwargs).data)
+            return result
 
     class Meta:
         model = DynamicGroup
-        fields = "__all__"
+        # renamed it to child_groups here because of
+        # an if statement in select2.min.js
+        # search if(e.children) to find out
+        exclude = ["children"]
         extra_kwargs = {"filter": {"read_only": False}}
-
-
-class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
-
-    class Meta:
-        model = DynamicGroupMembership
-        fields = "__all__"
 
 
 #

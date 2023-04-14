@@ -298,7 +298,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership

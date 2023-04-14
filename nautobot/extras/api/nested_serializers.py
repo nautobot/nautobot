@@ -1,38 +1,13 @@
-from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from nautobot.core.api import ContentTypeField
 from nautobot.core.api.serializers import BaseModelSerializer, WritableNestedSerializer
 from nautobot.extras import choices, models
 
 __all__ = [
-    "NestedDynamicGroupSerializer",
-    "NestedDynamicGroupMembershipSerializer",
     "NestedScheduledJobCreationSerializer",
     "NestedSecretsGroupAssociationSerializer",
     "NestedSecretSerializer",
 ]
-
-
-class NestedDynamicGroupSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
-    content_type = ContentTypeField(
-        queryset=ContentType.objects.all(),
-    )
-
-    class Meta:
-        model = models.DynamicGroup
-        fields = ["id", "url", "name", "content_type"]
-
-
-class NestedDynamicGroupMembershipSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
-    group = NestedDynamicGroupSerializer()
-    parent_group = NestedDynamicGroupSerializer()
-
-    class Meta:
-        model = models.DynamicGroupMembership
-        fields = ["id", "url", "group", "parent_group", "operator", "weight"]
 
 
 class NestedScheduledJobCreationSerializer(BaseModelSerializer):
