@@ -974,7 +974,7 @@ Below we provide an example on how to use `NautobotUIViewSet` on a theoretical a
 
 ```python
 from nautobot.apps.views import NautobotUIViewSet
-from yourapp import import filters, forms, models, tables
+from yourapp import filters, forms, models, tables
 from yourapp.api import serializers
 
 class YourAppModelUIViewSet(NautobotUIViewSet):
