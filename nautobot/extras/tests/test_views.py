@@ -587,7 +587,7 @@ class GitRepositoryTestCase(
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
-            repo.save(trigger_resync=False)
+            repo.validated_save()
 
         cls.form_data = {
             "name": "A new Git repository",

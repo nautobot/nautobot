@@ -1,3 +1,4 @@
+import inspect
 import logging
 import os
 
@@ -9,6 +10,7 @@ from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.module_loading import import_string
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
@@ -20,8 +22,25 @@ from nautobot.extras.registry import registry
 
 
 logger = logging.getLogger(__name__)
+
 registry["nav_menu"] = {"tabs": {}}
 registry["homepage_layout"] = {"panels": {}}
+registry["system_jobs"] = []
+
+
+def register_jobs(class_list):
+    """
+    Register a list of Job classes
+    """
+    from nautobot.extras.jobs import Job
+
+    for job in class_list:
+        if not inspect.isclass(job):
+            raise TypeError(f"Job class {job} was passed as an instance!")
+        if not issubclass(job, Job):
+            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
+
+        registry["system_jobs"].append(job)
 
 
 class NautobotConfig(AppConfig):
@@ -699,6 +718,10 @@ class CoreConfig(NautobotConfig):
         from taggit.managers import TaggableManager
 
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
+
+        # Register jobs last after everything else has been done.
+        jobs = import_string("nautobot.core.jobs.jobs")
+        register_jobs(jobs)
 
 
 class NautobotConstanceConfig(ConstanceConfig):

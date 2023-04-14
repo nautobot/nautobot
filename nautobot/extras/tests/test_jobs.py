@@ -1,10 +1,10 @@
 import datetime
+from io import StringIO
 import json
 import logging
 import re
-import uuid
-from io import StringIO
 from unittest import mock
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -17,7 +17,8 @@ from django.utils import timezone
 from nautobot.core.testing import (
     TestCase,
     TransactionTestCase,
-    run_job_for_testing,
+    create_job_result_and_run_job,
+    get_job_class_and_model,
 )
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Location, LocationType
@@ -29,26 +30,8 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job
-from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, Role, ScheduledJob, Status
+from nautobot.extras.models import CustomField, FileProxy, JobHook, JobResult, Role, ScheduledJob, Status
 from nautobot.extras.models.models import JobLogEntry
-
-
-def get_job_class_and_model(module, name):
-    """Test helper function to look up a job class and job model and ensure the latter is enabled."""
-    class_path = f"local/{module}/{name}"
-    job_class = get_job(class_path)
-    job_model = Job.objects.get_for_class_path(class_path)
-    job_model.enabled = True
-    job_model.validated_save()
-    return (job_class, job_model)
-
-
-def create_job_result_and_run_job(module, name, *args, **kwargs):
-    """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
-    _job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_model, **kwargs)
-    job_result.refresh_from_db()
-    return job_result
 
 
 class JobTest(TransactionTestCase):

@@ -682,6 +682,10 @@ CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connecti
 # Celery results backend URL to tell workers where to publish task results
 CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
 
+# Modules to explicitly import on Celery worker startup. This is not intended to be user-serviceable
+# as we are relying on this functionality for system jobs.
+CELERY_IMPORTS = ["nautobot.core.jobs"]
+
 # Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.
 CELERY_RESULT_EXTENDED = True
 
