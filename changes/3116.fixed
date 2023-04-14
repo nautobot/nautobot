@@ -1,0 +1,1 @@
+Fixed JSON comparison of `data_scheme` keys in `assertInstanceEqual` tests.
