@@ -21,6 +21,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueDateFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
+    CustomFieldSelectFilter,
 )
 from nautobot.extras.filters.mixins import (
     CustomFieldModelFilterSetMixin,
@@ -95,6 +96,7 @@ __all__ = (
     "CustomFieldNumberFilter",
     "CustomFieldModelFilterSet",
     "CustomFieldModelFilterSetMixin",
+    "CustomFieldSelectFilter",
     "CustomLinkFilterSet",
     "DynamicGroupFilterSet",
     "DynamicGroupMembershipFilterSet",

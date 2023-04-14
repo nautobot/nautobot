@@ -4,17 +4,19 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.forms import ChoiceField, IntegerField, NumberInput
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.dcim.filters import SiteFilterSet
-from nautobot.dcim.forms import SiteCSVForm
+from nautobot.dcim.forms import RackFilterForm, SiteCSVForm
 from nautobot.dcim.models import Site, Rack, Device
 from nautobot.dcim.tables import SiteTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.forms import StaticSelect2
 from nautobot.utilities.tables import CustomFieldColumn
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.utilities.testing.utils import post_data
@@ -375,6 +377,34 @@ class CustomFieldTest(TestCase):
 
             # Delete the custom field
             cf.delete()
+
+    def test_to_filter_field(self):
+        with self.subTest("Assert CustomField Select Type renders the correct filter form field and widget"):
+            # Assert a Select Choice Field
+            ct = ContentType.objects.get_for_model(Device)
+            custom_field_select = CustomField(
+                type=CustomFieldTypeChoices.TYPE_SELECT,
+                name="select_field",
+            )
+            custom_field_select.save()
+            custom_field_select.content_types.set([ct])
+            CustomFieldChoice.objects.create(field=custom_field_select, value="Foo")
+            CustomFieldChoice.objects.create(field=custom_field_select, value="Bar")
+            CustomFieldChoice.objects.create(field=custom_field_select, value="Baz")
+            filter_field = custom_field_select.to_filter_field()
+            self.assertIsInstance(filter_field, ChoiceField)
+            self.assertIsInstance(filter_field.widget, StaticSelect2)
+
+        with self.subTest("Assert CustomField Integer Type renders the correct filter form field and widget"):
+            custom_field_integer = CustomField(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                name="integer_field",
+            )
+            custom_field_integer.save()
+            custom_field_integer.content_types.set([ct])
+            filter_field = custom_field_integer.to_filter_field()
+            self.assertIsInstance(filter_field, IntegerField)
+            self.assertIsInstance(filter_field.widget, NumberInput)
 
 
 class CustomFieldManagerTest(TestCase):
@@ -2105,3 +2135,17 @@ class CustomFieldTableTest(TestCase):
 
             rendered_value = bound_row.get_cell(internal_col_name)
             self.assertEqual(rendered_value, col_expected_value)
+
+
+class CustomFieldFilterFormTest(TestCase):
+    def test_custom_filter_form(self):
+        """Assert CustomField renders the appropriate filter form field"""
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        ct_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, name="select_field")
+        ct_field.content_types.set([rack_ct])
+        CustomFieldChoice.objects.create(field=ct_field, value="Foo")
+        CustomFieldChoice.objects.create(field=ct_field, value="Bar")
+        CustomFieldChoice.objects.create(field=ct_field, value="Baz")
+        filterform = RackFilterForm()
+        self.assertIsInstance(filterform["cf_select_field"].field, ChoiceField)
+        self.assertIsInstance(filterform["cf_select_field"].field.widget, StaticSelect2)
