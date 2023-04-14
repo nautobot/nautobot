@@ -5,26 +5,30 @@ from nautobot.extras.utils import migrate_role_data
 
 
 def migrate_data_from_legacy_role_to_new_role(apps, schema):
-    """Copy record from role to temp_role"""
-
-    role_model = apps.get_model("extras", "Role")
+    """Copy data from legacy_role to new_role."""
+    new_role_model = apps.get_model("extras", "Role")
     for model_name in ("Device", "Rack"):
         model = apps.get_model("dcim", model_name)
-        migrate_role_data(model=model, role_model=role_model)
+        legacy_role_model = apps.get_model("dcim", f"{model_name}Role")
+        migrate_role_data(
+            model_to_migrate=model,
+            legacy_role_model=legacy_role_model,
+            new_role_model=new_role_model,
+        )
 
 
 def reverse_role_data_migrate(apps, schema):
     """Reverse changes made to new_role"""
-
-    model_role_map = {"Device": "DeviceRole", "Rack": "RackRole"}
-    for model_name, role_name in model_role_map.items():
+    legacy_role_model = apps.get_model("extras", "Role")
+    for model_name in ("Device", "Rack"):
         model = apps.get_model("dcim", model_name)
-        role_model = apps.get_model("dcim", role_name)
+        new_role_model = apps.get_model("dcim", f"{model_name}Role")
         migrate_role_data(
-            model=model,
-            role_model=role_model,
-            legacy_role="new_role",
-            new_role="legacy_role",
+            model_to_migrate=model,
+            legacy_role_field_name="new_role",
+            legacy_role_model=legacy_role_model,
+            new_role_field_name="legacy_role",
+            new_role_model=new_role_model,
         )
 
 

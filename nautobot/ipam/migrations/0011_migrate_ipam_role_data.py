@@ -6,47 +6,39 @@ from nautobot.ipam.choices import IPAddressRoleChoices
 
 
 def migrate_data_from_legacy_role_to_new_role(apps, schema):
-    """Copy record from role to temp_role"""
-
-    role_model = apps.get_model("extras", "Role")
-    model_class_is_choice_field_map = {
-        "VLAN": False,
-        "Prefix": False,
-        "IPAddress": True,
-    }
-    for model_name, is_choices in model_class_is_choice_field_map.items():
-        model = apps.get_model("ipam", model_name)
-        migrate_role_data(model=model, role_model=role_model, is_choice_field=is_choices)
-
-
-def reverse_ipaddress_data_migration(apps):
-    model = apps.get_model("ipam", "IPAddress")
-    migrate_role_data(
-        model=model,
-        role_choiceset=IPAddressRoleChoices,
-        legacy_role="new_role",
-        new_role="legacy_role",
-    )
-
-
-def reverse_vlan_and_prefix_data_migration(apps):
-    model_role_map = {"VLAN": {"role_model": "Role"}, "Prefix": {"role_model": "Role"}}
-    for model_name, value in model_role_map.items():
-        model = apps.get_model("ipam", model_name)
-        role_model = apps.get_model("ipam", value["role_model"])
+    """Copy data from legacy_role to new_role."""
+    new_role_model = apps.get_model("extras", "Role")
+    ipam_role_model = apps.get_model("ipam", "Role")
+    for model_to_migrate, legacy_role_model, legacy_role_choiceset in [
+        (apps.get_model("ipam", "VLAN"), ipam_role_model, None),
+        (apps.get_model("ipam", "Prefix"), ipam_role_model, None),
+        (apps.get_model("ipam", "IPAddress"), None, IPAddressRoleChoices),
+    ]:
         migrate_role_data(
-            model=model,
-            role_model=role_model,
-            legacy_role="new_role",
-            new_role="legacy_role",
+            model_to_migrate=model_to_migrate,
+            legacy_role_model=legacy_role_model,
+            legacy_role_choiceset=legacy_role_choiceset,
+            new_role_model=new_role_model,
         )
 
 
-def reverse_role_data_migrate(apps, schema):
-    """Reverse changes made to new_role"""
-
-    reverse_vlan_and_prefix_data_migration(apps)
-    reverse_ipaddress_data_migration(apps)
+def migrate_data_from_new_role_to_legacy_role(apps, schema):
+    """Copy data from new_role to legacy_role."""
+    new_role_model = apps.get_model("extras", "Role")
+    ipam_role_model = apps.get_model("ipam", "Role")
+    for model_to_migrate, legacy_role_model, legacy_role_choiceset in [
+        (apps.get_model("ipam", "VLAN"), ipam_role_model, None),
+        (apps.get_model("ipam", "Prefix"), ipam_role_model, None),
+        (apps.get_model("ipam", "IPAddress"), None, IPAddressRoleChoices),
+    ]:
+        migrate_role_data(
+            model_to_migrate=model_to_migrate,
+            legacy_role_field_name="new_role",
+            legacy_role_model=new_role_model,
+            new_role_field_name="legacy_role",
+            new_role_model=legacy_role_model,
+            new_role_choiceset=legacy_role_choiceset,
+        )
 
 
 class Migration(migrations.Migration):
@@ -55,5 +47,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(migrate_data_from_legacy_role_to_new_role, reverse_role_data_migrate),
+        migrations.RunPython(migrate_data_from_legacy_role_to_new_role, migrate_data_from_new_role_to_legacy_role),
     ]
