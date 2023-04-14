@@ -15,7 +15,6 @@ from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
@@ -36,7 +35,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -47,7 +45,6 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
 from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -94,11 +91,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object by PK or slug
         """
         instance = get_object_or_404(self.queryset, **kwargs)
-
-        changelog_url = None
-
-        if isinstance(instance, ChangeLoggedModel):
-            changelog_url = instance.get_changelog_url()
 
         return render(
             request,
