@@ -67,7 +67,7 @@
                             {% if object.roles.all %}
                                 <ul>
                                     {% for role in object.roles.all %}
-                                        <li><a href="{% url 'dcim:device_list' %}?role={{ role.slug }}">{{ role }}</a></li>
+                                        <li><a href="{% url 'dcim:device_list' %}?role={{ role.name }}">{{ role }}</a></li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
