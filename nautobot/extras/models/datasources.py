@@ -107,11 +107,11 @@ class GitRepository(PrimaryModel):
 
     def sync(self, user, dry_run=False):
         """
-        Perform a pull on the Git repository from the remote and return the sync result.
+        Enqueue a Job to pull the Git repository from the remote and return the sync result.
 
         Args:
-            user (User): The User that will perform the sync. If not set, will use `self.user`.
-            dry_run (bool): If set, dry-run the Git sync
+            user (User): The User that will perform the sync.
+            dry_run (bool): If set, dry-run the Git sync.
 
         Returns:
             JobResult
