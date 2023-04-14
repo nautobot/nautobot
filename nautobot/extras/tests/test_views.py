@@ -284,7 +284,7 @@ class ConfigContextSchemaTestCase(
         cls.form_data = {
             "name": "Schema X",
             "slug": "schema-x",
-            "data_schema": '{"type": "object","properties": {"baz": {"type": "string"}}}',
+            "data_schema": '{"type": "object","properties": {"baz": {"type": "string"}}}',  # Intentionally misformatted (missing space) to ensure proper formatting on output
         }
 
         cls.bulk_edit_data = {
