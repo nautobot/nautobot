@@ -233,7 +233,7 @@ class JobTest(TransactionTestCase):
         """
         Job read only test dryrun field is not shown.
         """
-        module = "test_read_only_no_dryrun_field"
+        module = "test_read_only_no_dryrun_form_field"
         name = "TestReadOnlyNoDryRunField"
         job_class = get_job(f"local/{module}/{name}")
 
