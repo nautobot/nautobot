@@ -95,6 +95,9 @@
 - Model/Endpoint: "SecretsGroup"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "SecretsGroupAssociation"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "Status"
   Removed Field: "slug"
   Comments:
