@@ -779,5 +779,5 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             TempForm = type("TempForm", (forms.Form,), {field_name: form_field})
             model_form_instance = TempForm(auto_id="id_for_%s")
 
-        bound_field = model_form_instance[field_name]
+        bound_field = form_field.get_bound_field(model_form_instance, field_name)
         return Response({"dom_element": bound_field.as_widget()})

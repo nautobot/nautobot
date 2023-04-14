@@ -281,12 +281,28 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
-        response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
+        with self.subTest("Assert correct lookup field dom element is generated"):
+            response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.data,
-            {
-                "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-            },
-        )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
+                },
+            )
+
+        with self.subTest("Assert TempFilterForm is used if model filterform raises error at initialization"):
+            # The generation of a lookup field DOM representation is dependent on the ModelForm of the field;;
+            # if an error occurs when initializing the ModelForm, it should fall back to creating a temp ModelForm.
+            # Because the InterfaceModelForm requires a device to initialize, this is a perfect example to test that
+            # the Temp ModelForm is used.
+            response = self.client.get(url + "?content_type=dcim.interface&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
+                },
+            )
