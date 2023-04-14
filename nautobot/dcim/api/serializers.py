@@ -84,10 +84,6 @@ from nautobot.extras.api.mixins import (
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.api.serializers import IPAddressSerializer
 
-from .nested_serializers import (
-    NestedDeviceSerializer,
-)
-
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
     cable_peer_type = serializers.SerializerMethodField(read_only=True)
@@ -520,24 +516,29 @@ class DeviceSerializer(
 
         return data
 
-    # TODO #3024: How to get rid of this?
-    @extend_schema_field(NestedDeviceSerializer)
+    @extend_schema_field(str)
     def get_parent_device(self, obj):
         try:
             device_bay = obj.parent_bay
         except DeviceBay.DoesNotExist:
             return None
-        # context = {"request": self.context["request"]}
         depth = int(self.context.get("depth", 0))
+        device = Device.objects.get(device_bays=obj.parent_bay)
         if depth == 0:
-            device = Device.objects.get(device_bays=obj.parent_bay)
             return device.id
         else:
             relation_info = get_relation_info_for_nested_serializers(device_bay, device_bay.device, "device")
             field_class, field_kwargs = self.build_nested_field("device", relation_info, depth)
             data = field_class(device_bay.device, context={"request": self.context.get("request")}, **field_kwargs).data
-            # data = NestedDeviceSerializer(instance=device_bay.device, context=context).data
-            # data["device_bay"] = DeviceBaySerializer(instance=device_bay, context=context).data
+            if depth - 1 == 0:
+                data["device_bay"] = device_bay.id
+            else:
+                relation_info = get_relation_info_for_nested_serializers(device, device_bay, "device_bays")
+                field_class, field_kwargs = self.build_nested_field("device_bays", relation_info, depth - 1)
+                data["device_bay"] = field_class(
+                    device_bay, context={"request": self.context.get("request")}, **field_kwargs
+                ).data
+
         return data
 
 

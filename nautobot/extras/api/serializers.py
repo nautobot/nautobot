@@ -29,6 +29,7 @@ from nautobot.dcim.api.serializers import (
     LocationSerializer,
     RackSerializer,
 )
+from nautobot.extras import choices, models
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -75,10 +76,6 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 
 from .fields import MultipleChoiceJSONField
-
-from .nested_serializers import (  # noqa: F401
-    NestedScheduledJobCreationSerializer,
-)
 
 #
 # Mixins and Base Classes
@@ -581,11 +578,54 @@ class JobHookSerializer(NautobotModelSerializer):
         return validated_data
 
 
+class JobCreationSerializer(BaseModelSerializer):
+    """
+    Nested serializer specifically for use with `JobInputSerializer.schedule`.
+
+    We don't use `WritableNestedSerializer` here because this is not used to look up
+    an existing `ScheduledJob`, but instead used to specify parameters for creating one.
+    """
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
+    name = serializers.CharField(max_length=255, required=False)
+    start_time = serializers.DateTimeField(format=None, required=False)
+
+    class Meta:
+        model = ScheduledJob
+        fields = ["url", "name", "start_time", "interval", "crontab"]
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if data["interval"] in choices.JobExecutionType.SCHEDULE_CHOICES:
+            if "name" not in data:
+                raise serializers.ValidationError({"name": "Please provide a name for the job schedule."})
+
+            if ("start_time" not in data and data["interval"] != choices.JobExecutionType.TYPE_CUSTOM) or (
+                "start_time" in data and data["start_time"] < models.ScheduledJob.earliest_possible_time()
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+            if data["interval"] == choices.JobExecutionType.TYPE_CUSTOM:
+                if data.get("crontab") is None:
+                    raise serializers.ValidationError({"crontab": "Please enter a valid crontab."})
+                try:
+                    models.ScheduledJob.get_crontab(data["crontab"])
+                except Exception as e:
+                    raise serializers.ValidationError({"crontab": e})
+
+        return data
+
+
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
     # TODO #3024: How to get rid of this?
-    schedule = NestedScheduledJobCreationSerializer(required=False)
+    schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
 
