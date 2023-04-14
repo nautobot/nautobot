@@ -551,7 +551,8 @@ def migrate_role_data(
             assert new_role_choiceset is None
             # Mapping legacy model instances to corresponding new model instances
             legacy_to_new_roles = {
-                legacy_role: new_role_model.objects.get(name=legacy_role.name)
+                # Use .filter().first(), not .get() because new role might not exist, especially on reverse migrations
+                legacy_role: new_role_model.objects.filter(name=legacy_role.name).first()
                 for legacy_role in legacy_role_model.objects.all()
             }
         else:
@@ -560,7 +561,7 @@ def migrate_role_data(
             # We need to use `label` to look up the legacy_role instance, but `value` is what we set for the new_field
             inverted_new_role_choiceset = {label: value for value, label in new_role_choiceset.CHOICES}
             legacy_to_new_roles = {
-                legacy_role: inverted_new_role_choiceset[legacy_role.name]
+                legacy_role: inverted_new_role_choiceset.get(legacy_role.name, None)
                 for legacy_role in legacy_role_model.objects.all()
             }
     else:
@@ -569,7 +570,8 @@ def migrate_role_data(
             assert new_role_choiceset is None
             # Mapping legacy choices to corresponding new model instances
             legacy_to_new_roles = {
-                legacy_role_value: new_role_model.objects.get(name=legacy_role_label)
+                # Use .filter().first(), not .get() because new role might not exist, especially on reverse migrations
+                legacy_role_value: new_role_model.objects.filter(name=legacy_role_label).first()
                 for legacy_role_value, legacy_role_label in legacy_role_choiceset.CHOICES
             }
         else:
@@ -578,22 +580,24 @@ def migrate_role_data(
             # We need to use `label` to look up the legacy_role instance, but `value` is what we set for the new_field
             inverted_new_role_choiceset = {label: value for value, label in new_role_choiceset.CHOICES}
             legacy_to_new_roles = {
-                legacy_role_value: inverted_new_role_choiceset[legacy_role_label]
+                legacy_role_value: inverted_new_role_choiceset.get(legacy_role_label, None)
                 for legacy_role_value, legacy_role_label in legacy_role_choiceset.CHOICES
             }
 
     if not is_m2m_field:
         # Bulk updates of a single field are easy enough...
         for legacy_role_value, new_role_value in legacy_to_new_roles.items():
-            model_to_migrate.objects.filter(**{legacy_role_field_name: legacy_role_value}).update(
-                **{new_role_field_name: new_role_value}
-            )
+            if new_role_value is not None:
+                model_to_migrate.objects.filter(**{legacy_role_field_name: legacy_role_value}).update(
+                    **{new_role_field_name: new_role_value}
+                )
     else:
         # ...but we have to update each instance's M2M field independently?
         for instance in model_to_migrate.objects.all():
-            getattr(instance, new_role_field_name).set(
-                [
-                    legacy_to_new_roles[legacy_role_value]
-                    for legacy_role_value in getattr(instance, legacy_role_field_name).all()
-                ]
-            )
+            new_role_set = {
+                legacy_to_new_roles[legacy_role_value]
+                for legacy_role_value in getattr(instance, legacy_role_field_name).all()
+            }
+            # Discard any null values
+            new_role_set.discard(None)
+            getattr(instance, new_role_field_name).set(new_role_set)
