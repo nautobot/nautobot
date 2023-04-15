@@ -240,7 +240,7 @@ def populate_model_features_registry(refresh=False):
     - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
-    if registry["model_features"].get("populate_model_features_registry_called", False) and not refresh:
+    if registry.get("populate_model_features_registry_called", False) and not refresh:
         return
 
     RelationshipAssociation = apps.get_model(app_label="extras", model_name="relationshipassociation")
@@ -267,7 +267,7 @@ def populate_model_features_registry(refresh=False):
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
 
-    if registry["model_features"].get("populate_model_features_registry_called", False):
+    if registry.get("populate_model_features_registry_called", False):
         registry["populate_model_features_registry_called"] = True
 
 
