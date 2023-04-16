@@ -267,7 +267,7 @@ def populate_model_features_registry(refresh=False):
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
 
-    if registry.get("populate_model_features_registry_called", False):
+    if not registry.get("populate_model_features_registry_called", False):
         registry["populate_model_features_registry_called"] = True
 
 
