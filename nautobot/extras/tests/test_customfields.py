@@ -394,6 +394,7 @@ class CustomFieldTest(TestCase):
             filter_field = custom_field_select.to_filter_field()
             self.assertIsInstance(filter_field, ChoiceField)
             self.assertIsInstance(filter_field.widget, StaticSelect2)
+            self.assertEqual(filter_field.widget.choices, [("Bar", "Bar"), ("Baz", "Baz"), ("Foo", "Foo")])
 
         with self.subTest("Assert CustomField Integer Type renders the correct filter form field and widget"):
             custom_field_integer = CustomField(
