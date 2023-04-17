@@ -585,8 +585,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         return field
 
-    def to_filter_field(self, *args, **kwargs):
-        """Return a filter field suitable for filtering a CustomField's value for an object."""
+    def to_filter_form_field(self, *args, **kwargs):
+        """Return a filter form field suitable for filtering a CustomField's value for an object."""
         form_field = self.to_form_field(*args, **kwargs)
         if self.type == CustomFieldTypeChoices.TYPE_SELECT:
             # Remove the blank choice, as StaticSelect2Multiple do not need a blank choice

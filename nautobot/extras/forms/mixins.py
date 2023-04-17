@@ -79,7 +79,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
                     set_initial=False, enforce_required=False, simple_json_filter=True
                 )
             else:
-                self.fields[field_name] = cf.to_filter_field(set_initial=False, enforce_required=False)
+                self.fields[field_name] = cf.to_filter_form_field(set_initial=False, enforce_required=False)
             self.custom_fields.append(field_name)
 
 

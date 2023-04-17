@@ -391,7 +391,7 @@ class CustomFieldTest(TestCase):
             CustomFieldChoice.objects.create(field=custom_field_select, value="Foo")
             CustomFieldChoice.objects.create(field=custom_field_select, value="Bar")
             CustomFieldChoice.objects.create(field=custom_field_select, value="Baz")
-            filter_field = custom_field_select.to_filter_field()
+            filter_field = custom_field_select.to_filter_form_field()
             self.assertIsInstance(filter_field, ChoiceField)
             self.assertIsInstance(filter_field.widget, StaticSelect2)
             self.assertEqual(filter_field.widget.choices, [("Bar", "Bar"), ("Baz", "Baz"), ("Foo", "Foo")])
@@ -403,7 +403,7 @@ class CustomFieldTest(TestCase):
             )
             custom_field_integer.save()
             custom_field_integer.content_types.set([ct])
-            filter_field = custom_field_integer.to_filter_field()
+            filter_field = custom_field_integer.to_filter_form_field()
             self.assertIsInstance(filter_field, IntegerField)
             self.assertIsInstance(filter_field.widget, NumberInput)
 

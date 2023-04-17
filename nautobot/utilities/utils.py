@@ -892,7 +892,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
     if isinstance(field, CustomFieldFilterMixin):
-        form_field = field.custom_field.to_filter_field()
+        form_field = field.custom_field.to_filter_form_field()
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, filters.ModelMultipleChoiceFilter):
@@ -1013,11 +1013,9 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
 
 def is_single_choice_field(filterset, field_name):
-    from nautobot.extras.filters import CustomFieldSelectFilter  # Avoid circular imports
-
     # Some filter parameters do not accept multiple values, e.g DateTime, Boolean, Int fields and the q field, etc.
     field = get_filterset_field(filterset, field_name)
-    return not isinstance(field, (django_filters.MultipleChoiceFilter, CustomFieldSelectFilter))
+    return not isinstance(field, django_filters.MultipleChoiceFilter)
 
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset):
