@@ -740,7 +740,7 @@ class MyJobTestCase(TransactionTestCase):
 
 ## Debugging job performance
 
-+++ 1.5.15
++++ 1.5.17
 
 Debugging the performance of Nautobot jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the job execution.
 
