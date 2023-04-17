@@ -68,7 +68,6 @@ User = get_user_model()
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("dcim-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -167,7 +166,6 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Region.objects.create(name="Region 1", slug="region-1")
         Region.objects.create(name="Region 2", slug="region-2")
         Region.objects.create(name="Region 3", slug="region-3")
@@ -184,7 +182,6 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         regions = Region.objects.all()[:2]
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
@@ -595,7 +592,6 @@ class RackRoleTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
         RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00")
         RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff")
@@ -611,7 +607,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         sites = Site.objects.all()[:2]
 
         rack_groups = (
@@ -833,7 +828,6 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
@@ -1245,7 +1239,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         sites = Site.objects.all()[:2]
 
         racks = (
@@ -1626,17 +1619,50 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
         Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtual_chassis, vc_position=1)
         Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtual_chassis, vc_position=2)
 
+        # Interfaces have special handling around the "Active" status so let's set our interfaces to something else.
+        non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
         cls.interfaces = (
-            Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
-            Interface.objects.create(device=cls.devices[0], name="Interface 2", type="1000base-t"),
-            Interface.objects.create(device=cls.devices[0], name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
             Interface.objects.create(
-                device=cls.devices[1], name="Interface 4", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+                device=cls.devices[0],
+                name="Interface 1",
+                type="1000base-t",
+                status=non_default_status,
             ),
-            Interface.objects.create(device=cls.devices[1], name="Interface 5", type=InterfaceTypeChoices.TYPE_LAG),
-            Interface.objects.create(device=cls.devices[2], name="Interface 6", type=InterfaceTypeChoices.TYPE_LAG),
             Interface.objects.create(
-                device=cls.devices[2], name="Interface 7", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+                device=cls.devices[0],
+                name="Interface 2",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[0],
+                name="Interface 3",
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[1],
+                name="Interface 4",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[1],
+                name="Interface 5",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Interface 6",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Interface 7",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
             ),
         )
 
@@ -1874,16 +1900,18 @@ class InterfaceTestVersion14(InterfaceTestVersion12):
         super().setUpTestData()
 
         # Add status to all payload because status is required in v1.4
+        # Since `active` status is special-cased for Interface API, make sure we have some other statuses in play
+        status_slug = Status.objects.get_for_model(Interface).exclude(name="Active").last().slug
         for i, _ in enumerate(cls.create_data):
-            cls.create_data[i]["status"] = "active"
+            cls.create_data[i]["status"] = status_slug
 
-        cls.untagged_vlan_data["status"] = "active"
+        cls.untagged_vlan_data["status"] = status_slug
 
         for i, _ in enumerate(cls.common_device_or_vc_data):
-            cls.common_device_or_vc_data[i]["status"] = "active"
+            cls.common_device_or_vc_data[i]["status"] = status_slug
 
         for i, _ in enumerate(cls.interfaces_not_belonging_to_same_device_data):
-            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = "active"
+            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = status_slug
 
     @skip("Test not required in v1.4")
     def test_active_status_not_found(self):
@@ -2184,7 +2212,6 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
 class ConnectedDeviceTest(APITestCase):
     def setUp(self):
-
         super().setUp()
 
         site = Site.objects.first()
@@ -2477,40 +2504,47 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
         REDUNDANT = PowerFeedTypeChoices.TYPE_REDUNDANT
+        status = Status.objects.get_for_model(PowerFeed).first()
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[0],
             name="Power Feed 1A",
+            status=status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[0],
             name="Power Feed 1B",
+            status=status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[1],
             name="Power Feed 2A",
+            status=status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[1],
             name="Power Feed 2B",
+            status=status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[2],
             name="Power Feed 3A",
+            status=status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[2],
             name="Power Feed 3B",
+            status=status,
             type=REDUNDANT,
         )
 

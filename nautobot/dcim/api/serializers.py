@@ -1048,8 +1048,8 @@ class InterfaceSerializerVersion12(
 
     def validate(self, data):
 
-        # set interface status to active if status not provided
-        if not data.get("status"):
+        # set interface status to active on create (only!) if status was not provided
+        if self.instance is None and not data.get("status"):
             # status is currently required in the Interface model but not required in api_version < 1.3 serializers
             # which raises an error when validating except status is explicitly set here
             query = Status.objects.get_for_model(Interface)

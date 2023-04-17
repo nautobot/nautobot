@@ -1,0 +1,1 @@
+Fixed an issue where sending a PATCH to `/api/dcim/interfaces/(uuid)/` might reset the interface's status to `Active`.

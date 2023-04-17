@@ -492,6 +492,7 @@ class APIViewTestCases:
             """
             PATCH a single object identified by its ID.
             """
+            self.maxDiff = None
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
             update_data = self.update_data or getattr(self, "create_data")[0]
@@ -502,8 +503,48 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
+            # Verify that an empty PATCH results in no change to the object.
+            # This is to catch issues like https://github.com/nautobot/nautobot/issues/3533
+
+            # Add object-level permission for GET
+            obj_perm.actions = ["view"]
+            obj_perm.save()
+            # Get initial serialized object representation
+            get_response = self.client.get(url, **self.header)
+            self.assertHttpStatus(get_response, status.HTTP_200_OK)
+            initial_serialized_object = get_response.json()
+            # Work around for https://github.com/nautobot/nautobot/issues/3321
+            initial_serialized_object.pop("last_updated", None)
+
+            # Redefine object-level permission for PATCH
+            obj_perm.actions = ["change"]
+            obj_perm.save()
+            # Send empty PATCH request
+            response = self.client.patch(url, {}, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            serialized_object = response.json()
+            # Work around for https://github.com/nautobot/nautobot/issues/3321
+            serialized_object.pop("last_updated", None)
+            # PATCH response always includes "opt-in" fields, but GET response does not.
+            serialized_object.pop("computed_fields", None)
+            serialized_object.pop("relationships", None)
+            self.assertEqual(initial_serialized_object, serialized_object)
+
+            # Verify ObjectChange creation -- yes, even though nothing actually changed
+            # This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
+            if hasattr(self.model, "to_objectchange"):
+                objectchanges = get_changes_for_model(instance)
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
+                objectchanges.delete()
+
+            # Verify that a PATCH with some data updates that data correctly.
             response = self.client.patch(url, update_data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            # Check for unexpected side effects on fields we DIDN'T intend to update
+            for field in initial_serialized_object:
+                if field not in update_data:
+                    self.assertEqual(initial_serialized_object[field], serialized_object[field])
             instance.refresh_from_db()
             self.assertInstanceEqual(instance, update_data, exclude=self.validation_excluded_fields, api=True)
 
