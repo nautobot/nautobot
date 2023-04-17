@@ -81,16 +81,23 @@ def create_roles(apps, roles_to_create, content_types):
             },
         )
         if created:
-            print(f'    Created Role "{old_role.name}"')
+            print(f'    Created Role "{new_role.name}"')
         if old_role_ct and hasattr(old_role, "pk"):
             # Move over existing object change records to the new role we created
-            ObjectChange.objects.filter(changed_object_type=old_role_ct, changed_object_id=old_role.pk).update(
-                changed_object_type=new_role_ct, changed_object_id=new_role.pk
+            updated_count = ObjectChange.objects.filter(
+                changed_object_type=old_role_ct, changed_object_id=old_role.pk
+            ).update(changed_object_type=new_role_ct, changed_object_id=new_role.pk)
+            print(
+                f"      Updated {updated_count} ObjectChanges from the existing "
+                f'"{old_role.name}" {old_role._meta.label}'
             )
 
     # This is for all of the change records for roles which no longer exist
     if old_role_ct:
-        ObjectChange.objects.filter(changed_object_type=old_role_ct).update(changed_object_type=new_role_ct)
+        updated_count = ObjectChange.objects.filter(changed_object_type=old_role_ct).update(
+            changed_object_type=new_role_ct
+        )
+        print(f"    Updated {updated_count} leftover ObjectChanges from deleted {old_role_ct.model} records.")
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
@@ -115,6 +122,7 @@ def populate_roles_from_related_app_roles(apps, schema_editor):
 def clear_populated_roles(apps, schema_editor):
     Role = apps.get_model("extras", "Role")
     Role.objects.all().delete()
+    # TODO: currently we do NOT recreate DeviceRole/RackRole records, nor do we revert ObjectChange records.
 
 
 class Migration(migrations.Migration):

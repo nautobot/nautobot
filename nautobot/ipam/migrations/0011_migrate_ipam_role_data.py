@@ -6,38 +6,40 @@ from nautobot.ipam.choices import IPAddressRoleChoices
 
 
 def migrate_data_from_legacy_role_to_new_role(apps, schema):
-    """Copy data from legacy_role to new_role."""
-    new_role_model = apps.get_model("extras", "Role")
+    """Migrate VLAN/Prefix/IPAddress data from legacy_role to new_role."""
+    to_role_model = apps.get_model("extras", "Role")
     ipam_role_model = apps.get_model("ipam", "Role")
-    for model_to_migrate, legacy_role_model, legacy_role_choiceset in [
+    for model_to_migrate, from_role_model, from_role_choiceset in [
         (apps.get_model("ipam", "VLAN"), ipam_role_model, None),
         (apps.get_model("ipam", "Prefix"), ipam_role_model, None),
         (apps.get_model("ipam", "IPAddress"), None, IPAddressRoleChoices),
     ]:
         migrate_role_data(
             model_to_migrate=model_to_migrate,
-            legacy_role_model=legacy_role_model,
-            legacy_role_choiceset=legacy_role_choiceset,
-            new_role_model=new_role_model,
+            from_role_field_name="legacy_role",
+            from_role_model=from_role_model,
+            to_role_field_name="new_role",
+            from_role_choiceset=from_role_choiceset,
+            to_role_model=to_role_model,
         )
 
 
 def migrate_data_from_new_role_to_legacy_role(apps, schema):
-    """Copy data from new_role to legacy_role."""
-    new_role_model = apps.get_model("extras", "Role")
+    """Migrate VLAN/Prefix/IPAddress data from new_role to legacy_role."""
+    to_role_model = apps.get_model("extras", "Role")
     ipam_role_model = apps.get_model("ipam", "Role")
-    for model_to_migrate, legacy_role_model, legacy_role_choiceset in [
+    for model_to_migrate, from_role_model, from_role_choiceset in [
         (apps.get_model("ipam", "VLAN"), ipam_role_model, None),
         (apps.get_model("ipam", "Prefix"), ipam_role_model, None),
         (apps.get_model("ipam", "IPAddress"), None, IPAddressRoleChoices),
     ]:
         migrate_role_data(
             model_to_migrate=model_to_migrate,
-            legacy_role_field_name="new_role",
-            legacy_role_model=new_role_model,
-            new_role_field_name="legacy_role",
-            new_role_model=legacy_role_model,
-            new_role_choiceset=legacy_role_choiceset,
+            from_role_field_name="new_role",
+            from_role_model=to_role_model,
+            to_role_field_name="legacy_role",
+            to_role_model=from_role_model,
+            to_role_choiceset=from_role_choiceset,
         )
 
 

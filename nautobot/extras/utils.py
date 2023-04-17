@@ -524,80 +524,94 @@ def check_if_key_is_graphql_safe(model_name, key):
 
 def migrate_role_data(
     model_to_migrate,
-    legacy_role_field_name="legacy_role",
-    legacy_role_model=None,
-    legacy_role_choiceset=None,
-    new_role_field_name="new_role",
-    new_role_model=None,
-    new_role_choiceset=None,
+    *,
+    from_role_field_name,
+    from_role_model=None,
+    from_role_choiceset=None,
+    to_role_field_name,
+    to_role_model=None,
+    to_role_choiceset=None,
     is_m2m_field=False,
 ):
     """
-    Update all `model_to_migrate` with a new value for `new_role_field_name` based on `legacy_role_field_name` value.
+    Update all `model_to_migrate` with a value for `to_role_field` based on `from_role_field` values.
 
     Args:
         model_to_migrate (Model): Model with role fields to alter
-        legacy_role_field_name (str): Name of the field on `model_to_migrate` to use as source data
-        legacy_role_model (Model): If `legacy_role_field` is a ForeignKey or M2M field, the corresponding model for it
-        legacy_role_choiceset (ChoiceSet): If `legacy_role_field` is a choices field, the corresponding ChoiceSet for it
-        new_role_field_name (str): Name of the field on `model_to_migrate` to update based on the `legacy_role_field`
-        new_role_model (Model): If `new_role_field` is a ForeignKey or M2M field, the corresponding model for it
-        new_role_choiceset (ChoiceSet): If `new_role_field` is a choices field, the corresponding ChoiceSet for it
+        from_role_field_name (str): Name of the field on `model_to_migrate` to use as source data
+        from_role_model (Model): If `from_role_field` is a ForeignKey or M2M field, the corresponding model for it
+        from_role_choiceset (ChoiceSet): If `from_role_field` is a choices field, the corresponding ChoiceSet for it
+        to_role_field_name (str): Name of the field on `model_to_migrate` to update based on the `from_role_field`
+        to_role_model (Model): If `to_role_field` is a ForeignKey or M2M field, the corresponding model for it
+        to_role_choiceset (ChoiceSet): If `to_role_field` is a choices field, the corresponding ChoiceSet for it
         is_m2m_field (bool): True if the role fields are both ManyToManyFields, else False
     """
-    if legacy_role_model is not None:
-        assert legacy_role_choiceset is None
-        if new_role_model is not None:
-            assert new_role_choiceset is None
-            # Mapping legacy model instances to corresponding new model instances
-            legacy_to_new_roles = {
-                # Use .filter().first(), not .get() because new role might not exist, especially on reverse migrations
-                legacy_role: new_role_model.objects.filter(name=legacy_role.name).first()
-                for legacy_role in legacy_role_model.objects.all()
+    if from_role_model is not None:
+        assert from_role_choiceset is None
+        if to_role_model is not None:
+            assert to_role_choiceset is None
+            # Mapping "from" model instances to corresponding "to" model instances
+            roles_translation_mapping = {
+                # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
+                from_role: to_role_model.objects.filter(name=from_role.name).first()
+                for from_role in from_role_model.objects.all()
             }
         else:
-            assert new_role_choiceset is not None
-            # Mapping legacy model instances to corresponding new choices
-            # We need to use `label` to look up the legacy_role instance, but `value` is what we set for the new_field
-            inverted_new_role_choiceset = {label: value for value, label in new_role_choiceset.CHOICES}
-            legacy_to_new_roles = {
-                legacy_role: inverted_new_role_choiceset.get(legacy_role.name, None)
-                for legacy_role in legacy_role_model.objects.all()
+            assert to_role_choiceset is not None
+            # Mapping "from" model instances to corresponding "to" choices
+            # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
+            inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
+            roles_translation_mapping = {
+                from_role: inverted_to_role_choiceset.get(from_role.name, None)
+                for from_role in from_role_model.objects.all()
             }
     else:
-        assert legacy_role_choiceset is not None
-        if new_role_model is not None:
-            assert new_role_choiceset is None
-            # Mapping legacy choices to corresponding new model instances
-            legacy_to_new_roles = {
-                # Use .filter().first(), not .get() because new role might not exist, especially on reverse migrations
-                legacy_role_value: new_role_model.objects.filter(name=legacy_role_label).first()
-                for legacy_role_value, legacy_role_label in legacy_role_choiceset.CHOICES
+        assert from_role_choiceset is not None
+        if to_role_model is not None:
+            assert to_role_choiceset is None
+            # Mapping "from" choices to corresponding "to" model instances
+            roles_translation_mapping = {
+                # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
+                from_role_value: to_role_model.objects.filter(name=from_role_label).first()
+                for from_role_value, from_role_label in from_role_choiceset.CHOICES
             }
         else:
-            assert new_role_choiceset is not None
-            # Mapping legacy choices to corresponding new choices - we don't currently use this case, but it should work
-            # We need to use `label` to look up the legacy_role instance, but `value` is what we set for the new_field
-            inverted_new_role_choiceset = {label: value for value, label in new_role_choiceset.CHOICES}
-            legacy_to_new_roles = {
-                legacy_role_value: inverted_new_role_choiceset.get(legacy_role_label, None)
-                for legacy_role_value, legacy_role_label in legacy_role_choiceset.CHOICES
+            assert to_role_choiceset is not None
+            # Mapping "from" choices to corresponding "to" choices; we don't currently use this case, but it should work
+            # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
+            inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
+            roles_translation_mapping = {
+                from_role_value: inverted_to_role_choiceset.get(from_role_label, None)
+                for from_role_value, from_role_label in from_role_choiceset.CHOICES
             }
 
     if not is_m2m_field:
         # Bulk updates of a single field are easy enough...
-        for legacy_role_value, new_role_value in legacy_to_new_roles.items():
-            if new_role_value is not None:
-                model_to_migrate.objects.filter(**{legacy_role_field_name: legacy_role_value}).update(
-                    **{new_role_field_name: new_role_value}
+        for from_role_value, to_role_value in roles_translation_mapping.items():
+            if to_role_value is not None:
+                updated_count = model_to_migrate.objects.filter(**{from_role_field_name: from_role_value}).update(
+                    **{to_role_field_name: to_role_value}
+                )
+                logger.info(
+                    'Updated %d %s records to reference %s "%s"',
+                    updated_count,
+                    model_to_migrate._meta.label,
+                    to_role_field_name,
+                    to_role_value.name if to_role_model else to_role_value,
                 )
     else:
         # ...but we have to update each instance's M2M field independently?
         for instance in model_to_migrate.objects.all():
-            new_role_set = {
-                legacy_to_new_roles[legacy_role_value]
-                for legacy_role_value in getattr(instance, legacy_role_field_name).all()
+            to_role_set = {
+                roles_translation_mapping[from_role_value]
+                for from_role_value in getattr(instance, from_role_field_name).all()
             }
             # Discard any null values
-            new_role_set.discard(None)
-            getattr(instance, new_role_field_name).set(new_role_set)
+            to_role_set.discard(None)
+            getattr(instance, to_role_field_name).set(to_role_set)
+        logger.info(
+            "Updated %d %s record %s M2M fields",
+            model_to_migrate.objects.count(),
+            model_to_migrate._meta.label,
+            to_role_field_name,
+        )
