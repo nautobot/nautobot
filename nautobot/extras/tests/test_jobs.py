@@ -4,6 +4,7 @@ import logging
 import re
 import uuid
 from io import StringIO
+from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -438,7 +439,17 @@ class JobTest(TransactionTestCase):
         name = "TestProfilingJob"
 
         # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
-        create_job_result_and_run_job(module, name)
+        job_result = create_job_result_and_run_job(module, name, profile=True)
+
+        self.assertEqual(
+            job_result.status,
+            JobResultStatusChoices.STATUS_COMPLETED,
+            msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
+        )
+
+        profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
+        self.assertTrue(profiling_result.exists())
+        profiling_result.unlink()
 
 
 class JobFileUploadTest(TransactionTestCase):

@@ -20,5 +20,4 @@ class TestProfilingJob(Job):
         return []
 
     def post_run(self):
-        # This serves as the 'assert' for the test - it shouldn't fail
-        pstats.Stats(f"/tmp/{self.job_result.id}.pstats")
+        pstats.Stats(f"/tmp/nautobot-jobresult-{self.job_result.id}.pstats")
