@@ -1090,7 +1090,6 @@ Other context keys may be available for certain views:
 
 You may see other context keys as well, but any not documented above should not be relied upon as they may be removed in a future release. Some examples of those are:
 
-* `changelog_url`: This can now be retrieved from the object itself, via `object.get_changelog_url`, if the object supports change-logging
 * `obj`: Please use `object` instead
 * `obj_type`: Please use `verbose_name` instead
 * `obj_type_plural`: Please use `verbose_name_plural` instead
