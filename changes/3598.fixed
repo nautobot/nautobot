@@ -1,1 +1,0 @@
-Fixed default sanitizer patterns to account for strings beginning with `i` or `is`.
