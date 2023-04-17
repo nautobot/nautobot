@@ -70,14 +70,14 @@ class WritableSerializerMixin:
             return queryset.get(**filter_params)
         except ObjectDoesNotExist as e:
             raise ValidationError(
-                {f"{model_name}": f"Related object not found using the provided attributes: {filter_params}"}
+                {model_name: f"Related object not found using the provided attributes: {filter_params}"}
             ) from e
         except MultipleObjectsReturned as e:
             raise ValidationError(
-                {f"{model_name}": f"Multiple objects match the provided attributes: {filter_params}"}
+                {model_name: f"Multiple objects match the provided attributes: {filter_params}"}
             ) from e
         except FieldError as e:
-            raise ValidationError({f"{model_name}": e}) from e
+            raise ValidationError({model_name: e}) from e
 
     def to_internal_value(self, data):
         if data is None:

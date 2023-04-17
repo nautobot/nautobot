@@ -19,9 +19,8 @@ from nautobot.core.api import (
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
-    get_relation_info_for_nested_serializers,
-    get_serializer_for_model,
     get_serializers_for_models,
+    return_nested_serializer_data_based_on_depth,
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.serializers import (
@@ -147,9 +146,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        serializer = get_serializer_for_model(obj.owner)
-        context = {"request": self.context["request"]}
-        return serializer(obj.owner, context=context).data
+        depth = int(self.context.get("depth", 0))
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
 #
@@ -182,9 +180,8 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        serializer = get_serializer_for_model(obj.owner)
-        context = {"request": self.context["request"]}
-        return serializer(obj.owner, context=context).data
+        depth = int(self.context.get("depth", 0))
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
 #
@@ -274,15 +271,9 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     @extend_schema_field(DynamicGroupMembershipSerializer)
     def get_child_groups(self, obj):
         depth = int(self.context.get("depth", 0))
-        if depth == 0:
-            return [child.id for child in obj.dynamic_group_memberships.all()]
-        else:
-            result = []
-            for child in obj.dynamic_group_memberships.all():
-                relation_info = get_relation_info_for_nested_serializers(obj, child, "dynamic_group_memberships")
-                field_class, field_kwargs = self.build_nested_field("dynamic_group_memberships", relation_info, depth)
-                result.append(field_class(child, context={"request": self.context.get("request")}, **field_kwargs).data)
-            return result
+        return return_nested_serializer_data_based_on_depth(
+            self, depth, obj, obj.dynamic_group_memberships, "dynamic_group_memberships"
+        )
 
     class Meta:
         model = DynamicGroup
@@ -327,9 +318,8 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        serializer = get_serializer_for_model(obj.owner)
-        context = {"request": self.context["request"]}
-        return serializer(obj.owner, context=context).data
+        depth = int(self.context.get("depth", 0))
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
 #
@@ -424,8 +414,8 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         )
     )
     def get_parent(self, obj):
-        serializer = get_serializer_for_model(obj.parent)
-        return serializer(obj.parent, context={"request": self.context["request"]}).data
+        depth = int(self.context.get("depth", 0))
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.parent, "parent")
 
 
 #
@@ -729,9 +719,10 @@ class NoteSerializer(BaseModelSerializer):
         if obj.assigned_object is None:
             return None
         try:
-            serializer = get_serializer_for_model(obj.assigned_object)
-            context = {"request": self.context["request"]}
-            return serializer(obj.assigned_object, context=context).data
+            depth = int(self.context.get("depth", 0))
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.assigned_object, "assigned_object"
+            )
         except SerializerNotFound:
             return None
 
@@ -769,15 +760,11 @@ class ObjectChangeSerializer(BaseModelSerializer):
         """
         if obj.changed_object is None:
             return None
-
         try:
-            serializer = get_serializer_for_model(obj.changed_object)
+            depth = int(self.context.get("depth", 0))
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.changed_object, "changed_object")
         except SerializerNotFound:
             return obj.object_repr
-        context = {"request": self.context["request"]}
-        data = serializer(obj.changed_object, context=context).data
-
-        return data
 
 
 #
@@ -877,17 +864,9 @@ class SecretsGroupSerializer(NautobotModelSerializer):
     @extend_schema_field(SecretsGroupAssociationSerializer)
     def get_secrets(self, obj):
         depth = int(self.context.get("depth", 0))
-        if depth == 0:
-            return [secret.id for secret in obj.secrets_group_associations.all()]
-        else:
-            result = []
-            for secret in obj.secrets_group_associations.all():
-                relation_info = get_relation_info_for_nested_serializers(obj, secret, "secrets_group_associations")
-                field_class, field_kwargs = self.build_nested_field("secrets_group_associations", relation_info, depth)
-                result.append(
-                    field_class(secret, context={"request": self.context.get("request")}, **field_kwargs).data
-                )
-            return result
+        return return_nested_serializer_data_based_on_depth(
+            self, depth, obj, obj.secrets_group_associations, "secrets_group_associations"
+        )
 
     class Meta:
         model = SecretsGroup

@@ -483,7 +483,7 @@ class DynamicModelChoiceMixin:
     :param null_option: The string used to represent a null selection (if any)
     :param disabled_indicator: The name of the field which, if populated, will disable selection of the
         choice (optional)
-    :param depth: Use the "depth=0" parameter (?depth=0) when making API requests (default)
+    :param depth: Nested serialization depth when making API requests (default: `0` or a flat representation)
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin

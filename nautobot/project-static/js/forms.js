@@ -205,7 +205,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     // Allow for controlling the depth setting from within APISelect
                     if ($(element).attr('data-depth') !== undefined){
                         parameters.depth = parseInt($(element).attr('data-depth'))
-                    }else{
+                    }
+                    else {
                         parameters.depth = 0
                     }
 

@@ -602,7 +602,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             "name": "http",
             "protocol": "tcp",
             "device": str(device.id),
-            "ports": [80],
+            "ports": ["80"],
         }
         expected = [80]  # We'll test w/ this
 

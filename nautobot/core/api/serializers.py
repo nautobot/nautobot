@@ -1,13 +1,13 @@
 import logging
 import uuid
 
+from abc import abstractmethod
 from django.core.exceptions import (
     FieldError,
     MultipleObjectsReturned,
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import AutoField, ManyToManyField
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -18,10 +18,14 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
+from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.mixins import WritableSerializerMixin
-from nautobot.core.api.utils import dict_to_filter_params, get_serializer_for_model
+from nautobot.core.api.utils import (
+    dict_to_filter_params,
+    get_serializer_for_model,
+)
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -112,7 +116,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
-    url = serializers.HyperlinkedIdentityField(read_only=True, view_name="")
     serializer_related_field = NautobotPrimaryKeyRelatedField
     object_type = ObjectTypeField()
 
@@ -126,6 +129,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             # RestAPI serializer is not affected by this because get_serializer_context() is always called
             # and depth is either passed into the request.query_params, or default to 0.
             self.Meta.depth = self.context.get("depth", 1)
+
+    @property
+    @abstractmethod
+    def url(self):  # to be explicitly declared on each serializer subclass
+        raise NotImplementedError(f"{self.__class__.__name__} must declare a url field with a valid view_name")
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -148,7 +156,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 self.Meta.opt_in_fields.append(field_name)
         return fields
 
-    def eliminate_field_names(self, fields, field_name):
+    def reduce_field_names(self, fields, field_name):
         """Eliminate non-user-facing field_name from `fields` e.g. `_custom_field_data`, `_name`"""
         if field_name not in fields:
             return fields
@@ -171,8 +179,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         self.extend_field_names(fields, "display", at_start=True)
         self.extend_field_names(fields, "id", at_start=True)
-        self.eliminate_field_names(fields, "_custom_field_data")
-        self.eliminate_field_names(fields, "_name")
         # Needed because we don't have a common base class for all nested serializers vs non-nested serializers
         if not self.__class__.__name__.startswith("Nested"):
             if hasattr(self.Meta.model, "created"):
@@ -181,16 +187,17 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 self.extend_field_names(fields, "last_updated")
         # This is here for the PolymorphicProxySerializers which
         # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
-        if "object_type" not in fields:
-            fields.append("object_type")
+        self.extend_field_names(fields, "object_type")
+        # Eliminate all field names starts with "_" as those fields are not user-facing
+        for field in fields:
+            if field.startswith("_"):
+                self.reduce_field_names(fields, field)
         return fields
 
     def build_field(self, field_name, info, model_class, nested_depth):
         """
         Return a two tuple of (cls, kwargs) to build a serializer field with.
         """
-        from rest_framework.utils.model_meta import RelationInfo, _get_to_field
-
         # For tags field, DRF does not recognize the relationship between tags and the model itself (?)
         # so instead of calling build_nested_field() it will call build_property_field() which
         # makes the field impervious to the `?depth` parameter.
@@ -199,11 +206,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         if field_name == "tags":
             if nested_depth > 0:
                 relation_info = RelationInfo(
-                    model_field=getattr(model_class, "tags"),
+                    model_field=model_class.tags,
                     related_model=Tag,
                     to_many=True,
                     has_through_model=True,
-                    to_field=_get_to_field(getattr(model_class, "tags")),
+                    to_field=_get_to_field(model_class.tags),
                     reverse=False,
                 )
                 return self.build_nested_field(field_name, relation_info, nested_depth)
@@ -217,7 +224,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         if field_name == "tags":
             field_class = NautobotPrimaryKeyRelatedField
             field_kwargs = {
-                "queryset": Tag.objects.filter(content_types=ContentType.objects.get_for_model(model_class)),
+                "queryset": Tag.objects.get_for_model(model_class),
                 "required": False,
             }
 

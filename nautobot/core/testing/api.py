@@ -1,7 +1,7 @@
-import uuid
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import ForeignKey, ManyToManyField
 from django.test import override_settings, tag
@@ -14,6 +14,7 @@ from nautobot.core import testing
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
+from nautobot.core.utils.data import is_uuid
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.extras import registry
@@ -197,17 +198,16 @@ class APIViewTestCases:
             """Get a list of model fields that could be tested with the ?depth query parameter"""
             depth_fields = []
             for field in self.model._meta.fields:
-                if isinstance(field, (ForeignKey, ManyToManyField)) and (
-                    field.related_model != ContentType
-                    # user is a model field on Token but not a field on TokenSerializer
-                    and not (field.name == "user" and self.model == users_models.Token)
-                ):
-                    depth_fields.append(field.name)
-                elif field.name == "tags":
-                    depth_fields.append(field.name)
-                elif field.name == "status" and isinstance(field, extras_models.StatusField):
-                    depth_fields.append(field.name)
-                # user is a model field but not a field on the TokenSerializer
+                if not field.name.startswith("_"):
+                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField)) and (
+                        field.related_model != ContentType
+                        # user is a model field on Token but not a field on TokenSerializer
+                        and not (field.name == "user" and self.model == users_models.Token)
+                    ):
+                        depth_fields.append(field.name)
+                    elif field.name == "tags":
+                        depth_fields.append(field.name)
+                    # user is a model field but not a field on the TokenSerializer
             return depth_fields
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -248,19 +248,13 @@ class APIViewTestCases:
 
             response_data = response.data["results"][0]
             for field in depth_fields:
-                self.assertEqual(field in response_data, True)
+                self.assertIn(field, response_data)
                 if isinstance(response_data[field], list):
                     for entry in response_data[field]:
-                        try:
-                            uuid.UUID(str(entry))
-                        except ValueError:
-                            self.fail(f"Response data field {field} contains invalid UUID")
+                        self.assertTrue(is_uuid(entry))
                 else:
                     if response_data[field] is not None:
-                        try:
-                            uuid.UUID(str(response_data[field]))
-                        except ValueError:
-                            self.fail(f"Response data field {field} contains invalid UUID")
+                        self.assertTrue(is_uuid(response_data[field]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
@@ -279,19 +273,15 @@ class APIViewTestCases:
 
             response_data = response.data["results"][0]
             for field in depth_fields:
-                self.assertEqual(field in response_data, True)
+                self.assertIn(field, response_data)
                 if isinstance(response_data[field], list):
                     for entry in response_data[field]:
-                        try:
-                            uuid.UUID(str(entry["id"]))
-                        except ValueError:
-                            self.fail(f"Response data field {field} contains invalid UUID")
+                        self.assertIsInstance(entry, dict)
+                        self.assertTrue(is_uuid(entry["id"]))
                 else:
                     if response_data[field] is not None:
-                        try:
-                            uuid.UUID(str(response_data[field]["id"]))
-                        except ValueError:
-                            self.fail(f"Response data field {field} contains invalid UUID")
+                        self.assertIsInstance(response_data[field], dict)
+                        self.assertTrue(is_uuid(response_data[field]["id"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_2(self):
@@ -317,17 +307,13 @@ class APIViewTestCases:
                 # First Level Parent
                 self.assertEqual(field in data, True)
                 if data[field] is not None:
-                    try:
-                        uuid.UUID(str(data[field]["id"]))
-                    except ValueError:
-                        self.fail(f"Response data field {field} contains invalid UUID")
+                    self.assertIsInstance(data[field], dict)
+                    self.assertTrue(is_uuid(data[field]["id"]))
                     # Second Level Parent
-                    self.assertEqual(field in data[field], True)
+                    self.assertIn(field, data[field])
                     if data[field][field] is not None:
-                        try:
-                            uuid.UUID(str(data[field][field]["id"]))
-                        except ValueError:
-                            self.fail(f"Response data field {field} contains invalid UUID")
+                        self.assertIsInstance(data[field][field], dict)
+                        self.assertTrue(is_uuid(data[field][field]["id"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):

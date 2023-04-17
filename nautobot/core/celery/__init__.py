@@ -6,10 +6,12 @@ from pathlib import Path
 from celery import Celery, shared_task, signals
 from celery.fixups.django import DjangoFixup
 from django.conf import settings
-from django.core.serializers.json import DjangoJSONEncoder
+
+# from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
+from rest_framework.utils.encoders import JSONEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +73,9 @@ def setup_prometheus(**kwargs):
         logger.warning("Cannot export Prometheus metrics from worker, no available ports in range.")
 
 
-class NautobotKombuJSONEncoder(DjangoJSONEncoder):
+class NautobotKombuJSONEncoder(JSONEncoder):
     """
-    Custom json encoder based on DjangoJSONEncoder that serializes objects that implement
+    Custom json encoder based on restframework's JSONEncoder that serializes objects that implement
     the `nautobot_serialize()` method via the `__nautobot_type__` interface. This is useful
     in passing special objects to and from Celery tasks.
 
@@ -111,7 +113,7 @@ class NautobotKombuJSONEncoder(DjangoJSONEncoder):
             obj = list(obj.values_list("id", flat=True))
             return obj
         else:
-            return DjangoJSONEncoder.default(self, obj)
+            return super().default(obj)
 
 
 def nautobot_kombu_json_loads_hook(data):

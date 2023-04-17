@@ -13,9 +13,9 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
-    get_relation_info_for_nested_serializers,
     get_serializer_for_model,
     get_serializers_for_models,
+    return_nested_serializer_data_based_on_depth,
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
@@ -109,14 +109,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         """
         if obj._cable_peer is not None:
             depth = int(self.context.get("depth", 0))
-            if depth == 0:
-                return obj._cable_peer.id
-            else:
-                relation_info = get_relation_info_for_nested_serializers(obj, obj._cable_peer, "_cable_peer")
-                field_class, field_kwargs = self.build_nested_field("cable_peer", relation_info, depth)
-                return field_class(
-                    obj._cable_peer, context={"request": self.context.get("request")}, **field_kwargs
-                ).data
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj._cable_peer, "_cable_peer")
         return None
 
 
@@ -151,16 +144,9 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         """
         if obj._path is not None and obj._path.destination is not None:
             depth = int(self.context.get("depth", 0))
-            if depth == 0:
-                return obj._path.destination.id
-            else:
-                relation_info = get_relation_info_for_nested_serializers(
-                    obj, obj._path.destination, "connected_endpoint"
-                )
-                field_class, field_kwargs = self.build_nested_field("connected_endpoint", relation_info, depth)
-                return field_class(
-                    obj._path.destination, context={"request": self.context.get("request")}, **field_kwargs
-                ).data
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj._path.destination, "connected_endpoint"
+            )
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
@@ -524,20 +510,17 @@ class DeviceSerializer(
             return None
         depth = int(self.context.get("depth", 0))
         device = Device.objects.get(device_bays=obj.parent_bay)
-        if depth == 0:
-            return device.id
+        data = return_nested_serializer_data_based_on_depth(self, depth, device_bay, device_bay.device, "device")
+        if depth - 1 == 0:
+            data["device_bay"] = device_bay.id
+        elif depth - 1 < 0:
+            # Device is only an UUID in this case
+            pass
         else:
-            relation_info = get_relation_info_for_nested_serializers(device_bay, device_bay.device, "device")
-            field_class, field_kwargs = self.build_nested_field("device", relation_info, depth)
-            data = field_class(device_bay.device, context={"request": self.context.get("request")}, **field_kwargs).data
-            if depth - 1 == 0:
-                data["device_bay"] = device_bay.id
-            else:
-                relation_info = get_relation_info_for_nested_serializers(device, device_bay, "device_bays")
-                field_class, field_kwargs = self.build_nested_field("device_bays", relation_info, depth - 1)
-                data["device_bay"] = field_class(
-                    device_bay, context={"request": self.context.get("request")}, **field_kwargs
-                ).data
+            device_bay_data = return_nested_serializer_data_based_on_depth(
+                data, depth - 1, device, device_bay, "device_bays"
+            )
+            data["device_bay"] = device_bay_data
 
         return data
 
@@ -753,12 +736,9 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
         depth = int(self.context.get("depth", 0))
-        if depth == 0:
-            return termination.id
-        else:
-            relation_info = get_relation_info_for_nested_serializers(obj, termination, f"termination_{side.lower()}")
-            field_class, field_kwargs = self.build_nested_field(f"termination_{side.lower()}", relation_info, depth)
-            return field_class(termination, context={"request": self.context.get("request")}, **field_kwargs).data
+        return return_nested_serializer_data_based_on_depth(
+            self, depth, obj, termination, f"termination_{side.lower()}"
+        )
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -816,12 +796,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         Return the appropriate serializer for the origin.
         """
         depth = int(self.context.get("depth", 0))
-        if depth == 0:
-            return obj.origin.id
-        else:
-            relation_info = get_relation_info_for_nested_serializers(obj, obj.origin, "origin")
-            field_class, field_kwargs = self.build_nested_field("origin", relation_info, depth)
-            return field_class(obj.origin, context={"request": self.context.get("request")}, **field_kwargs).data
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.origin, "origin")
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -837,14 +812,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         """
         if obj.destination_id is not None:
             depth = int(self.context.get("depth", 0))
-            if depth == 0:
-                return obj.destination.id
-            else:
-                relation_info = get_relation_info_for_nested_serializers(obj, obj.destination, "destination")
-                field_class, field_kwargs = self.build_nested_field("destination", relation_info, depth)
-                return field_class(
-                    obj.destination, context={"request": self.context.get("request")}, **field_kwargs
-                ).data
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.destination, "destination")
         return None
 
     @extend_schema_field(

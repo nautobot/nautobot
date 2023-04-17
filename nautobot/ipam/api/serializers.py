@@ -1,5 +1,3 @@
-import netaddr
-
 from collections import OrderedDict
 
 from rest_framework import serializers
@@ -14,6 +12,7 @@ from nautobot.extras.api.mixins import (
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
+from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
@@ -26,21 +25,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-
-
-class IPFieldSerializer(serializers.CharField):
-    def to_representation(self, value):
-        """Convert internal (IPNetwork) representation to API (string) representation."""
-        return str(value)
-
-    def to_internal_value(self, value):
-        """Convert API (string) representation to internal (IPNetwork) representation."""
-        try:
-            return netaddr.IPNetwork(value)
-        except netaddr.AddrFormatError:
-            raise serializers.ValidationError(f"Invalid IP address format: {value}")
-        except (TypeError, ValueError) as e:
-            raise serializers.ValidationError(e)
 
 
 #
@@ -149,10 +133,8 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Prefix
-        read_only_fields = ["family"]
-        # excluded here so that the user do not need to pass in a `prefix_length` value
-        # when doing a POST request.
-        exclude = ["prefix_length"]
+        fields = "__all__"
+        read_only_fields = ["family", "prefix_length"]
 
 
 class PrefixLengthSerializer(serializers.Serializer):
@@ -218,8 +200,8 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = IPAddress
-        read_only_fields = ["family"]
-        exclude = ["prefix_length"]
+        fields = "__all__"
+        read_only_fields = ["family", "prefix_length"]
 
 
 class AvailableIPSerializer(serializers.Serializer):

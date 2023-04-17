@@ -292,7 +292,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                     for object_data in objects_data:
                         serializer_instance = other_side_serializer(data=object_data, context=self.context)
                         # may raise ValidationError, let it bubble up if so
-                        serializer_instance.is_valid()
+                        serializer_instance.is_valid(raise_exception=True)
 
                         # We don't check/enforce relationship source_filter/destination_filter here, as that'll be handled
                         # later by `RelationshipAssociation.validated_save()` in RelationshipModelSerializerMixin.

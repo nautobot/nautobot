@@ -196,3 +196,27 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
         reverse=False,
     )
     return relation_info
+
+
+def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
+    if obj_related_field.__class__.__name__ == "RelatedManager":
+        result = []
+        if depth == 0:
+            result = obj_related_field.values_list("pk", flat=True)
+        else:
+            for entry in obj_related_field.all():
+                relation_info = get_relation_info_for_nested_serializers(obj, entry, obj_related_field_name)
+                field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
+                result.append(
+                    field_class(entry, context={"request": serializer.context.get("request")}, **field_kwargs).data
+                )
+        return result
+    else:
+        if depth == 0:
+            return obj_related_field.id
+        else:
+            relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
+            field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
+            return field_class(
+                obj_related_field, context={"request": serializer.context.get("request")}, **field_kwargs
+            ).data
