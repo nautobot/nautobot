@@ -1,2 +1,0 @@
-The default database backend if `METRICS_ENABLED` is `True` is now "django_prometheus.db.backends.postgresql"
-The default CACHES backend if `METRICS_ENABLED` is `True` is now "django_prometheus.cache.backends.redis.RedisCache"
