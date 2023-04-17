@@ -49,22 +49,31 @@ class UtilsTestCase(TestCase):
         with self.subTest("Empty queue"):
             self.assertEqual(get_worker_count(queue="nobody"), 0)
 
-    @mock.patch("nautobot.extras.utils.find_models_with_matching_fields")
-    def test_populate_model_features_registry(self, mocked_field_finder):
+    def test_populate_model_features_registry(self):
         original_custom_fields_registry = registry["model_features"]["custom_fields"].copy()
-        mocked_field_finder.return_value = {"test": ["testmodel"]}
+
+        self.assertIn(
+            "circuit", registry["model_features"]["custom_fields"]["circuits"], "Registry should already be populated"
+        )
 
         populate_model_features_registry()
-        self.assertEqual(
+        self.assertDictEqual(
             registry["model_features"]["custom_fields"],
             original_custom_fields_registry,
             "Registry should not be modified if refresh flag not set",
         )
-        mocked_field_finder.assert_not_called()
 
-        populate_model_features_registry(refresh=True)
+        registry["model_features"]["custom_fields"].pop("circuits")
         self.assertNotEqual(
             registry["model_features"]["custom_fields"],
             original_custom_fields_registry,
-            "Registry should be modified if refresh flag is set",
+            "Registry should be successfully modified",
+        )
+
+        # Make sure we return to the original state
+        populate_model_features_registry(refresh=True)
+        self.assertDictEqual(
+            registry["model_features"]["custom_fields"],
+            original_custom_fields_registry,
+            "Registry should be restored to original state",
         )
