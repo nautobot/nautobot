@@ -621,6 +621,12 @@ class JobViewSet(
         if not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
+        if job_model.supports_dryrun and job_model.read_only and cleaned_data.get("dryrun", False) is not True:
+            err_msg = (
+                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled."
+            )
+            raise ValidationError({"data": {"dryrun": [err_msg]}})
+
         # Default to a null JobResult.
         job_result = None
 
@@ -631,8 +637,7 @@ class JobViewSet(
         else:
             approval_required = job_model.approval_required
 
-        # Assert that a job with `approval_required=True` has a schedule that enforces approval and
-        # executes immediately.
+        # Set schedule for jobs that require approval but request did not supply schedule data
         if schedule_data is None and approval_required:
             schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
 
@@ -866,11 +871,14 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         job_model = scheduled_job.job_model
         if job_model is None or not job_model.runnable:
             raise MethodNotAllowed("This job cannot be dry-run at this time.")
+        if not job_model.supports_dryrun:
+            raise MethodNotAllowed("This job does not support dry-run.")
         if not Job.objects.check_perms(request.user, instance=job_model, action="run"):
             raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job
         job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
+        job_kwargs["dryrun"] = True
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,

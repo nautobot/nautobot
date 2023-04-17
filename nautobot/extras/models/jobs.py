@@ -161,13 +161,15 @@ class Job(PrimaryModel):
     approval_required = models.BooleanField(
         default=False, help_text="Whether the job requires approval from another user before running"
     )
-    dryrun_default = models.BooleanField(default=False, help_text="Whether the job defaults to running with dryrun set")
     hidden = models.BooleanField(
         default=False,
         db_index=True,
         help_text="Whether the job defaults to not being shown in the UI",
     )
     # Job.Meta.field_order is not overridable in this model
+    dryrun_default = models.BooleanField(
+        default=False, help_text="Whether the job defaults to running with dryrun argument set to true"
+    )
     read_only = models.BooleanField(default=False, help_text="Whether the job is only allowed to run with dryrun set")
     soft_time_limit = models.FloatField(
         default=0,
@@ -186,6 +188,10 @@ class Job(PrimaryModel):
         default=list,
         blank=True,
         help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+    )
+    supports_dryrun = models.BooleanField(
+        default=False,
+        help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
     )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database

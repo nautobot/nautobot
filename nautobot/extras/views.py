@@ -1151,6 +1151,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
+        elif job_model.supports_dryrun and job_model.read_only and not request.POST.get("dryrun", False):
+            messages.error(
+                request,
+                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
+            )
+
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             task_queue = job_form.cleaned_data.get("_task_queue", None)
             dryrun = job_form.cleaned_data.get("dryrun", False)

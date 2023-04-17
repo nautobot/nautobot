@@ -152,6 +152,11 @@
                 </td>
             </tr>
             <tr>
+                <td>Supports Dryrun</td>
+                <td>{{ object.supports_dryrun | render_boolean }}</td>
+            </tr>
+            {% if object.supports_dryrun %}
+            <tr>
                 <td>Default to Dryrun</td>
                 <td>{{ object.dryrun_default | render_boolean }}</td>
                 <td>
@@ -168,22 +173,6 @@
                 </td>
             </tr>
             <tr>
-                <td>Hide from Default UI</td>
-                <td>{{ object.hidden | render_boolean }}</td>
-                <td>
-                    {% if object.hidden_override %}
-                        <span class="text-muted">
-                            overridden; default is
-                            {% if object.installed %}
-                                {{ object.job_class.hidden | render_boolean }}
-                            {% else %}
-                                unknown (not currently installed)
-                            {% endif %}
-                        </span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
                 <td>Read-Only Execution</td>
                 <td>{{ object.read_only | render_boolean }}</td>
                 <td>
@@ -192,6 +181,23 @@
                             overridden; default is
                             {% if object.installed %}
                                 {{ object.job_class.read_only | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td>Hide from Default UI</td>
+                <td>{{ object.hidden | render_boolean }}</td>
+                <td>
+                    {% if object.hidden_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.hidden | render_boolean }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}

@@ -24,4 +24,9 @@ class Migration(migrations.Migration):
             name="dryrun_default",
             field=models.BooleanField(default=False),
         ),
+        migrations.AddField(
+            model_name="job",
+            name="supports_dryrun",
+            field=models.BooleanField(default=False),
+        ),
     ]
