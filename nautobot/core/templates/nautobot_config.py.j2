@@ -22,7 +22,10 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CACHES = {
 #     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
+#         "BACKEND": os.getenv(
+#             "NAUTOBOT_CACHES_BACKEND",
+#             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
+#         ),
 #         "LOCATION": parse_redis_connection(redis_database=0),
 #         "TIMEOUT": 300,
 #         "OPTIONS": {
@@ -56,7 +59,8 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
 #         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),  # Database timeout
 #         "ENGINE": os.getenv(
-#             "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
+#             "NAUTOBOT_DB_ENGINE",
+#             "django_prometheus.db.backends.postgresql" if METRICS_ENABLED else "django.db.backends.postgresql",
 #         ),  # Database driver ("mysql" or "postgresql")
 #     }
 # }
@@ -461,7 +465,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # SANITIZER_PATTERNS = [
 #     # General removal of username-like and password-like tokens
 #     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-#     (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+#     (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
 # ]
 
 # Configure SSO, for more information see docs/configuration/authentication/sso.md

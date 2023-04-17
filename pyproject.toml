@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.5.16"
+version = "1.5.17"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -121,6 +121,8 @@ netaddr = "~0.8.0"
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
 netutils = "^1.4.1"
+# Handling of version numbers
+packaging = "~23.0"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter

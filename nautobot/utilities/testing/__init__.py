@@ -50,13 +50,14 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, data=None, commit=True, username="test-user", request=None):
+def run_job_for_testing(job, data=None, commit=True, profile=False, username="test-user", request=None):
     """Provide a common interface to run Nautobot jobs as part of unit tests.
 
     Args:
       job (Job): Job model instance (not Job class) to run
       data (dict): Input data values for any Job variables.
       commit (bool): Whether to commit changes to the database or rollback when done.
+      profile (bool): Whether to profile the job execution.
       username (str): Username of existing or to-be-created User account to own the JobResult. Ignored if `request.user`
         exists.
       request (HttpRequest): Existing request (if any) to own the JobResult.
@@ -81,7 +82,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         )
     job_result = JobResult.objects.create(
         name=job.class_path,
-        job_kwargs={"data": data, "commit": commit},
+        job_kwargs={"data": data, "commit": commit, "profile": profile},
         obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,
@@ -97,7 +98,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
                 yield ctx_request
 
     with _web_request_context(user=user_instance) as wrapped_request:
-        run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk)
+        run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk, profile=profile)
     return job_result
 
 
