@@ -1094,6 +1094,9 @@ You may see other context keys as well, but any not documented above should not 
 * `obj_type`: Please use `verbose_name` instead
 * `obj_type_plural`: Please use `verbose_name_plural` instead
 
+--- 2.0.0
+    The `changelog_url` context key was removed. Use `object.get_changelog_url` instead.
+
 #### Excluding ViewMixins from NautobotUIViewSet
 
 For app models that do not require certain views, simply inherit directly from the `ViewMixin` classes available in `nautobot.apps.views` instead of `NautobotUIViewSet`.
