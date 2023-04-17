@@ -758,6 +758,12 @@ class JobForm(BootstrapMixin, forms.Form):
         label="Commit changes",
         help_text="Commit changes to the database (uncheck for a dry-run)",
     )
+    _profile = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Profile job execution",
+        help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+    )
     _task_queue = forms.ChoiceField(
         required=False,
         help_text="The task queue to route this job to",
@@ -767,11 +773,10 @@ class JobForm(BootstrapMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _task_queue and _commit to the end of the form
-        task_queue = self.fields.pop("_task_queue")
-        self.fields["_task_queue"] = task_queue
-        commit = self.fields.pop("_commit")
-        self.fields["_commit"] = commit
+        # Move special fields to the end of the form
+        for field in ["_task_queue", "_commit", "_profile"]:
+            value = self.fields.pop(field)
+            self.fields[field] = value
 
     @property
     def requires_input(self):

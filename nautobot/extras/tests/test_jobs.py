@@ -4,6 +4,7 @@ import logging
 import re
 import uuid
 from io import StringIO
+from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -46,12 +47,12 @@ def get_job_class_and_model(module, name):
     return (job_class, job_model)
 
 
-def create_job_result_and_run_job(module, name, *, data=None, commit=True, request=None):
+def create_job_result_and_run_job(module, name, *, data=None, commit=True, profile=False, request=None):
     """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
     if data is None:
         data = {}
     _job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
+    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, profile=profile, request=request)
     job_result.refresh_from_db()
     return job_result
 
@@ -161,7 +162,9 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit", "_profile"]
+        )
 
     def test_no_field_order(self):
         """
@@ -171,7 +174,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -183,7 +186,7 @@ class JobTest(TransactionTestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit", "_profile"],
         )
 
     def test_read_only_job_pass(self):
@@ -400,7 +403,8 @@ class JobTest(TransactionTestCase):
             <span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
-            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
 
@@ -425,9 +429,27 @@ class JobTest(TransactionTestCase):
             </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
-            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
+
+    def test_job_profiling(self):
+        module = "test_profiling"
+        name = "TestProfilingJob"
+
+        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
+        job_result = create_job_result_and_run_job(module, name, profile=True)
+
+        self.assertEqual(
+            job_result.status,
+            JobResultStatusChoices.STATUS_COMPLETED,
+            msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
+        )
+
+        profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
+        self.assertTrue(profiling_result.exists())
+        profiling_result.unlink()
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -671,7 +693,9 @@ class JobButtonReceiverTest(TransactionTestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit", "_profile"]
+        )
 
     def test_hidden(self):
         module = "test_job_button_receiver"
@@ -728,7 +752,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit", "_profile"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"
