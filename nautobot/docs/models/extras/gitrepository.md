@@ -16,6 +16,7 @@ When defining a Git repository for Nautobot to consume, the `name`, `remote URL`
 
 !!! note
     Nautobot currently only supports repositories that can be cloned using the standard git command line, `git clone`. This means App-style integrations like GitHub Apps are not currently supported, as their workflow of managing files leverages a REST API.
+
 !!! warning
     Beginning in Nautobot 1.2, there are two ways to define a `token` and/or `username` for a Git repository -- either by directly configuring them into the repository definition, or by associating the repository with a [secrets group](./secretsgroup.md) record (this latter approach is new in Nautobot 1.2). The direct-configuration approach should be considered as deprecated, as it is less secure and poses a number of maintainability issues. If at all possible, you should use a secrets group instead. The direct-configuration approach may be removed altogether as an option in a future release of Nautobot.
 
