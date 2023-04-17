@@ -136,11 +136,8 @@ class FeatureQuery:
         # initialization of the application, before `ExtrasConfig.ready` is called.
         # Calling `populate_model_features_registry` in `ExtrasConfig.ready` would lead to an outdated `model_features`
         # `registry` record being used by `FeatureQuery`.
-        # As the `populate_model_features_registry` can be resource-intensive. The check the conditional check is used to
-        # avoid calling the function multiple times and optimize the performance of the application.
-        # TODO(timizuo): Provide a better solution for this; check https://github.com/nautobot/nautobot/pull/3360/files#r1131373797 comment.
-        if not registry["model_features"].get("relationships"):
-            populate_model_features_registry()
+
+        populate_model_features_registry()
         query = Q()
         for app_label, models in registry["model_features"][self.feature].items():
             query |= Q(app_label=app_label, model__in=models)
@@ -223,7 +220,7 @@ def extras_features(*features):
     return wrapper
 
 
-def populate_model_features_registry():
+def populate_model_features_registry(refresh=False):
     """
     Populate the registry model features with new apps.
 
@@ -243,6 +240,9 @@ def populate_model_features_registry():
     - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
+    if registry.get("populate_model_features_registry_called", False) and not refresh:
+        return
+
     RelationshipAssociation = apps.get_model(app_label="extras", model_name="relationshipassociation")
 
     lookup_confs = [
@@ -266,6 +266,9 @@ def populate_model_features_registry():
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
+
+    if not registry.get("populate_model_features_registry_called", False):
+        registry["populate_model_features_registry_called"] = True
 
 
 def generate_signature(request_body, secret):
