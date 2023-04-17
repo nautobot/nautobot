@@ -1,7 +1,8 @@
 from unittest import mock
 
 from nautobot.core.testing import TestCase
-from nautobot.extras.utils import get_celery_queues, get_worker_count
+from nautobot.extras.registry import registry
+from nautobot.extras.utils import get_celery_queues, get_worker_count, populate_model_features_registry
 
 
 class UtilsTestCase(TestCase):
@@ -47,3 +48,23 @@ class UtilsTestCase(TestCase):
             self.assertEqual(get_worker_count(queue="bulk"), 4)
         with self.subTest("Empty queue"):
             self.assertEqual(get_worker_count(queue="nobody"), 0)
+
+    @mock.patch("nautobot.extras.utils.find_models_with_matching_fields")
+    def test_populate_model_features_registry(self, mocked_field_finder):
+        original_custom_fields_registry = registry["model_features"]["custom_fields"].copy()
+        mocked_field_finder.return_value = {"test": ["testmodel"]}
+
+        populate_model_features_registry()
+        self.assertEqual(
+            registry["model_features"]["custom_fields"],
+            original_custom_fields_registry,
+            "Registry should not be modified if refresh flag not set",
+        )
+        mocked_field_finder.assert_not_called()
+
+        populate_model_features_registry(refresh=True)
+        self.assertNotEqual(
+            registry["model_features"]["custom_fields"],
+            original_custom_fields_registry,
+            "Registry should be modified if refresh flag is set",
+        )
