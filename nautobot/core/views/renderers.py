@@ -20,7 +20,7 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display
-from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.utils import get_base_template
 
 
@@ -38,11 +38,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
         factory_formset_params = {}
+        filterset = None
         if filterset_class:
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, filterset_class
-            )
-        return DynamicFilterFormSet(filterset_class=view.filterset_class, data=factory_formset_params)
+            filterset = filterset_class()
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+        return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
@@ -136,7 +136,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         form = None
         table = None
         search_form = None
-        changelog_url = None
         instance = None
         filter_form = None
         queryset = view.alter_queryset(request)
@@ -146,8 +145,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
-            if isinstance(instance, ChangeLoggedModel):
-                changelog_url = instance.get_changelog_url()
         else:
             return_url = view.get_return_url(request)
         # Get form for context rendering according to view.action unless it is previously set.
@@ -158,7 +155,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if view.action == "list":
                 if view.filterset_class is not None:
                     view.queryset = view.filter_queryset(view.get_queryset())
-                    filterset_filters = view.filterset.get_filters()
+                    if view.filterset is not None:
+                        filterset_filters = view.filterset.filters
+                    else:
+                        filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -205,7 +205,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
         context = {
-            "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
             "form": form,
             "filter_form": filter_form,

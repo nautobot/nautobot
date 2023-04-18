@@ -148,6 +148,75 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.17 (2023-04-17)
+
+### Added
+
+- [#3484](https://github.com/nautobot/nautobot/issues/3484) - Added job profiling option to job execution when in DEBUG mode.
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - Added the ability to change the `CACHES["default"]["BACKEND"]` via an environment variable `NAUTOBOT_CACHES_BACKEND`
+
+### Changed
+
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - The default database backend if `METRICS_ENABLED` is `True` is now "django_prometheus.db.backends.postgresql"
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - The default CACHES backend if `METRICS_ENABLED` is `True` is now "django_prometheus.cache.backends.redis.RedisCache"
+- [#3548](https://github.com/nautobot/nautobot/issues/3548) - Changed Git Repository docs to include admonition about Github Apps.
+- [#3595](https://github.com/nautobot/nautobot/issues/3595) - Update the warning provided when a bad reverse entry is not found in serializer to point to correct import location.
+
+### Dependencies
+
+- [#3525](https://github.com/nautobot/nautobot/issues/3525) - Added explicit dependency on `packaging` that had been inadvertently omitted.
+
+### Fixed
+
+- [#3116](https://github.com/nautobot/nautobot/issues/3116) - Fixed JSON comparison of `data_scheme` keys in `assertInstanceEqual` tests.
+- [#3573](https://github.com/nautobot/nautobot/issues/3573) - Fixed advanced filtering on interface UI list page not working.
+- [#3577](https://github.com/nautobot/nautobot/issues/3577) - Fixed `NautobotUIViewSet` documentation example for case sensitive typos.
+- [#3577](https://github.com/nautobot/nautobot/issues/3577) - Fixed `NautobotUIViewSet` documentation example not including imports.
+- [#3598](https://github.com/nautobot/nautobot/issues/3598) - Fixed default sanitizer patterns to account for strings beginning with `i` or `is`.
+
+## v1.5.16 (2023-04-10)
+
+### Added
+
+- [#3557](https://github.com/nautobot/nautobot/issues/3557) - Added docs page for Circuit Maintenance.
+
+### Fixed
+
+- [#2944](https://github.com/nautobot/nautobot/issues/2944) - Fixed slow performance of relationships on ObjectListView.
+- [#3345](https://github.com/nautobot/nautobot/issues/3345) - Fixed missing Relationships in DynamicFilterForm.
+- [#3477](https://github.com/nautobot/nautobot/issues/3477) - Added a note under heading Setting ViewSet Attributes to mention the caveat of not using `slug` or `pk`.
+- [#3502](https://github.com/nautobot/nautobot/issues/3502) - Updated upstream workflow to support testing apps `next-2.0` branches against `next`.
+- [#3550](https://github.com/nautobot/nautobot/issues/3550) - Fixed display name of filtered relationships on ObjectListView.
+
+## v1.5.15 (2023-04-04)
+
+### Added
+
+- [#3446](https://github.com/nautobot/nautobot/issues/3446) - Added documentation links for Device Onboarding and LifeCycle Management plugins to docs.nautobot.com menu.
+
+### Changed
+
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Moved extra information stored previously in `block sidebar` to `block header_extra` in page templates (`aggregate_list.html` and `objectchange_list.html`).
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Documented `block header_extra` in `docs/development/templates.md`.
+
+### Dependencies
+
+- [#3499](https://github.com/nautobot/nautobot/issues/3499) - Updated `redis` to 4.5.4. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+
+### Fixed
+
+- [#3206](https://github.com/nautobot/nautobot/issues/3206) - Fixed Docker tag syntax on prerelease workflow.
+- [#3480](https://github.com/nautobot/nautobot/issues/3480) - Fixed an error that could be seen in certain cases with IPAddress records.
+
+### Removed
+
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Removed all remaining instances of `block sidebar` from page templates (`aggregate_list.html` and `objectchange_list.html`).
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Removed documentation about `block sidebar` from `docs/development/templates.md`.
+
+### Security
+
+- [#3499](https://github.com/nautobot/nautobot/issues/3499) - Updated `redis` to 4.5.4 due to CVE-2023-28858 and CVE-2023-28859. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
 ## v1.5.14 (2023-03-20)
 
 ### Added

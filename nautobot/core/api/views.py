@@ -2,7 +2,7 @@ import logging
 import platform
 from collections import OrderedDict
 
-from django import __version__ as DJANGO_VERSION
+from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -758,21 +758,25 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
         except ValidationError as err:
             return Response(err.args[0], status=err.code)
-        model_form = get_form_for_model(model)
-        if model_form is None:
-            logger = logging.getLogger(__name__)
-
-            logger.warning(f"Form for {model} model not found")
-            # Because the DOM Representation cannot be derived from a CharField without a Form, the DOM Representation must be hardcoded.
-            return Response(
-                {
-                    "dom_element": f"<input type='text' name='{field_name}' class='form-control lookup_value-input' id='id_{field_name}'>"
-                }
-            )
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", 404)
 
-        field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
-        return Response({"dom_element": field_dom_representation})
+        try:
+            model_form = get_form_for_model(model)
+            model_form_instance = model_form(auto_id="id_for_%s")
+        except Exception as err:
+            # Cant determine the exceptions to handle because any exception could be raised,
+            # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
+            # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Handled expected exception when generating filter field: {err}")
+
+            # Create a temporary form and get a BoundField for the specified field
+            # This is necessary to generate the HTML representation using as_widget()
+            TempForm = type("TempForm", (forms.Form,), {field_name: form_field})
+            model_form_instance = TempForm(auto_id="id_for_%s")
+
+        bound_field = form_field.get_bound_field(model_form_instance, field_name)
+        return Response({"dom_element": bound_field.as_widget()})
