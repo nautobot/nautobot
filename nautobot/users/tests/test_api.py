@@ -46,10 +46,15 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        User.objects.create(username="User_1")
-        User.objects.create(username="User_2")
-        User.objects.create(username="User_3")
+        user1 = User.objects.create(username="User_1")
+        user1.set_password(None)
+        user1.save()
+        user2 = User.objects.create(username="User_2")
+        user2.set_password(None)
+        user2.save()
+        user3 = User.objects.create(username="User_3")
+        user3.set_password(None)
+        user3.save()
 
 
 class GroupTest(APIViewTestCases.APIViewTestCase):

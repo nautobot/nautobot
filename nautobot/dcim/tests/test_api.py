@@ -2504,47 +2504,47 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
         REDUNDANT = PowerFeedTypeChoices.TYPE_REDUNDANT
-        status = Status.objects.get_for_model(PowerFeed).first()
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[0],
             name="Power Feed 1A",
-            status=status,
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[0],
             name="Power Feed 1B",
-            status=status,
+            status=pf_status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[1],
             name="Power Feed 2A",
-            status=status,
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[1],
             name="Power Feed 2B",
-            status=status,
+            status=pf_status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[2],
             name="Power Feed 3A",
-            status=status,
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[2],
             name="Power Feed 3B",
-            status=status,
+            status=pf_status,
             type=REDUNDANT,
         )
 
