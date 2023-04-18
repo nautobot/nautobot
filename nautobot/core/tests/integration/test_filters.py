@@ -152,7 +152,11 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath("//a[@href='#advanced-filter']").click()
         self.assertEqual(self.browser.find_by_name(text_field_name)[2].value, "test new")
         self.assertEqual(self.browser.find_by_name(integer_field_name)[2].value, "1111")
-        self.assertEqual(self.browser.find_by_name(select_field_name)[2].value, "Option B")
+        # CustomSelect Field is a MultiValueCharField, and the only way to get its values is using this approach.
+        # Its values are the  options available on the select field
+        custom_select_field = self.browser.find_by_name(select_field_name)[2].find_by_tag("option")
+        self.assertEqual(custom_select_field[0].value, "Option A")
+        self.assertEqual(custom_select_field[1].value, "Option B")
 
         # Assert on update of field in Advanced Filter the update is replicated on Default Filter
         self.change_field_value(text_field_name, "test new update", idx=2)
@@ -163,7 +167,10 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath("//a[@href='#default-filter']").click()
         self.assertEqual(self.browser.find_by_name(text_field_name)[1].value, "test new update")
         self.assertEqual(self.browser.find_by_name(integer_field_name)[1].value, "8888")
-        self.assertEqual(self.browser.find_by_name(select_field_name)[1].value, "Option C")
+        custom_select_values = self.browser.find_by_name(select_field_name)[1].find_by_tag("option")
+        self.assertEqual(custom_select_values[0].value, "Option A")
+        self.assertEqual(custom_select_values[1].value, "Option B")
+        self.assertEqual(custom_select_values[2].value, "Option C")
 
         # Assert on update of filter, the new filter is applied
         self.browser.find_by_xpath(apply_btn_xpath).click()  # Click on apply filter button
