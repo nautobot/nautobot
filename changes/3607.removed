@@ -1,1 +1,1 @@
-Removed slug as the default lookup_field for NautobotUIViewSet making pk the default value.
+Removed `"slug"` as the default `lookup_field` for `NautobotUIViewSet`, making `"pk"` now the default value.
