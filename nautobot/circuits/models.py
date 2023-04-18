@@ -55,7 +55,7 @@ class ProviderNetwork(PrimaryModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("circuits:providernetwork", args=[self.slug])
+        return reverse("circuits:providernetwork", args=[self.pk])
 
     def to_csv(self):
         return (

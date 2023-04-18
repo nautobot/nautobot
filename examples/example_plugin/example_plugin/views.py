@@ -74,7 +74,6 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     filterset_class = filters.ExampleModelFilterSet
     filterset_form_class = forms.ExampleModelFilterForm
     form_class = forms.ExampleModelForm
-    lookup_field = "pk"
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
@@ -96,7 +95,6 @@ class AnotherExampleModelUIViewSet(
     filterset_class = filters.AnotherExampleModelFilterSet
     filterset_form_class = forms.AnotherExampleModelFilterForm
     form_class = forms.AnotherExampleModelForm
-    lookup_field = "pk"
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
