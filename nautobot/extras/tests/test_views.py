@@ -1871,6 +1871,32 @@ class JobTestCase(
         self.assertHttpStatus(response, 200)
         self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_read_only_without_dryrun(self, _):
+        self.add_permissions("extras.run_job")
+
+        read_only_job = Job.objects.get(job_class_name="TestReadOnlyJob")
+        read_only_job.enabled = True
+        read_only_job.save()
+
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": False,
+            "var": "teststring",
+        }
+
+        run_url = reverse("extras:job_run", kwargs={"slug": read_only_job.slug})
+
+        # Assert error message shows after post
+        response = self.client.post(run_url, data)
+        self.assertHttpStatus(response, 200, msg=run_url)
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
+            content,
+        )
+
 
 class JobButtonTestCase(
     ViewTestCases.CreateObjectViewTestCase,

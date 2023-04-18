@@ -231,10 +231,10 @@ class JobTest(TransactionTestCase):
 
     def test_read_only_no_dryrun_field(self):
         """
-        Job read only test dryrun field is not shown.
+        Assert that dryrun form field is not shown when a job is set as read only.
         """
-        module = "test_read_only_no_dryrun_form_field"
-        name = "TestReadOnlyNoDryRunField"
+        module = "test_read_only_job"
+        name = "TestReadOnlyJob"
         job_class = get_job(f"local/{module}/{name}")
 
         form = job_class().as_form()
@@ -420,6 +420,23 @@ class JobTest(TransactionTestCase):
             </select><br><span class="helptext">The task queue to route this job to</span></td></tr>""",
             form.as_table(),
         )
+
+    def test_supports_dryrun(self):
+        """
+        Test job class supports_dryrun field and job model supports_dryrun field
+        """
+
+        module = "test_dry_run"
+        name = "TestDryRun"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertTrue(job_class.supports_dryrun)
+        self.assertTrue(job_model.supports_dryrun)
+
+        module = "test_pass"
+        name = "TestPass"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_class.supports_dryrun)
+        self.assertFalse(job_model.supports_dryrun)
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -772,7 +789,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="nautobot.extras.jobs.scheduled_job_handler",
+                task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
                 job_class="local/test_pass/TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
@@ -782,7 +799,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         ScheduledJob.objects.create(
             name="test7",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
@@ -811,7 +828,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = ScheduledJob.objects.create(
             name="weekly_interval",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,

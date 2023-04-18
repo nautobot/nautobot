@@ -171,7 +171,7 @@ Important notes about hidden jobs:
 
 Default: `False`
 
-A boolean that when set will only allow the job to run when the `dryrun` argument is set to `True`. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
+A boolean that when set will only allow the job to run when the `dryrun` argument is set to `True`. The job input form is also modified to remove the `dryrun` checkbox as it is irrelevant for read-only jobs. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 #### `soft_time_limit`
 
@@ -427,7 +427,7 @@ class CreateDevices(Job):
         ...
 ```
 
-Again, defining user variables is totally optional; you may create a job with just a `run()` method if no user input is needed.
+Again, defining user variables is totally optional; you may create a job with a `run()` method with only the `self` argument if no user input is needed.
 
 !!! warning
     When writing Jobs that create and manipulate data it is recommended to make use of the `validated_save()` convenience method which exists on all core models. This method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../development/best-practices.md).
@@ -586,7 +586,7 @@ When providing input data, it is possible to specify complex values contained in
 
 #### Jobs with Files
 
-To run a job that contains `FileVar` inputs via the REST API, you must use `multipart/form-data` content type requests instead of `application/json`. This also requires a slightly different request payload than the example above. The `task_queue`, and `schedule` data are flattened and prefixed with underscore to differentiate them from job-specific data. Job specific data is also flattened and not located under the top-level `data` dictionary key.
+To run a job that contains `FileVar` inputs via the REST API, you must use `multipart/form-data` content type requests instead of `application/json`. This also requires a slightly different request payload than the example above. The `task_queue` and `schedule` data are flattened and prefixed with underscore to differentiate them from job-specific data. Job specific data is also flattened and not located under the top-level `data` dictionary key.
 
 An example of running a job with both `FileVar` (named `myfile`) and `StringVar` (named `interval`) input:
 
@@ -660,7 +660,7 @@ class MyJobTestCase(TransactionTestCase):
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
         job_result = run_job_for_testing(job, var1="abc", var2=123)
 
-        # inspect the logs created by running the job
+        # Inspect the logs created by running the job
         log_entries = JobLogEntry.objects.filter(job_result=job_result)
         for log_entry in log_entries:
             self.assertEqual(log_entry.message, "...")
@@ -776,7 +776,7 @@ class NewBranch(Job):
     )
 
     def run(self, site_name, switch_count, switch_model):
-        STATUS_PLANNED = Status.objects.get(slug='planned')
+        STATUS_PLANNED = Status.objects.get(name='Planned')
 
         # Create the new site
         site = Site(

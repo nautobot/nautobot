@@ -2,7 +2,7 @@ from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import DryRunVar, Job, StringVar
 
 
-class TestReadOnlyNoDryRunField(Job):
+class TestReadOnlyJob(Job):
     """My job demo."""
 
     dryrun = DryRunVar()
@@ -12,4 +12,4 @@ class TestReadOnlyNoDryRunField(Job):
         read_only = True
 
 
-register_jobs(TestReadOnlyNoDryRunField)
+register_jobs(TestReadOnlyJob)

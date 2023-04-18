@@ -1849,6 +1849,27 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_read_only_without_dryrun(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "data": {"dryrun": False, "var": "teststring"},
+        }
+        read_only_job = Job.objects.get_for_class_path("local/test_read_only_job/TestReadOnlyJob")
+        read_only_job.enabled = True
+        read_only_job.validated_save()
+        url = self.get_run_url("local/test_read_only_job/TestReadOnlyJob")
+
+        # Assert error message shows after post
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        # breakpoint()
+        self.assertEqual(
+            response.data["data"]["dryrun"][0],
+            "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
+        )
+
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
     model = JobHook
@@ -2121,7 +2142,7 @@ class ScheduledJobTest(
         job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2131,7 +2152,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2141,7 +2162,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2160,9 +2181,22 @@ class JobApprovalTest(APITestCase):
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=cls.job_model.class_path,
             job_model=cls.job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=cls.additional_user,
+            approval_required=True,
+            start_time=now(),
+        )
+        cls.dryrun_job_model = Job.objects.get_for_class_path("local/test_dry_run/TestDryRun")
+        cls.dryrun_job_model.enabled = True
+        cls.dryrun_job_model.save()
+        cls.dryrun_scheduled_job = ScheduledJob.objects.create(
+            name="test",
+            task="nautobot.extras.tests.example_jobs.test_dry_run.TestDryRun",
+            job_class=cls.dryrun_job_model.class_path,
+            job_model=cls.dryrun_job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
             approval_required=True,
@@ -2201,7 +2235,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2225,7 +2259,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
@@ -2243,7 +2277,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
@@ -2287,7 +2321,7 @@ class JobApprovalTest(APITestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_dry_run_job_without_permission(self):
-        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.dryrun_scheduled_job.pk})
         with disable_warnings("django.request"):
             response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
@@ -2295,16 +2329,23 @@ class JobApprovalTest(APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_job_without_run_job_permission(self):
         self.add_permissions("extras.view_scheduledjob")
-        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.dryrun_scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_job(self):
         self.add_permissions("extras.run_job", "extras.view_scheduledjob")
-        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.dryrun_scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_dry_run_not_supported(self):
+        self.add_permissions("extras.run_job", "extras.view_scheduledjob")
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
+        response = self.client.post(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):

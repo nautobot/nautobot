@@ -155,7 +155,6 @@
                 <td>Supports Dryrun</td>
                 <td>{{ object.supports_dryrun | render_boolean }}</td>
             </tr>
-            {% if object.supports_dryrun %}
             <tr>
                 <td>Default to Dryrun</td>
                 <td>{{ object.dryrun_default | render_boolean }}</td>
@@ -188,7 +187,6 @@
                     {% endif %}
                 </td>
             </tr>
-            {% endif %}
             <tr>
                 <td>Hide from Default UI</td>
                 <td>{{ object.hidden | render_boolean }}</td>
