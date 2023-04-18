@@ -1,2 +1,2 @@
-Fixed an issue where sending a PATCH to `/api/dcim/interfaces/(uuid)/` might reset the interface's status to `Active`.
-Fixed an issue where sending a PATCH to `/api/users/tokens/(uuid)/` might change the token's value.
+Fixed an issue where sending a PATCH to `/api/dcim/interfaces/(uuid)/` might inadvertently reset the interface's status to `Active`.
+Fixed an issue where sending a PATCH to `/api/users/tokens/(uuid)/` might inadvertently change the token's value.
