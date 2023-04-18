@@ -1156,6 +1156,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
+            profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1231,6 +1232,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
+                    profile=profile,
                     task_queue=job_form.cleaned_data.get("_task_queue", None),
                 )
 

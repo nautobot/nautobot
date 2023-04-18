@@ -148,6 +148,32 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.17 (2023-04-17)
+
+### Added
+
+- [#3484](https://github.com/nautobot/nautobot/issues/3484) - Added job profiling option to job execution when in DEBUG mode.
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - Added the ability to change the `CACHES["default"]["BACKEND"]` via an environment variable `NAUTOBOT_CACHES_BACKEND`
+
+### Changed
+
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - The default database backend if `METRICS_ENABLED` is `True` is now "django_prometheus.db.backends.postgresql"
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - The default CACHES backend if `METRICS_ENABLED` is `True` is now "django_prometheus.cache.backends.redis.RedisCache"
+- [#3548](https://github.com/nautobot/nautobot/issues/3548) - Changed Git Repository docs to include admonition about Github Apps.
+- [#3595](https://github.com/nautobot/nautobot/issues/3595) - Update the warning provided when a bad reverse entry is not found in serializer to point to correct import location.
+
+### Dependencies
+
+- [#3525](https://github.com/nautobot/nautobot/issues/3525) - Added explicit dependency on `packaging` that had been inadvertently omitted.
+
+### Fixed
+
+- [#3116](https://github.com/nautobot/nautobot/issues/3116) - Fixed JSON comparison of `data_scheme` keys in `assertInstanceEqual` tests.
+- [#3573](https://github.com/nautobot/nautobot/issues/3573) - Fixed advanced filtering on interface UI list page not working.
+- [#3577](https://github.com/nautobot/nautobot/issues/3577) - Fixed `NautobotUIViewSet` documentation example for case sensitive typos.
+- [#3577](https://github.com/nautobot/nautobot/issues/3577) - Fixed `NautobotUIViewSet` documentation example not including imports.
+- [#3598](https://github.com/nautobot/nautobot/issues/3598) - Fixed default sanitizer patterns to account for strings beginning with `i` or `is`.
+
 ## v1.5.16 (2023-04-10)
 
 ### Added
