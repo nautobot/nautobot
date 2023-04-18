@@ -31,10 +31,6 @@ class Migration(migrations.Migration):
             name="slug",
         ),
         migrations.RemoveField(
-            model_name="role",
-            name="slug",
-        ),
-        migrations.RemoveField(
             model_name="secret",
             name="slug",
         ),

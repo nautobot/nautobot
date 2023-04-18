@@ -37,12 +37,6 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("name", models.CharField(max_length=100, unique=True)),
-                (
-                    "slug",
-                    nautobot.core.models.fields.AutoSlugField(
-                        blank=True, max_length=100, populate_from="name", unique=True
-                    ),
-                ),
                 ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("weight", models.PositiveSmallIntegerField(blank=True, null=True)),

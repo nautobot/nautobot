@@ -45,13 +45,14 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, username="test-user", **kwargs):
+def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
     Args:
       job (Job): Job model instance (not Job class) to run
       username (str): Username of existing or to-be-created User account to own the JobResult.
+      profile (bool): Whether to profile the job execution.
       **kwargs: Input keyword arguments for Job run method.
 
     Returns:
@@ -69,6 +70,7 @@ def run_job_for_testing(job, username="test-user", **kwargs):
     job_result = JobResult.execute_job(
         job_model=job,
         user=user_instance,
+        profile=profile,
         **kwargs,
     )
     return job_result

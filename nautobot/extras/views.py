@@ -1152,6 +1152,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             task_queue = job_form.cleaned_data.get("_task_queue", None)
             # Run the job. A new JobResult is created.
+            profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1210,6 +1211,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
+                    profile=profile,
                     celery_kwargs={"queue": task_queue},
                     **job_model.job_class.serialize_data(job_kwargs),
                 )

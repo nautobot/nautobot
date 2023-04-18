@@ -71,6 +71,8 @@ markdown_extensions:
   - "toc":
       permalink: true
   - "attr_list"
+  - "markdown_data_tables":
+      base_path: "docs"
   - "md_in_html"
   - "pymdownx.details"
   - "pymdownx.highlight":

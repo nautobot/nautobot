@@ -124,6 +124,24 @@ class BaseJob(Task):
         self.active_test = "run"
         context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
         change_context = context_class(user=self.user, context_detail=self.class_path)
+        # TODO: re-add profiling feature
+        # if profile:
+        #     import cProfile
+
+        #     # TODO: This should probably be available as a file download rather than dumped to the hard drive.
+        #     # Pending this: https://github.com/nautobot/nautobot/issues/3352
+        #     profiling_path = f"/tmp/nautobot-jobresult-{self.request.id}.pstats"
+
+        #     # TODO: Context manager for this is added in 3.8
+        #     profiler = cProfile.Profile()
+        #     profiler.enable()
+        #     output = job.run(data=data, commit=commit)
+        #     profiler.disable()
+        #     profiler.dump_stats(profiling_path)
+        #     job.log_info(obj=None, message=f"Wrote profiling information to {profiling_path}.")
+        # else:
+        #     output = job.run(data=data, commit=commit)
+
         with change_logging(change_context):
             return self.run(*args, **deserialized_kwargs)
 
@@ -471,6 +489,9 @@ class BaseJob(Task):
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
+
+        if not settings.DEBUG:
+            form.fields["_profile"].widget = forms.HiddenInput()
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
