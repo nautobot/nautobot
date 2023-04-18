@@ -96,7 +96,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         custom_field_type_to_filter_map = {
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldMultiValueDateFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldMultiValueNumberFilter,
-            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiValueCharFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
             CustomFieldTypeChoices.TYPE_TEXT: CustomFieldMultiValueCharFilter,
             CustomFieldTypeChoices.TYPE_URL: CustomFieldMultiValueCharFilter,
