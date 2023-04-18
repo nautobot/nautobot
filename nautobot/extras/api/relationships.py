@@ -162,7 +162,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
         return data
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
-        return nested_serializer_factory(field_name, relation_info, nested_depth)
+        return nested_serializer_factory(self, field_name, relation_info, nested_depth)
 
     def to_internal_value(self, data):
         """

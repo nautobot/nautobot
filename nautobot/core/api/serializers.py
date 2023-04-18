@@ -231,7 +231,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         return super().build_property_field(field_name, model_class)
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
-        return nested_serializer_factory(field_name, relation_info, nested_depth)
+        return nested_serializer_factory(self, field_name, relation_info, nested_depth)
 
 
 class TreeModelSerializerMixin(BaseModelSerializer):

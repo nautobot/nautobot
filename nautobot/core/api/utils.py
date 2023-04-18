@@ -2,7 +2,6 @@ from collections import namedtuple
 import logging
 import platform
 import sys
-import uuid
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -200,7 +199,26 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
     return relation_info
 
 
-def nested_serializer_factory(field_name, relation_info, nested_depth):
+NESTED_SERIALIZER_NAME_CACHE = {}
+
+
+def get_nested_serializer_name(serializer_name):
+    """
+    Use a cache to keep track of used NestedSerializer names.
+    Return a new NestedSerializer name for nested_serializer_factory()
+    if serializer_name is taken to avoid collision in our OpenAPISchema.
+    """
+    # We do not use serializer name to access the cache, because serializer_name is being updated.
+    old_name = serializer_name
+    if old_name in NESTED_SERIALIZER_NAME_CACHE:
+        serializer_name += str(NESTED_SERIALIZER_NAME_CACHE[old_name])
+        NESTED_SERIALIZER_NAME_CACHE[old_name] += 1
+    else:
+        NESTED_SERIALIZER_NAME_CACHE[old_name] = 1
+    return serializer_name
+
+
+def nested_serializer_factory(serializer, field_name, relation_info, nested_depth):
     """
     Return a NestedSerializer representation of a serializer field.
     This method should only be called in build_nested_field()
@@ -222,7 +240,16 @@ def nested_serializer_factory(field_name, relation_info, nested_depth):
     # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
     # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
     # does not make our schema happy.
-    NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
+    # NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
+    if hasattr(serializer, "queryset"):
+        model_name = serializer.queryset.model._meta.model_name
+    else:
+        model_name = serializer.Meta.model._meta.model_name
+    nested_serializer_name = (
+        f"{model_name.capitalize()}{relation_info.related_model._meta.model_name.capitalize()}"
+        + "NautobotNestedSerializer"
+    )
+    NautobotNestedSerializer.__name__ = get_nested_serializer_name(nested_serializer_name)
     field_class = NautobotNestedSerializer
     field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
