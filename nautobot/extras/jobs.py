@@ -345,6 +345,9 @@ class BaseJob:
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
+        if not settings.DEBUG:
+            form.fields["_profile"].widget = forms.HiddenInput()
+
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
             form.order_fields(self.field_order)
@@ -1081,7 +1084,7 @@ class RunJobTaskFailed(Exception):
 
 
 @nautobot_task
-def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
+def run_job(data, request, job_result_pk, commit=True, profile=False, *args, **kwargs):
     """
     Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
 
@@ -1188,7 +1191,22 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             with transaction.atomic():
                 # Script-like behavior
                 job.active_test = "run"
-                output = job.run(data=data, commit=commit)
+                if profile:
+                    import cProfile
+
+                    # TODO: This should probably be available as a file download rather than dumped to the hard drive.
+                    # Pending this: https://github.com/nautobot/nautobot/issues/3352
+                    profiling_path = f"/tmp/nautobot-jobresult-{job_result_pk}.pstats"
+
+                    # TODO: Context manager for this is added in 3.8
+                    profiler = cProfile.Profile()
+                    profiler.enable()
+                    output = job.run(data=data, commit=commit)
+                    profiler.disable()
+                    profiler.dump_stats(profiling_path)
+                    job.log_info(obj=None, message=f"Wrote profiling information to {profiling_path}.")
+                else:
+                    output = job.run(data=data, commit=commit)
                 if output:
                     job.results["output"] += "\n" + str(output)
 

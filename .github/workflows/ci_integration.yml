@@ -74,7 +74,7 @@ jobs:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
         image: "postgres:13-alpine"
@@ -103,7 +103,7 @@ jobs:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
@@ -135,7 +135,7 @@ jobs:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
@@ -167,7 +167,7 @@ jobs:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
         image: "postgres:13-alpine"
@@ -212,7 +212,7 @@ jobs:
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
       NAUTOBOT_DB_HOST: "127.0.0.1"
       NAUTOBOT_DB_PORT: "3306"
-      NAUTOBOT_DB_ENGINE: "django.db.backends.mysql"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
     services:
       mysql:
         image: "mysql:8"
@@ -255,7 +255,7 @@ jobs:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
       NAUTOBOT_SELENIUM_URL: "http://localhost:4444/wd/hub"
     services:
       postgres:
