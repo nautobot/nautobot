@@ -536,6 +536,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.maxDiff = None
         self.assertEqual(
+            # We expect a drf list of errors [ErrorDetail(string='This field is required.', code='required')]
             str(response.data["label"][0]),
             # Since we are setting blank=True on the key field, we only need to check
             # error messages from the label field.

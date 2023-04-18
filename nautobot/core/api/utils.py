@@ -2,12 +2,14 @@ from collections import namedtuple
 import logging
 import platform
 import sys
+import uuid
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.utils import formatting
+from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api import exceptions
@@ -196,6 +198,34 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
         reverse=False,
     )
     return relation_info
+
+
+def nested_serializer_factory(field_name, relation_info, nested_depth):
+    """
+    Return a NestedSerializer representation of a serializer field.
+    This method should only be called in build_nested_field()
+    in which field_name, relation_info and nested_depth are already given.
+    """
+    field = get_serializer_for_model(relation_info.related_model)
+
+    class NautobotNestedSerializer(field):
+        class Meta:
+            model = relation_info.related_model
+            depth = nested_depth - 1
+            if hasattr(field.Meta, "fields"):
+                fields = field.Meta.fields
+            if hasattr(field.Meta, "exclude"):
+                exclude = field.Meta.exclude
+
+    # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
+    # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90
+    # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
+    # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
+    # does not make our schema happy.
+    NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
+    field_class = NautobotNestedSerializer
+    field_kwargs = get_nested_relation_kwargs(relation_info)
+    return field_class, field_kwargs
 
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):

@@ -227,13 +227,18 @@ class ModelViewSetMixin:
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        depth = 0
-        try:
-            depth = int(self.request.query_params.get("depth", 0))
-        except ValueError:
-            self.logger.warning("The depth parameter must be an integer between 0 and 10")
+        # Only allow the depth to be greater than 0 in GET requests
+        # Use depth=0 in all write type requests.
+        if self.request.method == "GET":
+            depth = 0
+            try:
+                depth = int(self.request.query_params.get("depth", 0))
+            except ValueError:
+                self.logger.warning("The depth parameter must be an integer between 0 and 10")
 
-        context["depth"] = depth
+            context["depth"] = depth
+        else:
+            context["depth"] = 0
 
         return context
 

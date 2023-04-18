@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -7,11 +6,10 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework.fields import JSONField
 from rest_framework.reverse import reverse
 from rest_framework.serializers import ValidationError
-from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import WritableSerializerMixin
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model, nested_serializer_factory
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import Relationship
 
@@ -164,30 +162,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
         return data
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
-        field = get_serializer_for_model(relation_info.related_model)
-
-        class NautobotNestedSerializer(field, WritableSerializerMixin):
-            def to_internal_value(self, data):
-                # We need to specify which to_internal_value() to use here.
-                return super(WritableSerializerMixin).to_internal_value(data)
-
-            class Meta:
-                model = relation_info.related_model
-                depth = nested_depth - 1
-                if hasattr(field.Meta, "fields"):
-                    fields = field.Meta.fields
-                if hasattr(field.Meta, "exclude"):
-                    exclude = field.Meta.exclude
-
-        # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
-        # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90
-        # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
-        # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
-        # does not make our schema happy.
-        NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
-        field_class = NautobotNestedSerializer
-        field_kwargs = get_nested_relation_kwargs(relation_info)
-        return field_class, field_kwargs
+        return nested_serializer_factory(field_name, relation_info, nested_depth)
 
     def to_internal_value(self, data):
         """

@@ -24,8 +24,6 @@ class StatusModelSerializerMixin(BaseModelSerializer):
     def get_field_names(self, declared_fields, info):
         """Ensure that "status" field is always present."""
         fields = list(super().get_field_names(declared_fields, info))
-        if self.__class__.__name__ == "NestedSerializer":
-            return fields
         self.extend_field_names(fields, "status")
         return fields
 

@@ -266,10 +266,10 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     )
     # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
     # using their own endpoint at /api/extras/dynamic-group-memberships/.
-    child_groups = serializers.SerializerMethodField(read_only=True)
+    children = serializers.SerializerMethodField(read_only=True)
 
     @extend_schema_field(DynamicGroupMembershipSerializer)
-    def get_child_groups(self, obj):
+    def get_children(self, obj):
         depth = int(self.context.get("depth", 0))
         return return_nested_serializer_data_based_on_depth(
             self, depth, obj, obj.dynamic_group_memberships, "dynamic_group_memberships"
@@ -277,10 +277,7 @@ class DynamicGroupSerializer(NautobotModelSerializer):
 
     class Meta:
         model = DynamicGroup
-        # renamed it to child_groups here because of
-        # an if statement in select2.min.js
-        # search if(e.children) to find out
-        exclude = ["children"]
+        fields = "__all__"
         extra_kwargs = {"filter": {"read_only": False}}
 
 

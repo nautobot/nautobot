@@ -17,14 +17,13 @@ from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
-from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.api.utils import (
     dict_to_filter_params,
-    get_serializer_for_model,
+    nested_serializer_factory,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
@@ -232,27 +231,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         return super().build_property_field(field_name, model_class)
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
-        field = get_serializer_for_model(relation_info.related_model)
-
-        class NautobotNestedSerializer(field):
-            class Meta:
-                model = relation_info.related_model
-                depth = nested_depth - 1
-                if hasattr(field.Meta, "fields"):
-                    fields = field.Meta.fields
-                if hasattr(field.Meta, "exclude"):
-                    exclude = field.Meta.exclude
-
-        # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
-        # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90
-        # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
-        # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
-        # does not make our schema happy.
-        NautobotNestedSerializer.__name__ = "NautobotNestedSerializer" + f"{uuid.uuid1()}"
-        field_class = NautobotNestedSerializer
-        field_kwargs = get_nested_relation_kwargs(relation_info)
-
-        return field_class, field_kwargs
+        return nested_serializer_factory(field_name, relation_info, nested_depth)
 
 
 class TreeModelSerializerMixin(BaseModelSerializer):

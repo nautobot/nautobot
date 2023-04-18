@@ -53,8 +53,6 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * Every model should have a docstring. Every custom method should include an explanation of its function.
 
-* Nested API serializers generate minimal representations of an object. These are stored separately from the primary serializers to avoid circular dependencies. Always import nested serializers from other apps directly. For example, from within the DCIM app you would write `from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer`.
-
 * The combination of `nautobot.core.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedModelFilterSetMixin`, `nautobot.extras.filters.CustomFieldModelFilterSetMixin`, and `nautobot.extras.filters.RelationshipModelFilterSetMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these classes.
 
 * The combination of `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.

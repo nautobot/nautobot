@@ -11,7 +11,6 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
-from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -207,7 +206,6 @@ class APIViewTestCases:
                         depth_fields.append(field.name)
                     elif field.name == "tags":
                         depth_fields.append(field.name)
-                    # user is a model field but not a field on the TokenSerializer
             return depth_fields
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -246,15 +244,15 @@ class APIViewTestCases:
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
-            response_data = response.data["results"][0]
-            for field in depth_fields:
-                self.assertIn(field, response_data)
-                if isinstance(response_data[field], list):
-                    for entry in response_data[field]:
-                        self.assertTrue(is_uuid(entry))
-                else:
-                    if response_data[field] is not None:
-                        self.assertTrue(is_uuid(response_data[field]))
+            for response_data in response.data["results"]:
+                for field in depth_fields:
+                    self.assertIn(field, response_data)
+                    if isinstance(response_data[field], list):
+                        for entry in response_data[field]:
+                            self.assertTrue(is_uuid(entry))
+                    else:
+                        if response_data[field] is not None:
+                            self.assertTrue(is_uuid(response_data[field]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
@@ -271,49 +269,17 @@ class APIViewTestCases:
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
-            response_data = response.data["results"][0]
-            for field in depth_fields:
-                self.assertIn(field, response_data)
-                if isinstance(response_data[field], list):
-                    for entry in response_data[field]:
-                        self.assertIsInstance(entry, dict)
-                        self.assertTrue(is_uuid(entry["id"]))
-                else:
-                    if response_data[field] is not None:
-                        self.assertIsInstance(response_data[field], dict)
-                        self.assertTrue(is_uuid(response_data[field]["id"]))
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_list_objects_depth_2(self):
-            """
-            GET a list of objects using the "?depth=2" parameter.
-            TreeModel Only
-            """
-            if not issubclass(self.model, TreeModel):
-                self.skipTest(f"Model {self.model._meta.model_name} is not a TreeModel")
-            field = "parent"
-
-            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?depth=2"
-            response = self.client.get(url, **self.header)
-
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            self.assertIsInstance(response.data, dict)
-            self.assertIn("results", response.data)
-            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-
-            response_data = response.data["results"]
-            for data in response_data:
-                # First Level Parent
-                self.assertEqual(field in data, True)
-                if data[field] is not None:
-                    self.assertIsInstance(data[field], dict)
-                    self.assertTrue(is_uuid(data[field]["id"]))
-                    # Second Level Parent
-                    self.assertIn(field, data[field])
-                    if data[field][field] is not None:
-                        self.assertIsInstance(data[field][field], dict)
-                        self.assertTrue(is_uuid(data[field][field]["id"]))
+            for response_data in response.data["results"]:
+                for field in depth_fields:
+                    self.assertIn(field, response_data)
+                    if isinstance(response_data[field], list):
+                        for entry in response_data[field]:
+                            self.assertIsInstance(entry, dict)
+                            self.assertTrue(is_uuid(entry["id"]))
+                    else:
+                        if response_data[field] is not None:
+                            self.assertIsInstance(response_data[field], dict)
+                            self.assertTrue(is_uuid(response_data[field]["id"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -472,7 +438,13 @@ class APIViewTestCases:
 
             initial_count = self._get_queryset().count()
             for i, create_data in enumerate(self.create_data):
-                response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+                if i == len(self.create_data):
+                    # Test to see if depth parameter is ignored in POST request.
+                    response = self.client.post(
+                        self._get_list_url() + "?depth=3", create_data, format="json", **self.header
+                    )
+                else:
+                    response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_201_CREATED)
                 self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
                 instance = self._get_queryset().get(pk=response.data["id"])
