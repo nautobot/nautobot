@@ -7,7 +7,7 @@ import {
     DcimIcon,
     StatusIndicator,
     Text,
-    Button
+    Button,
 } from "@nautobot/nautobot-ui";
 import { useLocation } from "react-router-dom";
 import {
@@ -43,7 +43,8 @@ export default function Layout({ children }) {
         toRender = <LoadingWidget name="application" />;
 
     function legacyUI() {
-        document.cookie = "newui=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+        document.cookie =
+            "newui=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.location.reload(true);
     }
 
@@ -85,7 +86,9 @@ export default function Layout({ children }) {
                                 Log In
                             </RouterButton>
                         )}
-                        <Button onClick={legacyUI} variant='link' color="white">Return to Legacy UI</Button>
+                        <Button onClick={legacyUI} variant="link" color="white">
+                            Return to Legacy UI
+                        </Button>
                     </Sidebar>
                 </Box>
                 <Box flex="1" overflow="auto">
