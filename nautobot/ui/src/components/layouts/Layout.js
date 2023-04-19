@@ -7,6 +7,7 @@ import {
     DcimIcon,
     StatusIndicator,
     Text,
+    Button
 } from "@nautobot/nautobot-ui";
 import { useLocation } from "react-router-dom";
 import {
@@ -40,6 +41,11 @@ export default function Layout({ children }) {
 
     if (!sessionLoaded || !menuLoaded || sessionInfo === undefined)
         toRender = <LoadingWidget name="application" />;
+
+    function legacyUI() {
+        document.cookie = "newui=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+        document.location.reload(true);
+    }
 
     // TODO: This needs to be moved to useEffect. Weird order of operations.
     // const path = location.pathname
@@ -79,6 +85,7 @@ export default function Layout({ children }) {
                                 Log In
                             </RouterButton>
                         )}
+                        <Button onClick={legacyUI} variant='link' color="white">Return to Legacy UI</Button>
                     </Sidebar>
                 </Box>
                 <Box flex="1" overflow="auto">
