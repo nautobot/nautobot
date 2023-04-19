@@ -1,5 +1,6 @@
 import pstats
 
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 
 
@@ -10,7 +11,7 @@ class TestProfilingJob(Job):
 
     description = "Test profiling"
 
-    def run(self, data, commit):
+    def run(self):
         """
         Job function.
         """
@@ -19,5 +20,9 @@ class TestProfilingJob(Job):
 
         return []
 
-    def post_run(self):
+    def after_return(self, status, retval, task_id, args, kwargs, einfo):
+        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
         pstats.Stats(f"/tmp/nautobot-jobresult-{self.job_result.id}.pstats")
+
+
+register_jobs(TestProfilingJob)

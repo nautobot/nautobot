@@ -441,6 +441,25 @@ class JobTest(TransactionTestCase):
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 
+    def test_dryrun_default(self):
+        """Test that dryrun_default is reflected in job form."""
+        module = "test_dry_run"
+        name = "TestDryRun"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        # not overridden on job model, initial form field value should match job class
+        job_model.dryrun_default_override = False
+        job_model.save()
+        form = job_class().as_form()
+        self.assertEqual(form.fields["dryrun"].initial, job_class.dryrun_default)
+
+        # overridden on job model, initial form field value should match job model
+        job_model.dryrun_default_override = True
+        job_model.dryrun_default = not job_class.dryrun_default
+        job_model.save()
+        form = job_class().as_form()
+        self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
+
 
 class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
