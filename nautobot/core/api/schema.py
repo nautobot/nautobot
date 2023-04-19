@@ -88,7 +88,13 @@ class NautobotAutoSchema(AutoSchema):
             # https://github.com/nautobot/nautobot/actions/runs/4663799363/jobs/8255471066
             # if "depth" not in operation["parameters"]:
             #     operation["parameters"].append(
-            #         {"in": "query", "name": "depth", "description": "Serializer Depth", "type": "integer"}
+            #         {
+            #             "in": "query",
+            #             "name": "depth",
+            #             "description": "Serializer Depth",
+            #             "schema": {"type": "integer"},
+            #             "default": 1,
+            #         }
             #     )
         return operation
 

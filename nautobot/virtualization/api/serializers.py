@@ -60,7 +60,6 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class VirtualMachineSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
-    # TODO #3024 How to get rid of this?
     primary_ip = IPAddressSerializer(read_only=True)
 
     class Meta:

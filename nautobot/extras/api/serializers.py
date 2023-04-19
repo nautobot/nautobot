@@ -402,7 +402,6 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         PolymorphicProxySerializer(
             component_name="ImageAttachmentParent",
             resource_type_field_name="object_type",
-            # TODO #3024: How to get rid of this with the circular import problem for NautobotModelSerializers.
             serializers=[
                 DeviceSerializer,
                 LocationSerializer,
@@ -611,7 +610,6 @@ class JobCreationSerializer(BaseModelSerializer):
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
-    # TODO #3024: How to get rid of this?
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
@@ -855,7 +853,6 @@ class SecretsGroupSerializer(NautobotModelSerializer):
     # a `through` table, that appears very non-trivial to implement. For now we have this as a
     # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
     # api/extras/secrets-group-associations/ REST endpoint as appropriate.
-    # TODO #3024: How to get rid of this?
     secrets = serializers.SerializerMethodField(read_only=True)
 
     @extend_schema_field(SecretsGroupAssociationSerializer)

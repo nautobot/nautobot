@@ -846,7 +846,6 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
         model = Interface
         fields = ["interface_a", "interface_b", "connected_endpoint_reachable"]
 
-    # TODO #3024: How to get rid of this?
     @extend_schema_field(InterfaceSerializer)
     def get_interface_a(self, obj):
         context = {"request": self.context["request"]}
