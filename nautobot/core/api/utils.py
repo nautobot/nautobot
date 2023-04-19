@@ -202,21 +202,24 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
 NESTED_SERIALIZER_NAME_CACHE = {}
 
 
-def get_nested_serializer_name(view_name, serializer_name):
+def get_available_nested_serializer_name(key, serializer_name):
     """
     Use a cache to keep track of used NestedSerializer names.
     Return a new NestedSerializer name for nested_serializer_factory()
     if serializer_name is taken to avoid collision in our OpenAPISchema.
+    Args:
+        key: The parent serializer's name
+        serializer_name: Given Nested Serializer Name
     """
     # We do not use serializer name to access the cache, because serializer_name is being updated.
     if serializer_name not in NESTED_SERIALIZER_NAME_CACHE:
-        NESTED_SERIALIZER_NAME_CACHE[serializer_name] = [view_name]
+        NESTED_SERIALIZER_NAME_CACHE[serializer_name] = [key]
         return serializer_name
-    if view_name is not None and view_name not in NESTED_SERIALIZER_NAME_CACHE[serializer_name]:
-        NESTED_SERIALIZER_NAME_CACHE[serializer_name].append(view_name)
+    if key != "" and key not in NESTED_SERIALIZER_NAME_CACHE[serializer_name]:
+        NESTED_SERIALIZER_NAME_CACHE[serializer_name].append(key)
         return serializer_name
 
-    NESTED_SERIALIZER_NAME_CACHE[serializer_name].append(view_name)
+    NESTED_SERIALIZER_NAME_CACHE[serializer_name].append(key)
     serializer_name += str(len(NESTED_SERIALIZER_NAME_CACHE[serializer_name]))
     return serializer_name
 
@@ -251,8 +254,10 @@ def nested_serializer_factory(serializer, field_name, relation_info, nested_dept
         f"{model_name.capitalize()}{relation_info.related_model._meta.model_name.capitalize()}"
         + "NautobotNestedSerializer"
     )
-    serializer_name = get_nested_serializer_name(serializer.context.get("view", None), nested_serializer_name)
-    NautobotNestedSerializer.__name__ = serializer_name
+    parent_name = ""
+    if hasattr(serializer, "parent") and serializer.parent is not None:
+        parent_name = serializer.parent.__class__.__name__
+    NautobotNestedSerializer.__name__ = get_available_nested_serializer_name(parent_name, nested_serializer_name)
     field_class = NautobotNestedSerializer
     field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
