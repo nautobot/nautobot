@@ -1,3 +1,4 @@
+from taggit.managers import TaggableManager
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
@@ -198,13 +199,11 @@ class APIViewTestCases:
             depth_fields = []
             for field in self.model._meta.fields:
                 if not field.name.startswith("_"):
-                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField)) and (
+                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, TaggableManager)) and (
                         field.related_model != ContentType
                         # user is a model field on Token but not a field on TokenSerializer
                         and not (field.name == "user" and self.model == users_models.Token)
                     ):
-                        depth_fields.append(field.name)
-                    elif field.name == "tags":
                         depth_fields.append(field.name)
             return depth_fields
 

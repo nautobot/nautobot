@@ -86,16 +86,16 @@ class NautobotAutoSchema(AutoSchema):
                     param["description"] = "Unique object identifier, either a UUID primary key or a natural-key slug."
             # TODO #3024 make depth a valid schema query parameters
             # https://github.com/nautobot/nautobot/actions/runs/4663799363/jobs/8255471066
-            # if "depth" not in operation["parameters"]:
-            #     operation["parameters"].append(
-            #         {
-            #             "in": "query",
-            #             "name": "depth",
-            #             "description": "Serializer Depth",
-            #             "schema": {"type": "integer"},
-            #             "default": 1,
-            #         }
-            #     )
+            if "depth" not in operation["parameters"]:
+                operation["parameters"].append(
+                    {
+                        "in": "query",
+                        "name": "depth",
+                        "required": False,
+                        "description": "Serializer Depth",
+                        "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
+                    }
+                )
         return operation
 
     def get_operation_id(self):

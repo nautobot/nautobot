@@ -476,250 +476,11 @@ GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
 
 In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
 
-### Excluding Config Contexts
-
-When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext.md) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
-
-### Creating a New Object
-
-To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
-
-```no-highlight
-curl -s -X POST \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
-http://nautobot/api/ipam/prefixes/ \
---data '{"prefix": "192.0.2.0/24", "site": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
-```
-
-```json
-{
-  "id": "48df6965-0fcb-4155-b5f8-00fe8b9b01af",
-  "url": "http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/",
-  "family": {
-    "value": 4,
-    "label": "IPv4"
-  },
-  "prefix": "192.0.2.0/24",
-  "site": {
-    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
-    "url": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
-    "name": "US-East 4",
-    "slug": "us-east-4"
-  },
-  "vrf": null,
-  "tenant": null,
-  "vlan": null,
-  "status": {
-      "display": "Active",
-      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-      "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
-      "name": "Active",
-      "slug": "active",
-      "created": "2019-12-09T16:38:50.363404Z",
-      "last_updated": "2019-12-09T16:38:50.363404Z"
-  },
-  "role": null,
-  "type": "network",
-  "description": "",
-  "tags": [],
-  "custom_fields": {},
-  "created": "2020-08-04T20:08:39.007125Z",
-  "last_updated": "2020-08-04T20:08:39.007125Z"
-}
-```
-
-### Creating Multiple Objects
-
-To create multiple instances of a model using a single request, make a `POST` request to the model's _list_ endpoint with a list of JSON objects representing each instance to be created. If successful, the response will contain a list of the newly created instances. The example below illustrates the creation of three new sites.
-
-```no-highlight
-curl -X POST -H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
-http://nautobot/api/dcim/sites/ \
---data '[
-{"name": "Site 1", "slug": "site-1", "region": {"name": "United States"}},
-{"name": "Site 2", "slug": "site-2", "region": {"name": "United States"}},
-{"name": "Site 3", "slug": "site-3", "region": {"name": "United States"}}
-]'
-```
-
-```json
-[
-    {
-        "id": "0238a4e3-66f2-455a-831f-5f177215de0f",
-        "url": "http://nautobot/api/dcim/sites/0238a4e3-66f2-455a-831f-5f177215de0f/",
-        "name": "Site 1",
-        ...
-    },
-    {
-        "id": "33ac3a3b-0ee7-49b7-bf2a-244096051dc0",
-        "url": "http://nautobot/api/dcim/sites/33ac3a3b-0ee7-49b7-bf2a-244096051dc0/",
-        "name": "Site 2",
-        ...
-    },
-    {
-        "id": "10b3134d-960b-4794-ad18-0e73edd357c4",
-        "url": "http://nautobot/api/dcim/sites/10b3134d-960b-4794-ad18-0e73edd357c4/",
-        "name": "Site 3",
-        ...
-    }
-]
-```
-
-### Updating an Object
-
-To modify an object which has already been created, make a `PATCH` request to the model's _detail_ endpoint specifying its UUID. Include any data which you wish to update on the object. As with object creation, the `Authorization` and `Content-Type` headers must also be specified, and specifying the `Accept` header is also strongly recommended.
-
-```no-highlight
-curl -s -X PATCH \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
-http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
---data '{"status": "reserved"}' | jq '.'
-```
-
-```json
-{
-  "id": "48df6965-0fcb-4155-b5f8-00fe8b9b01af",
-  "url": "http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/",
-  "family": {
-    "value": 4,
-    "label": "IPv4"
-  },
-  "prefix": "192.0.2.0/24",
-  "site": {
-    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
-    "url": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
-    "name": "US-East 4",
-    "slug": "us-east-4"
-  },
-  "vrf": null,
-  "tenant": null,
-  "vlan": null,
-  "status": {
-      "display": "Reserved",
-      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-      "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
-      "name": "Reserved",
-      "slug": "reserved",
-      "created": "2019-12-09T00:00:00Z",
-      "last_updated": "2019-12-09T16:38:50.363404Z"
-  },
-  "role": null,
-  "type": "network",
-  "description": "",
-  "tags": [],
-  "custom_fields": {},
-  "created": "2020-08-04T00:00:00Z",
-  "last_updated": "2020-08-04T20:14:55.709430Z"
-}
-```
-
-!!! note "PUT versus PATCH"
-    The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
-
-#### Updating Relationship Associations
-
-+++ 1.4.0
-
-It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
-
-```json
-{
-    "relationships": {
-        "site-to-vrf": {
-            "destination": {
-                "objects": [
-                    {"name": "blue"}
-                ]
-            }
-        },
-        "vrfs-to-sites": {
-            "source": {
-                "objects": [
-                    {"name": "green"},
-                    {"name": "red"},
-                ]
-            }
-        }
-    }
-}
-```
-
-```json
-{
-    "relationships": {
-        "site-to-vrf": {
-            "destination": {
-                "objects": ["3e3c58f9-4f63-44ba-acee-f0c42430eba7"]
-            }
-        }
-    }
-}
-```
-
-!!! Note
-    Relationship slugs can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site-to-vrf"` Relationship would be replaced, but the `"vrfs-to-sites"` Relationship's associations would remain as-is.
-
-### Updating Multiple Objects
-
-Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` request to a model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted and the attributes to be updated. For example, to update sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589 and 1a414273-3d68-4586-ba22-6ae0a5702b8f to a status of "active", issue the following request:
-
-```no-highlight
-curl -s -X PATCH \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
-http://nautobot/api/dcim/sites/ \
---data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589", "status": "active"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f", "status": "active"}]'
-```
-
-Note that there is no requirement for the attributes to be identical among objects. For instance, it's possible to update the status of one site along with the name of another in the same request.
-
-!!! note
-    The bulk update of objects is an all-or-none operation, meaning that if Nautobot fails to successfully update any of the specified objects (e.g. due a validation error), the entire operation will be aborted and none of the objects will be updated.
-
-### Deleting an Object
-
-To delete an object from Nautobot, make a `DELETE` request to the model's _detail_ endpoint specifying its UUID. The `Authorization` header must be included to specify an authorization token, however this type of request does not support passing any data in the body.
-
-```no-highlight
-curl -s -X DELETE \
--H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3" \
-http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/
-```
-
-Note that `DELETE` requests do not return any data: If successful, the API will return a 204 (No Content) response.
-
-!!! note
-    You can run `curl` with the verbose (`-v`) flag to inspect the HTTP response codes.
-
-### Deleting Multiple Objects
-
-Nautobot supports the simultaneous deletion of multiple objects of the same type by issuing a `DELETE` request to the model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted. For example, to delete sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589, 1a414273-3d68-4586-ba22-6ae0a5702b8f, and c2516019-caf6-41f0-98a6-4276c1a73fa3, issue the following request:
-
-```no-highlight
-curl -s -X DELETE \
--H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
-http://nautobot/api/dcim/sites/ \
---data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f"}, {"id": "c2516019-caf6-41f0-98a6-4276c1a73fa3"}]'
-```
-
-!!! note
-    The bulk deletion of objects is an all-or-none operation, meaning that if Nautobot fails to delete any of the specified objects (e.g. due a dependency by a related object), the entire operation will be aborted and none of the objects will be deleted.
-
 ### Depth Query Parameter
 
 +++ 2.0.0
 
-The the built-in DRF `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It is available for both retrieving a single object and a list of objects.
+A `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It is available for both retrieving a single object and a list of objects.
 This parameter is an positive integer value that can range from 0 to 10. In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
 
 !!! note
@@ -1020,3 +781,242 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
     ...
 }
 ```
+
+### Excluding Config Contexts
+
+When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext.md) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
+
+### Creating a New Object
+
+To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
+
+```no-highlight
+curl -s -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/ipam/prefixes/ \
+--data '{"prefix": "192.0.2.0/24", "site": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
+```
+
+```json
+{
+  "id": "48df6965-0fcb-4155-b5f8-00fe8b9b01af",
+  "url": "http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/",
+  "family": {
+    "value": 4,
+    "label": "IPv4"
+  },
+  "prefix": "192.0.2.0/24",
+  "site": {
+    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
+    "url": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
+    "name": "US-East 4",
+    "slug": "us-east-4"
+  },
+  "vrf": null,
+  "tenant": null,
+  "vlan": null,
+  "status": {
+      "display": "Active",
+      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+      "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "name": "Active",
+      "slug": "active",
+      "created": "2019-12-09T16:38:50.363404Z",
+      "last_updated": "2019-12-09T16:38:50.363404Z"
+  },
+  "role": null,
+  "type": "network",
+  "description": "",
+  "tags": [],
+  "custom_fields": {},
+  "created": "2020-08-04T20:08:39.007125Z",
+  "last_updated": "2020-08-04T20:08:39.007125Z"
+}
+```
+
+### Creating Multiple Objects
+
+To create multiple instances of a model using a single request, make a `POST` request to the model's _list_ endpoint with a list of JSON objects representing each instance to be created. If successful, the response will contain a list of the newly created instances. The example below illustrates the creation of three new sites.
+
+```no-highlight
+curl -X POST -H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/dcim/sites/ \
+--data '[
+{"name": "Site 1", "slug": "site-1", "region": {"name": "United States"}},
+{"name": "Site 2", "slug": "site-2", "region": {"name": "United States"}},
+{"name": "Site 3", "slug": "site-3", "region": {"name": "United States"}}
+]'
+```
+
+```json
+[
+    {
+        "id": "0238a4e3-66f2-455a-831f-5f177215de0f",
+        "url": "http://nautobot/api/dcim/sites/0238a4e3-66f2-455a-831f-5f177215de0f/",
+        "name": "Site 1",
+        ...
+    },
+    {
+        "id": "33ac3a3b-0ee7-49b7-bf2a-244096051dc0",
+        "url": "http://nautobot/api/dcim/sites/33ac3a3b-0ee7-49b7-bf2a-244096051dc0/",
+        "name": "Site 2",
+        ...
+    },
+    {
+        "id": "10b3134d-960b-4794-ad18-0e73edd357c4",
+        "url": "http://nautobot/api/dcim/sites/10b3134d-960b-4794-ad18-0e73edd357c4/",
+        "name": "Site 3",
+        ...
+    }
+]
+```
+
+### Updating an Object
+
+To modify an object which has already been created, make a `PATCH` request to the model's _detail_ endpoint specifying its UUID. Include any data which you wish to update on the object. As with object creation, the `Authorization` and `Content-Type` headers must also be specified, and specifying the `Accept` header is also strongly recommended.
+
+```no-highlight
+curl -s -X PATCH \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
+--data '{"status": "reserved"}' | jq '.'
+```
+
+```json
+{
+  "id": "48df6965-0fcb-4155-b5f8-00fe8b9b01af",
+  "url": "http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/",
+  "family": {
+    "value": 4,
+    "label": "IPv4"
+  },
+  "prefix": "192.0.2.0/24",
+  "site": {
+    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
+    "url": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
+    "name": "US-East 4",
+    "slug": "us-east-4"
+  },
+  "vrf": null,
+  "tenant": null,
+  "vlan": null,
+  "status": {
+      "display": "Reserved",
+      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+      "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "name": "Reserved",
+      "slug": "reserved",
+      "created": "2019-12-09T00:00:00Z",
+      "last_updated": "2019-12-09T16:38:50.363404Z"
+  },
+  "role": null,
+  "type": "network",
+  "description": "",
+  "tags": [],
+  "custom_fields": {},
+  "created": "2020-08-04T00:00:00Z",
+  "last_updated": "2020-08-04T20:14:55.709430Z"
+}
+```
+
+!!! note "PUT versus PATCH"
+    The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
+
+#### Updating Relationship Associations
+
++++ 1.4.0
+
+It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
+
+```json
+{
+    "relationships": {
+        "site-to-vrf": {
+            "destination": {
+                "objects": [
+                    {"name": "blue"}
+                ]
+            }
+        },
+        "vrfs-to-sites": {
+            "source": {
+                "objects": [
+                    {"name": "green"},
+                    {"name": "red"},
+                ]
+            }
+        }
+    }
+}
+```
+
+```json
+{
+    "relationships": {
+        "site-to-vrf": {
+            "destination": {
+                "objects": ["3e3c58f9-4f63-44ba-acee-f0c42430eba7"]
+            }
+        }
+    }
+}
+```
+
+!!! Note
+    Relationship slugs can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site-to-vrf"` Relationship would be replaced, but the `"vrfs-to-sites"` Relationship's associations would remain as-is.
+
+### Updating Multiple Objects
+
+Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` request to a model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted and the attributes to be updated. For example, to update sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589 and 1a414273-3d68-4586-ba22-6ae0a5702b8f to a status of "active", issue the following request:
+
+```no-highlight
+curl -s -X PATCH \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/dcim/sites/ \
+--data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589", "status": "active"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f", "status": "active"}]'
+```
+
+Note that there is no requirement for the attributes to be identical among objects. For instance, it's possible to update the status of one site along with the name of another in the same request.
+
+!!! note
+    The bulk update of objects is an all-or-none operation, meaning that if Nautobot fails to successfully update any of the specified objects (e.g. due a validation error), the entire operation will be aborted and none of the objects will be updated.
+
+### Deleting an Object
+
+To delete an object from Nautobot, make a `DELETE` request to the model's _detail_ endpoint specifying its UUID. The `Authorization` header must be included to specify an authorization token, however this type of request does not support passing any data in the body.
+
+```no-highlight
+curl -s -X DELETE \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/
+```
+
+Note that `DELETE` requests do not return any data: If successful, the API will return a 204 (No Content) response.
+
+!!! note
+    You can run `curl` with the verbose (`-v`) flag to inspect the HTTP response codes.
+
+### Deleting Multiple Objects
+
+Nautobot supports the simultaneous deletion of multiple objects of the same type by issuing a `DELETE` request to the model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted. For example, to delete sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589, 1a414273-3d68-4586-ba22-6ae0a5702b8f, and c2516019-caf6-41f0-98a6-4276c1a73fa3, issue the following request:
+
+```no-highlight
+curl -s -X DELETE \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=1.3" \
+http://nautobot/api/dcim/sites/ \
+--data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f"}, {"id": "c2516019-caf6-41f0-98a6-4276c1a73fa3"}]'
+```
+
+!!! note
+    The bulk deletion of objects is an all-or-none operation, meaning that if Nautobot fails to delete any of the specified objects (e.g. due a dependency by a related object), the entire operation will be aborted and none of the objects will be deleted.

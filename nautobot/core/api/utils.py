@@ -109,9 +109,6 @@ def get_serializer_for_model(model, prefix=""):
     # Serializers for Django's auth models are in the users app
     if app_name == "auth":
         app_name = "users"
-    # Special Case where users.Permission needs ObjectPermissionSerializer
-    if app_name == "users" and model_name == "Permission":
-        model_name = "ObjectPermission"
     serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
     if app_name not in settings.PLUGINS:
         serializer_name = f"nautobot.{serializer_name}"
@@ -199,67 +196,39 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
     return relation_info
 
 
-NESTED_SERIALIZER_NAME_CACHE = {}
+NESTED_SERIALIZER_CACHE = {}
 
 
-def get_available_nested_serializer_name(key, serializer_name):
-    """
-    Use a cache to keep track of used NestedSerializer names.
-    Return a new NestedSerializer name for nested_serializer_factory()
-    if serializer_name is taken to avoid collision in our OpenAPISchema.
-    Args:
-        key: The parent serializer's name
-        serializer_name: Given Nested Serializer Name
-    """
-    # We do not use serializer name to access the cache, because serializer_name is being updated.
-    if serializer_name not in NESTED_SERIALIZER_NAME_CACHE:
-        NESTED_SERIALIZER_NAME_CACHE[serializer_name] = [key]
-        return serializer_name
-    if key != "" and key not in NESTED_SERIALIZER_NAME_CACHE[serializer_name]:
-        NESTED_SERIALIZER_NAME_CACHE[serializer_name].append(key)
-        return serializer_name
-
-    NESTED_SERIALIZER_NAME_CACHE[serializer_name].append(key)
-    serializer_name += str(len(NESTED_SERIALIZER_NAME_CACHE[serializer_name]))
-    return serializer_name
-
-
-def nested_serializer_factory(serializer, field_name, relation_info, nested_depth):
+def nested_serializer_factory(relation_info, nested_depth):
     """
     Return a NestedSerializer representation of a serializer field.
     This method should only be called in build_nested_field()
-    in which field_name, relation_info and nested_depth are already given.
+    in which relation_info and nested_depth are already given.
     """
-    field = get_serializer_for_model(relation_info.related_model)
-
-    class NautobotNestedSerializer(field):
-        class Meta:
-            model = relation_info.related_model
-            depth = nested_depth - 1
-            if hasattr(field.Meta, "fields"):
-                fields = field.Meta.fields
-            if hasattr(field.Meta, "exclude"):
-                exclude = field.Meta.exclude
-
-    # This is a very hacky way to avoid name collisions in OpenAPISchema Generations
-    # The exact error output can be seen in this issue https://github.com/tfranzel/drf-spectacular/issues/90
-    # Apparently drf-spectacular does not support the `?depth` argument that comes with DRF
-    # So auto-generating NestedSerializers with the default class names that are the same when depth > 0
-    # does not make our schema happy.
-    if hasattr(serializer, "queryset") and serializer.queryset is not None:
-        model_name = serializer.queryset.model._meta.model_name
+    nested_serializer_name = f"{relation_info.related_model._meta.model_name.capitalize()}" + "NautobotNestedSerializer"
+    # If we already have built a suitable NestedSerializer we return the cached serializer.
+    # else we build a new one and store it in the cache for future use.
+    if nested_serializer_name in NESTED_SERIALIZER_CACHE:
+        field_class = NESTED_SERIALIZER_CACHE[nested_serializer_name]
+        field_class.Meta.model = relation_info.related_model
+        field_class.Meta.depth = nested_depth - 1
+        field_kwargs = get_nested_relation_kwargs(relation_info)
     else:
-        model_name = serializer.Meta.model._meta.model_name
-    nested_serializer_name = (
-        f"{model_name.capitalize()}{relation_info.related_model._meta.model_name.capitalize()}"
-        + "NautobotNestedSerializer"
-    )
-    parent_name = ""
-    if hasattr(serializer, "parent") and serializer.parent is not None:
-        parent_name = serializer.parent.__class__.__name__
-    NautobotNestedSerializer.__name__ = get_available_nested_serializer_name(parent_name, nested_serializer_name)
-    field_class = NautobotNestedSerializer
-    field_kwargs = get_nested_relation_kwargs(relation_info)
+        field = get_serializer_for_model(relation_info.related_model)
+
+        class NautobotNestedSerializer(field):
+            class Meta:
+                model = relation_info.related_model
+                depth = nested_depth - 1
+                if hasattr(field.Meta, "fields"):
+                    fields = field.Meta.fields
+                if hasattr(field.Meta, "exclude"):
+                    exclude = field.Meta.exclude
+
+        NautobotNestedSerializer.__name__ = nested_serializer_name
+        NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
+        field_class = NautobotNestedSerializer
+        field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
 
 

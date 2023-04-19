@@ -15,7 +15,7 @@ class UserSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = "__all__"
+        exclude = ["user_permissions"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
@@ -36,7 +36,7 @@ class GroupSerializer(ValidatedModelSerializer):
 
     class Meta:
         model = Group
-        fields = "__all__"
+        exclude = ["permissions"]
 
 
 class TokenSerializer(ValidatedModelSerializer):
