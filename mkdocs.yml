@@ -6,6 +6,8 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+hooks:
+    - "scripts/mkdocs-hook.py"
 theme:
   name: "material"
   navigation_depth: 4
@@ -86,6 +88,20 @@ plugins:
         - docs/generate_code_reference_pages.py
   - "include-markdown"
   - "mkdocs-version-annotations"
+  - "mkdocs-python-classy":
+      classy_strategy: "subclass"
+      classy_modules:
+      - "nautobot.apps.filters"
+      - "nautobot.apps.forms"
+      - "nautobot.apps.models"
+      - "nautobot.apps.tables"
+      - "nautobot.apps.testing"
+      - "nautobot.apps.ui"
+      - "nautobot.apps.urls"
+      - "nautobot.apps.views"
+      - "nautobot.extras.forms.base"
+      classy_libraries:
+      - "nautobot"
   - "mkdocstrings":
       default_handler: "python"
       handlers:
@@ -201,6 +217,11 @@ nav:
           - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
           - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
           - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
+      - Classy Code Reference:
+        - Filtersets: "development/classy/filtersets.md"
+        - Forms: "development/classy/forms.md"
+        - Tables: "development/classy/tables.md"
+        - Views: "development/classy/views.md"
   - Core Developer Guide:
       - Introduction: "development/index.md"
       - Getting Started: "development/getting-started.md"

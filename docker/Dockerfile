@@ -191,9 +191,9 @@ FROM dependencies-dev-python as build-docs
 # Copy docs dependencies to build the rendered docs
 COPY mkdocs.yml /source/
 COPY docs /source/docs
+COPY scripts /source/scripts
 
 # Build the rendered docs, this ensures that the docs are in the final image.
-RUN mkdocs build --no-directory-urls
 
 ################################ Stage: build-nautobot (intermediate build target)
 
@@ -201,8 +201,6 @@ FROM dependencies as build-nautobot
 # Copy in the Nautobot source code to build the wheel from
 COPY nautobot /source/nautobot
 
-# Copy in the built docs to bundle with the wheel
-COPY --from=build-docs /source/nautobot/project-static/docs /source/nautobot/project-static/docs
 
 # Build the wheel
 RUN poetry build
@@ -312,6 +310,9 @@ USER nautobot
 WORKDIR /opt/nautobot
 
 COPY --from=final-dev --chown=nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
+RUN mkdocs build --strict=False -q
+# Copy in the built docs to bundle with the wheel
+COPY /source/nautobot/project-static/docs /source/nautobot/project-static/docs
 
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443
