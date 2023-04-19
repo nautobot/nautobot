@@ -98,6 +98,7 @@ class ContentTypeField(RelatedField):
             self.fail("does_not_exist", content_type=data)
         except (AttributeError, TypeError, ValueError):
             self.fail("invalid")
+        return None
 
     def to_representation(self, obj):
         return f"{obj.app_label}.{obj.model}"

@@ -3247,10 +3247,7 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.filter(slug=data["slug"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
-        self.assertIn(
-            f"{VLANGroup._meta.label_lower} ContentType does not exist",
-            str(response.data["content_types"]["content_type"]),
-        )
+        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
 
     def test_create_tags_without_content_types(self):
         self.add_permissions("extras.add_tag")
