@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from pathlib import Path
 import pkgutil
@@ -7,6 +6,7 @@ import sys
 
 from celery import Celery, shared_task, signals
 from celery.fixups.django import DjangoFixup
+from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
@@ -14,7 +14,7 @@ from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 # The Celery documentation tells us to call setup on the app to initialize
 # settings, but we will NOT be doing that because of a chicken-and-egg problem
@@ -69,7 +69,11 @@ def import_tasks_from_jobs_root(sender, **kwargs):
         if jobs_root not in sys.path:
             sys.path.append(jobs_root)
         for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
-            sender.loader.import_task_module(module_name)
+            try:
+                sender.loader.import_task_module(module_name)
+            except Exception as exc:
+                # logger.error(f"Unable to load module '{module_name}' from {jobs_root}: {exc:}")
+                logger.exception(exc)
 
 
 @signals.worker_ready.connect

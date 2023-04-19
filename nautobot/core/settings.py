@@ -115,7 +115,7 @@ SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 SANITIZER_PATTERNS = [
     # General removal of username-like and password-like tokens
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
 ]
 
 # Storage
@@ -271,7 +271,10 @@ DATABASES = {
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
-        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
+        "ENGINE": os.getenv(
+            "NAUTOBOT_DB_ENGINE",
+            "django_prometheus.db.backends.postgresql" if METRICS_ENABLED else "django.db.backends.postgresql",
+        ),
     }
 }
 
@@ -662,7 +665,10 @@ CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"
 # The django-redis cache is used to establish concurrent locks using Redis.
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
+        "BACKEND": os.getenv(
+            "NAUTOBOT_CACHES_BACKEND",
+            "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
+        ),
         "LOCATION": parse_redis_connection(redis_database=0),
         "TIMEOUT": 300,
         "OPTIONS": {
@@ -681,6 +687,10 @@ CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connecti
 
 # Celery results backend URL to tell workers where to publish task results
 CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
+
+# Modules to explicitly import on Celery worker startup. This is not intended to be user-serviceable
+# as we are relying on this functionality for system jobs.
+CELERY_IMPORTS = ["nautobot.core.jobs"]
 
 # Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.
 CELERY_RESULT_EXTENDED = True

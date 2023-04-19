@@ -286,7 +286,7 @@ class ConfigContextSchemaTestCase(
         cls.form_data = {
             "name": "Schema X",
             "slug": "schema-x",
-            "data_schema": '{"type": "object", "properties": {"baz": {"type": "string"}}}',
+            "data_schema": '{"type": "object","properties": {"baz": {"type": "string"}}}',  # Intentionally misformatted (missing space) to ensure proper formatting on output
         }
 
         cls.bulk_edit_data = {
@@ -587,7 +587,7 @@ class GitRepositoryTestCase(
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
-            repo.save(trigger_resync=False)
+            repo.validated_save()
 
         cls.form_data = {
             "name": "A new Git repository",

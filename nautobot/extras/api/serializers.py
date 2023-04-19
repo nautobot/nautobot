@@ -150,7 +150,7 @@ class NotesSerializerMixin(BaseModelSerializer):
                     f"Notes feature is not available for model {model_name}. "
                     "Please make sure to: "
                     f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
-                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.views in the {model_name}ViewSet "
                     "before including NotesSerializerMixin in the model serializer"
                 )
             )
@@ -626,13 +626,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
             "current_head",
             "provided_contents",
         ]
-
-    def validate(self, data):
-        """
-        Add the originating Request as a parameter to be passed when creating/updating a GitRepository.
-        """
-        data["request"] = self.context["request"]
-        return super().validate(data)
 
 
 #

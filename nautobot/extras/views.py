@@ -827,14 +827,18 @@ class GitRepositoryEditView(generic.ObjectEditView):
     model_form = forms.GitRepositoryForm
     template_name = "extras/gitrepository_object_edit.html"
 
+    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
+    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
+    # again, this will be moved to the API calls, so just something to keep in mind.
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
+        obj.user = request.user
         return super().alter_obj(obj, request, url_args, url_kwargs)
 
     def get_return_url(self, request, obj):
         if request.method == "POST":
             return reverse("extras:gitrepository_result", kwargs={"slug": obj.slug})
+
         return super().get_return_url(request, obj)
 
 
@@ -900,9 +904,9 @@ def check_and_call_git_repository_function(request, slug, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
     else:
         repository = get_object_or_404(GitRepository, slug=slug)
-        func(repository, request)
+        job_result = func(repository, request.user)
 
-    return redirect("extras:gitrepository_result", slug=slug)
+    return redirect(job_result.get_absolute_url())
 
 
 class GitRepositorySyncView(View):
@@ -927,12 +931,7 @@ class GitRepositoryResultView(generic.ObjectView):
         return "extras.view_gitrepository"
 
     def get_extra_context(self, request, instance):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
-        job_result = (
-            JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
-            .order_by("-date_created")
-            .first()
-        )
+        job_result = instance.get_latest_sync()
 
         return {
             "result": job_result,
@@ -1161,6 +1160,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
             task_queue = job_form.cleaned_data.get("_task_queue", None)
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
+            profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1219,6 +1219,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
+                    profile=profile,
                     celery_kwargs={"queue": task_queue},
                     **job_model.job_class.serialize_data(job_kwargs),
                 )

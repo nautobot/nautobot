@@ -1,3 +1,5 @@
+import collections
+
 from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
@@ -14,17 +16,21 @@ from nautobot.core.testing.utils import (
     post_data,
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
-from nautobot.extras.models import JobResult
+from nautobot.extras.jobs import get_job
+from nautobot.extras.models import Job, JobResult
 
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
+    "create_job_result_and_run_job",
     "create_test_user",
     "disable_warnings",
     "extract_form_failures",
     "extract_page_body",
     "FilterTestCases",
     "get_deletable_objects",
+    "get_job_class_and_model",
+    "JobClassInfo",
     "ModelTestCase",
     "ModelViewTestCase",
     "NautobotTestCaseMixin",
@@ -39,13 +45,14 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, username="test-user", **kwargs):
+def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
     Args:
       job (Job): Job model instance (not Job class) to run
       username (str): Username of existing or to-be-created User account to own the JobResult.
+      profile (bool): Whether to profile the job execution.
       **kwargs: Input keyword arguments for Job run method.
 
     Returns:
@@ -63,9 +70,42 @@ def run_job_for_testing(job, username="test-user", **kwargs):
     job_result = JobResult.execute_job(
         job_model=job,
         user=user_instance,
+        profile=profile,
         **kwargs,
     )
     return job_result
+
+
+def create_job_result_and_run_job(module, name, source="local", *args, **kwargs):
+    """Test helper function to call get_job_class_and_model() then call run_job_for_testing()."""
+    _job_class, job_model = get_job_class_and_model(module, name, source)
+    job_result = run_job_for_testing(job=job_model, **kwargs)
+    job_result.refresh_from_db()
+    return job_result
+
+
+#: Return value of `get_job_class_and_model()`.
+JobClassInfo = collections.namedtuple("JobClassInfo", "job_class job_model")
+
+
+def get_job_class_and_model(module, name, source="local"):
+    """
+    Test helper function to look up a job class and job model and ensure the latter is enabled.
+
+    Args:
+        module (str): Job module name
+        name (str): Job class name
+        source (str): Job grouping (default: "local")
+
+    Returns:
+        JobClassInfo: Named 2-tuple of (job_class, job_model)
+    """
+    class_path = f"{source}/{module}/{name}"
+    job_class = get_job(class_path)
+    job_model = Job.objects.get_for_class_path(class_path)
+    job_model.enabled = True
+    job_model.validated_save()
+    return JobClassInfo(job_class, job_model)
 
 
 @tag("unit")

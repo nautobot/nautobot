@@ -611,12 +611,18 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "tags",
         ]
 
-    def clean(self):
-        super().clean()
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
 
-        # set dryrun after a successful clean
-        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
-            self.instance.set_dryrun()
+        # TODO(jathan): Move sync() call out of the form and into the view. However, in v2 UI this
+        # probably just goes away since UI views will be making API calls. For now, the user is
+        # magically stored on the instance by the view code.
+        if commit:
+            # Set dryrun if that button was clicked in the UI, otherwise perform a normal sync.
+            dry_run = "_dryrun_create" in self.data or "_dryrun_update" in self.data
+            instance.sync(user=instance.user, dry_run=dry_run)
+
+        return instance
 
 
 class GitRepositoryCSVForm(CSVModelForm):
@@ -723,6 +729,12 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
+    _profile = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Profile job execution",
+        help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+    )
     _task_queue = forms.ChoiceField(
         required=False,
         help_text="The task queue to route this job to",
@@ -732,9 +744,10 @@ class JobForm(BootstrapMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _task_queue to the end of the form
-        task_queue = self.fields.pop("_task_queue")
-        self.fields["_task_queue"] = task_queue
+        # Move special fields to the end of the form
+        for field in ["_task_queue", "_profile"]:
+            value = self.fields.pop(field)
+            self.fields[field] = value
 
 
 class JobEditForm(NautobotModelForm):

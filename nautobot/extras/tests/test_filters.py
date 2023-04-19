@@ -546,7 +546,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         for repo in repos:
-            repo.save(trigger_resync=False)
+            repo.save()
         repos[0].tags.set(Tag.objects.get_for_model(GitRepository))
         repos[1].tags.set(Tag.objects.get_for_model(GitRepository)[:3])
 
@@ -812,7 +812,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_search(self):
         params = {"q": "file"}
         expected_matches = (
-            Q(name__icontains="file")
+            Q(name__icontains="file")  # pylint: disable=unsupported-binary-operation
             | Q(slug__icontains="file")
             | Q(grouping__icontains="file")
             | Q(description__icontains="file")

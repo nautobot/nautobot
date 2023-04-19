@@ -14,7 +14,7 @@ class TestFail(Job):
         Job function.
         """
         self.log_success(obj=None)
-        raise Exception("Test failure")
+        self.log_failure("Test failure")
 
 
 register_jobs(TestFail)

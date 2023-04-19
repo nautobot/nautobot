@@ -195,6 +195,9 @@ def git_repository_pre_delete(instance, **kwargs):
     """
     from nautobot.extras.datasources import refresh_datasource_content
 
+    # FIXME(jathan): In light of jobs overhaul and Git syncs as jobs, we need to rethink this. We
+    # might instead make "delete" another Job class and call it here, but also think about how
+    # worker events will be such as firing the worker event here.
     job_result = JobResult.objects.create(
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),
@@ -209,10 +212,6 @@ def git_repository_pre_delete(instance, **kwargs):
     job_result.use_job_logs_db = False
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
-
-    if job_result.status not in JobResultStatusChoices.READY_STATES:
-        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
-    job_result.save()
 
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.

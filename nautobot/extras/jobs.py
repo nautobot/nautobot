@@ -123,6 +123,24 @@ class BaseJob(Task):
         self.active_test = "run"
         context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
         change_context = context_class(user=self.user, context_detail=self.class_path)
+        # TODO: re-add profiling feature
+        # if profile:
+        #     import cProfile
+
+        #     # TODO: This should probably be available as a file download rather than dumped to the hard drive.
+        #     # Pending this: https://github.com/nautobot/nautobot/issues/3352
+        #     profiling_path = f"/tmp/nautobot-jobresult-{self.request.id}.pstats"
+
+        #     # TODO: Context manager for this is added in 3.8
+        #     profiler = cProfile.Profile()
+        #     profiler.enable()
+        #     output = job.run(data=data, commit=commit)
+        #     profiler.disable()
+        #     profiler.dump_stats(profiling_path)
+        #     job.log_info(obj=None, message=f"Wrote profiling information to {profiling_path}.")
+        # else:
+        #     output = job.run(data=data, commit=commit)
+
         with change_logging(change_context):
             return self.run(*args, **deserialized_kwargs)
 
@@ -298,12 +316,18 @@ class BaseJob(Task):
 
         Examples:
         local/my_script/MyScript
+        system/nautobot.core.jobs/MySystemJob
         plugins/my_plugin.jobs/MyPluginJob
         git.my-repository/myjob/MyJob
         """
         # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
+        # TODO(jathan: Once we make all Jobs imported as modules, this may no longer be necessary as
+        # we can just trust that the import location and class_path can be derived from a single
+        # source.
         if cls in registry["plugin_jobs"]:
             source_grouping = "plugins"
+        elif cls in registry["system_jobs"]:
+            source_grouping = "system"
         elif cls.file_path.startswith(settings.JOBS_ROOT):
             source_grouping = "local"
         elif cls.file_path.startswith(settings.GIT_ROOT):
@@ -487,6 +511,8 @@ class BaseJob(Task):
             elif not initial or "dryrun" not in initial:
                 # Set initial "dryrun" checkbox state based on the Meta parameter
                 form.fields["dryrun"].initial = dryrun_default
+        if not settings.DEBUG:
+            form.fields["_profile"].widget = forms.HiddenInput()
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
@@ -1146,6 +1172,12 @@ def get_jobs():
                 jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
             jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
 
+    # Add jobs from system (which were already imported at startup)
+    for cls in registry["system_jobs"]:
+        module = inspect.getmodule(cls)
+        jobs.setdefault("system", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
+        jobs["system"][module.__name__]["jobs"][cls.__name__] = cls
+
     # Add jobs from plugins (which were already imported at startup)
     for cls in registry["plugin_jobs"]:
         module = inspect.getmodule(cls)
@@ -1253,7 +1285,6 @@ def enqueue_job_hooks(object_change):
     Find job hook(s) assigned to this changed object type + action and enqueue them
     to be processed
     """
-    from nautobot.extras.models import JobResult  # avoid circular import
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:

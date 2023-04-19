@@ -318,7 +318,7 @@ class Job(PrimaryModel):
                 except Exception as exc:
                     logger.error(f"Error during local clone/refresh of Git repository {self.git_repository}: {exc}")
                     return None
-            elif self.source == JobSourceChoices.SOURCE_PLUGIN:
+            elif self.source in [JobSourceChoices.SOURCE_PLUGIN, JobSourceChoices.SOURCE_SYSTEM]:
                 # pkgutil.resolve_name is only available in Python 3.9 and later
                 self._job_class = import_object(f"{self.module_name}.{self.job_class_name}")
 
@@ -726,6 +726,8 @@ class JobResult(BaseModel, CustomFieldModel):
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
 
+    # FIXME(jathan): This needs to go away. Need to think about that the impact
+    # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
         """
         Helper method to change the status of the job result. If the target status is terminal, the  completion
@@ -743,7 +745,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, **job_kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
         a limitation in Celery where some of the fields in the job result are not updated when running synchronously so
@@ -755,12 +757,14 @@ class JobResult(BaseModel, CustomFieldModel):
             job_model (Job): The Job to be enqueued for execution
             user (User): User object to link to the JobResult instance
             celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            profile (bool, optional): Whether to run cProfile on the job execution
             *job_args: positional args passed to the job task
             **job_kwargs: keyword args passed to the job task
 
         Returns:
             JobResult instance
         """
+        # TODO: profile field will have to be added to the JobResult to support synchronous execution
         job_result = cls.objects.create(
             job_model=job_model,
             name=job_model.class_path,
@@ -791,13 +795,14 @@ class JobResult(BaseModel, CustomFieldModel):
         return job_result
 
     @classmethod
-    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, schedule=None, **job_kwargs):
+    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, schedule=None, **job_kwargs):
         """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
         Args:
             job_model (Job): The Job to be enqueued for execution
             user (User): User object to link to the JobResult instance
             celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            profile (bool, optional): Whether to run cProfile on the job execution
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult
             *job_args: positional args passed to the job task
             **job_kwargs: keyword args passed to the job task
@@ -818,6 +823,7 @@ class JobResult(BaseModel, CustomFieldModel):
             celery_kwargs = {}
 
         celery_kwargs["user_id"] = getattr(user, "pk", None)
+        celery_kwargs["profile"] = profile
 
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit

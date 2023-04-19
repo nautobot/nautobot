@@ -1,10 +1,11 @@
 import datetime
+from io import StringIO
 import json
 import logging
+from pathlib import Path
 import re
-import uuid
-from io import StringIO
 from unittest import mock
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -17,7 +18,8 @@ from django.utils import timezone
 from nautobot.core.testing import (
     TestCase,
     TransactionTestCase,
-    run_job_for_testing,
+    create_job_result_and_run_job,
+    get_job_class_and_model,
 )
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Location, LocationType
@@ -29,26 +31,8 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job
-from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, Role, ScheduledJob, Status
+from nautobot.extras.models import CustomField, FileProxy, JobHook, JobResult, Role, ScheduledJob, Status
 from nautobot.extras.models.models import JobLogEntry
-
-
-def get_job_class_and_model(module, name):
-    """Test helper function to look up a job class and job model and ensure the latter is enabled."""
-    class_path = f"local/{module}/{name}"
-    job_class = get_job(class_path)
-    job_model = Job.objects.get_for_class_path(class_path)
-    job_model.enabled = True
-    job_model.validated_save()
-    return (job_class, job_model)
-
-
-def create_job_result_and_run_job(module, name, *args, **kwargs):
-    """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
-    _job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_model, **kwargs)
-    job_result.refresh_from_db()
-    return job_result
 
 
 class JobTest(TransactionTestCase):
@@ -132,7 +116,7 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_profile"])
 
     def test_no_field_order(self):
         """
@@ -142,7 +126,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -154,7 +138,7 @@ class JobTest(TransactionTestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_profile"],
         )
 
     def test_atomic_transaction_decorator_job_pass(self):
@@ -395,7 +379,8 @@ class JobTest(TransactionTestCase):
             <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
             <option value="celery">celery (4 workers)</option>
             <option value="nonexistent">nonexistent (0 workers)</option></select><br>
-            <span class="helptext">The task queue to route this job to</span></td></tr>""",
+            <span class="helptext">The task queue to route this job to</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
 
@@ -417,7 +402,8 @@ class JobTest(TransactionTestCase):
             <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
             <option value="default">default (1 worker)</option>
             <option value="priority">priority (0 workers)</option>
-            </select><br><span class="helptext">The task queue to route this job to</span></td></tr>""",
+            </select><br><span class="helptext">The task queue to route this job to</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
 
@@ -437,6 +423,23 @@ class JobTest(TransactionTestCase):
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
+
+    def test_job_profiling(self):
+        module = "test_profiling"
+        name = "TestProfilingJob"
+
+        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
+        job_result = create_job_result_and_run_job(module, name, profile=True)
+
+        self.assertEqual(
+            job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
+        )
+
+        profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
+        self.assertTrue(profiling_result.exists())
+        profiling_result.unlink()
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -643,7 +646,9 @@ class JobButtonReceiverTest(TransactionTestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_profile"]
+        )
 
     def test_hidden(self):
         module = "test_job_button_receiver"
@@ -700,7 +705,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_profile"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"

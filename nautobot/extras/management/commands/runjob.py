@@ -16,6 +16,11 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("job", help="Job in the class path form: `<grouping_name>/<module_name>/<JobClassName>`")
         parser.add_argument(
+            "--profile",
+            action="store_true",
+            help="Run cProfile on the job execution and write the result to the disk under /tmp.",
+        )
+        parser.add_argument(
             "-u",
             "--username",
             help="User account to impersonate as the requester of this job",
@@ -60,11 +65,12 @@ class Command(BaseCommand):
             job_result = JobResult.execute_job(
                 job_model=job_model,
                 user=user,
+                profile=options["profile"],
                 **data,
             )
 
         else:
-            job_result = JobResult.enqueue_job(job_model, user, **data)
+            job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
 
             # Wait on the job to finish
             while job_result.status not in JobResultStatusChoices.READY_STATES:

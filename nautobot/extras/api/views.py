@@ -32,7 +32,6 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
-from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.models import (
     ComputedField,
@@ -347,7 +346,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
             raise CeleryWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
-        enqueue_pull_git_repository_and_refresh_data(repository, request)
+        repository.sync(user=request.user)
         return Response({"message": f"Repository {repository} sync job added to queue."})
 
 
