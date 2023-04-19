@@ -95,9 +95,9 @@ class ContentTypeField(RelatedField):
             app_label, model = data.split(".")
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
-            raise ValidationError({"content_type": f"{data} ContentType does not exist"})
+            self.fail("does_not_exist", content_type=data)
         except (AttributeError, TypeError, ValueError):
-            raise ValidationError({"content_type": f"{data} ContentType is not valid on this field"})
+            self.fail("invalid")
 
     def to_representation(self, obj):
         return f"{obj.app_label}.{obj.model}"

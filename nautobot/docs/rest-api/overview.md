@@ -250,6 +250,10 @@ Or by a set of nested attributes which uniquely identify the rack:
 
 Note that if the provided parameters do not return exactly one object, a validation error is raised.
 
++++ 2.0.0
+
+Nested serializers are removed in Nautobot v2.0. By default (when `?depth=0`), all related objects are represented by their primary keys. When depth > 0, the related objects will be replaced by dynamically generated base serializers that represent the complete view of the related objects. Please see [Depth Query Parameter](#depth-query-parameter) for more details.
+
 ### Generic Relations
 
 Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, an IP address can be assigned to either a device interface _or_ a virtual machine interface. When making this assignment via the REST API, we must specify two attributes:
