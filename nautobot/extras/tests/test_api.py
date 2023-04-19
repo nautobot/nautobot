@@ -1461,17 +1461,9 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertIsNone(response.data["scheduled_job"])
-        # The urls in a JobResultSerializer depends on the request context, which we don't have
         data_job_result = response.data["job_result"]
-        del data_job_result["url"]
-        del data_job_result["user"]["url"]
-        del data_job_result["computed_fields"]
-        expected_data_job_result = JobResultSerializer(job_result, context={"request": None}).data
-        # TODO #3024 Why is computed_fields not showing up here. look into opt_in_fields
-        del expected_data_job_result["url"]
-        del expected_data_job_result["user"]["url"]
-        # TODO #3024 The data here is inconsistent as well. We are just comparing the sorted keys for now.
-        self.assertEqual(sorted(data_job_result), sorted(expected_data_job_result))
+        expected_data_job_result = JobResultSerializer(job_result, context={"request": response.wsgi_request}).data
+        self.assertEqual(data_job_result, expected_data_job_result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

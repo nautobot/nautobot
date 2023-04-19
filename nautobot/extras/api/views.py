@@ -618,6 +618,10 @@ def _run_job(request, job_model, legacy_response=False):
         if schedule:
             data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
         if job_result:
+            # JobResult.objects.get vs JobResult.enqueue_job have inconsistent task_kwargs
+            # "var4"/ObjectType is rendered differently
+            # _profile and _task_queue is out of order
+            job_result = JobResult.objects.get(name=job_result.name)
             data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
