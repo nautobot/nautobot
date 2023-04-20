@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import uuid
+import tempfile
 from unittest import mock
 
 from django.conf import settings
@@ -3317,6 +3318,46 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
 
         for secret in secrets:
             secret.validated_save()
+
+    def test_secret_check(self):
+        """
+        Ensure that we can check the validity of a secret.
+        """
+
+        with self.subTest("Secret is not accessible"):
+            test_secret = Secret.objects.create(
+                name="secret-check-test-not-accessible",
+                provider="text-file",
+                parameters={"path": "/tmp/does-not-matter"},
+            )
+            response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
+            self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+        self.add_permissions("extras.view_secret")
+
+        with self.subTest("Secret check successful"):
+            with tempfile.NamedTemporaryFile() as secret_file:
+                secret_file.write(b"HELLO WORLD")
+                test_secret = Secret.objects.create(
+                    name="secret-check-test-accessible",
+                    provider="text-file",
+                    parameters={"path": secret_file.name},
+                )
+                response = self.client.get(
+                    reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header
+                )
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(response.data["result"], True)
+
+        with self.subTest("Secret check failed"):
+            test_secret = Secret.objects.create(
+                name="secret-check-test-failed",
+                provider="text-file",
+                parameters={"path": "/tmp/does-not-exist"},
+            )
+            response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["result"], False)
 
 
 class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
