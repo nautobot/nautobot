@@ -104,14 +104,15 @@ export default function ObjectRetrieve({ api_url }) {
 
     if (error) {
         return (
-            <GenericView>
+            <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>
             </GenericView>
         );
     }
 
-    // if (!objectData) return <GenericView />;
-    if (!appConfig) return <GenericView />;
+    // if (!objectData) return <GenericView objectData={objectData} />;
+
+    if (!appConfig) return <GenericView objectData={objectData} />;
 
     const route_name = `${app_name}:${model_name}`;
 
@@ -212,5 +213,5 @@ export default function ObjectRetrieve({ api_url }) {
         return_view = <CustomView {...obj} />;
     }
 
-    return <GenericView>{return_view}</GenericView>;
+    return <GenericView objectData={objectData}>{return_view}</GenericView>;
 }
