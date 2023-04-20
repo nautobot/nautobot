@@ -1050,6 +1050,7 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
 
 +/- 2.0.0
     The default `lookup_field` for `NautobotUIViewSet` has been changed from `"slug"` to `"pk"`.
+
 !!! note
     Using a field other than the default `pk` or the alternative field `slug` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id.
 
