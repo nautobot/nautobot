@@ -916,7 +916,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             # `MultipleContentTypeField` employs `registry["model features"][feature]`, which may
             # result in an error if `feature` is not found in the `registry["model features"]` dict.
             # In this case use queryset
-            queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
+            queryset_map = {"tags": TaggableClassesQuery, "job_hooks": ChangeLoggedModelsQuery}
             form_field = MultipleContentTypeField(
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
