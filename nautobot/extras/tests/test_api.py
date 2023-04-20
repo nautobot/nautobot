@@ -536,11 +536,10 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.maxDiff = None
         self.assertEqual(
-            # We expect a drf list of errors [ErrorDetail(string='This field is required.', code='required')]
-            str(response.data["label"][0]),
+            response.data,
             # Since we are setting blank=True on the key field, we only need to check
             # error messages from the label field.
-            "This field is required.",
+            {"label": ["This field is required."]},
         )
 
 
@@ -1376,7 +1375,9 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z"))
+        self.assertEqual(
+            response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z")
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1574,7 +1575,9 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z"))
+        self.assertEqual(
+            response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z")
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1714,7 +1717,9 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z"))
+        self.assertEqual(
+            response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z")
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 

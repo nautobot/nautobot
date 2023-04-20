@@ -200,7 +200,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             nat_outside_list = obj.nat_outside_list
         except IPAddress.DoesNotExist:
             return None
-        depth = self.Meta.depth
+        depth = int(self.context.get("depth", 0))
         data = return_nested_serializer_data_based_on_depth(
             IPAddressSerializer(nat_outside_list), depth, obj, nat_outside_list, "nat_outside_list"
         )

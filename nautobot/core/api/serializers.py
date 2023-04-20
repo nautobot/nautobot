@@ -136,7 +136,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             # so in order to have enough information present in the OpenAPISchema, we set depth here to 1
             # RestAPI serializer is not affected by this because get_serializer_context() is always called
             # and depth is either passed into the request.query_params, or default to 0.
-            self.Meta.depth = self.context.get("depth", 0)
+            self.Meta.depth = self.context.get("depth", 1)
 
     @property
     @abstractmethod
@@ -187,10 +187,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         # This is here for the PolymorphicProxySerializers which
         # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
         self.extend_field_names(fields, "object_type", at_start=True)
-        print(fields)
         # Eliminate all field names that start with "_" as those fields are not user-facing
         fields = [field for field in fields if not field.startswith("_")]
-        print(fields)
         return fields
 
     def build_field(self, field_name, info, model_class, nested_depth):

@@ -205,12 +205,13 @@ def nested_serializer_factory(relation_info, nested_depth):
     This method should only be called in build_nested_field()
     in which relation_info and nested_depth are already given.
     """
-    nested_serializer_name = "Nested" + f"{relation_info.related_model._meta.model_name.capitalize()}"
+    nested_serializer_name = (
+        "Nested" + str(nested_depth) + f"{relation_info.related_model._meta.model_name.capitalize()}"
+    )
     # If we already have built a suitable NestedSerializer we return the cached serializer.
     # else we build a new one and store it in the cache for future use.
     if nested_serializer_name in NESTED_SERIALIZER_CACHE:
         field_class = NESTED_SERIALIZER_CACHE[nested_serializer_name]
-        field_class.Meta.depth = nested_depth - 1
         field_kwargs = get_nested_relation_kwargs(relation_info)
     else:
         field = get_serializer_for_model(relation_info.related_model)
@@ -258,6 +259,7 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
         if depth == 0:
             return obj_related_field.id
         else:
+            print(depth)
             relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
             field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
             return field_class(

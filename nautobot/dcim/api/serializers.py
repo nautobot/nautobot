@@ -478,7 +478,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             device_bay = obj.parent_bay
         except DeviceBay.DoesNotExist:
             return None
-        depth = self.Meta.depth
+        depth = int(self.context.get("depth", 0))
         device_bay_data = return_nested_serializer_data_based_on_depth(
             DeviceBaySerializer(device_bay), depth, obj, device_bay, "parent_bay"
         )
@@ -695,8 +695,7 @@ class CableSerializer(
         if side.lower() not in ["a", "b"]:
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
-        # depth = int(self.context.get("depth", 0))
-        depth = self.Meta.depth
+        depth = int(self.context.get("depth", 0))
         return return_nested_serializer_data_based_on_depth(
             self, depth, obj, termination, f"termination_{side.lower()}"
         )
