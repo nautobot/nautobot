@@ -1154,7 +1154,7 @@ class SecretsViewSet(NautobotModelViewSet):
     )
     @action(methods=["GET"], detail=True)
     def check(self, request, pk):
-        """Check a secret's value is accessible"""
+        """Check that a secret's value is accessible."""
         result = False
         message = "Unknown error"
         try:
