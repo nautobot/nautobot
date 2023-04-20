@@ -8,10 +8,8 @@ from nautobot.core.api import (
 from nautobot.dcim.api.serializers import InterfaceCommonSerializer
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.api.mixins import (
-    StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.api.serializers import IPAddressSerializer
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -58,39 +56,23 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 #
 
 
-class VirtualMachineSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
+class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
-    primary_ip = IPAddressSerializer(read_only=True)
 
     class Meta:
         model = VirtualMachine
-        # TODO #3024 keeping this for the append on line 130
-        fields = [
-            "url",
-            "name",
-            "status",
-            "cluster",
-            "role",
-            "tenant",
-            "platform",
-            "primary_ip",
-            "primary_ip4",
-            "primary_ip6",
-            "vcpus",
-            "memory",
-            "disk",
-            "comments",
-            "local_config_context_data",
-            "local_config_context_schema",
-        ]
+        fields = "__all__"
         validators = []
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     config_context = serializers.SerializerMethodField()
 
-    class Meta(VirtualMachineSerializer.Meta):
-        fields = VirtualMachineSerializer.Meta.fields + ["config_context"]
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "config_contexts" is always included appropriately."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "config_context")
+        return fields
 
     @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
@@ -102,7 +84,9 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
-class VMInterfaceSerializer(InterfaceCommonSerializer, StatusModelSerializerMixin):
+class VMInterfaceSerializer(
+    InterfaceCommonSerializer,
+):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
 

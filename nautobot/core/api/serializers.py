@@ -18,6 +18,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+from taggit.managers import _TaggableManager
 
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.mixins import WritableSerializerMixin
@@ -25,6 +26,7 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
+from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -110,8 +112,15 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     Namely, it:
 
     - defines the `display` field which exposes a human friendly value for the given object.
-    - ensures that `id` field is always present on the serializer as well
+    - ensures that `id` field is always present on the serializer as well.
     - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
+    - ensures that `object_type` field is always present on the serializer which represents the content-type of this
+    serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
+    PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
+    which of several possible serializers are in use for a given attribute.
+    - ensures that `url` field has to be explicitly declared with a valid view_name on each serializer subclass.
+    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function to enable the
+    dynamic generation of nested serializers.
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
@@ -120,14 +129,14 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If it is not a NautobotNestedSerializer, we should set the depth argument to whatever is in the request's context
-        if "NautobotNestedSerializer" not in self.__class__.__name__:
+        # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
+        if "Nested" not in self.__class__.__name__:
             # We set our default depth value here to 1 because in OpenAPISchema
             # get_serializer_context() (where we get the depth from self.request.query_params) is not called
             # so in order to have enough information present in the OpenAPISchema, we set depth here to 1
             # RestAPI serializer is not affected by this because get_serializer_context() is always called
             # and depth is either passed into the request.query_params, or default to 0.
-            self.Meta.depth = self.context.get("depth", 1)
+            self.Meta.depth = self.context.get("depth", 0)
 
     @property
     @abstractmethod
@@ -155,13 +164,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
                 self.Meta.opt_in_fields.append(field_name)
         return fields
 
-    def reduce_field_names(self, fields, field_name):
-        """Eliminate non-user-facing field_name from `fields` e.g. `_custom_field_data`, `_name`"""
-        if field_name not in fields:
-            return fields
-        fields.remove(field_name)
-        return fields
-
     def get_field_names(self, declared_fields, info):
         """
         Override get_field_names() to ensure certain fields are present even when not explicitly stated in Meta.fields.
@@ -178,19 +180,17 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         self.extend_field_names(fields, "display", at_start=True)
         self.extend_field_names(fields, "id", at_start=True)
-        # Needed because we don't have a common base class for all nested serializers vs non-nested serializers
-        if not self.__class__.__name__.startswith("Nested"):
-            if hasattr(self.Meta.model, "created"):
-                self.extend_field_names(fields, "created")
-            if hasattr(self.Meta.model, "last_updated"):
-                self.extend_field_names(fields, "last_updated")
+        if hasattr(self.Meta.model, "created"):
+            self.extend_field_names(fields, "created")
+        if hasattr(self.Meta.model, "last_updated"):
+            self.extend_field_names(fields, "last_updated")
         # This is here for the PolymorphicProxySerializers which
         # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
-        self.extend_field_names(fields, "object_type")
-        # Eliminate all field names starts with "_" as those fields are not user-facing
-        for field in fields:
-            if field.startswith("_"):
-                self.reduce_field_names(fields, field)
+        self.extend_field_names(fields, "object_type", at_start=True)
+        print(fields)
+        # Eliminate all field names that start with "_" as those fields are not user-facing
+        fields = [field for field in fields if not field.startswith("_")]
+        print(fields)
         return fields
 
     def build_field(self, field_name, info, model_class, nested_depth):
@@ -202,17 +202,20 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         # makes the field impervious to the `?depth` parameter.
         # So we intercept it here to call build_nested_field()
         # which will make the tags field be rendered with TagSerializer() and respect the `depth` parameter.
-        if field_name == "tags":
-            if nested_depth > 0:
-                relation_info = RelationInfo(
-                    model_field=model_class.tags,
-                    related_model=Tag,
-                    to_many=True,
-                    has_through_model=True,
-                    to_field=_get_to_field(model_class.tags),
-                    reverse=False,
-                )
-                return self.build_nested_field(field_name, relation_info, nested_depth)
+        if (
+            field_name == "tags"
+            and isinstance(model_class.tags, (_NautobotTaggableManager, _TaggableManager))
+            and nested_depth > 0
+        ):
+            relation_info = RelationInfo(
+                model_field=model_class.tags,
+                related_model=Tag,
+                to_many=True,
+                has_through_model=True,
+                to_field=_get_to_field(model_class.tags),
+                reverse=False,
+            )
+            return self.build_nested_field(field_name, relation_info, nested_depth)
 
         return super().build_field(field_name, info, model_class, nested_depth)
 
@@ -284,15 +287,6 @@ class WritableNestedSerializer(BaseModelSerializer):
     PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
     which of several possible nested serializers are in use for a given attribute.
     """
-
-    object_type = ObjectTypeField()
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that the "object_type" field is always included in self.fields."""
-        fields = list(super().get_field_names(declared_fields, info))
-        if "object_type" not in fields:
-            fields.append("object_type")
-        return fields
 
     def get_queryset(self):
         return self.Meta.model.objects
@@ -456,7 +450,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
             try:
                 self._save_relationships(instance, relationships_data)
             except DjangoValidationError as error:
-                raise ValidationError(str(error))
+                raise ValidationError(str(error)) from error
         return instance
 
     def update(self, instance, validated_data):
@@ -473,7 +467,10 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
         instance = super().update(instance, validated_data)
         if relationships_data:
-            self._save_relationships(instance, relationships_data)
+            try:
+                self._save_relationships(instance, relationships_data)
+            except DjangoValidationError as error:
+                raise ValidationError(str(error)) from error
         return instance
 
     def _save_relationships(self, instance, relationships):
@@ -581,7 +578,7 @@ class NotesSerializerMixin(BaseModelSerializer):
                     f"Notes feature is not available for model {model_name}. "
                     "Please make sure to: "
                     f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
-                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.views in the {model_name}ViewSet "
                     "before including NotesSerializerMixin in the model serializer"
                 )
             )
@@ -594,5 +591,5 @@ class NautobotModelSerializer(
 ):
     """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
 
-    Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
+    Can also be used for models derived from BaseModel, so long as they support custom fields, notes, and relationships.
     """

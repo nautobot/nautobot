@@ -2507,7 +2507,6 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         queryset=VLAN.objects.all(),
         required=False,
         label="Untagged VLAN",
-        depth=1,
         query_params={
             "location": "null",
         },
@@ -2516,7 +2515,6 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         queryset=VLAN.objects.all(),
         required=False,
         label="Tagged VLANs",
-        depth=1,
         query_params={
             "location": "null",
         },
@@ -2525,7 +2523,6 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         queryset=IPAddress.objects.all(),
         required=False,
         label="IP Addresses",
-        depth=1,
     )
 
     class Meta:
@@ -2638,7 +2635,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        depth=1,
         query_params={
             "available_on_device": "$device",
         },
@@ -2646,7 +2642,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        depth=1,
         query_params={"available_on_device": "$device"},
     )
     field_order = (
@@ -2736,7 +2731,6 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        depth=1,
         query_params={
             "location": "null",
         },
@@ -2744,7 +2738,6 @@ class InterfaceBulkEditForm(
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        depth=1,
         query_params={
             "location": "null",
         },

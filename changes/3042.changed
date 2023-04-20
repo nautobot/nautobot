@@ -1,1 +1,2 @@
-Replaced `NestedFooSerializer` and `?brief=True` parameters using DRF `ModelSerializer`'s built-in `Meta.depth`.
+Removed all `Nested*Serializer` classes in favor of a `depth`-based REST API design.
+The `?brief=True` REST API parameter has been replaced by a new `?depth=<0-10>` API parameter, allowing greater control of the returned data.

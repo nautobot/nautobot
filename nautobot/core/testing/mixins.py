@@ -237,35 +237,3 @@ class NautobotTestCaseMixin:
             stacklevel=2,
         )
         return [extras_models.Tag.objects.create(name=name, slug=slugify(name)) for name in names]
-
-
-class TreeModelTestCaseMixin:
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_list_objects_depth_2(self):
-        """
-        GET a list of objects using the "?depth=2" parameter.
-        TreeModel Only
-        """
-        field = "parent"
-
-        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-        url = f"{self._get_list_url()}?depth=2"
-        response = self.client.get(url, **self.header)
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, dict)
-        self.assertIn("results", response.data)
-        self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-
-        response_data = response.data["results"]
-        for data in response_data:
-            # First Level Parent
-            self.assertEqual(field in data, True)
-            if data[field] is not None:
-                self.assertIsInstance(data[field], dict)
-                self.assertTrue(is_uuid(data[field]["id"]))
-                # Second Level Parent
-                self.assertIn(field, data[field])
-                if data[field][field] is not None:
-                    self.assertIsInstance(data[field][field], dict)
-                    self.assertTrue(is_uuid(data[field][field]["id"]))

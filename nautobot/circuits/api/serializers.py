@@ -7,7 +7,6 @@ from nautobot.dcim.api.serializers import (
     PathEndpointModelSerializerMixin,
 )
 from nautobot.extras.api.mixins import (
-    StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
 
@@ -52,7 +51,7 @@ class CircuitTypeSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
+class CircuitSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
 
     class Meta:

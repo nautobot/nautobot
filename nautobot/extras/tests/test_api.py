@@ -1376,7 +1376,7 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z"))
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1574,7 +1574,7 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z"))
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1714,7 +1714,7 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time.isoformat().replace("+00:00", "Z"))
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 

@@ -78,7 +78,6 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.api.mixins import (
-    StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
@@ -184,7 +183,6 @@ class LocationSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
     TreeModelSerializerMixin,
-    StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
@@ -244,7 +242,6 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 
 class RackSerializer(
     NautobotModelSerializer,
-    StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
@@ -442,49 +439,22 @@ class PlatformSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class DeviceSerializer(
-    NautobotModelSerializer,
-    TaggedModelSerializerMixin,
-    StatusModelSerializerMixin,
-):
+class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebay-detail")
+
+    class Meta:
+        model = DeviceBay
+        fields = "__all__"
+
+
+class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
-    parent_device = serializers.SerializerMethodField()
-    # TODO #3024 How to get rid of this?
-    primary_ip = IPAddressSerializer(read_only=True)
+    parent_bay = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
-        # TODO #3024 Leaving this here so that line 538 does not throw an error
-        fields = [
-            "url",
-            "name",
-            "device_type",
-            "role",
-            "tenant",
-            "platform",
-            "serial",
-            "asset_tag",
-            "location",
-            "rack",
-            "position",
-            "face",
-            "parent_device",
-            "status",
-            "primary_ip",
-            "primary_ip4",
-            "primary_ip6",
-            "secrets_group",
-            "cluster",
-            "virtual_chassis",
-            "vc_position",
-            "vc_priority",
-            "device_redundancy_group",
-            "device_redundancy_group_priority",
-            "comments",
-            "local_config_context_schema",
-            "local_config_context_data",
-        ]
+        fields = "__all__"
         validators = []
 
     def validate(self, data):
@@ -502,34 +472,27 @@ class DeviceSerializer(
 
         return data
 
-    @extend_schema_field(str)
-    def get_parent_device(self, obj):
+    @extend_schema_field(DeviceBaySerializer)
+    def get_parent_bay(self, obj):
         try:
             device_bay = obj.parent_bay
         except DeviceBay.DoesNotExist:
             return None
-        depth = int(self.context.get("depth", 0))
-        device = Device.objects.get(device_bays=obj.parent_bay)
-        data = return_nested_serializer_data_based_on_depth(self, depth, device_bay, device_bay.device, "device")
-        if depth - 1 == 0:
-            data["device_bay"] = device_bay.id
-        elif depth - 1 < 0:
-            # Device is only an UUID in this case
-            pass
-        else:
-            device_bay_data = return_nested_serializer_data_based_on_depth(
-                data, depth - 1, device, device_bay, "device_bays"
-            )
-            data["device_bay"] = device_bay_data
-
-        return data
+        depth = self.Meta.depth
+        device_bay_data = return_nested_serializer_data_based_on_depth(
+            DeviceBaySerializer(device_bay), depth, obj, device_bay, "parent_bay"
+        )
+        return device_bay_data
 
 
 class DeviceWithConfigContextSerializer(DeviceSerializer):
     config_context = serializers.SerializerMethodField()
 
-    class Meta(DeviceSerializer.Meta):
-        fields = DeviceSerializer.Meta.fields + ["config_context"]
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "config_contexts" is always included appropriately."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "config_context")
+        return fields
 
     @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
@@ -620,7 +583,6 @@ class InterfaceSerializer(
     InterfaceCommonSerializer,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
-    StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     type = ChoiceField(choices=InterfaceTypeChoices)
@@ -666,15 +628,10 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, C
         fields = "__all__"
 
 
-class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebay-detail")
-
-    class Meta:
-        model = DeviceBay
-        fields = "__all__"
-
-
-class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class DeviceRedundancyGroupSerializer(
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
     failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
 
@@ -716,7 +673,10 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
 #
 
 
-class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class CableSerializer(
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
@@ -735,7 +695,8 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         if side.lower() not in ["a", "b"]:
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
-        depth = int(self.context.get("depth", 0))
+        # depth = int(self.context.get("depth", 0))
+        depth = self.Meta.depth
         return return_nested_serializer_data_based_on_depth(
             self, depth, obj, termination, f"termination_{side.lower()}"
         )
@@ -761,7 +722,7 @@ class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Statu
         return self._get_termination(obj, "b")
 
 
-class TracedCableSerializer(StatusModelSerializerMixin, serializers.ModelSerializer):
+class TracedCableSerializer(serializers.ModelSerializer):
     """
     Used only while tracing a cable path.
     """
@@ -891,7 +852,6 @@ class PowerFeedSerializer(
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
-    StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerfeed-detail")
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)

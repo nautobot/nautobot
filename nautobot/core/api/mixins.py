@@ -42,14 +42,23 @@ class WritableSerializerMixin:
     """
 
     def remove_non_filter_fields(self, filter_params):
+        """
+        Make output from a WritableSerializer "round-trip" capable by automatically stripping from the
+        data any serializer fields that do not correspond to a specific model field
+        """
         if hasattr(self, "fields"):
             for field_name, field_instance in self.fields.items():
                 if field_name in filter_params and field_instance.source == "*":
-                    logger.debug("Discarding non-database field %s", field_name)
+                    logger.debug("Discarding non-filter field %s", field_name)
                     del filter_params[field_name]
         return filter_params
 
-    def get_queryset_filter_params(self, data, queryset, model_name):
+    def get_queryset_filter_params(self, data, queryset):
+        """
+        Data could be a dictionary and an int (for the User model) or a str that represents the primary key.
+        If it is a dictionary, we return it after remove non-filter fields.
+        If it is a primary key, we return a dictionary object formatted like this {"pk": pk}
+        """
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
             return self.remove_non_filter_fields(params)
@@ -57,36 +66,35 @@ class WritableSerializerMixin:
             pk = int(data) if isinstance(queryset.model._meta.pk, AutoField) else uuid.UUID(str(data))
         except (TypeError, ValueError) as e:
             raise ValidationError(
-                {
-                    f"{model_name}": "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    f"unrecognized value: {data}"
-                }
+                "Related objects must be referenced by ID or by dictionary of attributes. Received an "
+                f"unrecognized value: {data}"
             ) from e
         return {"pk": pk}
 
-    def get_object(self, data, queryset, model_name):
-        filter_params = self.get_queryset_filter_params(data=data, queryset=queryset, model_name=model_name)
+    def get_object(self, data, queryset):
+        """
+        Retrieve an unique object based on a dictionary of data attributes and raise errors accordingly if the object is not found.
+        """
+        filter_params = self.get_queryset_filter_params(data=data, queryset=queryset)
         try:
             return queryset.get(**filter_params)
         except ObjectDoesNotExist as e:
-            raise ValidationError(
-                {model_name: f"Related object not found using the provided attributes: {filter_params}"}
-            ) from e
+            raise ValidationError(f"Related object not found using the provided attributes: {filter_params}") from e
         except MultipleObjectsReturned as e:
-            raise ValidationError(
-                {model_name: f"Multiple objects match the provided attributes: {filter_params}"}
-            ) from e
+            raise ValidationError(f"Multiple objects match the provided attributes: {filter_params}") from e
         except FieldError as e:
-            raise ValidationError({model_name: e}) from e
+            raise ValidationError(e) from e
 
     def to_internal_value(self, data):
+        """
+        Return an object or a list of objects based on a dictionary of data attributes or an UUID.
+        """
         if data is None:
             return None
         if hasattr(self, "queryset"):
             queryset = self.queryset
         else:
             queryset = self.Meta.model.objects
-        model_name = queryset.model._meta.model_name
         if isinstance(data, list):
-            return [self.get_object(data=entry, queryset=queryset, model_name=model_name) for entry in data]
-        return self.get_object(data=data, model_name=model_name, queryset=queryset)
+            return [self.get_object(data=entry, queryset=queryset) for entry in data]
+        return self.get_object(data=data, queryset=queryset)

@@ -329,7 +329,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             {
                 "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
-                'display-field="display" value-field="name" data-url="/api/extras/roles/" id="id_for_role" '
+                'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             },
         )
@@ -420,7 +420,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"]["location"].startswith("Related object not found"))
+        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
         data = {
@@ -452,7 +452,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"]["location"].startswith("Related object not found"))
+        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
@@ -472,7 +472,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"]["location"].startswith("Multiple objects match"))
+        self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
 
     def test_related_by_invalid(self):
         data = {

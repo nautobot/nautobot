@@ -1,17 +1,15 @@
 from collections import OrderedDict
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
-    WritableNestedSerializer,
 )
-from nautobot.extras.api.mixins import (
-    StatusModelSerializerMixin,
-    TaggedModelSerializerMixin,
-)
+from nautobot.core.api.utils import return_nested_serializer_data_based_on_depth
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
@@ -98,7 +96,7 @@ class VLANGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class VLANSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
+class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     prefix_count = serializers.IntegerField(read_only=True)
 
@@ -134,7 +132,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Prefix
         fields = "__all__"
-        read_only_fields = ["family", "prefix_length"]
+        extra_kwargs = {"family": {"read_only": True}, "prefix_length": {"read_only": True}}
 
 
 class PrefixLengthSerializer(serializers.Serializer):
@@ -182,26 +180,31 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class NestedIPAddressSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
-    family = serializers.IntegerField(read_only=True)
-    address = IPFieldSerializer()
-
-    class Meta:
-        model = IPAddress
-        fields = ["id", "url", "family", "address"]
-
-
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
-    nat_outside_list = NestedIPAddressSerializer(read_only=True, many=True)
+    nat_outside_list = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = IPAddress
         fields = "__all__"
-        read_only_fields = ["family", "prefix_length"]
+        extra_kwargs = {
+            "family": {"read_only": True},
+            "prefix_length": {"read_only": True},
+        }
+
+    @extend_schema_field(str)
+    def get_nat_outside_list(self, obj):
+        try:
+            nat_outside_list = obj.nat_outside_list
+        except IPAddress.DoesNotExist:
+            return None
+        depth = self.Meta.depth
+        data = return_nested_serializer_data_based_on_depth(
+            IPAddressSerializer(nat_outside_list), depth, obj, nat_outside_list, "nat_outside_list"
+        )
+        return data
 
 
 class AvailableIPSerializer(serializers.Serializer):
@@ -233,6 +236,7 @@ class AvailableIPSerializer(serializers.Serializer):
 
 class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:service-detail")
+    # TODO #3024 make a backlog item to rip out the choice field.
     protocol = ChoiceField(choices=ServiceProtocolChoices, required=False)
     ports = serializers.ListField(
         child=serializers.IntegerField(

@@ -6,7 +6,7 @@ from django.test import tag
 
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
-from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient, TreeModelTestCaseMixin
+from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 from nautobot.core.testing.utils import (
     create_test_user,
     disable_warnings,
@@ -37,7 +37,6 @@ __all__ = (
     "post_data",
     "run_job_for_testing",
     "TestCase",
-    "TreeModelTestCaseMixin",
     "ViewTestCases",
 )
 

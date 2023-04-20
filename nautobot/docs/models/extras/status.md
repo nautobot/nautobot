@@ -62,9 +62,9 @@ Any model form that is intended to have a `status` field must inherit from one o
 
 - FIXME: CSV import forms
 
-### `StatusModelSerializerMixin` serializer mixin
+### `` serializer mixin
 
-Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
+Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
 
 +/- 2.0.0
     The `StatusSerializerField` was changed to use a `NestedStatusSerializer` instead of presenting choices as a list of enums.
@@ -98,7 +98,7 @@ To fully integrate a model to include a `status` field, assert the following:
 
 ### Serializers
 
-- Serializers for your model must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`
+- Serializers for your model must inherit from `nautobot.extras.api.serializers.`
 
 ### Tables
 

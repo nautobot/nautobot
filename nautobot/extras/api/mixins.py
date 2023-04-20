@@ -1,31 +1,11 @@
 import logging
 
-from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.api import (
     BaseModelSerializer,
-    ContentTypeField,
 )
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)
-
-
-class StatusModelSerializerMixin(BaseModelSerializer):
-    """Mixin to add `status` choice field to model serializers."""
-
-    content_types = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()),
-        required=False,
-        many=True,
-    )
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that "status" field is always present."""
-        fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "status")
-        return fields
 
 
 class TaggedModelSerializerMixin(BaseModelSerializer):
@@ -62,9 +42,3 @@ class TaggedModelSerializerMixin(BaseModelSerializer):
             instance.tags.clear()
 
         return instance
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(TaggedModelSerializerMixin)
-class TaggedObjectSerializer(TaggedModelSerializerMixin):
-    pass

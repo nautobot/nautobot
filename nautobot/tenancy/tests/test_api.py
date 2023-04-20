@@ -1,6 +1,6 @@
 from django.urls import reverse
 
-from nautobot.core.testing import APITestCase, APIViewTestCases, TreeModelTestCaseMixin
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.tenancy.models import Tenant, TenantGroup
 
 
@@ -12,7 +12,7 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class TenantGroupTest(APIViewTestCases.APIViewTestCase, TreeModelTestCaseMixin):
+class TenantGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = TenantGroup
     bulk_update_data = {
         "description": "New description",

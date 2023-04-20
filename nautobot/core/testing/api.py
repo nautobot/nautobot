@@ -200,6 +200,7 @@ class APIViewTestCases:
             for field in self.model._meta.fields:
                 if not field.name.startswith("_"):
                     if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, TaggableManager)) and (
+                        # we represent content-types as "app_label.modelname" rather than as FKs
                         field.related_model != ContentType
                         # user is a model field on Token but not a field on TokenSerializer
                         and not (field.name == "user" and self.model == users_models.Token)
@@ -437,7 +438,7 @@ class APIViewTestCases:
 
             initial_count = self._get_queryset().count()
             for i, create_data in enumerate(self.create_data):
-                if i == len(self.create_data):
+                if i == len(self.create_data) - 1:
                     # Test to see if depth parameter is ignored in POST request.
                     response = self.client.post(
                         self._get_list_url() + "?depth=3", create_data, format="json", **self.header
@@ -738,6 +739,39 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertIn("notes_url", response.data)
                 self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+
+    class TreeModelAPIViewTestCaseMixin:
+        """Test `?depth=2` query parameter for TreeModel"""
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_2(self):
+            """
+            GET a list of objects using the "?depth=2" parameter.
+            TreeModel Only
+            """
+            field = "parent"
+
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            url = f"{self._get_list_url()}?depth=2"
+            response = self.client.get(url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+
+            response_data = response.data["results"]
+            for data in response_data:
+                # First Level Parent
+                self.assertEqual(field in data, True)
+                if data[field] is not None:
+                    self.assertIsInstance(data[field], dict)
+                    self.assertTrue(is_uuid(data[field]["id"]))
+                    # Second Level Parent
+                    self.assertIn(field, data[field])
+                    if data[field][field] is not None:
+                        self.assertIsInstance(data[field][field], dict)
+                        self.assertTrue(is_uuid(data[field][field]["id"]))
 
     class APIViewTestCase(
         GetObjectViewTestCase,

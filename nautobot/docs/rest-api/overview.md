@@ -420,66 +420,6 @@ http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq
 }
 ```
 
-### Retrieving Object Relationships and Relationship Associations
-
-+++ 1.4.0
-
-Objects that are associated with another object by a custom [Relationship](../models/extras/relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
-
-```no-highlight
-GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
-```
-
-```json
-{
-    "id": "f472bb77-7f56-4e79-ac25-2dc73eb63924",
-    "display": "alpha",
-    "url": "http://nautobot/api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/",
-...
-    "relationships": {
-        "site-to-vrf": {
-            "id": "e74cb7f7-15b0-499d-9401-a0f01cb96a9a",
-            "url": "/api/extras/relationships/e74cb7f7-15b0-499d-9401-a0f01cb96a9a/",
-            "name": "Single Site to Single VRF",
-            "type": "one-to-one",
-            "destination": {
-                "label": "VRF",
-                "object_type": "ipam.vrf",
-                "objects": [
-                    {
-                        "id": "36641ba0-50d6-43be-b9b5-86aa992402e0",
-                        "url": "http://nautobot/api/ipam/vrfs/36641ba0-50d6-43be-b9b5-86aa992402e0/",
-                        "name": "red",
-                        "rd": null,
-                        "display": "red"
-                    }
-                ]
-            }
-        },
-        "vrfs-to-sites": {
-            "id": "e39c53e4-78cf-4572-b116-1d8830b81b2e",
-            "url": "/api/extras/relationships/e39c53e4-78cf-4572-b116-1d8830b81b2e/",
-            "name": "VRFs to Sites",
-            "type": "many-to-many",
-            "source": {
-                "label": "VRFs",
-                "object_type": "ipam.vrf",
-                "objects": []
-            }
-        },
-    }
-}
-```
-
-* Under the `"relationships"` key, there will be one key per Relationship that applies to this model, corresponding to the `slug` of that Relationship.
-    * Under each slug key, there will be information about the Relationship itself, plus any of `"source"`, `"destination"`, or `"peer"` keys (depending on the type and directionality of the Relationship).
-        * Under the `"source"`, `"destination"`, or `"peer"` keys, there are the following keys:
-            * `"label"` - a human-readable description of the related objects
-            * `"object_type"` - the content-type of the related objects
-            * `"objects"` - a list of all related objects, each represented in nested-serializer form as described under [Related Objects](#related-objects) above.
-
-In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
-
 ### Depth Query Parameter
 
 +++ 2.0.0
@@ -785,6 +725,66 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
     ...
 }
 ```
+
+### Retrieving Object Relationships and Relationship Associations
+
++++ 1.4.0
+
+Objects that are associated with another object by a custom [Relationship](../models/extras/relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
+
+```no-highlight
+GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
+```
+
+```json
+{
+    "id": "f472bb77-7f56-4e79-ac25-2dc73eb63924",
+    "display": "alpha",
+    "url": "http://nautobot/api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/",
+...
+    "relationships": {
+        "site-to-vrf": {
+            "id": "e74cb7f7-15b0-499d-9401-a0f01cb96a9a",
+            "url": "/api/extras/relationships/e74cb7f7-15b0-499d-9401-a0f01cb96a9a/",
+            "name": "Single Site to Single VRF",
+            "type": "one-to-one",
+            "destination": {
+                "label": "VRF",
+                "object_type": "ipam.vrf",
+                "objects": [
+                    {
+                        "id": "36641ba0-50d6-43be-b9b5-86aa992402e0",
+                        "url": "http://nautobot/api/ipam/vrfs/36641ba0-50d6-43be-b9b5-86aa992402e0/",
+                        "name": "red",
+                        "rd": null,
+                        "display": "red"
+                    }
+                ]
+            }
+        },
+        "vrfs-to-sites": {
+            "id": "e39c53e4-78cf-4572-b116-1d8830b81b2e",
+            "url": "/api/extras/relationships/e39c53e4-78cf-4572-b116-1d8830b81b2e/",
+            "name": "VRFs to Sites",
+            "type": "many-to-many",
+            "source": {
+                "label": "VRFs",
+                "object_type": "ipam.vrf",
+                "objects": []
+            }
+        },
+    }
+}
+```
+
+* Under the `"relationships"` key, there will be one key per Relationship that applies to this model, corresponding to the `slug` of that Relationship.
+    * Under each slug key, there will be information about the Relationship itself, plus any of `"source"`, `"destination"`, or `"peer"` keys (depending on the type and directionality of the Relationship).
+        * Under the `"source"`, `"destination"`, or `"peer"` keys, there are the following keys:
+            * `"label"` - a human-readable description of the related objects
+            * `"object_type"` - the content-type of the related objects
+            * `"objects"` - a list of all related objects, each represented in nested-serializer form as described under [Related Objects](#related-objects) above.
+
+In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
 
 ### Excluding Config Contexts
 

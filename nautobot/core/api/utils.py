@@ -205,12 +205,11 @@ def nested_serializer_factory(relation_info, nested_depth):
     This method should only be called in build_nested_field()
     in which relation_info and nested_depth are already given.
     """
-    nested_serializer_name = f"{relation_info.related_model._meta.model_name.capitalize()}" + "NautobotNestedSerializer"
+    nested_serializer_name = "Nested" + f"{relation_info.related_model._meta.model_name.capitalize()}"
     # If we already have built a suitable NestedSerializer we return the cached serializer.
     # else we build a new one and store it in the cache for future use.
     if nested_serializer_name in NESTED_SERIALIZER_CACHE:
         field_class = NESTED_SERIALIZER_CACHE[nested_serializer_name]
-        field_class.Meta.model = relation_info.related_model
         field_class.Meta.depth = nested_depth - 1
         field_kwargs = get_nested_relation_kwargs(relation_info)
     else:
@@ -233,6 +232,16 @@ def nested_serializer_factory(relation_info, nested_depth):
 
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
+    """
+    Return a Primary key for a ForeignKeyField or a list of Primary keys for a ManytoManyField when depth = 0
+    Return a Nested serializer for a ForeignKeyField or a list of Nested serializers for a ManytoManyField when depth > 0
+    Args:
+        serializer: BaseSerializer
+        depth: Levels of nested serialization
+        obj: Object needs to be serialized
+        obj_related_field: Related object needs to be serialized
+        obj_related_field_name: Object's field name that represents the related object.
+    """
     if obj_related_field.__class__.__name__ == "RelatedManager":
         result = []
         if depth == 0:

@@ -113,7 +113,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 #
 
 
-class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
+class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMixin, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:configcontext-detail")
     owner_content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("config_context_owners").get_query()),
@@ -122,7 +122,6 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         default=None,
     )
     owner = serializers.SerializerMethodField(read_only=True)
-    tags = serializers.SlugRelatedField(queryset=Tag.objects.all(), slug_field="slug", required=False, many=True)
 
     # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
@@ -463,10 +462,6 @@ class JobVariableSerializer(serializers.Serializer):
     model = serializers.CharField(read_only=True, required=False)
 
 
-class JobRunResponseSerializer(serializers.Serializer):
-    """Serializer representing responses from the JobModelViewSet.run() POST endpoint."""
-
-
 #
 # Job Results
 #
@@ -489,11 +484,18 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
-    start_time = serializers.DateTimeField(format=None, required=False)
+    # start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
         model = ScheduledJob
         fields = "__all__"
+
+
+class JobRunResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the JobModelViewSet.run() POST endpoint."""
+
+    schedule = ScheduledJobSerializer(read_only=True, required=False)
+    job_result = JobResultSerializer(read_only=True, required=False)
 
 
 #

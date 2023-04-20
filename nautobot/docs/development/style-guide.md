@@ -65,7 +65,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
     * API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
 
-    * `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedModelSerializerMixin` and `StatusModelSerializerMixin` will automatically add the `tags` and `status` fields when included in a serializer class.
+    * `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedModelSerializerMixin` and `` will automatically add the `tags` and `status` fields when included in a serializer class.
 
     * API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
 

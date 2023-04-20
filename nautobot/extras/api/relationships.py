@@ -9,7 +9,11 @@ from rest_framework.serializers import ValidationError
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.mixins import WritableSerializerMixin
-from nautobot.core.api.utils import get_serializer_for_model, nested_serializer_factory
+from nautobot.core.api.utils import (
+    get_relation_info_for_nested_serializers,
+    get_serializer_for_model,
+    nested_serializer_factory,
+)
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import Relationship
 
@@ -105,6 +109,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
         relationships_data = value.get_relationships(include_hidden=True)
         for this_side, relationships in relationships_data.items():
             for relationship, associations in relationships.items():
+                depth = int(self.context.get("depth", 0))
                 data.setdefault(
                     relationship.slug,
                     {
@@ -129,19 +134,19 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                 # or in the case of a relationship involving models from a plugin that's not currently enabled.
                 other_side_serializer = None
                 other_side_model = other_type.model_class()
-                from nautobot.core.api.utils import get_relation_info_for_nested_serializers
 
                 other_objects = [assoc.get_peer(value) for assoc in associations if assoc.get_peer(value) is not None]
                 if other_side_model is not None:
                     try:
                         depth = int(self.context.get("depth", 0))
                         if depth != 0:
-                            relation_info = get_relation_info_for_nested_serializers(
-                                associations[0], other_objects[0], f"{other_side}"
-                            )
-                            other_side_serializer, field_kwargs = self.build_nested_field(
-                                f"{other_side}", relation_info, depth
-                            )
+                            if associations and other_objects:
+                                relation_info = get_relation_info_for_nested_serializers(
+                                    associations[0], other_objects[0], f"{other_side}"
+                                )
+                                other_side_serializer, field_kwargs = self.build_nested_field(
+                                    f"{other_side}", relation_info, depth
+                                )
                     except SerializerNotFound:
                         pass
 

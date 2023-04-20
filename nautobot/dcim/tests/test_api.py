@@ -8,7 +8,7 @@ from rest_framework import status
 
 from constance.test import override_config
 
-from nautobot.core.testing import APITestCase, APIViewTestCases, TreeModelTestCaseMixin
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
@@ -130,7 +130,7 @@ class Mixins:
         """Mixin class for all `FooPortTemplate` tests."""
 
 
-class LocationTypeTest(APIViewTestCases.APIViewTestCase, TreeModelTestCaseMixin):
+class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = LocationType
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
@@ -172,7 +172,7 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase, TreeModelTestCaseMixin)
         ]
 
 
-class LocationTest(APIViewTestCases.APIViewTestCase, TreeModelTestCaseMixin):
+class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = Location
     choices_fields = []
     slug_source = ["parent__slug", "name"]
@@ -331,7 +331,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, TreeModelTestCaseMixin):
         self.assertEqual(response.json()["time_zone"], None)
 
 
-class RackGroupTest(APIViewTestCases.APIViewTestCase, TreeModelTestCaseMixin):
+class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = RackGroup
     bulk_update_data = {
         "description": "New description",
@@ -1782,7 +1782,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         ]
 
 
-class InventoryItemTest(Mixins.BaseComponentTestMixin, TreeModelTestCaseMixin):
+class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = InventoryItem
     choices_fields = []
 
