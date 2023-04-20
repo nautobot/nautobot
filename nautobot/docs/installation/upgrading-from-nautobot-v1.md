@@ -228,8 +228,61 @@ The Job `slug` has been updated to be derived from the `name` field instead of a
 !!! example
     The Nautobot Golden Config backup job's slug will change from `plugins-nautobot_golden_config-jobs-backupjob` to `backup-configurations`.
 
+The Job `commit_default` field has been renamed to `dryrun_default` and the default value has been changed from `True` to `False`. This change is a result of the fundamental job changes mentioned in the [Job Changes](#job-changes) section below.
+
 ## JobResult Database Model Changes
 
 The `JobResult` objects for which results from Job executions are stored are now automatically managed. Therefore job authors must never manipulate or `save()` these objects as they are now used internally for all state transitions and saving the objects yourself could interfere with and cause Job execution to fail or cause data loss.
 
 Therefore all code that is calling `JobResult.set_status()` (which has been removed) or `JobResult.save()` must be removed.
+
+## Job Changes
+
+### Fundamental Changes
+
+The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
+
+- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
+
+!!! important
+    Be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods
+
+- The run method signature is now customizable by the job author. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
+
+!!! example
+    ```py
+    class ExampleJob(Job):
+        var1 = StringVar()
+        var2 = IntegerVar(required=True)
+        var3 = BooleanVar()
+        var4 = ObjectVar(model=Role)
+
+        def run(self, var1, var2, var3, var4):
+            ...
+    ```
+
+### Database Transactions
+
+Nautobot no longer wraps the job `run` method in an atomic database transaction. As a result, jobs that need to roll back database changes will have to decorate the run method with `@transaction.atomic` or use the `with transaction.atomic()` context manager in the job code.
+
+With the removal of the atomic transaction, the `commit` flag has been removed. The ability to bypass job approval on dryrun can be achieved by using an optional `dryrun` argument. Job authors who wish to allow users to bypass approval when the `dryrun` flag is set should set a `dryrun` attribute with a value of `DryRunVar()` on their job class. `DryRunVar` can be imported from `nautobot.extras.jobs`.
+
+!!! example
+    ```py
+    from nautobot.extras.jobs import DryRunVar, Job
+
+    class ExampleJob(Job):
+        dryrun = DryRunVar()
+
+        def run(self, dryrun):
+            ...
+    ```
+
+A new `supports_dryrun` field has been added to the `Job` model and `Job` class that returns true if the `Job` class implements the `dryrun = DryRunVar()` attribute. This is used to determine if jobs that require approval can be dry run without prior approval.
+
+The `commit_default` job field has been renamed to `dryrun_default` and the default value has been changed from `True` to `False`.
+
+The `read_only` job field now forces `dryrun=True` instead of the prior behavior of setting `commit=False`.
+
+!!! important
+    Nautobot no longer enforces any job behavior when dryrun is set. It is now the job author's responsibility to define and enforce the execution of a "dry run".

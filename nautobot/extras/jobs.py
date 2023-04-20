@@ -924,7 +924,7 @@ class DryRunVar(BooleanVar):
     description = "Check to run job in dryrun mode."
 
     def __init__(self, *args, **kwargs):
-        # Default must be false unless overridden on job model
+        # Default must be false unless overridden through `dryrun_default` meta attribute
         kwargs["default"] = False
 
         # Default description if one was not provided

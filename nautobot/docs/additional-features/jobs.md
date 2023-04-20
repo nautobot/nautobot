@@ -318,6 +318,10 @@ Stores a numeric integer. Options include:
 
 A true/false flag. This field has no options beyond the defaults listed above.
 
+#### `DryRunVar`
+
+A true/false flag with special handling for jobs that require approval. If `dryrun = DryRunVar()` is declared on a job class, approval may be bypassed if `dryrun` is set to `True` on job execution.
+
 #### `ChoiceVar`
 
 A set of choices from which the user can select one.
@@ -686,27 +690,41 @@ if "job_logs" in settings.DATABASES:
 Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
 
 ```python
-import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.jobs import run_job
-from nautobot.extras.models import JobResult, Job
+from nautobot.extras.models import JobResult
 
-def run_job_for_testing(job, data=None, commit=True, username="test-user"):
-    if data is None:
-        data = {}
-    user_model = get_user_model()
-    user, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
-    job_result = JobResult.objects.create(
-        name=job.class_path,
-        obj_type=ContentType.objects.get_for_model(Job),
-        user=user,
-        task_id=uuid.uuid4(),
+User = get_user_model()
+
+def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
+    """
+    Provide a common interface to run Nautobot jobs as part of unit tests.
+
+    Args:
+      job (Job): Job model instance (not Job class) to run
+      username (str): Username of existing or to-be-created User account to own the JobResult.
+      profile (bool): Whether to profile the job execution.
+      **kwargs: Input keyword arguments for Job run method.
+
+    Returns:
+      JobResult: representing the executed job
+    """
+    # Enable the job if it wasn't enabled before
+    if not job.enabled:
+        job.enabled = True
+        job.validated_save()
+
+    user_instance, _ = User.objects.get_or_create(
+        username=username, defaults={"is_superuser": True, "password": "password"}
     )
-    with web_request_context(user=user) as request:
-        run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    # Run the job synchronously in the current thread as if it were being executed by a worker
+    job_result = JobResult.execute_job(
+        job_model=job,
+        user=user_instance,
+        profile=profile,
+        **kwargs,
+    )
     return job_result
 ```
 
