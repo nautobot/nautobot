@@ -3358,6 +3358,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(response.data["result"], False)
+            self.assertContains(response.data["message"], "SecretValueNotFoundError")
 
 
 class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
