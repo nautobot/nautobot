@@ -13,7 +13,6 @@ name = "ExamplePlugin jobs"
 
 
 class ExampleDryRunJob(Job):
-    # TODO(gary): assert that only one DryRunVar is defined on Job classes
     dryrun = DryRunVar()
 
     class Meta:
