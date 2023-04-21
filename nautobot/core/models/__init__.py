@@ -57,7 +57,7 @@ class BaseModel(models.Model):
                 except NoReverseMatch:
                     continue
 
-        return None
+        return AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
 
     class Meta:
         abstract = True

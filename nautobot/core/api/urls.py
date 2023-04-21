@@ -56,7 +56,7 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-    # Core (keeping for backwards compatibility for the moment)
+    # Core, keeping for backwards compatibility of the legacy UI (Dynamic Filter Form)
     path("core/", include((core_api_patterns, "core-api"))),
     # UI
     path("ui/", include((ui_api_patterns, "ui-api"))),
