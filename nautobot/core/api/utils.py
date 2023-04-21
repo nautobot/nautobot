@@ -259,7 +259,6 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
         if depth == 0:
             return obj_related_field.id
         else:
-            print(depth)
             relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
             field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
             return field_class(

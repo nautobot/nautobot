@@ -186,6 +186,13 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 ??? info "Full table of code location changes"
     {data-table installation/tables/v2-code-location-changes.yaml}
 
+## Removed Python Code
+
+Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
+
+??? info "Full table of code removals"
+    {data-table installation/tables/v2-code-removals.yaml}
+
 ## Git Data Source Changes
 
 The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.

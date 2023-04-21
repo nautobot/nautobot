@@ -81,7 +81,6 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.api.serializers import IPAddressSerializer
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
