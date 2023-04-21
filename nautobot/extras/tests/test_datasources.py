@@ -85,11 +85,7 @@ class GitTest(TransactionTestCase):
         )
         self.repo.save()
 
-        self.job_result = JobResult.objects.create(
-            name=self.repo.name,
-            obj_type=ContentType.objects.get_for_model(GitRepository),
-            task_id=uuid.uuid4(),
-        )
+        self.job_result = JobResult.objects.create(name=self.repo.name)
 
         self.config_context_schema = {
             "_metadata": {

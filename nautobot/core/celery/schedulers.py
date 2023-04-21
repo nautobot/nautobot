@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 import logging
 
 from celery import current_app
@@ -38,11 +39,13 @@ class NautobotScheduleEntry(ModelEntry):
             )
             self._disable(model)
 
-        self.options = {}
-        if model.queue:
-            self.options["queue"] = model.queue
+        self.options = {
+            "headers": {},
+            "nautobot_job_scheduled_job_id": model.id,
+        }
+        if isinstance(model.celery_kwargs, Mapping):
+            self.options.update(model.celery_kwargs)
 
-        self.options["headers"] = {}
         self.total_run_count = model.total_run_count
         self.model = model
 

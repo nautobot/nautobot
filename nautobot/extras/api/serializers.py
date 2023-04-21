@@ -807,7 +807,6 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     job_model = NestedJobSerializer(read_only=True)
-    obj_type = ContentTypeField(read_only=True)
     scheduled_job = NestedScheduledJobSerializer(read_only=True)
 
     class Meta:
@@ -818,11 +817,9 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
             "date_done",
             "name",
             "job_model",
-            "obj_type",
             "status",
             "user",
-            "data",
-            "task_id",
+            "result",
             "task_kwargs",
             "scheduled_job",
         ]

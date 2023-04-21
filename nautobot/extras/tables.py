@@ -644,7 +644,7 @@ class JobLogEntryTable(BaseTable):
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
-    linked_record = tables.Column(verbose_name="Job / Git Repository", linkify=True)
+    job_model = tables.Column(verbose_name="Job", linkify=True)
     name = tables.Column()
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
@@ -683,15 +683,6 @@ class JobResultTable(BaseTable):
         """
     )
 
-    def order_linked_record(self, queryset, is_descending):
-        return (
-            queryset.order_by(
-                ("-" if is_descending else "") + "job_model__name",
-                ("-" if is_descending else "") + "name",
-            ),
-            True,
-        )
-
     def render_summary(self, record):
         """
         Define custom rendering for the summary column.
@@ -718,7 +709,7 @@ class JobResultTable(BaseTable):
             "pk",
             "date_created",
             "name",
-            "linked_record",
+            "job_model",
             "duration",
             "date_done",
             "user",
@@ -726,7 +717,7 @@ class JobResultTable(BaseTable):
             "summary",
             "actions",
         )
-        default_columns = ("pk", "date_created", "name", "linked_record", "user", "status", "summary", "actions")
+        default_columns = ("pk", "date_created", "name", "job_model", "user", "status", "summary", "actions")
 
 
 class JobButtonTable(BaseTable):

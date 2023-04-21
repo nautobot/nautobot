@@ -52,7 +52,7 @@ from nautobot.extras.models import (
     ComputedField,
 )
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
+from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
@@ -560,6 +560,7 @@ class ExportTemplateTestCase(
         }
 
 
+@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.BulkImportObjectsViewTestCase,
@@ -1026,6 +1027,7 @@ class ScheduledJobTestCase(
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
 
+@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class ApprovalQueueTestCase(
     # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
     # but we can't directly use it as it uses instance.get_absolute_url() rather than self._get_url("view", instance)
@@ -1430,17 +1432,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = get_job_content_type()
-        JobResult.objects.create(
-            name="local/test_pass/TestPass",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_fail/TestFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
+        JobResult.objects.create(name="local/test_pass/TestPass")
+        JobResult.objects.create(name="local/test_fail/TestFail")
 
 
 class JobTestCase(

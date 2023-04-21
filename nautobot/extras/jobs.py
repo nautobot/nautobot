@@ -123,26 +123,21 @@ class BaseJob(Task):
         self.active_test = "run"
         context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
         change_context = context_class(user=self.user, context_detail=self.class_path)
-        # TODO: re-add profiling feature
-        # if profile:
-        #     import cProfile
-
-        #     # TODO: This should probably be available as a file download rather than dumped to the hard drive.
-        #     # Pending this: https://github.com/nautobot/nautobot/issues/3352
-        #     profiling_path = f"/tmp/nautobot-jobresult-{self.request.id}.pstats"
-
-        #     # TODO: Context manager for this is added in 3.8
-        #     profiler = cProfile.Profile()
-        #     profiler.enable()
-        #     output = job.run(data=data, commit=commit)
-        #     profiler.disable()
-        #     profiler.dump_stats(profiling_path)
-        #     job.log_info(obj=None, message=f"Wrote profiling information to {profiling_path}.")
-        # else:
-        #     output = job.run(data=data, commit=commit)
 
         with change_logging(change_context):
-            return self.run(*args, **deserialized_kwargs)
+            if self.celery_kwargs.get("nautobot_job_profile", False) is True:
+                import cProfile
+
+                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
+                # Pending this: https://github.com/nautobot/nautobot/issues/3352
+                profiling_path = f"/tmp/nautobot-jobresult-{self.job_result.id}.pstats"
+
+                with cProfile.Profile() as pr:
+                    output = self.run(*args, **deserialized_kwargs)
+                    pr.dump_stats(profiling_path)
+                    return output
+            else:
+                return self.run(*args, **deserialized_kwargs)
 
     def __str__(self):
         return str(self.name)
@@ -531,6 +526,10 @@ class BaseJob(Task):
         celery reuses task instances for multiple runs.
         """
         try:
+            del self.celery_kwargs
+        except AttributeError:
+            pass
+        try:
             del self.job_result
         except AttributeError:
             pass
@@ -545,7 +544,11 @@ class BaseJob(Task):
 
     @functools.cached_property
     def job_result(self):
-        return JobResult.objects.get(task_id=self.request.id)
+        return JobResult.objects.get(id=self.request.id)
+
+    @functools.cached_property
+    def celery_kwargs(self):
+        return self.job_result.celery_kwargs or {}
 
     @property
     def user(self):
@@ -582,6 +585,7 @@ class BaseJob(Task):
 
         return return_data
 
+    # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
     def deserialize_data(cls, data):
         """

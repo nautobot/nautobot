@@ -416,6 +416,13 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
         name = serializer["name"]
     crontab = serializer.get("crontab", "")
 
+    celery_kwargs = {
+        "nautobot_job_user_id": user.id,
+        "nautobot_job_profile": False,
+        "nautobot_job_job_model_id": job_model.id,
+        "queue": task_queue,
+    }
+
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
     # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
@@ -431,6 +438,7 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
         start_time=time,
         description=f"Nautobot job {name} scheduled by {user} for {time}",
         kwargs=data,
+        celery_kwargs=celery_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=user,
@@ -662,7 +670,7 @@ class JobViewSet(
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
-                celery_kwargs={"queue": task_queue},
+                task_queue=task_queue,
                 **job_class.serialize_data(cleaned_data),
             )
 
@@ -722,7 +730,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.select_related("job_model", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -881,7 +889,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
+            celery_kwargs=scheduled_job.celery_kwargs or {},
             **job_model.job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})

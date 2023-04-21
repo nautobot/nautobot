@@ -820,6 +820,7 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     brief_fields = ["display", "id", "name", "url"]
@@ -1127,6 +1128,7 @@ class ImageAttachmentTest(
         )
 
 
+@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class JobTest(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
     APIViewTestCases.GetObjectViewTestCase,
@@ -1136,6 +1138,7 @@ class JobTest(
 ):
     """Test cases for the Jobs REST API."""
 
+    databases = ("default", "job_logs")
     model = Job
     brief_fields = ["display", "grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
@@ -2044,44 +2047,33 @@ class JobResultTest(
     @classmethod
     def setUpTestData(cls):
         jobs = Job.objects.all()[:2]
-        job_ct = ContentType.objects.get_for_model(Job)
-        git_ct = ContentType.objects.get_for_model(GitRepository)
 
         JobResult.objects.create(
             job_model=jobs[0],
             name=jobs[0].class_path,
-            obj_type=job_ct,
             date_done=datetime.now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
-            data={"output": "\nRan for 3 seconds"},
             task_kwargs=None,
             scheduled_job=None,
-            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=None,
             name="Git Repository",
-            obj_type=git_ct,
             date_done=datetime.now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
-            data=None,
             task_kwargs={"repository_pk": uuid.uuid4()},
             scheduled_job=None,
-            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=jobs[1],
             name=jobs[1].class_path,
-            obj_type=job_ct,
             date_done=None,
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
-            data=None,
             task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             scheduled_job=None,
-            task_id=uuid.uuid4(),
         )
 
 
@@ -2106,11 +2098,7 @@ class JobLogEntryTest(
 
     @classmethod
     def setUpTestData(cls):
-        cls.job_result = JobResult.objects.create(
-            name="test",
-            task_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
-        )
+        cls.job_result = JobResult.objects.create(name="test")
 
         for log_level in ("debug", "info", "success", "warning"):
             JobLogEntry.objects.create(

@@ -633,14 +633,13 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
-    obj_type = ContentTypeFilter()
     date_created = django_filters.DateTimeFilter()
     date_done = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "name", "status", "user", "obj_type"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

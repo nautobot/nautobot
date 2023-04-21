@@ -3,13 +3,11 @@
 from datetime import timedelta
 import logging
 import os
-import uuid
 
 from celery import schedules
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
@@ -46,9 +44,7 @@ from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
-    FeatureQuery,
     extras_features,
-    get_job_content_type,
     jobs_in_directory,
 )
 
@@ -543,16 +539,6 @@ class JobResult(BaseModel, CustomFieldModel):
         db_index=True,
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
-    obj_type = models.ForeignKey(
-        to=ContentType,
-        related_name="job_results",
-        verbose_name="Object types",
-        limit_choices_to=FeatureQuery("job_results"),
-        help_text="The object type to which this job result applies",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
     date_created = models.DateTimeField(auto_now_add=True)
     date_done = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(
@@ -565,26 +551,10 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="Current state of the Job being run",
         db_index=True,
     )
-    data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
-    """
-    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
-
-    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
-
-    Log Messages now go to their own object, the JobLogEntry.
-
-    data = {
-        "output": <optional string, such as captured stdout/stderr>,
-    }
-    """
-    periodic_task_name = models.CharField(
-        null=True,
-        max_length=255,
-        help_text="Registered name of the Celery periodic task for this job. Internal use only.",
-    )
     worker = models.CharField(max_length=100, default=None, null=True)
     task_args = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
     # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
     # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
     # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
@@ -600,8 +570,6 @@ class JobResult(BaseModel, CustomFieldModel):
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
-    task_id = models.UUIDField(unique=True)
-
     objects = JobResultManager()
 
     def __init__(self, *args, **kwargs):
@@ -613,12 +581,12 @@ class JobResult(BaseModel, CustomFieldModel):
         get_latest_by = "date_created"
 
     def __str__(self):
-        return str(self.task_id)
+        return str(self.id)
 
     def as_dict(self):
         """This is required by the django-celery-results DB backend."""
         return {
-            "task_id": self.task_id,
+            "id": self.id,
             "task_name": self.task_name,
             "task_args": self.task_args,
             "task_kwargs": self.task_kwargs,
@@ -639,89 +607,6 @@ class JobResult(BaseModel, CustomFieldModel):
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
-
-    @property
-    def related_object(self):
-        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `task_id` fields.
-
-        If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
-        `class_path` of the Job subclass.
-        Note that this is **not** the extras.models.Job model class nor an instance thereof.
-
-        Else, if the the model class referenced by `obj_type` has a `name` field, our `name` field will be used
-        to look up a corresponding model instance. This is used, for example, to look up a related `GitRepository`;
-        more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
-        relationship between JobResults and model instances.
-
-        Else, the `obj_type` and `task_id` will be used together as a quasi-GenericForeignKey to look up a model
-        instance whose PK corresponds to the `task_id`. This behavior is currently unused in the Nautobot core,
-        but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
-        to plugin model instances.
-
-        This method is potentially rather slow as get_job() may need to actually load the Job class from disk;
-        consider carefully whether you actually need to use it.
-        """
-        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
-
-        if self.obj_type == get_job_content_type():
-            # Related object is an extras.Job subclass, our `name` matches its `class_path`
-            return get_job(self.name)
-
-        if self.obj_type:
-            model_class = self.obj_type.model_class()
-        else:
-            model_class = None
-
-        if model_class is not None:
-            if hasattr(model_class, "name"):
-                # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
-                try:
-                    return model_class.objects.get(name=self.name)
-                except model_class.DoesNotExist:
-                    pass
-
-            # See if we have a one-to-one relationship from JobResult to model_class record based on `task_id`
-            try:
-                return model_class.objects.get(id=self.task_id)
-            except model_class.DoesNotExist:
-                pass
-
-        return None
-
-    @property
-    def related_name(self):
-        """
-        Similar to self.name, but if there's an appropriate `related_object`, use its name instead.
-
-        Since this calls related_object, the same potential performance concerns exist. Use with caution.
-        """
-        related_object = self.related_object
-        if not related_object:
-            return self.name
-        if hasattr(related_object, "name"):
-            return related_object.name
-        return str(related_object)
-
-    @property
-    def linked_record(self):
-        """
-        A newer alternative to self.related_object that looks up an extras.models.Job instead of an extras.jobs.Job.
-        """
-        if self.job_model is not None:
-            return self.job_model
-        model_class = self.obj_type.model_class()
-        if model_class is not None:
-            if hasattr(model_class, "name"):
-                try:
-                    return model_class.objects.get(name=self.name)
-                except model_class.DoesNotExist:
-                    pass
-            if hasattr(model_class, "class_path"):
-                try:
-                    return model_class.objects.get(class_path=self.name)
-                except model_class.DoesNotExist:
-                    pass
-        return None
 
     def get_absolute_url(self):
         return reverse("extras:jobresult", kwargs={"pk": self.pk})
@@ -764,76 +649,88 @@ class JobResult(BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        # TODO: profile field will have to be added to the JobResult to support synchronous execution
-        job_result = cls.objects.create(
-            job_model=job_model,
-            name=job_model.class_path,
-            obj_type=ContentType.objects.get_for_model(job_model),
-            task_id=uuid.uuid4(),
-            user=user,
-        )
-
-        if celery_kwargs is None:
-            celery_kwargs = {}
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_profile": profile,
+            "nautobot_job_user_id": user.id,
+        }
 
         if job_model.soft_time_limit > 0:
-            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:
-            celery_kwargs["time_limit"] = job_model.time_limit
+            job_celery_kwargs["time_limit"] = job_model.time_limit
+
+        if celery_kwargs is not None:
+            job_celery_kwargs.update(celery_kwargs)
+
+        job_result = cls.objects.create(
+            job_model=job_model,
+            name=job_model.name,
+            user=user,
+            celery_kwargs=job_celery_kwargs,
+        )
+
         eager_result = job_model.job_task.apply(
-            args=job_args, kwargs=job_kwargs, task_id=job_result.task_id, **celery_kwargs
+            args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
         )
         job_result.refresh_from_db()
         job_result.date_done = timezone.now()
         job_result.status = eager_result.status
         job_result.result = eager_result.result
         job_result.traceback = eager_result.traceback
-        # user must be re-added because celery Task.apply() does not keep track of properties like apply_async()
+        # celery_kwargs, job_model and user must be re-added because celery Task.apply() does not keep track of properties like apply_async()
+        job_result.celery_kwargs = job_celery_kwargs
+        job_result.job_model = job_model
         job_result.user = user
         job_result.worker = eager_result.worker
         job_result.save()
         return job_result
 
     @classmethod
-    def enqueue_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, schedule=None, **job_kwargs):
+    def enqueue_job(
+        cls, job_model, user, *job_args, celery_kwargs=None, profile=False, schedule=None, task_queue=None, **job_kwargs
+    ):
         """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
         Args:
             job_model (Job): The Job to be enqueued for execution
             user (User): User object to link to the JobResult instance
             celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
-            profile (bool, optional): Whether to run cProfile on the job execution
+            profile (bool, optional): Whether to dumps cProfile stats on the job execution
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult
+            task_queue (str, optional): The celery queue to send the job to
             *job_args: positional args passed to the job task
             **job_kwargs: keyword args passed to the job task
 
         Returns:
             JobResult instance
         """
-        job_result = cls.objects.create(
-            job_model=job_model,
-            name=job_model.class_path,
-            obj_type=ContentType.objects.get_for_model(job_model),
-            scheduled_job=schedule,
-            task_id=uuid.uuid4(),
-            user=user,
-        )
+        job_result = cls.objects.create(name=job_model.name)
 
-        if celery_kwargs is None:
-            celery_kwargs = {}
+        if task_queue is None:
+            task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
 
-        celery_kwargs["user_id"] = getattr(user, "pk", None)
-        celery_kwargs["profile"] = profile
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_profile": profile,
+            "nautobot_job_user_id": user.id,
+            "queue": task_queue,
+        }
 
+        if schedule is not None:
+            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
         if job_model.soft_time_limit > 0:
-            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
         if job_model.time_limit > 0:
-            celery_kwargs["time_limit"] = job_model.time_limit
+            job_celery_kwargs["time_limit"] = job_model.time_limit
+
+        if celery_kwargs is not None:
+            job_celery_kwargs.update(celery_kwargs)
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
         transaction.on_commit(
             lambda: job_model.job_task.apply_async(
-                args=job_args, kwargs=job_kwargs, task_id=str(job_result.task_id), **celery_kwargs
+                args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
             )
         )
 
@@ -1011,6 +908,7 @@ class ScheduledJob(BaseModel):
     interval = models.CharField(choices=JobExecutionType, max_length=255)
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
     queue = models.CharField(
         max_length=200,
         blank=True,

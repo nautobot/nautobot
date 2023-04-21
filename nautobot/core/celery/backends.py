@@ -1,5 +1,6 @@
 from django_celery_results.backends import DatabaseBackend
 
+from nautobot.extras.constants import JOB_RESULT_CUSTOM_CELERY_KWARGS
 from nautobot.extras.models import JobResult
 
 
@@ -21,12 +22,14 @@ class NautobotDatabaseBackend(DatabaseBackend):
     def _get_extended_properties(self, request, traceback):
         """
         Overload default so that `argsrepr` and `kwargsrepr` aren't used to construct `args` and `kwargs`.
-        Also adds `user_id` passed in on `apply_async` calls.
+        Also adds custom kwargs passed in on `apply_async` calls to track user, job model, scheduled job, etc.
         """
         extended_props = {
-            "periodic_task_name": None,
             "task_args": None,
             "task_kwargs": None,
+            "celery_kwargs": None,
+            "job_model_id": None,
+            "scheduled_job_id": None,
             "task_name": None,
             "traceback": None,
             "user_id": None,
@@ -38,14 +41,22 @@ class NautobotDatabaseBackend(DatabaseBackend):
             task_kwargs = getattr(request, "kwargs", None)
 
             properties = getattr(request, "properties", {}) or {}
+
+            celery_kwargs = {"queue": request.delivery_info.get("routing_key", None)}
+            for kwarg_name in JOB_RESULT_CUSTOM_CELERY_KWARGS:
+                if kwarg_name in properties:
+                    celery_kwargs[kwarg_name] = properties[kwarg_name]
+
             extended_props.update(
                 {
-                    "periodic_task_name": properties.get("periodic_task_name", None),
                     "task_args": task_args,
                     "task_kwargs": task_kwargs,
+                    "celery_kwargs": celery_kwargs,
+                    "job_model_id": properties.get("nautobot_job_job_model_id", None),
+                    "scheduled_job_id": properties.get("nautobot_job_scheduled_job_id", None),
                     "task_name": getattr(request, "task", None),
                     "traceback": traceback,
-                    "user_id": properties.get("user_id", None),
+                    "user_id": properties.get("nautobot_job_user_id", None),
                     "worker": getattr(request, "hostname", None),
                 }
             )

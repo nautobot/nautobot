@@ -9,6 +9,7 @@ from celery.fixups.django import DjangoFixup
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
@@ -123,13 +124,17 @@ class NautobotKombuJSONEncoder(DjangoJSONEncoder):
     """
 
     def default(self, obj):
-        if hasattr(obj, "nautobot_serialize"):
+        from nautobot.core.models import BaseModel
+
+        if isinstance(obj, BaseModel):
             cls = obj.__class__
             module = cls.__module__
             qual_name = ".".join([module, cls.__qualname__])  # fully qualified dotted import path
             logger.debug("Performing nautobot serialization on %s for type %s", obj, qual_name)
-            data = {"__nautobot_type__": qual_name}
-            data.update(obj.nautobot_serialize())
+            data = {
+                "id": obj.id,
+                "__nautobot_type__": qual_name,
+            }
             return data
 
         elif isinstance(obj, set):
@@ -150,7 +155,7 @@ def nautobot_kombu_json_loads_hook(data):
         logger.debug("Performing nautobot deserialization for type %s", qual_name)
         cls = import_string(qual_name)  # fully qualified dotted import path
         if cls:
-            return cls.nautobot_deserialize(data)
+            return SimpleLazyObject(lambda: cls.objects.get(id=data["id"]))
         else:
             raise TypeError(f"Unable to import {qual_name} during nautobot deserialization")
     else:

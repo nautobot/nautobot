@@ -1,16 +1,14 @@
-import pickle
-
 from django import forms as django_forms
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import RequestFactory, TestCase
+from django.test import TestCase
 
 from example_plugin.models import ExampleModel
 
 from nautobot.circuits import models as circuits_models
-from nautobot.core import constants, exceptions, forms, settings_funcs, testing
+from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
@@ -593,62 +591,6 @@ class LookupRelatedFunctionTest(TestCase):
             )
         self.assertEqual(str(err.exception.args[0]), "content_type not found")
         self.assertEqual(err.exception.code, 404)
-
-
-class NautobotFakeRequestTest(testing.TestCase):
-    """Test the NautobotFakeRequest class."""
-
-    def setUp(self):
-        """Create the RequestFactory."""
-        super().setUp()
-        self.factory = RequestFactory()
-
-    def get_with_user(self, url):
-        """RequestFactory() doesn't run middleware, so simulate it."""
-        request = self.factory.get(url)
-        request.user = self.user
-        return request
-
-    def test_copy_safe_request(self):
-        """Test that copy_safe_request() produces a realistic looking NautobotFakeRequest."""
-        real_request = self.get_with_user("/")
-        fake_request = requests.copy_safe_request(real_request)
-        self.assertEqual(real_request.POST, fake_request.POST)
-        self.assertEqual(real_request.GET, fake_request.GET)
-        self.assertEqual(real_request.user, fake_request.user)
-        self.assertEqual(real_request.path, fake_request.path)
-        for key in fake_request.META.keys():
-            self.assertIn(key, constants.HTTP_REQUEST_META_SAFE_COPY)
-            self.assertEqual(real_request.META[key], fake_request.META[key])
-        self.assertEqual(fake_request.user, self.user)
-
-    def test_fake_request_json_no_extra_db_access(self):
-        """Verify that serializing and deserializing a NautobotFakeRequest as JSON doesn't unnecessarily access the DB."""
-        real_request = self.get_with_user("/")
-        fake_request = requests.copy_safe_request(real_request)
-        with self.assertNumQueries(0):
-            new_fake_request = requests.NautobotFakeRequest.nautobot_deserialize(fake_request.nautobot_serialize())
-        # After creating the new instance, its `user` is a lazy attribute, which should evaluate on demand:
-        with self.assertNumQueries(1):
-            new_fake_request.user
-            self.assertEqual(new_fake_request.user, self.user)
-        # It should then be cached and not require re-lookup from the DB
-        with self.assertNumQueries(0):
-            new_fake_request.user
-
-    def test_fake_request_pickle_no_extra_db_access(self):
-        """Verify that pickling and unpickling a NautobotFakeRequest doesn't unnecessarily access the DB."""
-        real_request = self.get_with_user("/")
-        fake_request = requests.copy_safe_request(real_request)
-        with self.assertNumQueries(0):
-            new_fake_request = pickle.loads(pickle.dumps(fake_request))
-        # After creating the new instance, its `user` is a lazy attribute, which should evaluate on demand:
-        with self.assertNumQueries(1):
-            new_fake_request.user
-            self.assertEqual(new_fake_request.user, self.user)
-        # It should then be cached and not require re-lookup from the DB
-        with self.assertNumQueries(0):
-            new_fake_request.user
 
 
 class GetFilterFieldLabelTest(TestCase):

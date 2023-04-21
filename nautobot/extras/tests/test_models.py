@@ -2,7 +2,6 @@ import os
 import tempfile
 import datetime
 from unittest import mock
-import uuid
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -26,7 +25,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.jobs import get_job, Job as JobClass
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -47,7 +46,6 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -869,65 +867,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         )
 
 
-class JobResultTest(TestCase):
-    """
-    Tests for the `JobResult` model class.
-    """
-
-    def test_related_object(self):
-        """Test that the `related_object` property is computed properly."""
-        # Case 1: Job, identified by class_path.
-        job_class = get_job("local/test_pass/TestPass")
-        job_result = JobResult(
-            name=job_class.class_path,
-            obj_type=get_job_content_type(),
-            task_id=uuid.uuid4(),
-        )
-
-        # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
-        self.assertEqual(type(job_result.related_object), type)
-        self.assertTrue(issubclass(job_result.related_object, JobClass))
-        self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
-
-        job_result.name = "local/no_such_job/NoSuchJob"
-        self.assertIsNone(job_result.related_object)
-
-        job_result.name = "not-a-class-path"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 2: GitRepository, identified by name.
-        repo = GitRepository(
-            name="Test Git Repository",
-            slug="test-git-repo",
-            remote_url="http://localhost/git.git",
-        )
-        repo.save()
-
-        job_result = JobResult(
-            name=repo.name,
-            obj_type=ContentType.objects.get_for_model(repo),
-            task_id=uuid.uuid4(),
-        )
-
-        self.assertEqual(job_result.related_object, repo)
-
-        job_result.name = "No such GitRepository"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 3: Related object with no name, identified by PK/ID
-        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
-        job_result = JobResult(
-            name="irrelevant",
-            obj_type=ContentType.objects.get_for_model(ip_address),
-            task_id=ip_address.pk,
-        )
-
-        self.assertEqual(job_result.related_object, ip_address)
-
-        job_result.task_id = uuid.uuid4()
-        self.assertIsNone(job_result.related_object)
-
-
 class RoleTest(TestCase):
     """Tests for `Role` model class."""
 
@@ -1413,12 +1352,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         name = "TestPass"
         job_class = get_job(f"local/{module}/{name}")
 
-        self.job_result = JobResult.objects.create(
-            name=job_class.class_path,
-            obj_type=get_job_content_type(),
-            user=None,
-            task_id=uuid.uuid4(),
-        )
+        self.job_result = JobResult.objects.create(name=job_class.class_path, user=None)
 
     def test_log_entry_creation(self):
         log = JobLogEntry(

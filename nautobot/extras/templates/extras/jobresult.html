@@ -84,20 +84,36 @@
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <strong>Job Inputs</strong>
+                        <strong>Job Positional Arguments</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Job Keyword Arguments</strong>
                     </div>
                     <div class="panel-body">
                         {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Job Celery Keyword Arguments</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.celery_kwargs format="json" %}
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <strong>Output Data</strong>
+                        <strong>Return Data</strong>
                     </div>
                     <div class="panel-body">
-                        {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
+                        {% include 'extras/inc/json_data.html' with data=result.result format="json" %}
                     </div>
                 </div>
                 <div class="panel panel-default">
