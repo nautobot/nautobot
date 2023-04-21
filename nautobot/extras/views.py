@@ -1090,7 +1090,6 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    # TODO(gary): task_queue is no longer stored on the task kwargs, may need to add it as a field on JobResult?
                     task_queue = job_result.task_kwargs.get("task_queue")
                     if task_queue is not None:
                         initial.setdefault("_task_queue", task_queue)
