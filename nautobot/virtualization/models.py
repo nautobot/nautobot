@@ -9,11 +9,9 @@ from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
-from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
-    ObjectChange,
     StatusModel,
 )
 from nautobot.extras.models.roles import RoleModelMixin
@@ -452,16 +450,15 @@ class VMInterface(PrimaryModel, BaseInterface):
             self.bridge.name if self.bridge else None,
         )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, **kwargs):
         # Annotate the parent VirtualMachine
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=self.virtual_machine,
-        )
+        try:
+            virtual_machine = self.virtual_machine
+        except VirtualMachine.DoesNotExist:
+            # The parent VirtualMachine has already been deleted
+            virtual_machine = None
+
+        return super().to_objectchange(action, related_object=virtual_machine, **kwargs)
 
     def add_ip_addresses(
         self,
