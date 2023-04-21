@@ -128,6 +128,11 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | `/dcim/rack-roles/`   | `/extras/roles/` |
 | `/ipam/roles/`        | `/extras/roles/` |
 
+### API Query Parameters Changes
+
+Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are.
+Please see the [documentation on the `?depth` query parameter](../rest-api/overview.md/#depth-query-parameter) for more information.
+
 ## UI, GraphQL, and REST API Filter Changes
 
 ### Removed Changelog URL from View Context
@@ -181,6 +186,13 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 ??? info "Full table of code location changes"
     {data-table installation/tables/v2-code-location-changes.yaml}
+
+## Removed Python Code
+
+Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
+
+??? info "Full table of code removals"
+    {data-table installation/tables/v2-code-removals.yaml}
 
 ## Git Data Source Changes
 

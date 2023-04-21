@@ -79,18 +79,14 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         """
         Select the specific serializer based on the request context.
 
-        If the `brief` query param equates to True, return the NestedVirtualMachineSerializer
-
         If the `exclude` query param includes `config_context` as a value, return the VirtualMachineSerializer
 
         Else, return the VirtualMachineWithConfigContextSerializer
         """
 
         request = self.get_serializer_context()["request"]
-        if request is not None and request.query_params.get("brief", False):
-            return serializers.NestedVirtualMachineSerializer
 
-        elif request is not None and "config_context" in request.query_params.get("exclude", []):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.VirtualMachineSerializer
 
         return serializers.VirtualMachineWithConfigContextSerializer
@@ -105,5 +101,3 @@ class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
     ).prefetch_related("tags", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["virtual_machine"]

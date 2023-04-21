@@ -27,6 +27,9 @@
   Removed Field: "slug"
   Comments:
 - Model/Endpoint: "Device"
+  Removed Field: "primary_ip"
+  Comments: "Use `primary_ip4` or `primary_ip6`instead"
+- Model/Endpoint: "Device"
   Removed Field: "site"
   Comments: "Use `location` instead"
 - Model/Endpoint: "DeviceRedundancyGroup"
@@ -107,6 +110,9 @@
 - Model/Endpoint: "TenantGroup"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "VirtualMachine"
+  Removed Field: "primary_ip"
+  Comments: "Use `primary_ip4` or `primary_ip6`instead"
 - Model/Endpoint: "VLAN"
   Removed Field: "site"
   Comments: "Use `location` instead"

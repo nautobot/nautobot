@@ -35,7 +35,6 @@ class AppTest(APITestCase):
 
 class VRFTest(APIViewTestCases.APIViewTestCase):
     model = VRF
-    brief_fields = ["display", "id", "name", "prefix_count", "rd", "url"]
     create_data = [
         {
             "name": "VRF 4",
@@ -57,7 +56,6 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     model = RouteTarget
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "65000:1004",
@@ -76,7 +74,6 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
 
 class RIRTest(APIViewTestCases.APIViewTestCase):
     model = RIR
-    brief_fields = ["assigned_prefix_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "RIR 4",
@@ -109,7 +106,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
-    brief_fields = ["display", "family", "id", "prefix", "url"]
     choices_fields = []
 
     @classmethod
@@ -366,7 +362,6 @@ class ParallelPrefixTest(APITransactionTestCase):
 
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
-    brief_fields = ["address", "display", "family", "id", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -427,7 +422,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
         response = self.client.get(
-            self._get_detail_url(nat_inside),
+            self._get_detail_url(nat_inside) + "?depth=1",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -437,7 +432,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     model = VLANGroup
-    brief_fields = ["display", "id", "name", "slug", "url", "vlan_count"]
     create_data = [
         {
             "name": "VLAN Group 4",
@@ -463,7 +457,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
-    brief_fields = ["display", "id", "name", "url", "vid"]
     choices_fields = []
 
     @classmethod
@@ -527,7 +520,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):
     model = Service
-    brief_fields = ["display", "id", "name", "ports", "protocol", "url"]
     bulk_update_data = {
         "description": "New description",
     }
