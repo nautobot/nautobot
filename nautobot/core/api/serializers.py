@@ -424,12 +424,6 @@ class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
         return fields
 
 
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CustomFieldModelSerializerMixin)
-class CustomFieldModelSerializer(CustomFieldModelSerializerMixin):
-    pass
-
-
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     """Extend ValidatedModelSerializer with a `relationships` field."""
 

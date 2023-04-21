@@ -205,9 +205,7 @@ def nested_serializer_factory(relation_info, nested_depth):
     This method should only be called in build_nested_field()
     in which relation_info and nested_depth are already given.
     """
-    nested_serializer_name = (
-        "Nested" + str(nested_depth) + f"{relation_info.related_model._meta.model_name.capitalize()}"
-    )
+    nested_serializer_name = f"Nested{nested_depth}{relation_info.related_model.__name__}"
     # If we already have built a suitable NestedSerializer we return the cached serializer.
     # else we build a new one and store it in the cache for future use.
     if nested_serializer_name in NESTED_SERIALIZER_CACHE:
