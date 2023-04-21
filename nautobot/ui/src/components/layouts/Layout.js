@@ -8,7 +8,6 @@ import {
     Sidebar,
     Button,
 } from "@nautobot/nautobot-ui";
-import { useLocation } from "react-router-dom";
 
 import LoadingWidget from "@components/common/LoadingWidget";
 import RouterButton from "@components/common/RouterButton";
@@ -17,7 +16,6 @@ import SidebarNav from "@components/common/SidebarNav";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 
 export default function Layout({ children }) {
-    const location = useLocation();
     const { data: sessionInfo, isSuccess: sessionLoaded } =
         useGetSessionQuery();
     const { isSuccess: menuLoaded } = useGetUIMenuQuery();
