@@ -15,10 +15,9 @@ from django.db.models import Q
 from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
-from taggit.managers import _TaggableManager
 
-# 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.core.models.utils import find_models_with_matching_fields, is_taggable  # noqa: F401
+from nautobot.core.models.managers import TagsManager
+from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -162,19 +161,19 @@ class FeatureQuery:
 @deconstructible
 class TaggableClassesQuery(FeaturedQueryMixin):
     """
-    Helper class to get ContentType models that implements tags(TaggableManager)
+    Helper class to get ContentType models that implements tags(TagsField)
     """
 
     def list_subclasses(self):
         """
-        Return a list of classes that has implements tags e.g tags = TaggableManager(...)
+        Return a list of classes that has implements tags e.g tags = TagsField(...)
         """
         return [
             _class
             for _class in apps.get_models()
             if (
                 hasattr(_class, "tags")
-                and isinstance(_class.tags, _TaggableManager)
+                and isinstance(_class.tags, TagsManager)
                 and ".tests." not in _class.__module__  # avoid leakage from nautobot.core.tests.test_filters
             )
         ]

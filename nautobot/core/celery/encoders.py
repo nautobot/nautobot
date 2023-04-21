@@ -26,8 +26,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
     def default(self, obj):
         # Import here to avoid django.core.exceptions.ImproperlyConfigured Error.
         # Core App is not set up yet if we import this at the top of the file.
-        from taggit.managers import _TaggableManager
-        from nautobot.core.models.generics import _NautobotTaggableManager
+        from nautobot.core.models.managers import TagsManager
 
         if hasattr(obj, "nautobot_serialize"):
             cls = obj.__class__
@@ -41,7 +40,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
         elif isinstance(obj, set):
             # Convert a set to a list for passing to and from a task
             return list(obj)
-        elif isinstance(obj, (_NautobotTaggableManager, _TaggableManager)):
+        elif isinstance(obj, TagsManager):
             obj = obj.values_list("id", flat=True)
             return obj
         else:

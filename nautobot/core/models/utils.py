@@ -1,7 +1,6 @@
 import json
 
 from itertools import count, groupby
-from taggit.managers import _TaggableManager
 from urllib.parse import quote_plus, unquote_plus
 
 from django.apps import apps
@@ -36,10 +35,9 @@ def is_taggable(obj):
     """
     Return True if the instance can have Tags assigned to it; False otherwise.
     """
-    if hasattr(obj, "tags"):
-        if issubclass(obj.tags.__class__, _TaggableManager):
-            return True
-    return False
+    from nautobot.core.models.managers import TagsManager
+
+    return hasattr(obj, "tags") and isinstance(obj.tags, TagsManager)
 
 
 def pretty_print_query(query):

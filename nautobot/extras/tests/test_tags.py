@@ -18,14 +18,6 @@ class TaggedItemORMTest(TestCase):
 
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-    def test_tags_set_taggit_1(self):
-        """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
-        self.location.tags.set("Tag 1", "Tag 2")
-        self.assertListEqual(sorted([t.name for t in self.location.tags.all()]), ["Tag 1", "Tag 2"])
-
-        self.location.tags.set(Tag.objects.get(name="Tag 1"))
-        self.assertListEqual(sorted([t.name for t in self.location.tags.all()]), ["Tag 1"])
-
     def test_tags_set_taggit_2(self):
         """Test that obj.tags.set() works when invoked like django-taggit 2.x and later."""
         self.location.tags.set(["Tag 1", "Tag 2"])

@@ -1,0 +1,2 @@
+Removed monkey-patching of `taggit.managers.TaggableManager`.
+Removed `nautobot.extras.utils.is_taggable`; use `nautobot.core.models.utils.is_taggable` instead.

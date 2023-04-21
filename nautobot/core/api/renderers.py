@@ -17,8 +17,7 @@ class FormlessBrowsableAPIRenderer(BrowsableAPIRenderer):
 
 class NautobotJSONRenderer(JSONRenderer):
     """
-    Override the encoder_class of the default JSONRenderer to handle the default rendering
-    of _TaggableManager and _NautobotTaggableManager in Nautobot API.
+    Override the encoder_class of the default JSONRenderer to handle the rendering of TagsManager in Nautobot API.
     """
 
     encoder_class = NautobotKombuJSONEncoder

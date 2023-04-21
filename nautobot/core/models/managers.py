@@ -1,4 +1,5 @@
 from django.db.models import Manager
+from taggit.managers import _TaggableManager
 
 
 class BaseManager(Manager):
@@ -43,3 +44,7 @@ class BaseManager(Manager):
                 raise self.model.DoesNotExist() from exc
 
         return self.get(**kwargs)
+
+
+class TagsManager(_TaggableManager, BaseManager):
+    """Manager class for model 'tags' fields."""
