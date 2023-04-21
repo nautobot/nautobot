@@ -71,29 +71,6 @@ class NautobotAPIVersionMixin:
         return response
 
 
-class BulkCreateModelMixin:
-    """
-    Bulk create multiple model instances by using the
-    Serializers ``many=True`` ability from Django REST >= 2.2.5.
-
-    .. note::
-        This mixin uses the same method to create model instances
-        as ``CreateModelMixin`` because both non-bulk and bulk
-        requests will use ``POST`` request method.
-    """
-
-    def bulk_create(self, request, *args, **kwargs):
-        return self.perform_bulk_create(request)
-
-    def perform_bulk_create(self, request):
-        with transaction.atomic():
-            serializer = self.get_serializer(data=request.data, many=True)
-            serializer.is_valid(raise_exception=True)
-            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
-            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
 class BulkUpdateModelMixin:
     """
     Support bulk modification of objects using the list endpoint for a model. Accepts a PATCH action with a list of one

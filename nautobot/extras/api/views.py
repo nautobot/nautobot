@@ -67,6 +67,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
+from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from . import nested_serializers, serializers
 
@@ -1059,6 +1060,31 @@ class SecretsViewSet(NautobotModelViewSet):
     queryset = Secret.objects.all()
     serializer_class = serializers.SecretSerializer
     filterset_class = filters.SecretFilterSet
+
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "result": {"type": "boolean"},
+                    "message": {"type": "string"},
+                },
+            }
+        },
+    )
+    @action(methods=["GET"], detail=True)
+    def check(self, request, pk):
+        """Check that a secret's value is accessible."""
+        result = False
+        message = "Unknown error"
+        try:
+            self.get_object().get_value()
+            result = True
+            message = "Passed"
+        except SecretError as e:
+            message = str(e)
+        response = {"result": result, "message": message}
+        return Response(response)
 
 
 class SecretsGroupViewSet(NautobotModelViewSet):
