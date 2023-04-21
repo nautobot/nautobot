@@ -4,7 +4,6 @@ from nautobot.core import choices
 
 
 class ExampleChoices(choices.ChoiceSet):
-
     CHOICE_A = "a"
     CHOICE_B = "b"
     CHOICE_C = "c"

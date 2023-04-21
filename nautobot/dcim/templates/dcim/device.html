@@ -18,15 +18,6 @@
                                 </div>
                                 <table class="table table-hover panel-body attr-table">
                                     <tr>
-                                        <td>Site</td>
-                                        <td>
-                                            {% if object.site.region %}
-                                                {{ object.site.region|hyperlinked_object }} /
-                                            {% endif %}
-                                            {{ object.site|hyperlinked_object }}
-                                        </td>
-                                    </tr>
-                                    <tr>
                                         <td>Location</td>
                                         <td>
                                             {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
@@ -35,8 +26,8 @@
                                     <tr>
                                         <td>Rack</td>
                                         <td>
-                                            {% if object.rack and object.rack_group %}
-                                                {{ object.rack.group|hyperlinked_object }} /
+                                            {% if object.rack and object.rack.rack_group %}
+                                                {{ object.rack.rack_group|hyperlinked_object }} /
                                             {% endif %}
                                             {{ object.rack|hyperlinked_object }}
                                         </td>
@@ -151,8 +142,13 @@
                                                     {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }}
                                                     {% if object.primary_ip4.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                                                    {% elif object.primary_ip4.nat_outside %}
-                                                        <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
+                                                    {% elif object.primary_ip4.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip4.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                     <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
                                                         <span class="mdi mdi-content-copy"></span>
@@ -172,8 +168,13 @@
                                                     {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }}
                                                     {% if object.primary_ip6.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                                                    {% elif object.primary_ip6.nat_outside %}
-                                                        <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                                                    {% elif object.primary_ip6.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                     <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
                                                         <span class="mdi mdi-content-copy"></span>

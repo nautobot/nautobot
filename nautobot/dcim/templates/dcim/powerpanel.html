@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-                <li>{{ object.site|hyperlinked_object }}</li>
+                <li>{{ object.location|hyperlinked_object }}</li>
                 {% if object.rack_group %}
                     <li>{{ object.rack_group|hyperlinked_object }}</li>
                 {% endif %}
@@ -14,10 +14,6 @@
                 <strong>Power Panel</strong>
             </div>
             <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Site</td>
-                    <td>{{ object.site|hyperlinked_object }}</td>
-                </tr>
                 <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>

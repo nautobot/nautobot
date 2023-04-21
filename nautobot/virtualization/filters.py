@@ -9,12 +9,11 @@ from nautobot.core.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, Location, Platform
 from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
@@ -49,7 +48,7 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = ClusterType
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -65,7 +64,7 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = ClusterGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyModelFilterSetMixin):
@@ -94,30 +93,27 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
-        label="Parent group (ID)",
+        label="Parent group (ID) - Deprecated (use group filter)",
     )
-    cluster_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster_group__slug",
+    cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
-        label="Parent group (slug)",
+        label="Parent group (ID or name)",
+        to_field_name="name",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_type",
         queryset=ClusterType.objects.all(),
-        label="Cluster type (ID)",
+        label="Cluster type (ID) - Deprecated (use type filter)",
     )
-    cluster_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster_type__slug",
+    cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ClusterType.objects.all(),
-        to_field_name="slug",
-        label="Cluster type (slug)",
+        label="Cluster type (ID or name)",
+        to_field_name="name",
     )
-    tag = TagFilter()
 
     class Meta:
         model = Cluster
-        fields = ["id", "name", "comments"]
+        fields = ["id", "comments", "name", "tags"]
 
 
 class VirtualMachineFilterSet(
@@ -136,50 +132,28 @@ class VirtualMachineFilterSet(
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
-        label="Cluster group (ID)",
+        label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
-    cluster_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__cluster_group__slug",
+    cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
-        label="Cluster group (slug)",
+        label="Cluster group (ID or name)",
+        to_field_name="name",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
-        label="Cluster type (ID)",
+        label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
-    cluster_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__cluster_type__slug",
+    cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
-        to_field_name="slug",
-        label="Cluster type (slug)",
+        label="Cluster type (ID or name)",
+        to_field_name="name",
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         label="Cluster (ID)",
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="cluster__site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="cluster__site__region",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__site",
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
@@ -189,13 +163,12 @@ class VirtualMachineFilterSet(
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        label="Platform (ID)",
+        label="Platform (ID) - Deprecated (use platform filter)",
     )
-    platform = django_filters.ModelMultipleChoiceFilter(
-        field_name="platform__slug",
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
-        to_field_name="slug",
-        label="Platform (slug)",
+        to_field_name="name",
+        label="Platform (ID or name)",
     )
     mac_address = MultiValueMACAddressFilter(
         field_name="interfaces__mac_address",
@@ -227,11 +200,10 @@ class VirtualMachineFilterSet(
         field_name="interfaces",
         label="Has interfaces",
     )
-    tag = TagFilter()
 
     class Meta:
         model = VirtualMachine
-        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments"]
+        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments", "tags"]
 
     def generate_query__has_primary_ip(self, value):
         query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
@@ -265,24 +237,23 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
-        label="Cluster (ID)",
+        label="Cluster (ID) - Deprecated (use cluster filter)",
     )
-    cluster = django_filters.ModelMultipleChoiceFilter(
-        field_name="virtual_machine__cluster__name",
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
         to_field_name="name",
-        label="Cluster",
+        label="Cluster (ID or name)",
     )
     virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
         field_name="virtual_machine",
         queryset=VirtualMachine.objects.all(),
-        label="Virtual machine (ID)",
+        label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
-    virtual_machine = django_filters.ModelMultipleChoiceFilter(
-        field_name="virtual_machine__name",
+    virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual machine",
+        label="Virtual machine (ID or name)",
     )
     parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -331,7 +302,6 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
     )
     ip_addresses = MultiValueCharFilter(method="filter_ip_addresses", label="IP addresses (address or ID)")
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
-    tag = TagFilter()
 
     def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
@@ -342,4 +312,4 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
 
     class Meta:
         model = VMInterface
-        fields = ["id", "name", "description", "enabled", "mtu", "mode"]
+        fields = ["id", "name", "description", "enabled", "mtu", "mode", "tags"]

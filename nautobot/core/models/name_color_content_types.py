@@ -3,8 +3,8 @@ from django.db import models
 from django.db.models import Q
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField, ColorField
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
@@ -35,9 +35,6 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
         content_types = ContentType.objects.filter(q)
         return self.filter(content_types__in=content_types)
 
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
-
 
 # TODO(timizuo): Inheriting from OrganizationalModel here causes partial import error
 class NameColorContentTypesModel(
@@ -60,17 +57,15 @@ class NameColorContentTypesModel(
         help_text="The content type(s) to which this model applies.",
     )
     name = models.CharField(max_length=100, unique=True)
-    # TODO (timizuo): Remove slug
-    slug = AutoSlugField(populate_from="name", max_length=100)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
         blank=True,
     )
 
-    objects = ContentTypeRelatedQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ContentTypeRelatedQuerySet)()
 
-    csv_headers = ["name", "slug", "color", "content_types", "description"]
+    csv_headers = ["name", "color", "content_types", "description"]
     clone_fields = ["color", "content_types"]
 
     class Meta:
@@ -80,17 +75,13 @@ class NameColorContentTypesModel(
     def __str__(self):
         return self.name
 
-    def natural_key(self):
-        return (self.name,)
-
     def get_content_types(self):
         return ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
 
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.color,
-            f'"{self.get_content_types()}"',  # Wrap labels in double quotes for CSV
+            self.get_content_types(),
             self.description,
         )

@@ -5,28 +5,27 @@ from nautobot.dcim import models
 
 class NaturalOrderByManagerTest(TestCase):
     """
-    Ensure consistent natural ordering given myriad sample data. We use dcim.Site as our guinea pig because it's simple.
+    Ensure consistent natural ordering given myriad sample data. We use dcim.Rack as our guinea pig because it's simple.
     """
 
     def setUp(self):
         return
 
     def evaluate_ordering(self, names):
-
-        # Create the Sites
-        models.Site.objects.bulk_create(models.Site(name=name, slug=name.lower()) for name in names)
-
+        # Create the Racks
+        location_type = models.LocationType.objects.get(name="Campus")
+        location = models.Location.objects.filter(location_type=location_type).first()
+        models.Rack.objects.bulk_create(models.Rack(name=name, location=location) for name in names)
         # Validate forward ordering
-        self.assertEqual(names, list(models.Site.objects.filter(name__in=names).values_list("name", flat=True)))
+        self.assertEqual(names, list(models.Rack.objects.filter(name__in=names).values_list("name", flat=True)))
 
         # Validate reverse ordering
         self.assertEqual(
             list(reversed(names)),
-            list(models.Site.objects.filter(name__in=names).reverse().values_list("name", flat=True)),
+            list(models.Rack.objects.filter(name__in=names).reverse().values_list("name", flat=True)),
         )
 
     def test_leading_digits(self):
-
         self.evaluate_ordering(
             [
                 "1Alpha",
@@ -51,7 +50,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_trailing_digits(self):
-
         self.evaluate_ordering(
             [
                 "Alpha1",
@@ -76,7 +74,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_leading_and_trailing_digits(self):
-
         self.evaluate_ordering(
             [
                 "1Alpha1",

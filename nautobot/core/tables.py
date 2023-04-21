@@ -33,7 +33,7 @@ class BaseTable(django_tables2.Table):
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         for cf in models.CustomField.objects.filter(content_types=obj_type):
-            name = f"cf_{cf.slug}"
+            name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in models.ComputedField.objects.filter(content_type=obj_type):
@@ -381,9 +381,8 @@ class CustomFieldColumn(django_tables2.Column):
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
-        # 2.0 TODO: #824 replace customfield.name with customfield.slug
-        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.name}")
-        kwargs["verbose_name"] = customfield.label or customfield.name
+        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.key}")
+        kwargs["verbose_name"] = customfield.label
 
         super().__init__(*args, **kwargs)
 

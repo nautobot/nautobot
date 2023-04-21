@@ -54,7 +54,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.7",
+            "python_ver": "3.8",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
             "compose_files": [
@@ -223,7 +223,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     }
 )
 def build_dependencies(context, poetry_parallel=True):
-
     # Determine preferred/default target architecture
     output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
     result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
@@ -339,7 +338,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.7":
+    if context.nautobot.python_ver == "3.8":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -593,6 +592,14 @@ def pylint(context, target=None, recursive=False):
             command += "--recursive "
         command += " ".join(target)
         run_command(context, command)
+
+
+@task
+def yamllint(context):
+    """Run yamllint to validate formatting applies to YAML standards."""
+    # TODO: enable for directories other than nautobot/docs and fix all warnings
+    command = "yamllint nautobot/docs --format standard"
+    run_command(context, command)
 
 
 @task
@@ -896,6 +903,7 @@ def tests(context, lint_only=False, keepdb=False):
     eslint(context)
     hadolint(context)
     markdownlint(context)
+    yamllint(context)
     pylint(context)
     check_migrations(context)
     check_schema(context)

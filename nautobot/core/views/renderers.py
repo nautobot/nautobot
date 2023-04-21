@@ -3,7 +3,6 @@ import logging
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
@@ -17,12 +16,11 @@ from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    get_filterable_params_from_filter_params,
     normalize_querydict,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display
-from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.utils import get_base_template
 
 
@@ -34,22 +32,17 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
 
-    def get_filter_params(self, view, request):
-        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params, view.filterset_class)
-
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
         Helper function to obtain the filter_form_class,
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
         factory_formset_params = {}
+        filterset = None
         if filterset_class:
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, filterset_class
-            )
-        return DynamicFilterFormSet(filterset_class=view.filterset_class, data=factory_formset_params)
+            filterset = filterset_class()
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+        return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
@@ -143,7 +136,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         form = None
         table = None
         search_form = None
-        changelog_url = None
         instance = None
         filter_form = None
         queryset = view.alter_queryset(request)
@@ -153,8 +145,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
-            if isinstance(instance, ChangeLoggedModel):
-                changelog_url = instance.get_changelog_url()
         else:
             return_url = view.get_return_url(request)
         # Get form for context rendering according to view.action unless it is previously set.
@@ -163,21 +153,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             form = data["form"]
         else:
             if view.action == "list":
-                filter_params = self.get_filter_params(view, request)
                 if view.filterset_class is not None:
-                    filterset = view.filterset_class(filter_params, view.queryset)
-                    filterset_filters = filterset.get_filters()
-                    view.queryset = filterset.qs
-                    if not filterset.is_valid():
-                        messages.error(
-                            request,
-                            mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-                        )
-                        view.queryset = view.queryset.none()
-
+                    view.queryset = view.filter_queryset(view.get_queryset())
+                    if view.filterset is not None:
+                        filterset_filters = view.filterset.filters
+                    else:
+                        filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
-                        for field_name, values in filter_params.items()
+                        for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(request.GET, label_suffix="")
@@ -186,7 +170,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
-                initial_data = normalize_querydict(request.GET)
+                initial_data = normalize_querydict(request.GET, form_class=form_class)
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
@@ -221,7 +205,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
         context = {
-            "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
             "form": form,
             "filter_form": filter_form,

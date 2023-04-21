@@ -4,9 +4,10 @@ from netaddr import EUI
 
 from nautobot.core.testing import ViewTestCases, post_data
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Device, Platform, Site
+from nautobot.dcim.models import Device, Location, LocationType, Platform
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
+from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -21,27 +22,20 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
-        ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2")
-        ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3")
-        ClusterGroup.objects.create(name="Cluster Group 8")
+        ClusterGroupFactory.create_batch(4)
 
         cls.form_data = {
             "name": "Cluster Group X",
-            "slug": "cluster-group-x",
             "description": "A new cluster group",
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Cluster Group 4,cluster-group-4,Fourth cluster group",
-            "Cluster Group 5,cluster-group-5,Fifth cluster group",
-            "Cluster Group 6,cluster-group-6,Sixth cluster group",
-            "Cluster Group 7,,Seventh cluster group",
+            "name,description",
+            "Cluster Group 4,Fourth cluster group",
+            "Cluster Group 5,Fifth cluster group",
+            "Cluster Group 6,Sixth cluster group",
+            "Cluster Group 7,Seventh cluster group",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = "Cluster Group 8"
 
 
 class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -49,27 +43,23 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
-        ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
+        ClusterType.objects.create(name="Cluster Type 1")
+        ClusterType.objects.create(name="Cluster Type 2")
+        ClusterType.objects.create(name="Cluster Type 3")
         ClusterType.objects.create(name="Cluster Type 8")
 
         cls.form_data = {
             "name": "Cluster Type X",
-            "slug": "cluster-type-x",
             "description": "A new cluster type",
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "Cluster Type 4,cluster-type-4,Fourth cluster type",
-            "Cluster Type 5,cluster-type-5,Fifth cluster type",
-            "Cluster Type 6,cluster-type-6,Sixth cluster type",
-            "Cluster Type 7,,Seventh cluster type",
+            "name,description",
+            "Cluster Type 4,Fourth cluster type",
+            "Cluster Type 5,Fifth cluster type",
+            "Cluster Type 6,Sixth cluster type",
+            "Cluster Type 7,Seventh cluster type",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = "Cluster Type 8"
 
 
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -77,39 +67,33 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
+        location_type = LocationType.objects.get(name="Campus")
+        locations = (
+            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
         )
 
-        clustergroups = (
-            ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
-            ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2"),
-        )
+        clustergroups = ClusterGroupFactory.create_batch(2)
 
-        clustertypes = (
-            ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
-            ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
-        )
+        clustertypes = ClusterTypeFactory.create_batch(2)
 
         Cluster.objects.create(
             name="Cluster 1",
             cluster_group=clustergroups[0],
             cluster_type=clustertypes[0],
-            site=sites[0],
+            location=locations[0],
         )
         Cluster.objects.create(
             name="Cluster 2",
             cluster_group=clustergroups[0],
             cluster_type=clustertypes[0],
-            site=sites[0],
+            location=locations[0],
         )
         Cluster.objects.create(
             name="Cluster 3",
             cluster_group=clustergroups[0],
             cluster_type=clustertypes[0],
-            site=sites[0],
+            location=locations[0],
         )
 
         cls.form_data = {
@@ -117,23 +101,23 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_group": clustergroups[1].pk,
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
 
         cls.csv_data = (
             "name,cluster_type",
-            "Cluster 4,Cluster Type 1",
-            "Cluster 5,Cluster Type 1",
-            "Cluster 6,Cluster Type 1",
+            f"Cluster 4,{clustertypes[0].name}",
+            f"Cluster 5,{clustertypes[0].name}",
+            f"Cluster 6,{clustertypes[0].name}",
         )
 
         cls.bulk_edit_data = {
             "cluster_group": clustergroups[1].pk,
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
-            "site": sites[1].pk,
+            "location": locations[1].pk,
             "comments": "New comments",
         }
 
@@ -143,23 +127,24 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
-
-        platforms = (
-            Platform.objects.create(name="Platform 1", slug="platform-1"),
-            Platform.objects.create(name="Platform 2", slug="platform-2"),
+        location_type = LocationType.objects.get(name="Campus")
+        locations = (
+            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
         )
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        platforms = Platform.objects.all()[:2]
+
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype),
-            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype),
+            Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=locations[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, location=locations[0]),
         )
 
         statuses = Status.objects.get_for_model(VirtualMachine)
-        status_staged = statuses.get(slug="staged")
+        status_staged = statuses[0]
 
         VirtualMachine.objects.create(
             name="Virtual Machine 1",
@@ -202,9 +187,9 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,cluster,status",
-            "Virtual Machine 4,Cluster 1,active",
-            "Virtual Machine 5,Cluster 1,active",
-            "Virtual Machine 6,Cluster 1,staged",
+            f"Virtual Machine 4,Cluster 1,{statuses[0].name}",
+            f"Virtual Machine 5,Cluster 1,{statuses[0].name}",
+            f"Virtual Machine 6,Cluster 1,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {
@@ -273,11 +258,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
         devicerole = Role.objects.get_for_model(Device).first()
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, site=site)
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole),
@@ -289,26 +274,29 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3"),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE"),
         )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = interfaces[:3]
+        cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN1", site=site),
-            VLAN.objects.create(vid=101, name="VLAN101", site=site),
-            VLAN.objects.create(vid=102, name="VLAN102", site=site),
-            VLAN.objects.create(vid=103, name="VLAN103", site=site),
+            VLAN.objects.create(vid=1, name="VLAN1", location=location),
+            VLAN.objects.create(vid=101, name="VLAN101", location=location),
+            VLAN.objects.create(vid=102, name="VLAN102", location=location),
+            VLAN.objects.create(vid=103, name="VLAN103", location=location),
         )
 
         obj_type = ContentType.objects.get_for_model(VMInterface)
-        cf = CustomField.objects.create(name="custom_field_1", type="text")
+        cf = CustomField.objects.create(label="Custom Field 1", type="text")
         cf.save()
         cf.content_types.set([obj_type])
 
         statuses = Status.objects.get_for_model(VMInterface)
-        status_active = statuses.get(slug="active")
+        status = statuses.first()
 
         cls.form_data = {
             "virtual_machine": virtualmachines[1].pk,
             "name": "Interface X",
-            "status": status_active.pk,
+            "status": status.pk,
             "enabled": False,
             "bridge": interfaces[3].pk,
             "mac_address": EUI("01-02-03-04-05-06"),
@@ -326,7 +314,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "enabled": False,
             "bridge": interfaces[3].pk,
-            "status": status_active.pk,
+            "status": status.pk,
             "mac_address": EUI("01-02-03-04-05-06"),
             "mtu": 2000,
             "description": "New description",
@@ -341,7 +329,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "virtual_machine": virtualmachines[1].pk,
             "name_pattern": "Interface [4-6]",
             "enabled": True,
-            "status": status_active.pk,
+            "status": status.pk,
             "mtu": 1500,
             "description": "New Description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -351,15 +339,15 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "virtual_machine,name,status",
-            "Virtual Machine 2,Interface 4,active",
-            "Virtual Machine 2,Interface 5,active",
-            "Virtual Machine 2,Interface 6,active",
+            f"Virtual Machine 2,Interface 4,{statuses[0].name}",
+            f"Virtual Machine 2,Interface 5,{statuses[0].name}",
+            f"Virtual Machine 2,Interface 6,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {
             "enabled": False,
             "mtu": 2000,
-            "status": status_active.pk,
+            "status": status.pk,
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,

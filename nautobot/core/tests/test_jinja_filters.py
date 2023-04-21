@@ -42,6 +42,7 @@ class NautobotJinjaFilterTest(TestCase):
             "as_range",
             "meters_to_feet",
             "get_item",
+            "settings_or_config",
         ]
 
         # For each helper, try to render a jinja template with render_jinja2 and fail if TemplateAssertionError is raised
@@ -73,11 +74,11 @@ class NautobotJinjaFilterTest(TestCase):
 
     def test_safe_render(self):
         """Assert that safe Jinja rendering still works."""
-        site = dcim_models.Site.objects.filter(region__isnull=False).first()
-        template_code = "{{ obj.region.name }}"
+        location = dcim_models.Location.objects.filter(parent__isnull=False).first()
+        template_code = "{{ obj.parent.name }}"
         try:
-            value = data.render_jinja2(template_code=template_code, context={"obj": site})
+            value = data.render_jinja2(template_code=template_code, context={"obj": location})
         except SecurityError:
             self.fail("SecurityError raised on safe Jinja template render")
         else:
-            self.assertEqual(value, site.region.name)
+            self.assertEqual(value, location.parent.name)

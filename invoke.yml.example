@@ -2,7 +2,7 @@
 nautobot:
   project_name: "nautobot"
   local: False
-  python_ver: "3.7"
+  python_ver: "3.10"
   compose_dir: "/full/path/to/nautobot/development"
   cache_test_fixtures: False
   compose_files:
@@ -26,3 +26,12 @@ nautobot:
 #     - "docker-compose.yml"
 #     - "docker-compose.mysql.yml"
 #     - "docker-compose.dev.yml"
+
+# The following is an example of using SSO development environment
+# ---
+# nautobot:
+#   compose_files:
+#     - "docker-compose.yml"
+#     - "docker-compose.mysql.yml"
+#     - "docker-compose.dev.yml"
+#     - "docker-compose.keycloak.yml"

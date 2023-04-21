@@ -37,7 +37,6 @@ class Command(BaseCommand):
         )
 
     def _generate_factory_data(self, seed):
-
         try:
             import factory.random
 
@@ -57,14 +56,12 @@ class Command(BaseCommand):
             from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.dcim.factory import (
-                RegionFactory,
-                SiteFactory,
                 LocationTypeFactory,
                 LocationFactory,
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
-                AggregateFactory,
+                PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
                 VLANGroupFactory,
@@ -96,15 +93,13 @@ class Command(BaseCommand):
         self.stdout.write("Creating Tenants...")
         TenantFactory.create_batch(10, has_tenant_group=False)
         TenantFactory.create_batch(10, has_tenant_group=True)
-        self.stdout.write("Creating Regions...")
-        RegionFactory.create_batch(15, has_parent=False)
-        RegionFactory.create_batch(5, has_parent=True)
-        self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(25)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(40)  # we need more locations with sites since it can be nested now.
+        # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
+        LocationFactory.create_batch(7, has_parent=True)
+        LocationFactory.create_batch(40)
+        LocationFactory.create_batch(10, has_parent=False)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
@@ -116,20 +111,20 @@ class Command(BaseCommand):
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
-        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
-        AggregateFactory.create_batch(5, has_tenant_group=True)
-        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
-        AggregateFactory.create_batch(10)
+        self.stdout.write("Creating Prefixes and IP Addresses...")
+        PrefixFactory.create_batch(30)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(10)  # First 10 hard-coded Manufacturers
+        ManufacturerFactory.create_batch(8)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False)
-        self.stdout.write("Creating Manufacturers without platforms...")
-        ManufacturerFactory.create_batch(4)  # Remaining 4 hard-coded Manufacturers
+        self.stdout.write("Creating Manufacturers without Platforms...")
+        ManufacturerFactory.create_batch(4)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
         DeviceTypeFactory.create_batch(20)
+        self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
+        ManufacturerFactory.create_batch(2)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(10)
         self.stdout.write("Creating CircuitTypes...")
@@ -143,14 +138,13 @@ class Command(BaseCommand):
         self.stdout.write("Creating Providers without Circuits...")
         ProviderFactory.create_batch(10)
         self.stdout.write("Creating CircuitTerminations...")
-        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="A")
-        CircuitTerminationFactory.create_batch(2, has_region=True, term_side="Z")
-        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="A")
-        CircuitTerminationFactory.create_batch(2, has_site=False, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z")
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A")
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z")
         CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
         CircuitTerminationFactory.create_batch(
             size=2,
-            has_site=True,
             has_location=True,
             has_port_speed=True,
             has_upstream_speed=True,

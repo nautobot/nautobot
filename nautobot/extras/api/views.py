@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -47,6 +48,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -67,7 +69,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from . import nested_serializers, serializers
+from . import serializers
 
 
 class ExtrasRootView(APIRootView):
@@ -238,22 +240,21 @@ class ConfigContextQuerySetMixin:
         """
         Build the proper queryset based on the request context
 
-        If the `brief` query param equates to True or the `exclude` query param
+        If the `exclude` query param
         includes `config_context` as a value, return the base queryset.
 
         Else, return the queryset annotated with config context data
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if self.brief or (request is not None and "config_context" in request.query_params.get("exclude", [])):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
 
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContext.objects.prefetch_related(
-        "regions",
-        "sites",
+        "locations",
         "roles",
         "device_types",
         "platforms",
@@ -285,6 +286,7 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """
 
+    permission_classes = [IsAuthenticated]
     queryset = ContentType.objects.order_by("app_label", "model")
     serializer_class = serializers.ContentTypeSerializer
     filterset_class = filters.ContentTypeFilterSet
@@ -313,7 +315,6 @@ class CustomFieldModelViewSet(ModelViewSet):
     """
 
     def get_serializer_context(self):
-
         # Gather all custom fields for the model
         content_type = ContentType.objects.get_for_model(self.queryset.model)
         custom_fields = content_type.custom_fields.all()
@@ -461,7 +462,7 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.slug, variables=request.data.get("variables"), request=request).to_dict()
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
             return Response(result)
         except GraphQLError as error:
             return Response(
@@ -552,7 +553,11 @@ def _run_job(request, job_model, legacy_response=False):
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
     if job_model.has_sensitive_variables:
-        if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+        if (
+            "schedule" in request.data
+            and "interval" in request.data["schedule"]
+            and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+        ):
             raise ValidationError(
                 {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
@@ -699,15 +704,12 @@ def _run_job(request, job_model, legacy_response=False):
         return Response(serializer.data)
     else:
         # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"schedule": None, "job_result": None}
+        data = {"scheduled_job": None, "job_result": None}
         if schedule:
-            data["schedule"] = nested_serializers.NestedScheduledJobSerializer(
-                schedule, context={"request": request}
-            ).data
+            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
         if job_result:
-            data["job_result"] = nested_serializers.NestedJobResultSerializer(
-                job_result, context={"request": request}
-            ).data
+            job_result.refresh_from_db()
+            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -911,9 +913,24 @@ class JobResultViewSet(
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
-        logs = job_result.logs.all()
-        serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
+        logs = job_result.job_log_entries.all()
+        serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+
+#
+# Job Button
+#
+
+
+class JobButtonViewSet(ModelViewSet, NotesViewSetMixin):
+    """
+    Manage Job Buttons through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobButton.objects.all()
+    serializer_class = serializers.JobButtonSerializer
+    filterset_class = filters.JobButtonFilterSet
 
 
 #

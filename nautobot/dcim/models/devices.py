@@ -11,6 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
@@ -46,11 +47,9 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Manufacturer(OrganizationalModel):
@@ -59,10 +58,9 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -71,16 +69,14 @@ class Manufacturer(OrganizationalModel):
         return self.name
 
     def to_csv(self):
-        return (self.name, self.slug, self.description)
+        return (self.name, self.description)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class DeviceType(PrimaryModel):
@@ -168,23 +164,23 @@ class DeviceType(PrimaryModel):
         )
 
         # Component templates
-        if self.consoleporttemplates.exists():
+        if self.console_port_templates.exists():
             data["console-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                 }
-                for c in self.consoleporttemplates.all()
+                for c in self.console_port_templates.all()
             ]
-        if self.consoleserverporttemplates.exists():
+        if self.console_server_port_templates.exists():
             data["console-server-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                 }
-                for c in self.consoleserverporttemplates.all()
+                for c in self.console_server_port_templates.all()
             ]
-        if self.powerporttemplates.exists():
+        if self.power_port_templates.exists():
             data["power-ports"] = [
                 {
                     "name": c.name,
@@ -192,52 +188,52 @@ class DeviceType(PrimaryModel):
                     "maximum_draw": c.maximum_draw,
                     "allocated_draw": c.allocated_draw,
                 }
-                for c in self.powerporttemplates.all()
+                for c in self.power_port_templates.all()
             ]
-        if self.poweroutlettemplates.exists():
+        if self.power_outlet_templates.exists():
             data["power-outlets"] = [
                 {
                     "name": c.name,
                     "type": c.type,
-                    "power_port": c.power_port.name if c.power_port else None,
+                    "power_port": c.power_port_template.name if c.power_port_template else None,
                     "feed_leg": c.feed_leg,
                 }
-                for c in self.poweroutlettemplates.all()
+                for c in self.power_outlet_templates.all()
             ]
-        if self.interfacetemplates.exists():
+        if self.interface_templates.exists():
             data["interfaces"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                     "mgmt_only": c.mgmt_only,
                 }
-                for c in self.interfacetemplates.all()
+                for c in self.interface_templates.all()
             ]
-        if self.frontporttemplates.exists():
+        if self.front_port_templates.exists():
             data["front-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
-                    "rear_port": c.rear_port.name,
+                    "rear_port": c.rear_port_template.name,
                     "rear_port_position": c.rear_port_position,
                 }
-                for c in self.frontporttemplates.all()
+                for c in self.front_port_templates.all()
             ]
-        if self.rearporttemplates.exists():
+        if self.rear_port_templates.exists():
             data["rear-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                     "positions": c.positions,
                 }
-                for c in self.rearporttemplates.all()
+                for c in self.rear_port_templates.all()
             ]
-        if self.devicebaytemplates.exists():
+        if self.device_bay_templates.exists():
             data["device-bays"] = [
                 {
                     "name": c.name,
                 }
-                for c in self.devicebaytemplates.all()
+                for c in self.device_bay_templates.all()
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
@@ -275,7 +271,7 @@ class DeviceType(PrimaryModel):
                     }
                 )
 
-        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.devicebaytemplates.count():
+        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
             raise ValidationError(
                 {
                     "subdevice_role": "Must delete all device bay templates associated with this device before "
@@ -322,7 +318,7 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features("custom_validators", "graphql")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
@@ -331,7 +327,6 @@ class Platform(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -357,7 +352,6 @@ class Platform(OrganizationalModel):
 
     csv_headers = [
         "name",
-        "slug",
         "manufacturer",
         "napalm_driver",
         "napalm_args",
@@ -373,7 +367,6 @@ class Platform(OrganizationalModel):
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.manufacturer.name if self.manufacturer else None,
             self.napalm_driver,
             self.napalm_args,
@@ -382,14 +375,12 @@ class Platform(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -398,7 +389,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     Role, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
+    Each Device must be assigned to a Location, and optionally to a Rack within that.
     Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
     do not consume rack units).
 
@@ -407,7 +398,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     creation of a Device.
     """
 
-    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="instances")
+    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="devices")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -433,13 +424,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         verbose_name="Asset tag",
         help_text="A unique tag used to identify this device",
     )
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="devices",
-        blank=True,
-        null=True,
     )
     rack = models.ForeignKey(
         to="dcim.Rack",
@@ -491,7 +479,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     device_redundancy_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
         on_delete=models.SET_NULL,
-        related_name="members",
+        related_name="devices",
         blank=True,
         null=True,
         verbose_name="Device Redundancy Group",
@@ -512,12 +500,13 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="devices",
         default=None,
         blank=True,
         null=True,
     )
 
-    objects = ConfigContextModelQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     csv_headers = [
         "name",
@@ -529,7 +518,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         "serial",
         "asset_tag",
         "status",
-        "site",
         "location",
         "rack_group",
         "rack_name",
@@ -546,7 +534,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         "role",
         "tenant",
         "platform",
-        "site",
         "location",
         "rack",
         "status",
@@ -557,7 +544,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     class Meta:
         ordering = ("_name",)  # Name may be null
         unique_together = (
-            ("site", "tenant", "name"),  # See validate_unique below
+            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -566,35 +553,26 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         return self.display or super().__str__()
 
     def validate_unique(self, exclude=None):
-
-        # Check for a duplicate name on a device assigned to the same Site and no Tenant. This is necessary
+        # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
-        if self.name and hasattr(self, "site") and self.tenant is None:
-            if Device.objects.exclude(pk=self.pk).filter(name=self.name, site=self.site, tenant__isnull=True):
+        if self.name and hasattr(self, "location") and self.tenant is None:
+            if Device.objects.exclude(pk=self.pk).filter(name=self.name, location=self.location, tenant__isnull=True):
                 raise ValidationError({"name": "A device with this name already exists."})
 
         super().validate_unique(exclude)
 
     def clean(self):
-        super().clean()
+        from nautobot.ipam import models as ipam_models  # circular import workaround
 
-        # Validate site/rack combination
-        if self.rack and self.site != self.rack.site:
-            raise ValidationError(
-                {
-                    "rack": f"Rack {self.rack} does not belong to site {self.site}.",
-                }
-            )
+        super().clean()
 
         # Validate location
         if self.location is not None:
-            if self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
+            # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a Rack belongs to
+            # the parent Location or the child location of `self.location`?
 
-            if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
+            if self.rack is not None and self.rack.location != self.location:
                 raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
 
             # self.cluster is validated somewhat later, see below
@@ -633,7 +611,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             )
 
         if self.rack:
-
             try:
                 # Child devices cannot be assigned to a rack face/unit
                 if self.device_type.is_child_device and self.face:
@@ -675,10 +652,15 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         if self.primary_ip4:
             if self.primary_ip4.family != 4:
                 raise ValidationError({"primary_ip4": f"{self.primary_ip4} is not an IPv4 address."})
-            if self.primary_ip4.assigned_object in vc_interfaces:
+            if ipam_models.IPAddressToInterface.objects.filter(
+                ip_address=self.primary_ip4, interface__in=vc_interfaces
+            ).exists():
                 pass
             elif (
-                self.primary_ip4.nat_inside is not None and self.primary_ip4.nat_inside.assigned_object in vc_interfaces
+                self.primary_ip4.nat_inside is not None
+                and ipam_models.IPAddressToInterface.objects.filter(
+                    ip_address=self.primary_ip4.nat_inside, interface__in=vc_interfaces
+                ).exists()
             ):
                 pass
             else:
@@ -688,10 +670,15 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         if self.primary_ip6:
             if self.primary_ip6.family != 6:
                 raise ValidationError({"primary_ip6": f"{self.primary_ip6} is not an IPv6 address."})
-            if self.primary_ip6.assigned_object in vc_interfaces:
+            if ipam_models.IPAddressToInterface.objects.filter(
+                ip_address=self.primary_ip6, interface__in=vc_interfaces
+            ).exists():
                 pass
             elif (
-                self.primary_ip6.nat_inside is not None and self.primary_ip6.nat_inside.assigned_object in vc_interfaces
+                self.primary_ip6.nat_inside is not None
+                and ipam_models.IPAddressToInterface.objects.filter(
+                    ip_address=self.primary_ip6.nat_inside, interface__in=vc_interfaces
+                ).exists()
             ):
                 pass
             else:
@@ -710,12 +697,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                         )
                     }
                 )
-
-        # A Device can only be assigned to a Cluster in the same Site (or no Site)
-        if self.cluster and self.cluster.site is not None and self.cluster.site != self.site:
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a different site ({self.cluster.site})"}
-            )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
         if (
@@ -752,28 +733,31 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             )
 
     def save(self, *args, **kwargs):
-
         is_new = not self.present_in_database
 
         super().save(*args, **kwargs)
 
         # If this is a new Device, instantiate all of the related components per the DeviceType definition
         if is_new:
-            ConsolePort.objects.bulk_create([x.instantiate(self) for x in self.device_type.consoleporttemplates.all()])
-            ConsoleServerPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.consoleserverporttemplates.all()]
+            ConsolePort.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.console_port_templates.all()]
             )
-            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.powerporttemplates.all()])
-            PowerOutlet.objects.bulk_create([x.instantiate(self) for x in self.device_type.poweroutlettemplates.all()])
-            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interfacetemplates.all()])
-            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rearporttemplates.all()])
-            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.frontporttemplates.all()])
-            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.devicebaytemplates.all()])
+            ConsoleServerPort.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.console_server_port_templates.all()]
+            )
+            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.power_port_templates.all()])
+            PowerOutlet.objects.bulk_create(
+                [x.instantiate(self) for x in self.device_type.power_outlet_templates.all()]
+            )
+            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interface_templates.all()])
+            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rear_port_templates.all()])
+            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.front_port_templates.all()])
+            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.device_bay_templates.all()])
 
-        # Update Site and Rack assignment for any child Devices
+        # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
         for device in devices:
-            device.site = self.site
+            device.location = self.location
             device.rack = self.rack
             device.save()
 
@@ -788,9 +772,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             self.serial,
             self.asset_tag,
             self.get_status_display(),
-            self.site.name,
-            self.location.name if self.location else None,
-            self.rack.group.name if self.rack and self.rack.group else None,
+            self.location.name,
+            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
             self.rack.name if self.rack else None,
             self.position,
             self.get_face_display(),
@@ -895,12 +878,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class VirtualChassis(PrimaryModel):
@@ -943,7 +924,6 @@ class VirtualChassis(PrimaryModel):
             )
 
     def delete(self, *args, **kwargs):
-
         # Check for LAG interfaces split across member chassis
         interfaces = Interface.objects.filter(device__in=self.members.all(), lag__isnull=False).exclude(
             lag__device=F("device")
@@ -965,13 +945,11 @@ class VirtualChassis(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -981,7 +959,6 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
 
     failover_strategy = models.CharField(
@@ -996,6 +973,7 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="device_redundancy_groups",
         default=None,
         blank=True,
         null=True,
@@ -1013,8 +991,8 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
         ordering = ("name",)
 
     @property
-    def members_sorted(self):
-        return self.members.order_by("device_redundancy_group_priority")
+    def devices_sorted(self):
+        return self.devices.order_by("device_redundancy_group_priority")
 
     def __str__(self):
         return self.name

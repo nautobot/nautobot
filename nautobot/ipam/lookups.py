@@ -8,7 +8,9 @@ def _mysql_varbin_to_broadcast():
     return "HEX(broadcast)"
 
 
-def _mysql_varbin_to_hex(lhs):
+def _mysql_varbin_to_hex(lhs, alias=None):
+    if alias:
+        return f"HEX({alias}.{lhs})"
     return f"HEX({lhs})"
 
 
@@ -20,7 +22,9 @@ def _postgresql_varbin_to_broadcast(length):
     return f"right(broadcast::text, -1)::varbit::bit({length})"
 
 
-def _postgresql_varbin_to_integer(lhs, length):
+def _postgresql_varbin_to_integer(lhs, length, alias=None):
+    if alias:
+        return f"right({alias}.{lhs}::text, -1)::varbit::bit({length})"
     return f"right({lhs}::text, -1)::varbit::bit({length})"
 
 
@@ -33,7 +37,7 @@ def py_to_hex(ip, length):
     return str(hex(int(ip)))[2:].zfill(int(length / 4))
 
 
-def get_ip_info(field_name, ip_str):
+def get_ip_info(field_name, ip_str, alias=None):
     """Function to set all details about an IP, that may be needed."""
     ip_details = IPDetails()
     ip = netaddr.IPNetwork(ip_str)
@@ -51,7 +55,7 @@ def get_ip_info(field_name, ip_str):
         ip_details.bcast_addr = f"'{py_to_hex(ip[-1], ip_details.length)}'"
         ip_details.q_net = _mysql_varbin_to_network()
         ip_details.q_bcast = _mysql_varbin_to_broadcast()
-        ip_details.q_ip = _mysql_varbin_to_hex(field_name)
+        ip_details.q_ip = _mysql_varbin_to_hex(field_name, alias=alias)
 
     elif _connection.vendor == "postgresql":
         ip_details.rhs = bin(int(ip_details.addr))[2:].zfill(ip_details.length)
@@ -60,7 +64,7 @@ def get_ip_info(field_name, ip_str):
         ip_details.bcast_addr = f"B'{bin(int(ip[-1]))[2:].zfill(ip_details.length)}'"
         ip_details.q_net = _postgresql_varbin_to_network(field_name, ip_details.length)
         ip_details.q_bcast = _postgresql_varbin_to_broadcast(ip_details.length)
-        ip_details.q_ip = _postgresql_varbin_to_integer(field_name, ip_details.length)
+        ip_details.q_ip = _postgresql_varbin_to_integer(field_name, ip_details.length, alias=alias)
 
     return ip_details
 
@@ -133,7 +137,7 @@ class NetworkFieldMixin:
             raise NotSupportedError(f"Lookup for network field does not include the {self.lookup_name} lookup.")
         if field_name == "host" and self.lookup_name not in ["net_host", "net_host_contained", "net_in"]:
             raise NotSupportedError(f"Lookup for host field does not include the {self.lookup_name} lookup.")
-        self.ip = get_ip_info(field_name, self.rhs)
+        self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
         return str(self.ip.ip)
 
     def process_rhs(self, qn, connection):
@@ -199,7 +203,7 @@ class NetHost(Lookup):
         field_name = self.lhs.field.name
         if field_name != "host":
             raise NotSupportedError(f"Lookup only provided on the host fields, not {field_name}.")
-        self.ip = get_ip_info(field_name, self.rhs)
+        self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
         return str(self.ip.ip)
 
     def process_rhs(self, qn, connection):
@@ -227,7 +231,7 @@ class NetIn(Lookup):
             raise NotSupportedError(f"Lookup only provided on the host field, not {field_name}.")
         self.ips = []
         for _ip in self.rhs:
-            ip = get_ip_info(field_name, _ip)
+            ip = get_ip_info(field_name, _ip, alias=self.lhs.alias)
             self.ips.append(ip)
         # This is to satisfy an issue with django cacheops, specifically this line:
         # https://github.com/Suor/django-cacheops/blob/a5ed1ac28c7259f5ad005e596cc045d1d61e2c51/cacheops/query.py#L175

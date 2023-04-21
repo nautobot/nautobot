@@ -7,31 +7,14 @@ from django.utils.hashable import make_hashable
 
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
-class StatusQuerySet(RestrictedQuerySet):
-    """Queryset for `Status` objects."""
-
-    def get_for_model(self, model):
-        """
-        Return all `Status` assigned to the given model.
-        """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.filter(content_types=content_type)
-
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
-
-
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Status(NameColorContentTypesModel):
@@ -61,12 +44,13 @@ class StatusField(ForeignKeyLimitedByContentTypes):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Status)
-        super().__init__(**kwargs)
+        kwargs.setdefault("on_delete", models.PROTECT)
+        super().__init__(*args, **kwargs)
 
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
 
-    def contribute_to_class(self, cls, name, *args, private_only=False, **kwargs):
+    def contribute_to_class(self, cls, *args, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
         attached to any model that is using a `StatusField`.
@@ -78,7 +62,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         `.get_status_display()` and a `.get_status_color()` method without
         having to define it on the model yourself.
         """
-        super().contribute_to_class(cls, name, *args, private_only=private_only, **kwargs)
+        super().contribute_to_class(cls, *args, **kwargs)
 
         def _get_FIELD_display(self, field):
             """
@@ -123,10 +107,7 @@ class StatusModel(models.Model):
     Abstract base class for any model which may have statuses.
     """
 
-    status = StatusField(
-        on_delete=models.PROTECT,
-        related_name="%(app_label)s_%(class)s_related",  # e.g. dcim_device_related
-    )
+    status = StatusField()
 
     class Meta:
         abstract = True

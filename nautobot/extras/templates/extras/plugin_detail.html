@@ -89,6 +89,22 @@
                     <table class="table table-hover panel-body attr-table">
                         {% with object.features as features %}
                             <tr>
+                                <td>Constance Config</td>
+                                <td>
+                                    {% if features.constance_config %}
+                                        <ul class="list-unstyled">
+                                            {% for name in features.constance_config %}
+                                                {% with options=features.constance_config|get_item:name %}
+                                                    <li><code>{{ name | bettertitle }}</code> {{ options.help_text }}</li>
+                                                {% endwith %}
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.constance_config %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Data Models</td>
                                 <td>
                                     {% if features.models %}
@@ -282,6 +298,20 @@
                                         <ul class="list-unstyled">
                                             {% for override in features.overridden_views %}
                                                 <li>{{ override.0 }} <code>{{ override.1 }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {{ False | render_boolean }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>App Metrics</td>
+                                <td>
+                                    {% if features.metrics %}
+                                        <ul class="list-unstyled">
+                                            {% for metric in features.metrics %}
+                                                <li><code>{{ metric }}</code></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

@@ -21,15 +21,12 @@ class StatusManagementTestCase(TestCase):
 
         # Should be safe to re-run when default statuses have been modified,
         # and so long as their slugs are unchanged, no new statuses should be created
-        status = Status.objects.get(slug="active")
-        status.name = "Really Active"
-        status.validated_save()
 
-        status = Status.objects.get(slug="planned")
+        status = Status.objects.get(name="Planned")
         status.color = "12ab34"
         status.validated_save()
 
-        status = Status.objects.get(slug="deprecated")
+        status = Status.objects.get(name="Deprecated")
         status.description = "I'm a little teapot"
         status.validated_save()
 
@@ -41,7 +38,7 @@ class StatusManagementTestCase(TestCase):
         Verify that populate_status_choices() handles Status slug change when its name still matches a default Status.
         """
         initial_statuses_count = Status.objects.count()
-        status = Status.objects.get(slug="active")
+        status = Status.objects.get(name="Active")
         status.slug = "active2"
         status.validated_save()
         # Note that status.name is still "Active", which also must be globally unique.

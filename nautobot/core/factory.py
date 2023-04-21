@@ -1,9 +1,13 @@
+from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
+
 from django.db.models import Model
 import factory
 from factory.django import DjangoModelFactory
+from faker.providers import BaseProvider
 import factory.random
 import itertools
 
+from nautobot.core import constants
 from nautobot.extras.models import Tag
 
 
@@ -184,7 +188,14 @@ class NautobotBoolIterator(factory.Iterator):
         factory.random.randgen.shuffle(iterator)
         return iterator
 
-    def __init__(self, *args, cycle=True, getter=None, chance_of_getting_true=50, length=8):
+    def __init__(
+        self,
+        *args,
+        cycle=True,
+        getter=None,
+        chance_of_getting_true=constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY,
+        length=constants.NAUTOBOT_BOOL_ITERATOR_DEFAULT_LENGTH,
+    ):
         super().__init__(None, cycle=cycle, getter=getter)
 
         if cycle:
@@ -195,3 +206,17 @@ class NautobotBoolIterator(factory.Iterator):
             self.iterator_builder = lambda: factory.utils.ResetableIterator(
                 self._nautobot_boolean_iterator_sample(chance_of_getting_true, length)
             )
+
+
+class NautobotFakerProvider(BaseProvider):
+    """Faker provider to generate fake data specific to Nautobot or network automation use cases."""
+
+    def ipv6_network(self) -> str:
+        """Produce a random IPv6 network with a valid CIDR greater than 0"""
+        address = str(IPv6Address(self.generator.random.randint(0, (2**IPV6LENGTH) - 1)))
+        address += "/" + str(self.generator.random.randint(1, IPV6LENGTH))
+        address = str(IPv6Network(address, strict=False))
+        return address
+
+
+factory.Faker.add_provider(NautobotFakerProvider)

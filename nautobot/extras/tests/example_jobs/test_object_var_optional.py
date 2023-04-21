@@ -1,14 +1,14 @@
 from nautobot.extras.jobs import Job, ObjectVar
-from nautobot.dcim.models import Region
+from nautobot.dcim.models import Location
 
 
 class TestOptionalObjectVar(Job):
-    region = ObjectVar(
-        description="Region (optional)",
-        model=Region,
+    location = ObjectVar(
+        description="Location (optional)",
+        model=Location,
         required=False,
     )
 
     def run(self, data, commit):
-        self.log_info(obj=data["region"], message="The Region if any that the user provided.")
-        return "Nice Region (or not)!"
+        self.log_info(obj=data["location"], message="The Location if any that the user provided.")
+        return "Nice Location (or not)!"

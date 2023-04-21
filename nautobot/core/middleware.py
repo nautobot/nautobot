@@ -115,7 +115,6 @@ class ExceptionHandlingMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
-
         # Don't catch exceptions when in debug mode
         if settings.DEBUG:
             return None

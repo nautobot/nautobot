@@ -94,7 +94,6 @@ class NautobotTestCaseMixin:
 
             # Handle ManyToManyFields
             if value and isinstance(field, (ManyToManyField, TaggableManager)):
-
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
@@ -103,7 +102,6 @@ class NautobotTestCaseMixin:
                     model_dict[key] = sorted([obj.pk for obj in value])
 
             if api:
-
                 # Replace ContentType primary keys with <app_label>.<model>
                 if isinstance(getattr(instance, key), ContentType):
                     ct = ContentType.objects.get(pk=value)
@@ -114,7 +112,6 @@ class NautobotTestCaseMixin:
                     model_dict[key] = str(value)
 
             else:
-
                 # Convert ArrayFields to CSV strings
                 if isinstance(field, core_fields.JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
@@ -186,6 +183,9 @@ class NautobotTestCaseMixin:
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
                 new_model_dict[k] = sorted(v)
+            elif k == "data_schema" and isinstance(v, str):
+                # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                new_model_dict[k] = self.standardize_json(v)
             else:
                 new_model_dict[k] = v
 
@@ -196,6 +196,9 @@ class NautobotTestCaseMixin:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
+                elif k == "data_schema" and isinstance(v, str):
+                    # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                    relevant_data[k] = self.standardize_json(v)
                 else:
                     relevant_data[k] = v
 
@@ -212,6 +215,10 @@ class NautobotTestCaseMixin:
     #
     # Convenience methods
     #
+
+    def standardize_json(self, data):
+        obj = json.loads(data)
+        return json.dumps(obj, sort_keys=True)
 
     @classmethod
     def create_tags(cls, *names):

@@ -3,7 +3,7 @@
 
 {% block breadcrumbs %}
     <li><a href="{% url 'circuits:circuit_list' %}">Circuits</a></li>
-    <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.slug }}">{{ object.circuit.provider }}</a></li>
+    <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.pk }}">{{ object.circuit.provider }}</a></li>
     <li>{{ object.circuit|hyperlinked_object }}</li>
     <li>{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
@@ -12,14 +12,11 @@
     <div class="panel panel-default">
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    {% if object.site %}
-                        <td>Site</td>
-                        <td>
-                            {% if object.site.region %}
-                                {{ object.site.region|hyperlinked_object }} /
-                            {% endif %}
-                            {{ object.site|hyperlinked_object }}
-                        </td>
+                    {% if object.location %}
+                        <tr>
+                            <td>Location</td>
+                            <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                        </tr>
                     {% endif %}
                     {% if object.provider_network %}
                         <td>Provider Network</td>
@@ -29,12 +26,6 @@
                     {% endif %}
                 </tr>
                 {% if object.location %}
-                    <tr>
-                        <td>Location</td>
-                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
-                    </tr>
-                {% endif %}
-                {% if object.site %}
                 <tr>
                     <td>Cable</td>
                     <td>
@@ -60,17 +51,17 @@
                                 ({{ peer }})
                             {% endwith %}
                         {% else %}
-                            {% if perms.dcim.add_cable and object.site %}
+                            {% if perms.dcim.add_cable %}
                                 <div class="pull-right">
                                     <span class="dropdown">
                                         <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-right">
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='interface' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='front-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='interface' %}?termination_b_location={{ object.location.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='front-port' %}?termination_b_location={{ object.location.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?termination_b_location={{ object.location.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?termination_b_location={{ object.location.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
                                         </ul>
                                     </span>
                                 </div>

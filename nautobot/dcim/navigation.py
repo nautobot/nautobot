@@ -7,56 +7,6 @@ menu_items = (
         weight=100,
         groups=(
             NavMenuGroup(
-                name="Sites",
-                weight=100,
-                items=(
-                    NavMenuItem(
-                        link="dcim:site_list",
-                        name="Sites",
-                        weight=100,
-                        permissions=[
-                            "dcim.view_site",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:site_add",
-                                permissions=[
-                                    "dcim.add_site",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:site_import",
-                                permissions=[
-                                    "dcim.add_site",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="dcim:region_list",
-                        name="Regions",
-                        weight=200,
-                        permissions=[
-                            "dcim.view_region",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:region_add",
-                                permissions=[
-                                    "dcim.add_region",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:region_import",
-                                permissions=[
-                                    "dcim.add_region",
-                                ],
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-            NavMenuGroup(
                 name="Locations",
                 weight=150,
                 items=(

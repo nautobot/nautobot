@@ -12,11 +12,13 @@ from nautobot.core.tables import (
 )
 from nautobot.core.templatetags.helpers import render_boolean
 from nautobot.dcim.models import Interface
+from nautobot.dcim.tables import InterfaceTable
+from nautobot.dcim.tables.devices import DeviceComponentTable
+from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -46,7 +48,7 @@ PREFIX_LINK = """
 {% url 'ipam:prefix_add' %}\
 ?prefix={{ record }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
-{% if object.site %}&site={{ object.site.pk }}{% endif %}\
+{% if object.location %}&location={{ object.location.pk }}{% endif %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 ">{{ record.prefix }}</a>
@@ -65,7 +67,7 @@ PREFIX_COPY_LINK = """
 {% url 'ipam:prefix_add' %}\
 ?prefix={{ record }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
-{% if object.site %}&site={{ object.site.pk }}{% endif %}\
+{% if object.location %}&location={{ object.location.pk }}{% endif %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 " id="copy_{{record.id}}">{{ record.prefix }}</a>
@@ -172,7 +174,7 @@ VLAN_LINK = """
     <a href="\
 {% url 'ipam:vlan_add' %}\
 ?vid={{ record.vid }}&vlan_group={{ vlan_group.pk }}\
-{% if vlan_group.site %}&site={{ vlan_group.site.pk }}{% endif %}\
+{% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
 {% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
 " class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>\
 {% else %}
@@ -201,7 +203,7 @@ VLANGROUP_ADD_VLAN = """
     {% if next_vid and perms.ipam.add_vlan %}
         <a href="\
 {% url 'ipam:vlan_add' %}\
-?site={{ record.site_id }}\
+?location={{ record.location_id }}\
 {% if record.location %}&location={{ record.location_id }}{% endif %}\
 &vlan_group={{ record.pk }}&vid={{ next_vid }}\
 " title="Add VLAN" class="btn btn-xs btn-success"><i class="mdi mdi-plus-thick" aria-hidden="true"></i></a>
@@ -266,21 +268,20 @@ class RIRTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     is_private = BooleanColumn(verbose_name="Private")
-    aggregate_count = LinkedCountColumn(
-        viewname="ipam:aggregate_list",
-        url_params={"rir": "slug"},
-        verbose_name="Aggregates",
+    assigned_prefix_count = LinkedCountColumn(
+        viewname="ipam:prefix_list",
+        url_params={"rir": "name"},
+        verbose_name="Assigned Prefixes",
     )
-    actions = ButtonsColumn(RIR, pk_field="slug")
+    actions = ButtonsColumn(RIR)
 
     class Meta(BaseTable.Meta):
         model = RIR
         fields = (
             "pk",
             "name",
-            "slug",
             "is_private",
-            "aggregate_count",
+            "assigned_prefix_count",
             "description",
             "actions",
         )
@@ -288,55 +289,9 @@ class RIRTable(BaseTable):
             "pk",
             "name",
             "is_private",
-            "aggregate_count",
+            "assigned_prefix_count",
             "description",
             "actions",
-        )
-
-
-#
-# Aggregates
-#
-
-
-class AggregateTable(BaseTable):
-    pk = ToggleColumn()
-    prefix = tables.LinkColumn(verbose_name="Aggregate", order_by=("network", "prefix_length"))
-    rir = tables.Column(linkify=True)
-    tenant = TenantColumn()
-    date_added = tables.DateColumn(format="Y-m-d", verbose_name="Added")
-
-    class Meta(BaseTable.Meta):
-        model = Aggregate
-        fields = ("pk", "prefix", "rir", "tenant", "date_added", "description")
-
-
-class AggregateDetailTable(AggregateTable):
-    child_count = tables.Column(verbose_name="Prefixes")
-    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
-    tags = TagColumn(url_name="ipam:aggregate_list")
-
-    class Meta(AggregateTable.Meta):
-        fields = (
-            "pk",
-            "prefix",
-            "rir",
-            "tenant",
-            "child_count",
-            "utilization",
-            "date_added",
-            "description",
-            "tags",
-        )
-        default_columns = (
-            "pk",
-            "prefix",
-            "rir",
-            "tenant",
-            "child_count",
-            "utilization",
-            "date_added",
-            "description",
         )
 
 
@@ -352,9 +307,10 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
+    rir = tables.Column(linkify=True)
+    date_allocated = tables.DateTimeColumn()
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -366,10 +322,11 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "children",
             "vrf",
             "tenant",
-            "site",
             "location",
             "vlan",
             "role",
+            "rir",
+            "date_allocated",
             "description",
         )
         default_columns = (
@@ -379,7 +336,6 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "vrf",
             "tenant",
-            "site",
             "location",
             "vlan",
             "role",
@@ -405,7 +361,6 @@ class PrefixDetailTable(PrefixTable):
             "vrf",
             "utilization",
             "tenant",
-            "site",
             "location",
             "vlan",
             "role",
@@ -421,7 +376,6 @@ class PrefixDetailTable(PrefixTable):
             "vrf",
             "utilization",
             "tenant",
-            "site",
             "location",
             "vlan",
             "role",
@@ -441,13 +395,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
-    assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Interface")
-    assigned_object_parent = tables.Column(
-        accessor="assigned_object__parent",
-        linkify=True,
-        orderable=False,
-        verbose_name="Interface Parent",
-    )
+    # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -458,8 +406,6 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "assigned_object",
-            "assigned_object_parent",
             "dns_name",
             "description",
         )
@@ -471,8 +417,8 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
 class IPAddressDetailTable(IPAddressTable):
     nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
-    assigned = BooleanColumn(accessor="assigned_object_id", verbose_name="Assigned")
     tags = TagColumn(url_name="ipam:ipaddress_list")
+    # TODO: add interface M2M
 
     class Meta(IPAddressTable.Meta):
         fields = (
@@ -503,7 +449,7 @@ class IPAddressDetailTable(IPAddressTable):
 
 class IPAddressAssignTable(StatusTableMixin, BaseTable):
     address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
-    assigned_object = tables.Column(orderable=False)
+    # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -514,7 +460,6 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "assigned_object",
             "description",
         )
         orderable = False
@@ -534,6 +479,66 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
         fields = ("address", "vrf", "status", "role", "tenant", "description")
 
 
+class IPAddressInterfaceTable(InterfaceTable):
+    name = tables.TemplateColumn(
+        template_code='<i class="mdi mdi-{% if iface.mgmt_only %}wrench{% elif iface.is_lag %}drag-horizontal-variant'
+        "{% elif iface.is_virtual %}circle{% elif iface.is_wireless %}wifi{% else %}ethernet"
+        '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
+        attrs={"td": {"class": "text-nowrap"}},
+    )
+    parent_interface = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
+    lag = tables.Column(linkify=True, verbose_name="LAG")
+
+    class Meta(DeviceComponentTable.Meta):
+        model = Interface
+        fields = (
+            "pk",
+            "name",
+            "device",
+            "status",
+            "label",
+            "enabled",
+            "type",
+            "parent_interface",
+            "bridge",
+            "lag",
+            "mgmt_only",
+            "mtu",
+            "mode",
+            "mac_address",
+            "description",
+            "cable",
+            "cable_peer",
+            "connection",
+            "tags",
+            "ip_addresses",
+            "untagged_vlan",
+            "tagged_vlans",
+        )
+        default_columns = [
+            "pk",
+            "device",
+            "name",
+            "status",
+            "label",
+            "enabled",
+            "type",
+            "parent_interface",
+            "lag",
+            "mtu",
+            "mode",
+            "description",
+            "ip_addresses",
+            "cable",
+            "connection",
+        ]
+        row_attrs = {
+            "style": cable_status_color_css,
+            "data-name": lambda record: record.name,
+        }
+
+
 #
 # VLAN groups
 #
@@ -542,15 +547,14 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
 class VLANGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "slug"}, verbose_name="VLANs")
     actions = ButtonsColumn(model=VLANGroup, prepend_template=VLANGROUP_ADD_VLAN)
 
     class Meta(BaseTable.Meta):
         model = VLANGroup
-        fields = ("pk", "name", "site", "location", "vlan_count", "slug", "description", "actions")
-        default_columns = ("pk", "name", "site", "location", "vlan_count", "description", "actions")
+        fields = ("pk", "name", "location", "vlan_count", "slug", "description", "actions")
+        default_columns = ("pk", "name", "location", "vlan_count", "description", "actions")
 
 
 #
@@ -561,7 +565,6 @@ class VLANGroupTable(BaseTable):
 class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan_group = tables.Column(linkify=True)
     tenant = TenantColumn()
@@ -571,7 +574,6 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "vid",
-            "site",
             "location",
             "vlan_group",
             "name",
@@ -594,7 +596,6 @@ class VLANDetailTable(VLANTable):
         fields = (
             "pk",
             "vid",
-            "site",
             "location",
             "vlan_group",
             "name",
@@ -608,7 +609,6 @@ class VLANDetailTable(VLANTable):
         default_columns = (
             "pk",
             "vid",
-            "site",
             "location",
             "vlan_group",
             "name",
@@ -657,7 +657,6 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
 
     vid = tables.LinkColumn(viewname="ipam:vlan", args=[Accessor("pk")], verbose_name="ID")
     tagged = BooleanColumn()
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
@@ -668,7 +667,6 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
         fields = (
             "vid",
             "tagged",
-            "site",
             "location",
             "vlan_group",
             "name",

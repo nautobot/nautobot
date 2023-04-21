@@ -23,7 +23,6 @@ def reverse_populate_tags(app, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0031_tag_content_types"),
     ]

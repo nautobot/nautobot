@@ -12,7 +12,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 
-logger = logging.getLogger("nautobot.graphql.generators")
+logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 
@@ -92,17 +92,16 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     return resolve_filter
 
 
-# 2.0 TODO: #824 rename `name` to `slug`
-def generate_custom_field_resolver(name, resolver_name):
+def generate_custom_field_resolver(key, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 
     Args:
-        name (str): name of the custom field to resolve
+        key (str): unique key of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
     """
 
     def resolve_custom_field(self, info, **kwargs):
-        return self.cf.get(name, None)
+        return self.cf.get(key, None)
 
     resolve_custom_field.__name__ = resolver_name
     return resolve_custom_field
@@ -276,7 +275,6 @@ def generate_single_item_resolver(schema_type, resolver_name):
     model = schema_type._meta.model
 
     def single_resolver(self, info, **kwargs):
-
         obj_id = kwargs.get("id", None)
         if obj_id:
             return gql_optimizer.query(

@@ -35,7 +35,6 @@ def fixup_p2p_broadcast(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0003_remove_max_length"),
     ]

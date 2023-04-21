@@ -19,100 +19,104 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     RearPort,
-    Region,
-    Site,
 )
-from nautobot.extras.choices import DynamicGroupOperatorChoices
+from nautobot.extras.choices import (
+    CustomFieldFilterLogicChoices,
+    CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
+    RelationshipTypeChoices,
+)
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Role, Status
+from nautobot.extras.models import (
+    CustomField,
+    DynamicGroup,
+    DynamicGroupMembership,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+    Status,
+)
 from nautobot.ipam.models import Prefix
 
 
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
-
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
+        cls.lt = LocationType.objects.get(name="Campus")
 
-        cls.sites = [
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-            Site.objects.create(name="Site 4", slug="site-4"),
+        cls.locations = [
+            Location.objects.create(name="Location 1", slug="location-1", location_type=cls.lt),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=cls.lt),
+            Location.objects.create(name="Location 3", slug="location-3", location_type=cls.lt),
+            Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt),
         ]
 
-        cls.manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        cls.device_type = DeviceType.objects.create(
-            manufacturer=cls.manufacturer,
-            model="device Type 1",
-            slug="device-type-1",
-        )
+        cls.manufacturer = Manufacturer.objects.first()
+        cls.device_type = DeviceType.objects.first()
         cls.device_role = Role.objects.get_for_model(Device).first()
-        cls.status_active = Status.objects.get_for_model(Device).get(slug="active")
-        cls.status_planned = Status.objects.get_for_model(Device).get(slug="planned")
-        cls.status_staged = Status.objects.get_for_model(Device).get(slug="staged")
+        statuses = Status.objects.get_for_model(Device)
+        cls.status_1 = statuses[0]
+        cls.status_2 = statuses[1]
+        cls.status_3 = statuses[2]
 
         cls.devices = [
             Device.objects.create(
-                name="device-site-1",
-                status=cls.status_active,
+                name="device-location-1",
+                status=cls.status_1,
                 role=cls.device_role,
                 device_type=cls.device_type,
-                site=cls.sites[0],
+                location=cls.locations[0],
             ),
             Device.objects.create(
-                name="device-site-2",
-                status=cls.status_active,
+                name="device-location-2",
+                status=cls.status_1,
                 role=cls.device_role,
                 device_type=cls.device_type,
                 serial="abc123",
-                site=cls.sites[1],
+                location=cls.locations[1],
             ),
             Device.objects.create(
-                name="device-site-3",
-                status=cls.status_planned,
+                name="device-location-3",
+                status=cls.status_2,
                 role=cls.device_role,
                 device_type=cls.device_type,
-                site=cls.sites[2],
+                location=cls.locations[2],
             ),
             Device.objects.create(
-                name="device-site-4",
-                status=cls.status_staged,
+                name="device-location-4",
+                status=cls.status_3,
                 role=cls.device_role,
                 device_type=cls.device_type,
-                site=cls.sites[3],
+                location=cls.locations[3],
             ),
         ]
 
         cls.groups = [
             DynamicGroup.objects.create(
                 name="Parent",
-                slug="parent",
                 description="The parent group with no filter",
                 filter={},
                 content_type=cls.device_ct,
             ),
-            # Site-1 only
+            # Location-1 only
             DynamicGroup.objects.create(
                 name="First Child",
-                slug="first-child",
                 description="The first child group",
-                filter={"site": ["site-1"]},
+                filter={"location": ["location-1"]},
                 content_type=cls.device_ct,
             ),
-            # Site-2 only
+            # Location-2 only
             DynamicGroup.objects.create(
                 name="Second Child",
-                slug="second-child",
                 description="A second child group",
-                filter={"site": ["site-3"]},
+                filter={"location": ["location-3"]},
                 content_type=cls.device_ct,
             ),
             # Empty filter to use for testing nesting.
             DynamicGroup.objects.create(
                 name="Third Child",
-                slug="third-child",
                 description="A third child group with a child of its own",
                 filter={},
                 content_type=cls.device_ct,
@@ -120,22 +124,19 @@ class DynamicGroupTestBase(TestCase):
             # Nested child of third-child to test ancestors/descendants
             DynamicGroup.objects.create(
                 name="Nested Child",
-                slug="nested-child",
                 description="This will be the child of third-child",
-                filter={"status": ["active"]},
+                filter={"status": [statuses[0].name]},
                 content_type=cls.device_ct,
             ),
             # No matches (bogus/invalid name match)
             DynamicGroup.objects.create(
                 name="Invalid Filter",
-                slug="invalid-filter",
                 description="A group with a non-matching filter",
                 filter={"name": ["bogus"]},
                 content_type=cls.device_ct,
             ),
             DynamicGroup.objects.create(
                 name="MultiValueCharFilter",
-                slug="multivaluecharfilter",
                 description="A group with a multivaluechar filter",
                 filter={"name": ["device-1", "device-2", "device-3"]},
                 content_type=cls.device_ct,
@@ -185,7 +186,7 @@ class DynamicGroupTestBase(TestCase):
         )
 
 
-class DynamicGroupModelTest(DynamicGroupTestBase):
+class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroup model tests."""
 
     def test_content_type_is_immutable(self):
@@ -207,14 +208,14 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             instance.validated_save()
 
         with self.assertRaises(ValidationError):
-            instance.filter = "site=ams01"
+            instance.filter = "location=ams01"
             instance.validated_save()
 
     def test_clean_filter_not_valid(self):
         """Test that an invalid filter dict raises an error."""
         instance = self.groups[0]
         with self.assertRaises(ValidationError):
-            instance.filter = {"site": -42}
+            instance.filter = {"location": -42}
             instance.validated_save()
 
     def test_clean_valid(self):
@@ -235,8 +236,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_get_for_object(self):
         """Test `DynamicGroup.objects.get_for_object()`."""
-        device1 = self.devices[0]  # site-1
-        device4 = self.devices[-1]  # site-4
+        device1 = self.devices[0]  # location-1
+        device4 = self.devices[-1]  # location-4
 
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
@@ -264,8 +265,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Grab some values we'll used to setup the test case.
         device1 = self.devices[0]
         device2 = self.devices[1]
-        site = device1.site
-        status = Status.objects.get(slug="active")
+        status = Status.objects.get_for_model(Location).first()
 
         # Create two LocationTypes (My Region > My Site)
         loc_type_region = LocationType.objects.create(name="My Region", slug="my-region")
@@ -273,7 +273,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         loc_type_site = LocationType.objects.create(name="My Site", slug="my-site", parent=loc_type_region)
         loc_type_site.content_types.add(self.device_ct)
 
-        loc_region = Location.objects.create(name="Location A", location_type=loc_type_region, site=site, status=status)
+        loc_region = Location.objects.create(name="Location A", location_type=loc_type_region, status=status)
         loc_site = Location.objects.create(
             name="Location B", location_type=loc_type_site, parent=loc_region, status=status
         )
@@ -283,7 +283,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device1.validated_save()
 
         # Add Location B to device2
-        device2.site = device1.site
         device2.location = loc_site
         device2.validated_save()
 
@@ -292,7 +291,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Create the Dynamic Group filtering on Location A
         group = DynamicGroup.objects.create(
             name="Devices Location",
-            slug="devices-location",
             content_type=self.device_ct,
             filter={"location": ["location-a"]},
         )
@@ -308,7 +306,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # the same number of members.
         parent_group = DynamicGroup.objects.create(
             name="Parent of Devices Location",
-            slug="parent-devices-location",
             content_type=self.device_ct,
             filter={},
         )
@@ -342,7 +339,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Test that we can get a full queryset
         qs = group.get_queryset()
-        devices = group.model.objects.filter(site=device1.site)
+        devices = group.model.objects.filter(location=device1.location)
 
         # Expect a single-member qs/list of Device names (only `device1`)
         expected = [device1.name]
@@ -361,7 +358,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_model(self):
         """Test `DynamicGroup.model`."""
         # New instances should not have a model unless `content_type` is set.
-        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
+        new_group = DynamicGroup(name="Unsaved Group")
         self.assertIsNone(new_group.model)
 
         # Setting the content_type will now allow `.model` to be accessed.
@@ -371,7 +368,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_set_object_classes(self):
         """Test `DynamicGroup._set_object_classes()`."""
         # New instances should fail to map until `content_type` is set.
-        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
+        new_group = DynamicGroup(name="Unsaved Group")
         objects_mapped = new_group._set_object_classes(new_group.model)
         self.assertFalse(objects_mapped)
 
@@ -392,7 +389,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # First assert that a basic group with no children, then a group with children, will always
         # link to the members tab on the detail view.
         for group in [self.first_child, self.parent]:
-            detail_url = reverse("extras:dynamicgroup", kwargs={"slug": group.slug})
+            detail_url = reverse("extras:dynamicgroup", kwargs={"pk": group.pk})
             params = "tab=members"
             url = f"{detail_url}?{params}"
             self.assertEqual(group.get_group_members_url(), url)
@@ -409,7 +406,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Test that it's a dict with or without certain key fields.
         self.assertIsInstance(fields, dict)
         self.assertNotEqual(fields, {})
-        self.assertNotIn("q", fields)
+        self.assertNotIn("comments", fields)
         self.assertIn("name", fields)
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
@@ -471,7 +468,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         )
 
         # Test that the filter returns the one device to which we added front/rear ports.
-        expected = ["device-site-1"]
+        expected = ["device-location-1"]
         filterset = group.filterset_class({"has_front_ports": True, "has_rear_ports": True}, Device.objects.all())
         devices = list(filterset.qs.values_list("name", flat=True))
         self.assertEqual(expected, devices)
@@ -485,7 +482,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         """
         pfx_content_type = ContentType.objects.get_for_model(Prefix)
-        group = DynamicGroup(name="pfx", slug="pfx", content_type=pfx_content_type)
+        group = DynamicGroup(name="pfx", content_type=pfx_content_type)
         filterset = group.filterset_class()
         fields = group._map_filter_fields
 
@@ -503,7 +500,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_get_filter_fields(self):
         """Test `DynamicGroup.get_filter_fields()`."""
         # New instances should return {} `content_type` is set.
-        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
+        new_group = DynamicGroup(name="Unsaved Group")
         new_filter_fields = new_group.get_filter_fields()
         self.assertEqual(new_filter_fields, {})
 
@@ -512,7 +509,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         filter_fields = group.get_filter_fields()
         self.assertIsInstance(filter_fields, dict)
         self.assertNotEqual(filter_fields, {})
-        self.assertNotIn("q", filter_fields)
+        self.assertNotIn("comments", filter_fields)
         self.assertIn("name", filter_fields)
         self.assertIn("rack", filter_fields)
 
@@ -531,7 +528,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""
-        group1 = self.first_child  # Filter has `site`
+        group1 = self.first_child  # Filter has `location`
         self.assertEqual(group1.get_initial(), group1.filter)
         # Test if MultiValueCharField is properly pre-populated
         group2 = self.groups[6]  # Filter has `name`
@@ -559,7 +556,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filter, new_filter)
 
         # And a bad input
-        bad_filter = {"site": -42}
+        bad_filter = {"location": -42}
         with self.assertRaises(ValidationError):
             group.set_filter(bad_filter)
 
@@ -573,12 +570,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
             weight=10,
         )
-        self.assertTrue(self.parent.children.filter(slug=self.invalid_filter.slug).exists())
+        self.assertTrue(self.parent.children.filter(name=self.invalid_filter.name).exists())
 
     def test_clean_child_validation(self):
         """Test various ways in which adding a child group should fail."""
         parent = self.parent
-        parent.filter = {"site": ["site-1"]}
+        parent.filter = {"location": ["location-1"]}
         child = self.invalid_filter
 
         # parent.add_child() should fail
@@ -593,23 +590,20 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         with self.assertRaises(ValidationError):
             parent.children.add(
                 child,
-                through_defaults=dict(
-                    operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
-                    weight=10,
-                ),
+                through_defaults={"operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE, "weight": 10},
             )
 
     def test_remove_child(self):
         """Test `DynamicGroup.remove_child()`."""
         self.parent.remove_child(self.third_child)
-        self.assertFalse(self.parent.children.filter(slug=self.third_child.slug).exists())
+        self.assertFalse(self.parent.children.filter(name=self.third_child.name).exists())
 
     def test_generate_query_for_filter(self):
         """Test `DynamicGroup.generate_query_for_filter()`."""
         group = self.parent  # Any group will do, so why not this one?
-        multi_value = ["site-3"]
+        multi_value = ["location-3"]
         fs = group.filterset_class()
-        multi_field = fs.filters["site"]
+        multi_field = fs.filters["location"]
         multi_query = group.generate_query_for_filter(
             filter_field=multi_field,
             value=multi_value,
@@ -619,7 +613,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Assert that both querysets resturn the same results
         group_qs = queryset.filter(multi_query)
-        device_qs = Device.objects.filter(site__slug__in=multi_value)
+        device_qs = Device.objects.filter(location__slug__in=multi_value)
         self.assertQuerySetEqual(group_qs, device_qs)
 
         # Now do a non-multi-value filter.
@@ -631,20 +625,20 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertQuerySetEqual(solo_qs, interface_qs)
 
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
-        # test a regression w/ nested slug-related values such as `DeviceFilterSet.region` which
-        # filters on `site__region`.
-        parent_region = Region.objects.filter(children__isnull=False).first()
-        nested_value = [parent_region.slug]
-        group.set_filter({"region": nested_value})
+        # test a regression w/ nested slug-related values such as `DeviceFilterSet.macufacturer` which
+        # filters on `device_type__manufacturer`.
+        manufacturer = Manufacturer.objects.first()
+        nested_value = [manufacturer.name]
+        group.set_filter({"manufacturer": nested_value})
         group.validated_save()
 
         # We are making sure the filterset generated from the slug as an argument results in the same
-        # filtered queryset, and more importantly that the nested filter expression `site__region`
+        # filtered queryset, and more importantly that the nested filter expression `device_type__manufacturer`
         # is automatically used to get the related model name without failing.
-        nested_query = group.generate_query_for_filter(filter_field=fs.filters["region"], value=nested_value)
+        nested_query = group.generate_query_for_filter(filter_field=fs.filters["manufacturer"], value=nested_value)
         nested_qs = queryset.filter(nested_query)
-        region_qs = Device.objects.filter(site__region__slug__in=nested_value)
-        self.assertQuerySetEqual(nested_qs, region_qs)
+        parent_qs = Device.objects.filter(device_type__manufacturer__name__in=nested_value)
+        self.assertQuerySetEqual(nested_qs, parent_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
@@ -677,20 +671,20 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_get_ancestors(self):
         """Test `DynamicGroup.get_ancestors()`."""
-        expected = ["third-child", "parent"]
-        ancestors = [a.slug for a in self.nested_child.get_ancestors()]
+        expected = ["Third Child", "Parent"]
+        ancestors = [a.name for a in self.nested_child.get_ancestors()]
         self.assertEqual(ancestors, expected)
 
     def test_get_descendants(self):
         """Test `DynamicGroup.get_descendants()`."""
-        expected = ["first-child", "second-child", "third-child", "nested-child"]
-        descendants = [d.slug for d in self.parent.get_descendants()]
+        expected = ["First Child", "Second Child", "Third Child", "Nested Child"]
+        descendants = [d.name for d in self.parent.get_descendants()]
         self.assertEqual(descendants, expected)
 
     def test_get_siblings(self):
         """Test `DynamicGroup.get_siblings()`."""
-        expected = ["first-child", "second-child"]
-        siblings = sorted(s.slug for s in self.third_child.get_siblings())
+        expected = ["First Child", "Second Child"]
+        siblings = sorted(s.name for s in self.third_child.get_siblings())
         self.assertEqual(siblings, expected)
 
     def test_is_root(self):
@@ -730,8 +724,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Assert descendants are deterministic
         d_tree = self.parent.descendants_tree()
         d_flat = self.parent.flatten_descendants_tree(d_tree)
-        expected = {"first-child": 1, "second-child": 1, "third-child": 1, "nested-child": 2}
-        seen = {d.slug: d.depth for d in d_flat}
+        expected = {"First Child": 1, "Second Child": 1, "Third Child": 1, "Nested Child": 2}
+        seen = {d.name: d.depth for d in d_flat}
         self.assertEqual(seen, expected)
 
         # Parent should not be here; nested-child should.
@@ -743,8 +737,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # Assert ancestors are deterministic
         a_tree = self.nested_child.ancestors_tree()
         a_flat = self.nested_child.flatten_ancestors_tree(a_tree)
-        expected = {"third-child": 1, "parent": 2}
-        seen = {a.slug: a.depth for a in a_flat}
+        expected = {"Third Child": 1, "Parent": 2}
+        seen = {a.name: a.depth for a in a_flat}
         self.assertEqual(seen, expected)
 
         # Nested-child should not be here; parent should.
@@ -758,8 +752,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         d_tree = group.flatten_descendants_tree(group.descendants_tree())
         m_tree = group.membership_tree()
 
-        d_groups = [d.slug for d in d_tree]
-        m_groups = [m.group.slug for m in m_tree]
+        d_groups = [d.name for d in d_tree]
+        m_groups = [m.group.name for m in m_tree]
 
         d_depths = [d.depth for d in d_tree]
         m_depths = [m.depth for m in m_tree]
@@ -815,7 +809,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group_qs.count(), len(child_set))
 
         # And have the same members...
-        expected = ["device-site-3"]
+        expected = ["device-location-3"]
         self.assertEqual(sorted(group_qs.values_list("name", flat=True)), expected)
 
     def test_delete(self):
@@ -828,8 +822,106 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.nested_child.parents.clear()
         self.nested_child.delete()
 
+    def test_filter_relationships(self):
+        """Test that relationships can be used in filters."""
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
 
-class DynamicGroupMembershipModelTest(DynamicGroupTestBase):
+        device = self.devices[0]
+        prefix = Prefix.objects.first()
+
+        relationship = Relationship(
+            name="Device to Prefix",
+            slug="device_to_prefix",
+            source_type=self.device_ct,
+            source_label="My Prefixes",
+            source_filter=None,
+            destination_type=prefix_ct,
+            destination_label="My Devices",
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        relationship.validated_save()
+
+        ra = RelationshipAssociation(
+            relationship=relationship,
+            source=device,
+            destination=prefix,
+        )
+        ra.validated_save()
+
+        dg = DynamicGroup(
+            name="relationships",
+            description="I filter on relationships.",
+            filter={"cr_device_to_prefix__destination": [prefix.pk]},
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        # These should be the same length.
+        self.assertEqual(dg.count, 1)
+
+        # And have the same members...
+        self.assertIn(device, dg.members)
+        expected = [str(device)]
+        self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+    def test_filter_custom_fields(self):
+        """Test that relationships can be used in filters."""
+
+        device = self.devices[0]
+
+        cf = CustomField.objects.create(
+            label="Favorite Food",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE,
+        )
+        cf.content_types.add(self.device_ct)
+
+        device._custom_field_data = {"favorite_food": "bacon"}
+        device.validated_save()
+        device.refresh_from_db()
+
+        dg = DynamicGroup(
+            name="custom_fields",
+            description="I filter on custom fields.",
+            filter={"cf_favorite_food": "bacon"},
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        # These should be the same length.
+        self.assertEqual(dg.count, 1)
+
+        # And have the same members...
+        self.assertIn(device, dg.members)
+        expected = [str(device)]
+        self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+    def test_filter_search(self):
+        """Test that search (`q` filter) can be used in filters."""
+
+        # Rename the device to explicitly match on search.
+        device = self.devices[0]
+        device.name = "pizza-party-machine"
+        device.save()
+
+        dg = DynamicGroup(
+            name="custom_fields",
+            description="I filter on the q field",
+            filter={"q": "party"},  # Let's party! 🎉
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        # These should be the same length.
+        self.assertEqual(dg.count, 1)
+
+        # And have the same members...
+        self.assertIn(device, dg.members)
+        expected = [str(device)]
+        self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+
+class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroupMembership model tests."""
 
     def test_clean_content_type(self):
@@ -908,10 +1000,6 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
         params = {"name": ["First Child", "Third Child"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_slug(self):
-        params = {"slug": ["invalid-filter"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
     def test_content_type(self):
         params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
@@ -920,7 +1008,6 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
         tests = {
             "Devices No Filter": 0,  # name
             "Invalid Filter": 1,  # name
-            "invalid-filter": 1,  # slug
             "A group with a non-matching filter": 1,  # description
             "dcim": 7,  # content_type__app_label
             "device": 7,  # content_type__model
@@ -941,7 +1028,7 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_operator(self):
-        params = {"operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION}
+        params = {"operator": [DynamicGroupOperatorChoices.OPERATOR_INTERSECTION]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_weight(self):
@@ -950,23 +1037,22 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
 
     def test_group(self):
         group_pk = self.queryset.first().group.pk  # expecting 1
-        group_slug = self.queryset.last().group.slug  # expecting 1
+        group_slug = self.queryset.last().group.name  # expecting 1
         params = {"group": [group_pk, group_slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent_group(self):
         parent_group_pk = self.queryset.first().parent_group.pk  # expecting 3
-        parent_group_slug = self.queryset.last().parent_group.slug  # expecting 1
-        params = {"parent_group": [parent_group_pk, parent_group_slug]}
+        parent_group_name = self.queryset.last().parent_group.name  # expecting 1
+        params = {"parent_group": [parent_group_pk, parent_group_name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_search(self):
         tests = {
             "intersection": 2,  # operator
             "First Child": 1,  # group__name
-            "second-child": 1,  # group__slug
             "Parent": 3,  # parent_group__name,
-            "third-child": 2,  # parent_group__slug OR group__slug,
+            "Third Child": 2,  # parent_group__slug OR group__slug,
         }
         for value, cnt in tests.items():
             params = {"q": value}

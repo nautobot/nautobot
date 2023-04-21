@@ -1,5 +1,4 @@
 from django import forms
-from django.db.models import Q
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -8,7 +7,7 @@ from nautobot.core.forms import (
     BulkEditNullBooleanSelect,
     CSVChoiceField,
     CSVModelChoiceField,
-    DatePicker,
+    DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
@@ -27,7 +26,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Interface, Rack, Region, Site
+from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
@@ -43,7 +42,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
+from nautobot.virtualization.models import Cluster, VirtualMachine
 from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
@@ -54,8 +53,8 @@ from .constants import (
     SERVICE_PORT_MIN,
 )
 from .models import (
-    Aggregate,
     IPAddress,
+    IPAddressToInterface,
     Prefix,
     RIR,
     RouteTarget,
@@ -211,13 +210,10 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
 
 
 class RIRForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = RIR
         fields = [
             "name",
-            "slug",
             "is_private",
             "description",
         ]
@@ -242,89 +238,14 @@ class RIRFilterForm(NautobotFilterForm):
 
 
 #
-# Aggregates
-#
-
-
-class AggregateForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
-
-    class Meta:
-        model = Aggregate
-        fields = [
-            "prefix",
-            "rir",
-            "date_added",
-            "description",
-            "tenant_group",
-            "tenant",
-            "tags",
-        ]
-        help_texts = {
-            "prefix": "IPv4 or IPv6 network",
-            "rir": "Regional Internet Registry responsible for this prefix",
-        }
-        widgets = {
-            "date_added": DatePicker(),
-        }
-
-
-class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
-    rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Aggregate
-        fields = Aggregate.csv_headers
-
-
-class AggregateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Aggregate.objects.all(), widget=forms.MultipleHiddenInput())
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    date_added = forms.DateField(required=False)
-    description = forms.CharField(max_length=100, required=False)
-
-    class Meta:
-        nullable_fields = [
-            "date_added",
-            "description",
-        ]
-        widgets = {
-            "date_added": DatePicker(),
-        }
-
-
-class AggregateFilterForm(NautobotFilterForm, TenancyFilterForm):
-    model = Aggregate
-    field_order = [
-        "q",
-        "rir",
-    ]
-
-    q = forms.CharField(required=False, label="Search")
-    family = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
-        widget=StaticSelect2(),
-    )
-    rir = DynamicModelMultipleChoiceField(queryset=RIR.objects.all(), to_field_name="slug", required=False, label="RIR")
-    tag = TagFilterField(model)
-
-
-#
 # Prefixes
 #
 
 
 class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
     vrf = DynamicModelChoiceField(
+        empty_label="Global",
+        null_option="Global",
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
@@ -334,7 +255,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"location_id": "$location"},
         initial_params={"vlans": "$vlan"},
     )
     vlan = DynamicModelChoiceField(
@@ -342,9 +263,14 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN",
         query_params={
-            "site_id": "$site",
+            "location": "$location",
             "group_id": "$vlan_group",
         },
+    )
+    rir = DynamicModelChoiceField(
+        queryset=RIR.objects.all(),
+        required=False,
+        label="RIR",
     )
 
     class Meta:
@@ -352,7 +278,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         fields = [
             "prefix",
             "vrf",
-            "site",
             "location",
             "vlan",
             "status",
@@ -361,11 +286,15 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "description",
             "tenant_group",
             "tenant",
+            "rir",
+            "date_allocated",
             "tags",
         ]
+        widgets = {
+            "date_allocated": DateTimePicker(),
+        }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
@@ -403,6 +332,7 @@ class PrefixCSVForm(
         help_text="Assigned VLAN",
     )
     type = CSVChoiceField(choices=PrefixTypeChoices, required=False)
+    rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
 
     class Meta:
         model = Prefix
@@ -412,10 +342,9 @@ class PrefixCSVForm(
         super().__init__(data, *args, **kwargs)
 
         if data:
-
-            # Limit vlan queryset by assigned site and vlan_group
+            # Limit vlan queryset by assigned location and vlan_group
             params = {
-                f"site__{self.fields['site'].to_field_name}": data.get("site"),
+                f"location__{self.fields['location'].to_field_name}": data.get("location"),
                 f"vlan_group__{self.fields['vlan_group'].to_field_name}": data.get("vlan_group"),
             }
             self.fields["vlan"].queryset = self.fields["vlan"].queryset.filter(**params)
@@ -440,15 +369,18 @@ class PrefixBulkEditForm(
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
         model = Prefix
         nullable_fields = [
-            "site",
             "location",
             "vrf",
             "tenant",
+            "rir",
+            "date_allocated",
             "description",
         ]
 
@@ -464,18 +396,17 @@ class PrefixFilterForm(
     field_order = [
         "q",
         "within_include",
+        "type",
         "family",
         "mask_length",
         "vrf_id",
         "present_in_vrf_id",
         "status",
-        "region",
-        "site",
         "location",
         "role",
         "tenant_group",
         "tenant",
-        "expand",
+        "rir",
     ]
     mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
@@ -507,6 +438,12 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    type = forms.MultipleChoiceField(
+        required=False,
+        choices=PrefixTypeChoices,
+        widget=StaticSelect2Multiple(),
+    )
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     tag = TagFilterField(model)
 
 
@@ -516,57 +453,29 @@ class PrefixFilterForm(
 
 
 class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
-    device = DynamicModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        initial_params={"interfaces": "$interface"},
-    )
-    interface = DynamicModelChoiceField(
-        queryset=Interface.objects.all(),
-        required=False,
-        query_params={"device_id": "$device"},
-    )
-    virtual_machine = DynamicModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        initial_params={"interfaces": "$vminterface"},
-    )
-    vminterface = DynamicModelChoiceField(
-        queryset=VMInterface.objects.all(),
-        required=False,
-        label="Interface",
-        query_params={"virtual_machine_id": "$virtual_machine"},
-    )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
     )
-    nat_region = DynamicModelChoiceField(
-        queryset=Region.objects.all(),
+    nat_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
         required=False,
-        label="Region",
-        initial_params={"sites": "$nat_site"},
-    )
-    nat_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        label="Site",
-        query_params={"region": "$nat_region"},
+        label="Location",
     )
     nat_rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$nat_location"},
     )
     nat_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
-            "site": "$site",
+            "location": "$nat_location",
             "rack": "$nat_rack",
         },
     )
@@ -594,7 +503,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "vrf_id": "$nat_vrf",
         },
     )
-    primary_for_parent = forms.BooleanField(required=False, label="Make this the primary IP for the device/VM")
 
     class Meta:
         model = IPAddress
@@ -605,8 +513,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "role",
             "dns_name",
             "description",
-            "primary_for_parent",
-            "nat_site",
             "nat_rack",
             "nat_device",
             "nat_cluster",
@@ -619,96 +525,29 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         ]
 
     def __init__(self, *args, **kwargs):
-
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
         if instance:
-            if isinstance(instance.assigned_object, Interface):
-                initial["interface"] = instance.assigned_object
-            elif isinstance(instance.assigned_object, VMInterface):
-                initial["vminterface"] = instance.assigned_object
             if instance.nat_inside:
-                nat_inside_parent = instance.nat_inside.assigned_object
-                if isinstance(nat_inside_parent, Interface):
-                    initial["nat_site"] = nat_inside_parent.device.site.pk
-                    if nat_inside_parent.device.rack:
-                        initial["nat_rack"] = nat_inside_parent.device.rack.pk
-                    initial["nat_device"] = nat_inside_parent.device.pk
-                elif isinstance(nat_inside_parent, VMInterface):
-                    initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
-                    initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
+                # TODO: Does this make sense with ip address to interface relationship changing to m2m?
+                nat_inside_parent = IPAddressToInterface.objects.filter(ip_address=instance.nat_inside)
+                if nat_inside_parent.count() == 1:
+                    nat_inside_parent = nat_inside_parent.first()
+                    if nat_inside_parent.interface is not None:
+                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
+                        if nat_inside_parent.interface.device.rack:
+                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
+                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                    elif nat_inside_parent.vm_interface is not None:
+                        initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
+                        initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
-
-        # Initialize primary_for_parent if IP address is already assigned
-        if self.instance.present_in_database and self.instance.assigned_object:
-            parent = self.instance.assigned_object.parent
-            if (
-                self.instance.address.version == 4
-                and parent.primary_ip4_id == self.instance.pk
-                or self.instance.address.version == 6
-                and parent.primary_ip6_id == self.instance.pk
-            ):
-                self.initial["primary_for_parent"] = True
-
-    def clean(self):
-        super().clean()
-
-        # Cannot select both a device interface and a VM interface
-        if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
-            raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
-
-        # Stash a copy of `assigned_object` before we replace it, so we can use it in `save()`.
-        self.instance._original_assigned_object = self.instance.assigned_object
-        self.instance.assigned_object = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-
-        # Primary IP assignment is only available if an interface has been assigned.
-        interface = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-        primary_for_parent = self.cleaned_data.get("primary_for_parent")
-        if primary_for_parent and not interface:
-            self.add_error(
-                "primary_for_parent",
-                "Only IP addresses assigned to an interface can be designated as primary IPs.",
-            )
-
-        # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
-        # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
-        # also checks for the `_primary_ip_unset_by_form` value.
-        device_primary_ip = Device.objects.filter(Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)).exists()
-        vm_primary_ip = VirtualMachine.objects.filter(
-            Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)
-        ).exists()
-
-        currently_primary_ip = device_primary_ip or vm_primary_ip
-
-        if not primary_for_parent and self.instance._original_assigned_object is not None and currently_primary_ip:
-            self.instance._primary_ip_unset_by_form = True
-
-    def save(self, *args, **kwargs):
-        ipaddress = super().save(*args, **kwargs)
-
-        interface = ipaddress.assigned_object
-        primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
-        primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
-
-        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
-        if interface and self.cleaned_data["primary_for_parent"]:
-            setattr(interface.parent, primary_ip_attr, ipaddress)
-            interface.parent.save()
-
-        # Or clear it as the primary, saving the `original_assigned_object.parent` if
-        # `_primary_ip_unset_by_form` was set in `clean()`
-        elif primary_ip_unset_by_form:
-            parent = ipaddress._original_assigned_object.parent
-            setattr(parent, primary_ip_attr, None)
-            parent.save()
-
-        return ipaddress
 
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
@@ -754,25 +593,6 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFi
         required=False,
         help_text="Assigned tenant",
     )
-    device = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent device of assigned interface (if any)",
-    )
-    virtual_machine = CSVModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent VM of assigned interface (if any)",
-    )
-    interface = CSVModelChoiceField(
-        queryset=Interface.objects.none(),  # Can also refer to VMInterface
-        required=False,
-        to_field_name="name",
-        help_text="Assigned interface",
-    )
-    is_primary = forms.BooleanField(help_text="Make this the primary IP for the assigned device", required=False)
 
     class Meta:
         model = IPAddress
@@ -782,60 +602,9 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFi
             "tenant",
             "status",
             "role",
-            "device",
-            "virtual_machine",
-            "interface",
-            "is_primary",
             "dns_name",
             "description",
         ]
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-
-            # Limit interface queryset by assigned device
-            if data.get("device"):
-                self.fields["interface"].queryset = Interface.objects.filter(
-                    **{f"device__{self.fields['device'].to_field_name}": data["device"]}
-                )
-
-            # Limit interface queryset by assigned device
-            elif data.get("virtual_machine"):
-                self.fields["interface"].queryset = VMInterface.objects.filter(
-                    **{f"virtual_machine__{self.fields['virtual_machine'].to_field_name}": data["virtual_machine"]}
-                )
-
-    def clean(self):
-        super().clean()
-
-        device = self.cleaned_data.get("device")
-        virtual_machine = self.cleaned_data.get("virtual_machine")
-        is_primary = self.cleaned_data.get("is_primary")
-
-        # Validate is_primary
-        if is_primary and not device and not virtual_machine:
-            raise forms.ValidationError("No device or virtual machine specified; cannot set as primary IP")
-
-    def save(self, *args, **kwargs):
-
-        # Set interface assignment
-        if self.cleaned_data["interface"]:
-            self.instance.assigned_object = self.cleaned_data["interface"]
-
-        ipaddress = super().save(*args, **kwargs)
-
-        # Set as primary for device/VM
-        if self.cleaned_data["is_primary"]:
-            parent = self.cleaned_data["device"] or self.cleaned_data["virtual_machine"]
-            if self.instance.address.version == 4:
-                parent.primary_ip4 = ipaddress
-            elif self.instance.address.version == 6:
-                parent.primary_ip6 = ipaddress
-            parent.save()
-
-        return ipaddress
 
 
 class IPAddressBulkEditForm(
@@ -884,7 +653,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "present_in_vrf_id",
         "status",
         "role",
-        "assigned_to_interface",
         "tenant_group",
         "tenant",
     ]
@@ -917,11 +685,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    assigned_to_interface = forms.NullBooleanField(
-        required=False,
-        label="Assigned to an interface",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
     tag = TagFilterField(model)
 
 
@@ -936,8 +699,6 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = VLANGroup
         fields = [
-            "region",
-            "site",
             "location",
             "name",
             "slug",
@@ -964,13 +725,12 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location": "$location"},
     )
 
     class Meta:
         model = VLAN
         fields = [
-            "site",
             "location",
             "vlan_group",
             "vid",
@@ -983,7 +743,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "site": "Leave blank if this VLAN spans multiple sites",
+            "location": "Leave blank if this VLAN spans multiple locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -1018,9 +778,8 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned group
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
+            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
             self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)
 
 
@@ -1035,7 +794,7 @@ class VLANBulkEditForm(
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location_id": "$location"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
@@ -1043,7 +802,6 @@ class VLANBulkEditForm(
     class Meta:
         model = VLAN
         nullable_fields = [
-            "site",
             "location",
             "vlan_group",
             "tenant",
@@ -1061,8 +819,6 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "region",
-        "site",
         "location",
         "group_id",
         "status",
@@ -1076,7 +832,7 @@ class VLANFilterForm(
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"region": "$region"},
+        query_params={"location": "$location"},
     )
     tag = TagFilterField(model)
 
@@ -1117,11 +873,11 @@ class ServiceForm(NautobotModelForm):
         # Limit IP address choices to those assigned to interfaces of the parent device/VM
         if self.instance.device:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                interface__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
+                interfaces__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
             )
         elif self.instance.virtual_machine:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                vminterface__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
+                vm_interfaces__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
             )
         else:
             self.fields["ip_addresses"].choices = []

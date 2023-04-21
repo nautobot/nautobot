@@ -4,25 +4,25 @@ import hmac
 import inspect
 import logging
 import pkgutil
+import re
 import sys
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.db.models import Q
+from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.core.models.fields import slugify_dots_to_dashes
-
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.core.models.utils import is_taggable  # noqa: F401
+from nautobot.core.models.utils import find_models_with_matching_fields, is_taggable  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
     JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -129,6 +129,15 @@ class FeatureQuery:
         """
         Given an extras feature, return a Q object for content type lookup
         """
+
+        # The `populate_model_features_registry` function is called in the `FeatureQuery().get_query` method instead of
+        # `ExtrasConfig.ready` because `FeatureQuery().get_query` is called before `ExtrasConfig.ready`.
+        # This is because `FeatureQuery` is a helper class used in `Forms` and `Serializers` that are called during the
+        # initialization of the application, before `ExtrasConfig.ready` is called.
+        # Calling `populate_model_features_registry` in `ExtrasConfig.ready` would lead to an outdated `model_features`
+        # `registry` record being used by `FeatureQuery`.
+
+        populate_model_features_registry()
         query = Q()
         for app_label, models in registry["model_features"][self.feature].items():
             query |= Q(app_label=app_label, model__in=models)
@@ -144,6 +153,10 @@ class FeatureQuery:
             [('dcim.device', 13), ('dcim.rack', 34)]
         """
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+
+    def list_subclasses(self):
+        """Return a list of model classes that declare this feature."""
+        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
 
 
 @deconstructible
@@ -205,6 +218,57 @@ def extras_features(*features):
         return model_class
 
     return wrapper
+
+
+def populate_model_features_registry(refresh=False):
+    """
+    Populate the registry model features with new apps.
+
+    This function updates the registry model features.
+
+    Behavior:
+    - Defines a list of dictionaries called lookup_confs. Each dictionary contains:
+        - 'feature_name': The name of the feature to be updated in the registry.
+        - 'field_names': A list of names of fields that must be present in order for the model to be considered
+                        a valid model_feature.
+        - 'field_attributes': Optional dictionary of attributes to filter the fields by. Only model which fields match
+                            all the attributes specified in the dictionary will be considered. This parameter can be
+                            useful to narrow down the search for fields that match certain criteria. For example, if
+                            `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
+                            a related model of RelationshipAssociation will be considered.
+    - Looks up all the models in the installed apps.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - Groups the results by app and updates the registry model features for each app.
+    """
+    if registry.get("populate_model_features_registry_called", False) and not refresh:
+        return
+
+    RelationshipAssociation = apps.get_model(app_label="extras", model_name="relationshipassociation")
+
+    lookup_confs = [
+        {
+            "feature_name": "custom_fields",
+            "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "relationships",
+            "field_names": ["source_for_associations", "destination_for_associations"],
+            "field_attributes": {"related_model": RelationshipAssociation},
+        },
+    ]
+
+    app_models = apps.get_models()
+    for lookup_conf in lookup_confs:
+        registry_items = find_models_with_matching_fields(
+            app_models=app_models,
+            field_names=lookup_conf["field_names"],
+            field_attributes=lookup_conf.get("field_attributes"),
+        )
+        feature_name = lookup_conf["feature_name"]
+        registry["model_features"][feature_name] = registry_items
+
+    if not registry.get("populate_model_features_registry_called", False):
+        registry["populate_model_features_registry_called"] = True
 
 
 def generate_signature(request_body, secret):
@@ -317,14 +381,10 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
-    from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
-
-    if git_repository is not None:
-        default_slug = slugify_dots_to_dashes(
-            f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
-        )
-    else:
-        default_slug = slugify_dots_to_dashes(f"{job_source}-{job_class.__module__}-{job_class.__name__}")
+    from nautobot.extras.jobs import (
+        JobHookReceiver,
+        JobButtonReceiver,
+    )  # imported here to prevent circular import problem
 
     # Unrecoverable errors
     if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
@@ -348,6 +408,12 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
         return (None, False)
+    if issubclass(job_class, JobHookReceiver) and issubclass(job_class, JobButtonReceiver):
+        logger.error(
+            'Job class "%s" must not sub-class from both JobHookReceiver and JobButtonReceiver!',
+            job_class.__name__,
+        )
+        return (None, False)
 
     # Recoverable errors
     if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
@@ -365,20 +431,51 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
 
+    # handle duplicate names by appending an incrementing counter to the end
+    default_job_name = job_class.name[:JOB_MAX_NAME_LENGTH]
+    job_name = default_job_name
+    append_counter = 2
+    existing_job_names = (
+        job_model_class.objects.filter(name__startswith=job_name)
+        .exclude(
+            source=job_source[:JOB_MAX_SOURCE_LENGTH],
+            git_repository=git_repository,
+            module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+            job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+        )
+        .values_list("name", flat=True)
+    )
+    while job_name in existing_job_names:
+        job_name_append = f" ({append_counter})"
+        max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
+        job_name = default_job_name[:max_name_length] + job_name_append
+        append_counter += 1
+    if job_name != default_job_name and "test" not in sys.argv:
+        logger.warning(
+            'Job class "%s" name "%s" is not unique, changing to "%s".',
+            job_class.__name__,
+            default_job_name,
+            job_name,
+        )
+
     job_model, created = job_model_class.objects.get_or_create(
         source=job_source[:JOB_MAX_SOURCE_LENGTH],
         git_repository=git_repository,
         module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
         job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
+            "slug": slugify(job_name)[:JOB_MAX_NAME_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
-            "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+            "name": job_name,
             "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
+            "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
             "installed": True,
             "enabled": False,
         },
     )
+
+    if job_name != default_job_name:
+        job_model.name_override = True
 
     for field_name in JOB_OVERRIDABLE_FIELDS:
         # Was this field directly inherited from the job before, or was it overridden in the database?
@@ -405,96 +502,119 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     return (job_model, created)
 
 
+def remove_prefix_from_cf_key(field_name):
+    """
+    field_name (str): f"cf_{cf.key}"
+
+    Helper method to remove the "cf_" prefix
+    """
+    return field_name[3:]
+
+
+def check_if_key_is_graphql_safe(model_name, key):
+    """
+    Helper method to check if a key field is Python/GraphQL safe.
+    Used in CustomField for now, should be used in ComputedField and Relationship as well.
+    """
+    graphql_safe_pattern = re.compile("[_A-Za-z][_0-9A-Za-z]*")
+    if not graphql_safe_pattern.fullmatch(key):
+        raise ValidationError(
+            {
+                "key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
+            }
+        )
+
+
 def migrate_role_data(
-    model,
-    role_model=None,
-    is_choice_field=False,
-    role_choiceset=None,
-    legacy_role="legacy_role",
-    new_role="new_role",
+    model_to_migrate,
+    *,
+    from_role_field_name,
+    from_role_model=None,
+    from_role_choiceset=None,
+    to_role_field_name,
+    to_role_model=None,
+    to_role_choiceset=None,
     is_m2m_field=False,
 ):
     """
-    Migrate legacy_role's `role_model` equivalent record into new_role.
+    Update all `model_to_migrate` with a value for `to_role_field` based on `from_role_field` values.
 
     Args:
-        model(Model): Model with role field to alter
-        role_model(Model): Role Model (optional)
-        is_choice_field(bool): True if Model's role field is a choice field not an FK field else False
-        role_choiceset(ChoiceSet): Role ChoiceSet (optional)
-        legacy_role(str): Models role field legacy name; This is the current role field name
-        new_role(str): Models role field new name; This is the name role field should be updated to
-        is_m2m_field(bool): True if the role field is a ManyToManyField, else False
+        model_to_migrate (Model): Model with role fields to alter
+        from_role_field_name (str): Name of the field on `model_to_migrate` to use as source data
+        from_role_model (Model): If `from_role_field` is a ForeignKey or M2M field, the corresponding model for it
+        from_role_choiceset (ChoiceSet): If `from_role_field` is a choices field, the corresponding ChoiceSet for it
+        to_role_field_name (str): Name of the field on `model_to_migrate` to update based on the `from_role_field`
+        to_role_model (Model): If `to_role_field` is a ForeignKey or M2M field, the corresponding model for it
+        to_role_choiceset (ChoiceSet): If `to_role_field` is a choices field, the corresponding ChoiceSet for it
+        is_m2m_field (bool): True if the role fields are both ManyToManyFields, else False
     """
-
-    # Retrieve the queryset of `model` instances that have a value for the `legacy_role` field
-    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).only(*["pk", legacy_role])
-    instances_to_update_data = get_instances_to_pk_and_new_role(
-        queryset=queryset,
-        role_model=role_model,
-        role_choiceset=role_choiceset,
-        legacy_role=legacy_role,
-        new_role=new_role,
-        is_m2m_field=is_m2m_field,
-    )
-
-    if instances_to_update_data:
-        if is_m2m_field:
-            # Update the new_role field using the set() method for ManyToManyFields
-            for data in instances_to_update_data:
-                instance = model.objects.get(pk=data["id"])
-                getattr(instance, new_role).set(data[new_role])
+    if from_role_model is not None:
+        assert from_role_choiceset is None
+        if to_role_model is not None:
+            assert to_role_choiceset is None
+            # Mapping "from" model instances to corresponding "to" model instances
+            roles_translation_mapping = {
+                # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
+                from_role: to_role_model.objects.filter(name=from_role.name).first()
+                for from_role in from_role_model.objects.all()
+            }
         else:
-            # Update the new_role field using the set() method for Foreign Key fields
-            instances_to_update_data = [model(**data) for data in instances_to_update_data]
-            model.objects.bulk_update(instances_to_update_data, fields=[new_role], batch_size=1000)
-
-
-def get_instances_to_pk_and_new_role(queryset, role_model, role_choiceset, legacy_role, new_role, is_m2m_field):
-    """
-    Return a list of dictionaries containing the primary key and the new role value for each instance in the queryset.
-
-    The new role value is determined by the following logic:
-    - If `role_model` is not None, the value of the `legacy_role` field for each instance is used to
-      query the `role_model` for a matching role. If a match is found, it is used as the new role value.
-      If the `legacy_role` field is a ManyToManyField, all role names are obtained and used to query
-      the `role_model`.
-    - If `role_model` is None, the `legacy_role` field is assumed to be a ChoiceField, and the
-      `role_choiceset` is used to look up the value corresponding to the label of the `legacy_role` field.
-      This value is used as the new role value.
-
-    Args:
-        queryset (QuerySet): A queryset of instances to get the data for.
-        role_model (Model): A model class to use to look up the new role value.
-        role_choiceset (ChoiceSet): A `ChoiceSet` containing the choices for the new role field.
-        legacy_role (str): The name of the field on each instance containing the legacy role value.
-        new_role (str): The name of the field on each instance that will be updated with the new role value.
-        is_m2m_field (bool): Whether the `legacy_role` field is a ManyToManyField.
-    """
-    data = []
-
-    for item in queryset:
-        role_equivalent = None
-        if role_model:
-            # Get the value for the legacy role field e.g. Device.role, IPAddress.role
-            legacy_role_field = getattr(item, legacy_role)
-            if is_m2m_field:
-                # In the case of a m2m field, `legacy_role_field` we would need to get all role names e.g ConfigContext.roles.values_list("name", flat=True)
-                role_names = legacy_role_field.values_list("name", flat=True)
-                role_equivalent = role_model.objects.filter(Q(name__in=role_names) | Q(slug__in=role_names))
-            else:
-                if not isinstance(legacy_role_field, str):
-                    legacy_role_field = legacy_role_field.name
-                try:
-                    role_equivalent = role_model.objects.get(Q(name=legacy_role_field) | Q(slug=legacy_role_field))
-                except role_model.DoesNotExist:
-                    logger.error(f"Role with name {legacy_role_field} not found")
+            assert to_role_choiceset is not None
+            # Mapping "from" model instances to corresponding "to" choices
+            # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
+            inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
+            roles_translation_mapping = {
+                from_role: inverted_to_role_choiceset.get(from_role.name, None)
+                for from_role in from_role_model.objects.all()
+            }
+    else:
+        assert from_role_choiceset is not None
+        if to_role_model is not None:
+            assert to_role_choiceset is None
+            # Mapping "from" choices to corresponding "to" model instances
+            roles_translation_mapping = {
+                # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
+                from_role_value: to_role_model.objects.filter(name=from_role_label).first()
+                for from_role_value, from_role_label in from_role_choiceset.CHOICES
+            }
         else:
-            # ChoiceSet.CHOICES has to be inverted to obtain the value using its label
-            # i.e {"vrf": "VRF"} --> {"VRF": "vrf"}
-            inverted_role_choiceset = {label: value for value, label in role_choiceset.CHOICES}
-            role_equivalent = inverted_role_choiceset.get(legacy_role_field)
-        model_data = {"id": item.pk, new_role: role_equivalent}
-        data.append(model_data)
+            assert to_role_choiceset is not None
+            # Mapping "from" choices to corresponding "to" choices; we don't currently use this case, but it should work
+            # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
+            inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
+            roles_translation_mapping = {
+                from_role_value: inverted_to_role_choiceset.get(from_role_label, None)
+                for from_role_value, from_role_label in from_role_choiceset.CHOICES
+            }
 
-    return data
+    if not is_m2m_field:
+        # Bulk updates of a single field are easy enough...
+        for from_role_value, to_role_value in roles_translation_mapping.items():
+            if to_role_value is not None:
+                updated_count = model_to_migrate.objects.filter(**{from_role_field_name: from_role_value}).update(
+                    **{to_role_field_name: to_role_value}
+                )
+                logger.info(
+                    'Updated %d %s records to reference %s "%s"',
+                    updated_count,
+                    model_to_migrate._meta.label,
+                    to_role_field_name,
+                    to_role_value.name if to_role_model else to_role_value,
+                )
+    else:
+        # ...but we have to update each instance's M2M field independently?
+        for instance in model_to_migrate.objects.all():
+            to_role_set = {
+                roles_translation_mapping[from_role_value]
+                for from_role_value in getattr(instance, from_role_field_name).all()
+            }
+            # Discard any null values
+            to_role_set.discard(None)
+            getattr(instance, to_role_field_name).set(to_role_set)
+        logger.info(
+            "Updated %d %s record %s M2M fields",
+            model_to_migrate.objects.count(),
+            model_to_migrate._meta.label,
+            to_role_field_name,
+        )

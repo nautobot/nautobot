@@ -41,19 +41,20 @@ Add the name of the new field to `csv_headers` and included a CSV-friendly repre
 
 ## 4. Update relevant querysets
 
-<!-- v2 TODO(jathan): Replace prefetch_related with select_related -->
-
-If you're adding a relational field (e.g. `ForeignKey`) and intend to include the data when retrieving a list of objects, be sure to include the field using `prefetch_related()` as appropriate. This will optimize the view and avoid extraneous database queries.
+If you're adding a relational field (e.g. `ForeignKey`) and intend to include the data when retrieving a list of objects, be sure to include the field using `select_related()` (for `ForeignKey` forward lookups) and/or `prefetch_related()` (for `ForeignKey` reverse lookups and `ManyToManyField` lookups) as appropriate. This will optimize the view and avoid extraneous database queries.
 
 ## 5. Update API serializer
 
-Extend the model's API serializer in `<app>.api.serializers` to include the new field. In most cases, it will not be necessary to also extend the nested serializer, which produces a minimal representation of the model.
+Extend the model's API serializer in `nautobot.<app>.api.serializers` to include the new field, if necessary.
+
++++ 2.0.0
+Most model serializers now use `fields = [__all__]`, in which case you do not have to explicitly include the new field in the model's API serializer. The serializer will automatically pick up the field and render it according to Nautobot standards. If the default rendering does not meet your API needs, you can explicitly declare the field on the serializer.
 
 ## 6. Add field to forms
 
 Extend any forms to include the new field as appropriate. Common forms include:
 
-* **Credit/edit** - Manipulating a single object
+* **Create/edit** - Manipulating a single object
 * **Bulk edit** - Performing a change on many objects at once
 * **CSV import** - The form used when bulk importing objects in CSV format
 * **Filter** - Displays the options available for filtering a list of objects (both UI and API)
@@ -82,11 +83,11 @@ Note that if you're using the `convert_django_field` registry to override the de
 
 Create or extend the relevant test cases to verify that the new field and any accompanying validation logic perform as expected. This is especially important for relational fields. Nautobot incorporates various test suites, including:
 
-* API serializer/view tests
-* Filter tests
+* API serializer/view tests (should be based on `nautobot.core.testing.api.APIViewTestCases`)
+* Filter tests (should be based on `nautobot.core.testing.filters.FilterTestCases`)
 * Form tests
-* Model tests
-* View tests
+* Model tests (should be based on `nautobot.core.testing.models.ModelTestCases`)
+* View tests (should be based on `nautobot.core.testing.views.ViewTestCases`)
 
 Be diligent to ensure all of the relevant test suites are adapted or extended as necessary to test any new functionality.
 
@@ -95,6 +96,3 @@ Be diligent to ensure all of the relevant test suites are adapted or extended as
 Each model has a dedicated page in the documentation, at `models/<app>/<model>.md`. Update this file to include any relevant information about the new field.
 
 Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.
-
-!!! warning
-    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks *between* Nautobot documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.

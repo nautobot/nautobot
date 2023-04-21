@@ -103,7 +103,6 @@ def reverse_migrate_params(apps, schema_editor):
 
     for job_result in JobResult.objects.all():
         for entry in JobLogEntry.objects.filter(job_result=job_result):
-
             if not job_result.data:
                 job_result.data = {}
 
@@ -136,7 +135,6 @@ def reverse_migrate_params(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0017_joblogentry"),
     ]

@@ -88,12 +88,12 @@ class RackElevationSVG:
         return drawing
 
     def _draw_device_front(self, drawing, device, start, end, text):
-        devicebay_details = ""
-        if device.devicebay_count:
-            devicebay_details += f" ({device.get_children().count()}/{device.devicebay_count})"
+        device_bay_details = ""
+        if device.device_bay_count:
+            device_bay_details += f" ({device.get_children().count()}/{device.device_bay_count})"
 
-        device_fullname = str(device) + devicebay_details
-        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
+        device_fullname = str(device) + device_bay_details
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + device_bay_details
 
         color = device.role.color
         reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})
@@ -182,7 +182,7 @@ class RackElevationSVG:
         query_params = urlencode(
             {
                 "rack": rack.pk,
-                "site": rack.site.pk,
+                "location": rack.location.pk,
                 "face": face_id,
                 "position": id_,
             }
@@ -237,7 +237,6 @@ class RackElevationSVG:
             drawing.add(drawing.text(str(unit), position_coordinates, class_="unit"))
 
         for unit in self.merge_elevations(face):
-
             # Loop through all units in the elevation
             device = unit["device"]
             height = unit.get("height", 1)

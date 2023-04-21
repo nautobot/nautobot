@@ -7,7 +7,6 @@ from nautobot.core.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.filters import (
@@ -15,7 +14,7 @@ from nautobot.dcim.filters import (
     LocatableModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 )
-from nautobot.dcim.models import Location, Region, Site
+from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
@@ -51,26 +50,25 @@ class ProviderFilterSet(NautobotFilterSet):
         field_name="provider_networks",
         label="Has provider networks",
     )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuits__circuit_terminations__site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="circuits__circuit_terminations__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuits__circuit_terminations__location",
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Provider
-        fields = ["account", "admin_contact", "asn", "comments", "id", "name", "noc_contact", "portal_url", "slug"]
+        fields = [
+            "account",
+            "admin_contact",
+            "asn",
+            "comments",
+            "id",
+            "name",
+            "noc_contact",
+            "portal_url",
+            "tags",
+        ]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -103,13 +101,13 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="provider",
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        to_field_name="name",
+        label="Provider (name or ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = ProviderNetwork
-        fields = ["comments", "description", "id", "name", "slug"]
+        fields = ["comments", "description", "id", "name", "slug", "tags"]
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -125,7 +123,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     class Meta:
         model = CircuitType
-        fields = ["id", "description", "name", "slug"]
+        fields = ["id", "description", "name"]
 
 
 class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
@@ -141,7 +139,8 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        label="Provider (slug or ID)",
+        to_field_name="name",
+        label="Provider (name or ID)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="circuit_terminations__provider_network",
@@ -150,23 +149,13 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
     circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
-        to_field_name="slug",
-        label="Circuit type (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="circuit_terminations__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
+        to_field_name="name",
+        label="Circuit type (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="circuit_terminations__site__region",
-        label="Region (slug or ID)",
     )
     has_terminations = RelatedMembershipBooleanFilter(
         field_name="circuit_terminations",
@@ -180,18 +169,18 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         queryset=CircuitTermination.objects.all(),
         label="Termination Z (ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Circuit
         fields = [
             "cid",
+            "circuit_terminations",
             "comments",
             "commit_rate",
             "description",
             "id",
             "install_date",
-            "circuit_terminations",
+            "tags",
         ]
 
 
@@ -221,4 +210,4 @@ class CircuitTerminationFilterSet(
 
     class Meta:
         model = CircuitTermination
-        fields = ["description", "port_speed", "pp_info", "term_side", "upstream_speed", "xconnect_id"]
+        fields = ["description", "port_speed", "pp_info", "tags", "term_side", "upstream_speed", "xconnect_id"]
