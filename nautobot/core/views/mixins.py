@@ -205,7 +205,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     renderer_classes = [NautobotHTMLRenderer]
     logger = logging.getLogger(__name__)
-    lookup_field = "slug"
     # Attributes that need to be specified: form_class, queryset, serializer_class, table_class for most mixins.
     # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
     filter_params = None

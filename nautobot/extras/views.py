@@ -1589,7 +1589,6 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     filterset_class = filters.JobButtonFilterSet
     filterset_form_class = forms.JobButtonFilterForm
     form_class = forms.JobButtonForm
-    lookup_field = "pk"
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
@@ -1860,7 +1859,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     form_class = RoleForm
     serializer_class = serializers.RoleSerializer
     table_class = RoleTable
-    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
