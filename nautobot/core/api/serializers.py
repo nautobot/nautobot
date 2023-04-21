@@ -27,7 +27,6 @@ from nautobot.core.api.utils import (
     nested_serializer_factory,
 )
 from nautobot.core.models.generics import _NautobotTaggableManager
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -201,16 +200,16 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         # So we intercept it here to call build_nested_field()
         # which will make the tags field be rendered with TagSerializer() and respect the `depth` parameter.
         if (
-            field_name == "tags"
-            and isinstance(model_class.tags, (_NautobotTaggableManager, _TaggableManager))
+            isinstance(getattr(model_class, field_name, None), (_NautobotTaggableManager, _TaggableManager))
             and nested_depth > 0
         ):
+            tags_field = getattr(model_class, field_name)
             relation_info = RelationInfo(
-                model_field=model_class.tags,
+                model_field=tags_field,
                 related_model=Tag,
                 to_many=True,
                 has_through_model=True,
-                to_field=_get_to_field(model_class.tags),
+                to_field=_get_to_field(tags_field),
                 reverse=False,
             )
             return self.build_nested_field(field_name, relation_info, nested_depth)

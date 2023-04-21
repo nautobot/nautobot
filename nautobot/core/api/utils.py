@@ -196,6 +196,15 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
     return relation_info
 
 
+def get_nested_serializer_depth(serializer):
+    request = serializer.context.get("request", None)
+    if not request or request.method != "GET" or not hasattr(serializer.Meta, "depth"):
+        depth = 0
+    else:
+        depth = serializer.Meta.depth
+    return depth
+
+
 NESTED_SERIALIZER_CACHE = {}
 
 

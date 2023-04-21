@@ -63,6 +63,7 @@ class WritableSerializerMixin:
             params = dict_to_filter_params(data)
             return self.remove_non_filter_fields(params)
         try:
+            # The int case here is taking into account for the User model we inherit from django
             pk = int(data) if isinstance(queryset.model._meta.pk, AutoField) else uuid.UUID(str(data))
         except (TypeError, ValueError) as e:
             raise ValidationError(

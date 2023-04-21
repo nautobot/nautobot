@@ -130,7 +130,8 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 ### API Query Parameters Changes
 
-Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField` , `DynamicModelMultipleChoiceField` or `MultiMatchModelMultipleChoiceField` is also removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` e.g. `brief_mode=True`, please remove the statement. And leave other occurrences of the fields where you do not have `brief_mode` specified as they are. See more details about the `?depth` query parameter [here](../rest-api/overview.md/#depth-query-parameter)
+Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are.
+Please see the [documentation on the `?depth` query parameter](../rest-api/overview.md/#depth-query-parameter) for more information.
 
 ## UI, GraphQL, and REST API Filter Changes
 

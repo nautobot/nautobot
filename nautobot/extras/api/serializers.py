@@ -19,6 +19,7 @@ from nautobot.core.api import (
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
+    get_nested_serializer_depth,
     get_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
 )
@@ -145,7 +146,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
@@ -179,7 +180,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
@@ -269,7 +270,7 @@ class DynamicGroupSerializer(NautobotModelSerializer):
 
     @extend_schema_field(DynamicGroupMembershipSerializer)
     def get_children(self, obj):
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(
             self, depth, obj, obj.dynamic_group_memberships, "dynamic_group_memberships"
         )
@@ -314,7 +315,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
     def get_owner(self, obj):
         if obj.owner is None:
             return None
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
@@ -409,7 +410,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         )
     )
     def get_parent(self, obj):
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.parent, "parent")
 
 
@@ -716,7 +717,7 @@ class NoteSerializer(BaseModelSerializer):
         if obj.assigned_object is None:
             return None
         try:
-            depth = int(self.context.get("depth", 0))
+            depth = get_nested_serializer_depth(self)
             return return_nested_serializer_data_based_on_depth(
                 self, depth, obj, obj.assigned_object, "assigned_object"
             )
@@ -758,7 +759,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
         if obj.changed_object is None:
             return None
         try:
-            depth = int(self.context.get("depth", 0))
+            depth = get_nested_serializer_depth(self)
             return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.changed_object, "changed_object")
         except SerializerNotFound:
             return obj.object_repr
@@ -859,7 +860,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
 
     @extend_schema_field(SecretsGroupAssociationSerializer)
     def get_secrets(self, obj):
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(
             self, depth, obj, obj.secrets_group_associations, "secrets_group_associations"
         )

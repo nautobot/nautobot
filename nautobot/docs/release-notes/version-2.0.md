@@ -20,7 +20,7 @@ Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `
 
 #### Added Depth REST API Query Parameter
 
-Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` parameter in the REST API. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It allows users greater control of the API response data and it is available for both retrieving a single object and a list of objects. This parameter is an positive integer value that can range from 0 to 10. Check out more about the `?depth` query parameter in our [REST API Documentation](../rest-api/overview.md/#depth-query-parameter)
+Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` parameter in the REST API. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It allows users greater control of the API response data and it is available for both retrieving a single object and a list of objects. This parameter is a positive integer value that can range from 0 to 10. To learn more more, check out the [documentation on the `?depth` query parameter](../rest-api/overview.md/#depth-query-parameter).
 
 #### Natural Key Support Across Nautobot Models ([#2900](https://github.com/nautobot/nautobot/issues/2900))
 
@@ -242,7 +242,7 @@ The "Container" status will be removed and all prefixes will be migrated to the 
 
 #### Removed Brief REST API Query Parameter
 
-Support for `?brief` REST API query parameter and `Nested*Serializers` are being removed in Nautobot v2.X. They are replaced by the new `?depth` query parameter. Check out the specific changes in [REST API documentation](../rest-api/overview.md/#depth-query-parameter)
+Support for `?brief` REST API query parameter and `Nested*Serializers` have been removed in Nautobot v2.X. They are replaced by the new [`?depth` query parameter](../rest-api/overview.md/#depth-query-parameter).
 
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 

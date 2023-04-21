@@ -13,6 +13,7 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
+    get_nested_serializer_depth,
     get_serializer_for_model,
     get_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
@@ -106,7 +107,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         Return the appropriate serializer for the cable termination model.
         """
         if obj._cable_peer is not None:
-            depth = int(self.context.get("depth", 0))
+            depth = get_nested_serializer_depth(self)
             return return_nested_serializer_data_based_on_depth(self, depth, obj, obj._cable_peer, "_cable_peer")
         return None
 
@@ -141,7 +142,7 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         Return the appropriate serializer for the type of connected object.
         """
         if obj._path is not None and obj._path.destination is not None:
-            depth = int(self.context.get("depth", 0))
+            depth = get_nested_serializer_depth(self)
             return return_nested_serializer_data_based_on_depth(
                 self, depth, obj, obj._path.destination, "connected_endpoint"
             )
@@ -477,7 +478,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             device_bay = obj.parent_bay
         except DeviceBay.DoesNotExist:
             return None
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         device_bay_data = return_nested_serializer_data_based_on_depth(self, depth, obj, device_bay, "parent_bay")
         return device_bay_data
 
@@ -692,7 +693,7 @@ class CableSerializer(
         if side.lower() not in ["a", "b"]:
             raise ValueError("Termination side must be either A or B.")
         termination = getattr(obj, f"termination_{side.lower()}")
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(
             self, depth, obj, termination, f"termination_{side.lower()}"
         )
@@ -752,7 +753,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         """
         Return the appropriate serializer for the origin.
         """
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.origin, "origin")
 
     @extend_schema_field(
@@ -768,7 +769,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         Return the appropriate serializer for the destination, if any.
         """
         if obj.destination_id is not None:
-            depth = int(self.context.get("depth", 0))
+            depth = get_nested_serializer_depth(self)
             return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.destination, "destination")
         return None
 

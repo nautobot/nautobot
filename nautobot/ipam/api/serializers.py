@@ -8,7 +8,7 @@ from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
 )
-from nautobot.core.api.utils import return_nested_serializer_data_based_on_depth
+from nautobot.core.api.utils import get_nested_serializer_depth, return_nested_serializer_data_based_on_depth
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
@@ -200,7 +200,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             nat_outside_list = obj.nat_outside_list
         except IPAddress.DoesNotExist:
             return None
-        depth = int(self.context.get("depth", 0))
+        depth = get_nested_serializer_depth(self)
         data = return_nested_serializer_data_based_on_depth(
             IPAddressSerializer(nat_outside_list), depth, obj, nat_outside_list, "nat_outside_list"
         )
