@@ -181,7 +181,13 @@ class GetReturnURLMixin:
         # Note that the use of both `obj.present_in_database` and `obj.pk` is correct here because this conditional
         # handles all three of the create, update, and delete operations. When Django deletes an instance
         # from the DB, it sets the instance's PK field to None, regardless of the use of a UUID.
-        if obj is not None and obj.present_in_database and obj.pk and hasattr(obj, "get_absolute_url"):
+        if (
+            obj is not None
+            and obj.present_in_database
+            and obj.pk
+            and hasattr(obj, "get_absolute_url")
+            and obj.get_absolute_url() is not None
+        ):
             return obj.get_absolute_url()
 
         # Fall back to the default URL (if specified) for the view.

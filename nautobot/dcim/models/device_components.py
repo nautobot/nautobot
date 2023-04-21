@@ -4,7 +4,6 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
-from django.urls import reverse
 
 from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
@@ -225,9 +224,6 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    def get_absolute_url(self):
-        return reverse("dcim:consoleport", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.device.identifier,
@@ -265,9 +261,6 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:consoleserverport", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -334,9 +327,6 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:powerport", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -471,9 +461,6 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:poweroutlet", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -638,9 +625,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     class Meta:
         ordering = ("device", CollateAsChar("_name"))
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:interface", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -840,9 +824,6 @@ class FrontPort(CableTermination, ComponentModel):
             ("rear_port", "rear_port_position"),
         )
 
-    def get_absolute_url(self):
-        return reverse("dcim:frontport", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.device.identifier,
@@ -896,9 +877,6 @@ class RearPort(CableTermination, ComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    def get_absolute_url(self):
-        return reverse("dcim:rearport", kwargs={"pk": self.pk})
-
     def clean(self):
         super().clean()
 
@@ -951,9 +929,6 @@ class DeviceBay(ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:devicebay", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -1048,9 +1023,6 @@ class InventoryItem(TreeModel, ComponentModel):
     class Meta:
         ordering = ("_name",)
         unique_together = ("device", "parent", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:inventoryitem", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (

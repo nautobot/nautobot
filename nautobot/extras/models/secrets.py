@@ -3,7 +3,6 @@ import logging
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
 
 from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 
@@ -58,9 +57,6 @@ class Secret(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:secret", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -130,9 +126,6 @@ class SecretsGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:secretsgroup", args=[self.slug])
 
     def to_csv(self):
         return (self.name, self.slug, self.description)

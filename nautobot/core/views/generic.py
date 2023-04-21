@@ -126,23 +126,22 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         if isinstance(instance, ChangeLoggedModel):
             changelog_url = instance.get_changelog_url()
 
-        # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
-        from nautobot.extras.templatetags.plugins import _get_registered_content
-
-        temp_fake_context = {
-            "object": instance,
-            "request": request,
-            "settings": {},
-            "csrf_token": "",
-            "perms": {},
-        }
-
-        plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
-
         # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
         # on the object-retrieve endpoint?
         # TODO: similar functionality probably needed in NautobotUIViewSet as well, not currently present
         if request.GET.get("viewconfig", None) == "true":
+            # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
+            from nautobot.extras.templatetags.plugins import _get_registered_content
+
+            temp_fake_context = {
+                "object": instance,
+                "request": request,
+                "settings": {},
+                "csrf_token": "",
+                "perms": {},
+            }
+
+            plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
             resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:

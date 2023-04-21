@@ -1,6 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.urls import reverse
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
@@ -58,9 +57,6 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     def natural_key(self):
         return (self.name,)
-
-    def get_absolute_url(self):
-        return reverse("extras:tag", args=[self.slug])
 
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)

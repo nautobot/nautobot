@@ -1,8 +1,10 @@
 import uuid
 
 from django.db import models
+from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.lookup import get_route_for_model
 
 
 class BaseModel(models.Model):
@@ -33,6 +35,29 @@ class BaseModel(models.Model):
         True if the record exists in the database, False if it does not.
         """
         return not self._state.adding
+
+    def get_absolute_url(self):
+        """
+        Return the canonical URL for this object.
+        """
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]  # TODO: Eventually all PKs
+        actions = ["retrieve", "detail", ""]  # TODO: Eventually all retrieve
+
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            for action in actions:
+                route = get_route_for_model(self, action)
+
+                try:
+                    return reverse(route, kwargs={field: getattr(self, field)})
+                except NoReverseMatch:
+                    continue
+
+        return None
 
     class Meta:
         abstract = True

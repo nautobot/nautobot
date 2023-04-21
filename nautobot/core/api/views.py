@@ -210,49 +210,49 @@ class ModelViewSetMixin:
         return super().get_serializer(*args, **kwargs)
 
     # TODO: the below needs to be either fixed or removed as part of issue #3042.
-    # def get_serializer_class(self):
-    #     logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
+    def get_serializer_class(self):
+        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
 
-    #     # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-    #     if self.brief:
-    #         logger.debug("Request is for 'brief' format; initializing nested serializer")
-    #         try:
-    #             serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-    #             logger.debug(f"Using serializer {serializer}")
-    #             return serializer
-    #         except SerializerNotFound:
-    #             logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
+        if self.brief:
+            logger.debug("Request is for 'brief' format; initializing nested serializer")
+            try:
+                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
+                logger.debug(f"Using serializer {serializer}")
+                return serializer
+            except SerializerNotFound:
+                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
 
-    #     # Fall back to the hard-coded serializer class
-    #     return self.serializer_class
+        # Fall back to the hard-coded serializer class
+        return self.serializer_class
 
     # TODO: this is part of issue #3042.
-    def get_serializer_context(self):
-        ctx = super().get_serializer_context()
-        ctx["request"] = None
-        try:
-            depth = int(self.request.query_params.get("depth", 0))
-        except ValueError:
-            depth = 0  # Ignore non-numeric parameters and keep default 0 depth
-        ctx["depth"] = depth
+    # def get_serializer_context(self):
+    #     ctx = super().get_serializer_context()
+    #     ctx["request"] = None
+    #     try:
+    #         depth = int(self.request.query_params.get("depth", 0))
+    #     except ValueError:
+    #         depth = 0  # Ignore non-numeric parameters and keep default 0 depth
+    #     ctx["depth"] = depth
 
-        return ctx
+    #     return ctx
 
     # TODO: the below needs to be either fixed or remvoed as part of issue #3042.
-    # def get_queryset(self):
-    #     # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-    #     if self.brief:
-    #         # v2 TODO(jathan): Replace prefetch_related with select_related
-    #         return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
+    def get_queryset(self):
+        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
+        if self.brief:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
+            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
-    #     return super().get_queryset()
+        return super().get_queryset()
 
-    # def initialize_request(self, request, *args, **kwargs):
-    #     # Check if brief=True has been passed
-    #     if request.method == "GET" and request.GET.get("brief"):
-    #         self.brief = True
+    def initialize_request(self, request, *args, **kwargs):
+        # Check if brief=True has been passed
+        if request.method == "GET" and request.GET.get("brief"):
+            self.brief = True
 
-    #     return super().initialize_request(request, *args, **kwargs)
+        return super().initialize_request(request, *args, **kwargs)
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
