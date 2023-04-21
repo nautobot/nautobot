@@ -197,7 +197,14 @@ def get_relation_info_for_nested_serializers(model_class, related_model, field_n
 
 
 def get_nested_serializer_depth(serializer):
+    """
+    Determine the correct depth value based on the request.
+    This method is used mostly in SerializerMethodField where
+    DRF does not automatically build a serializer for us because the field
+    is not a native model field.
+    """
     request = serializer.context.get("request", None)
+    # If we do not have a request or request.method is not GET default depth to 0
     if not request or request.method != "GET" or not hasattr(serializer.Meta, "depth"):
         depth = 0
     else:
