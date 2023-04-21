@@ -1,4 +1,3 @@
-import { Alert } from "@chakra-ui/react";
 import {
     Box,
     DcimIcon,
@@ -7,8 +6,6 @@ import {
     Link,
     NautobotLogoIcon,
     Sidebar,
-    StatusIndicator,
-    Text,
     Button,
 } from "@nautobot/nautobot-ui";
 import { useLocation } from "react-router-dom";
@@ -91,10 +88,6 @@ export default function Layout({ children }) {
             </Sidebar>
 
             <Box flex="1" height="full">
-                <Alert position="absolute" status="info" width="auto">
-                    <StatusIndicator variant="secondary" breathe={true} />
-                    <Text ml={1}>Current route is {location.pathname}</Text>
-                </Alert>
                 {toRender}
             </Box>
         </Flex>
