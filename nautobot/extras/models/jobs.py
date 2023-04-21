@@ -170,7 +170,7 @@ class Job(PrimaryModel):
     dryrun_default = models.BooleanField(
         default=False, help_text="Whether the job defaults to running with dryrun argument set to true"
     )
-    read_only = models.BooleanField(default=False, help_text="Whether the job is only allowed to run with dryrun set")
+    read_only = models.BooleanField(default=False, help_text="Whether the job is only permitted to run with dryrun set")
     soft_time_limit = models.FloatField(
         default=0,
         validators=[MinValueValidator(0)],
