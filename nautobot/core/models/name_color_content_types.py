@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
-from django.urls import reverse
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models import BaseModel
@@ -83,11 +82,6 @@ class NameColorContentTypesModel(
 
     def natural_key(self):
         return (self.name,)
-
-    def get_absolute_url(self):
-        ct = f"{self._meta.app_label}:{self._meta.model_name}"
-        # TODO(timizuo): Replace self.slug with natural key or pk
-        return reverse(ct, args=[self.slug])
 
     def get_content_types(self):
         return ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())

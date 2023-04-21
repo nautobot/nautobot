@@ -155,9 +155,6 @@ class ObjectChange(BaseModel):
 
         return super().save(*args, **kwargs)
 
-    def get_absolute_url(self):
-        return reverse("extras:objectchange", args=[self.pk])
-
     def to_csv(self):
         return (
             self.time,

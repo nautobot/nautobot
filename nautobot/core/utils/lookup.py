@@ -76,7 +76,9 @@ def get_route_for_model(model, action, api=False):
 
     suffix = "" if not api else "-api"
     prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
-    sep = "_" if not api else "-"
+    sep = ""
+    if action != "":
+        sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
     if model._meta.app_label in settings.PLUGINS:

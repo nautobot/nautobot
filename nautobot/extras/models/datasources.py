@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models, transaction
-from django.urls import reverse
 from django_cryptography.fields import encrypt
 
 from nautobot.core.models.fields import AutoSlugField
@@ -96,9 +95,6 @@ class GitRepository(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:gitrepository", kwargs={"slug": self.slug})
 
     def to_csv(self):
         return (

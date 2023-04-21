@@ -12,7 +12,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
 from django.utils.text import slugify
-from django.urls import reverse
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
@@ -124,9 +123,6 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         if self.owner:
             return f"[{self.owner}] {self.name}"
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:configcontext", kwargs={"pk": self.pk})
 
     def clean(self):
         super().clean()
@@ -277,9 +273,6 @@ class ConfigContextSchema(OrganizationalModel):
             return f"[{self.owner}] {self.name}"
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("extras:configcontextschema", args=[self.slug])
-
     def clean(self):
         """
         Validate the schema
@@ -350,9 +343,6 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:customlink", kwargs={"pk": self.pk})
 
 
 #
@@ -437,9 +427,6 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         return response
-
-    def get_absolute_url(self):
-        return reverse("extras:exporttemplate", kwargs={"pk": self.pk})
 
     def clean(self):
         super().clean()
@@ -543,9 +530,6 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
         ordering = ("slug",)
         verbose_name = "GraphQL query"
         verbose_name_plural = "GraphQL queries"
-
-    def get_absolute_url(self):
-        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
 
     def save(self, *args, **kwargs):
         variables = {}
@@ -813,9 +797,6 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
             return render_jinja2(self.body_template, context)
         else:
             return json.dumps(context, cls=JSONEncoder, ensure_ascii=False)
-
-    def get_absolute_url(self):
-        return reverse("extras:webhook", kwargs={"pk": self.pk})
 
     @classmethod
     def check_for_conflicts(

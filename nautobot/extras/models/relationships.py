@@ -459,9 +459,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             return self.source_type
         return None
 
-    def get_absolute_url(self):
-        return reverse("extras:relationship", args=[self.slug])
-
     def get_label(self, side):
         """Return the label for a given side, source or destination.
 
@@ -737,6 +734,9 @@ class RelationshipAssociation(BaseModel):
             )
 
         return None
+
+    def get_absolute_url(self):
+        return self.relationship.get_absolute_url()
 
     def get_source(self):
         """Accessor for self.source - returns None if the object cannot be located."""

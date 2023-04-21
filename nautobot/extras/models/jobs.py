@@ -13,7 +13,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
-from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
@@ -373,9 +372,6 @@ class Job(PrimaryModel):
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
 
-    def get_absolute_url(self):
-        return reverse("extras:job_detail", kwargs={"slug": self.slug})
-
 
 @extras_features("graphql")
 class JobHook(OrganizationalModel):
@@ -419,9 +415,6 @@ class JobHook(OrganizationalModel):
         # At least one action type must be selected
         if not self.type_create and not self.type_delete and not self.type_update:
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
-
-    def get_absolute_url(self):
-        return reverse("extras:jobhook", kwargs={"slug": self.slug})
 
     @classmethod
     def check_for_conflicts(
@@ -716,9 +709,6 @@ class JobResult(BaseModel, CustomFieldModel):
                     pass
         return None
 
-    def get_absolute_url(self):
-        return reverse("extras:jobresult", kwargs={"pk": self.pk})
-
     def set_status(self, status):
         """
         Helper method to change the status of the job result. If the target status is terminal, the  completion
@@ -1003,9 +993,6 @@ class ScheduledJob(BaseModel):
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
-
-    def get_absolute_url(self):
-        return reverse("extras:scheduledjob", kwargs={"pk": self.pk})
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""

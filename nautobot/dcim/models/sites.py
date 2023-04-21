@@ -1,6 +1,5 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
-from django.urls import reverse
 from timezone_field import TimeZoneField
 
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
@@ -45,9 +44,6 @@ class Region(TreeModel, OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:region", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -168,9 +164,6 @@ class Site(PrimaryModel, StatusModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:site", args=[self.slug])
 
     def to_csv(self):
         return (
