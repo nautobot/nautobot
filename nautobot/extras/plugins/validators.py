@@ -40,7 +40,7 @@ def wrap_model_clean_methods():
     """
     Helper function that wraps plugin model validator registered clean methods for all applicable models
     """
-    for app_label, models in FeatureQuery("custom_validators").get_dict():
+    for app_label, models in FeatureQuery("custom_validators").as_dict():
         for model in models:
             model_class = apps.get_model(app_label=app_label, model_name=model)
             model_class.clean = custom_validator_clean(model_class.clean)
