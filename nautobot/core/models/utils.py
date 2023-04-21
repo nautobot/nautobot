@@ -1,12 +1,13 @@
-from itertools import count, groupby
 import json
+
+from itertools import count, groupby
+from taggit.managers import _TaggableManager
 from urllib.parse import quote_plus, unquote_plus
 
 from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
 from django.utils.tree import Node
-from taggit.managers import _TaggableManager
 
 from nautobot.core.models.constants import NATURAL_KEY_SLUG_SEPARATOR
 

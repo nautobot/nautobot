@@ -69,7 +69,7 @@ from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from . import nested_serializers, serializers
+from . import serializers
 
 
 class ExtrasRootView(APIRootView):
@@ -162,14 +162,14 @@ class ConfigContextQuerySetMixin:
         """
         Build the proper queryset based on the request context
 
-        If the `brief` query param equates to True or the `exclude` query param
+        If the `exclude` query param
         includes `config_context` as a value, return the base queryset.
 
         Else, return the queryset annotated with config context data
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if self.brief or (request is not None and "config_context" in request.query_params.get("exclude", [])):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
 
@@ -617,13 +617,10 @@ def _run_job(request, job_model, legacy_response=False):
         # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
         data = {"scheduled_job": None, "job_result": None}
         if schedule:
-            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
-                schedule, context={"request": request}
-            ).data
+            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
         if job_result:
-            data["job_result"] = nested_serializers.NestedJobResultSerializer(
-                job_result, context={"request": request}
-            ).data
+            job_result.refresh_from_db()
+            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -828,7 +825,7 @@ class JobResultViewSet(
     def logs(self, request, pk=None):
         job_result = self.get_object()
         logs = job_result.job_log_entries.all()
-        serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
+        serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
 

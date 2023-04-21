@@ -202,8 +202,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     }
 
 
-                    // Allow for controlling the brief setting from within APISelect
-                    parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                    // Allow for controlling the depth setting from within APISelect
+                    parameters.depth = parseInt($(element).attr('data-depth'))
 
                     // Attach any extra query parameters
                     $.each(element.attributes, function(index, attr){
@@ -286,6 +286,12 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                         }
                         else {
                             results[idx] = record;
+                        }
+                        // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
+                        // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
+                        // So we nullify the field here since we do not need this field.
+                        if (record.url.includes("dynamic-groups")){
+                            record.children = undefined;
                         }
 
                         return results;
@@ -372,7 +378,6 @@ function initializeTags(context, dropdownParent=null){
                 var offset = (params.page - 1) * 50 || 0;
                 var parameters = {
                     q: params.term,
-                    brief: 1,
                     limit: 50,
                     offset: offset,
                 };

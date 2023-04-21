@@ -250,6 +250,10 @@ Or by a set of nested attributes which uniquely identify the rack:
 
 Note that if the provided parameters do not return exactly one object, a validation error is raised.
 
++++ 2.0.0
+
+Nested serializers are removed in Nautobot v2.0. By default (when `?depth=0`), all related objects are represented by their primary keys. When depth > 0, the related objects will be replaced by dynamically generated base serializers that represent the complete view of the related objects. Please see [Depth Query Parameter](#depth-query-parameter) for more details.
+
 ### Generic Relations
 
 Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, an IP address can be assigned to either a device interface _or_ a virtual machine interface. When making this assignment via the REST API, we must specify two attributes:
@@ -416,76 +420,311 @@ http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq
 }
 ```
 
-### Brief Format
+### Depth Query Parameter
 
-The `GET` API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
++++ 2.0.0
+
+A `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It is available for both retrieving a single object and a list of objects.
+This parameter is an positive integer value that can range from 0 to 10. In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
+
+!!! note
+    The `?brief` query parameter is removed for Nautobot v2.x. Use `?depth=0` instead.
+
+!!! important
+    The `?depth` query parameter should only be used for `GET` operations in the API. It should not be used in `POST`, `PATCH` and `DELETE` requests. For these requests, only `?depth=0` should be used.
+
+#### Default/?depth=0
+
+`?depth` parameter defaults to 0 and offers a very lightweight view of the API where all object-related fields are represented by only their primary keys:
 
 ```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+curl -s -X GET \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.'
 ```
 
 ```json
 {
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": {
-        "value": 4,
-        "label": "IPv4"
+    "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
+    "display": "Campus-01",
+    "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
+    "custom_fields": {
+        "example_plugin_auto_custom_field": null
     },
-    "prefix": "192.0.2.0/24",
-    "type": {
-        "value": "container",
-        "label": "Container"
-    },
-    "site": {
-        "id": "b9edf2ee-cad9-48be-9921-006294bff730",
-        "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
-        "name": "Site 23A",
-        "slug": "site-23a"
-    },
-    "vrf": null,
-    "tenant": null,
-    "vlan": null,
+    "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+    "tree_depth": 0,
+    "time_zone": "Asia/Baghdad",
+    "circuit_count": 7,
+    "device_count": 0,
+    "prefix_count": 0,
+    "rack_count": 0,
+    "virtual_machine_count": 0,
+    "vlan_count": 0,
+    "created": "2023-04-12T19:29:06.884754Z",
+    "last_updated": "2023-04-12T19:29:06.906503Z",
+    "name": "Campus-01",
+    "slug": "campus-01",
+    "description": "Local take each compare court exactly.",
+    "facility": "328",
+    "asn": null,
+    "physical_address": "",
+    "shipping_address": "",
+    "latitude": null,
+    "longitude": "104.200000",
+    "contact_name": "Frances Hernandez",
+    "contact_phone": "",
+    "contact_email": "",
+    "comments": "Sort share road candidate.",
+    "status": "28eb334b-4171-4da4-a03a-fa6d0c6a9442",
+    "parent": null,
+    "location_type": "e3d4a9af-c6c1-4582-b483-a13301eb6e28",
+    "tenant": "5b1feadb-fab0-4f81-a53f-5192d83b0216",
+    "tags": [
+        "a50d4568-27ae-4743-87ac-ffdc22b7f5d2",
+    ]
+}
+```
+
+#### ?depth=1
+
+When `?depth=1` is added to the query parameters, all object-related fields, instead of being represented as UUIDs as they are when `?depth=0`, will be replaced by the related models' serializers.
+For example, `LocationSerializer`'s `location_type` field will be replaced by the `LocationTypeSerializer` and `LocationSerializer`'s `parent` field will be replaced by a Nested `LocationSerializer`:
+
+```no-highlight
+curl -s -X GET \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1 | jq '.'
+```
+
+```json
+{
+    ...
     "status": {
-        "display": "Reserved",
-        "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-        "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
-        "name": "Reserved",
-        "slug": "reserved",
-        "created": "2019-12-09T01:02:03.456789Z",
-        "last_updated": "2019-12-09T16:38:50.363404Z"
+        "id": "91a53d61-4180-4820-835d-533b34dbb5b4",
+        "display": "Active",
+        "url": "http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/",
+        "custom_fields": {},
+        "notes_url": "http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/notes/",
+        "content_types": [
+            "dcim.interface",
+            "dcim.location",
+        ],
+        "created": "2023-04-12T00:00:00Z",
+        "last_updated": "2023-04-12T19:25:51.413824Z",
+        "name": "Active",
+        "color": "4caf50",
+        "description": "Unit is active"
     },
-    "role": {
-        "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
-        "url": "http://nautobot/api/ipam/roles/ae1470bc-a858-4ce7-b9ce-dd1cd46333fe/",
-        "name": "Staging",
-        "slug": "staging"
+    "parent": {
+        "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
+        "display": "Campus-01",
+        "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
+        "custom_fields": {
+            "example_plugin_auto_custom_field": null
+        },
+        "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+        "tree_depth": null,
+        "time_zone": "Asia/Baghdad",
+        "created": "2023-04-12T19:29:06.884754Z",
+        "last_updated": "2023-04-12T19:29:06.906503Z",
+        "name": "Campus-01",
+        "slug": "campus-01",
+        "description": "Local take each compare court exactly.",
+        "facility": "328",
+        "asn": null,
+        "physical_address": "",
+        "shipping_address": "",
+        "latitude": null,
+        "longitude": "104.200000",
+        "contact_name": "Frances Hernandez",
+        "contact_phone": "",
+        "contact_email": "",
+        "comments": "Sort share road candidate.",
+        "status": "28eb334b-4171-4da4-a03a-fa6d0c6a9442",
+        "parent": null,
+        "location_type": "e3d4a9af-c6c1-4582-b483-a13301eb6e28",
+        "tenant": "5b1feadb-fab0-4f81-a53f-5192d83b0216",
+        "tags": [
+            "6e8ce6c9-0a8c-4731-b02a-b2ec19db5c52",
+            "1e986e5d-099d-4742-bfa5-16363abea5fd",
+            "21afbdad-c782-4fc5-9b3b-7b59273bb08c",
+            "0118b994-9943-4295-946b-92b27efe15db"
+        ]
     },
-    "type": "network",
-    "description": "Example prefix",
-    "tags": [],
-    "custom_fields": {},
-    "created": "2018-12-10T00:00:00Z",
-    "last_updated": "2019-03-01T20:02:46.173540Z"
+    "location_type": {
+        "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
+        "display": "Campus → Building",
+        "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
+        "custom_fields": {},
+        "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+        "tree_depth": null,
+        "content_types": [
+            "ipam.vlan",
+            "dcim.rackgroup",
+            "ipam.vlangroup"
+        ],
+        "created": "2023-04-12T19:29:06.707759Z",
+        "last_updated": "2023-04-12T19:29:06.716482Z",
+        "name": "Building",
+        "slug": "building",
+        "description": "Protect growth bill all hair along.",
+        "nestable": false,
+        "parent": "e3d4a9af-c6c1-4582-b483-a13301eb6e28"
+    },
+    "tenant": {
+        "id": "d043b6bc-6892-45f9-b460-4b006eb68016",
+        "display": "Page Inc",
+        "url": "http://nautobot/api/tenancy/tenants/d043b6bc-6892-45f9-b460-4b006eb68016/",
+        "custom_fields": {},
+        "notes_url": "http://nautobot/api/tenancy/tenants/d043b6bc-6892-45f9-b460-4b006eb68016/notes/",
+        "created": "2023-04-12T19:29:06.257345Z",
+        "last_updated": "2023-04-12T19:29:06.262563Z",
+        "name": "Page Inc",
+        "description": "Citizen father policy door science light. Glass improve place understand against ground.\nLarge firm per sing. Item they side walk test open tend.",
+        "comments": "",
+        "tenant_group": null,
+        "tags": []
+    },
+    "tags": [
+        {
+            "id": "a50d4568-27ae-4743-87ac-ffdc22b7f5d2",
+            "display": "Light blue",
+            "url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
+            "custom_fields": {},
+            "notes_url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/notes/",
+            "content_types": [
+                "dcim.location",
+                "tenancy.tenant",
+                "virtualization.cluster"
+            ],
+            "name": "Light blue",
+            "slug": "light-blue",
+            "created": "2023-04-12T19:29:05.753433Z",
+            "last_updated": "2023-04-12T19:29:05.770752Z",
+            "color": "03a9f4",
+            "description": "Want task generation. Commercial candidate performance financial guess modern.\nEarly toward adult black. Join black land sit. It smile standard possible reach."
+        }
+    ]
 }
 ```
 
-The brief format is much more terse:
+### ?depth=2 and beyond
+
+A higher depth parameter in the query presents you with more insight to the object and is very useful in situations that demand information of an indirectly related field of the object.
+E.g. If you need information on the `parent` of a `location` instance's `parent`.
 
 ```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+curl -s -X GET \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2 | jq '.'
 ```
 
 ```json
 {
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": 4,
-    "prefix": "10.40.3.0/24"
+    ...
+    "parent": {
+        ...
+        "status": {
+            "id": "39ea1ea4-3028-4a81-81e0-24a5743d3657",
+            "display": "Retired",
+            "url": "http://nautobot/api/extras/statuses/39ea1ea4-3028-4a81-81e0-24a5743d3657/",
+            "custom_fields": {},
+            "notes_url": "http://nautobot/api/extras/statuses/39ea1ea4-3028-4a81-81e0-24a5743d3657/notes/",
+            "content_types": [
+                "dcim.location",
+                "dcim.deviceredundancygroup"
+            ],
+            "created": "2023-04-12T00:00:00Z",
+            "last_updated": "2023-04-12T19:26:16.982697Z",
+            "name": "Retired",
+            "color": "f44336",
+            "description": "Location has been retired"
+        },
+        "parent": {
+            "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
+            "display": "Campus-01",
+            "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
+            "custom_fields": {
+                "example_plugin_auto_custom_field": null
+            },
+            "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+            "tree_depth": null,
+            "time_zone": "Asia/Baghdad",
+            "created": "2023-04-12T19:29:06.884754Z",
+            "last_updated": "2023-04-12T19:29:06.906503Z",
+            "name": "Campus-01",
+            "slug": "campus-01",
+            "description": "Local take each compare court exactly.",
+            "facility": "328",
+            "asn": null,
+            "physical_address": "",
+            "shipping_address": "",
+            "latitude": null,
+            "longitude": "104.200000",
+            "contact_name": "Frances Hernandez",
+            "contact_phone": "",
+            "contact_email": "",
+            "comments": "Sort share road candidate.",
+            "status": "28eb334b-4171-4da4-a03a-fa6d0c6a9442",
+            "parent": null,
+            "location_type": "e3d4a9af-c6c1-4582-b483-a13301eb6e28",
+            "tenant": "5b1feadb-fab0-4f81-a53f-5192d83b0216",
+            "tags": [
+                "6e8ce6c9-0a8c-4731-b02a-b2ec19db5c52",
+                "1e986e5d-099d-4742-bfa5-16363abea5fd",
+                "21afbdad-c782-4fc5-9b3b-7b59273bb08c",
+                "0118b994-9943-4295-946b-92b27efe15db"
+            ]
+        },
+        "location_type": {
+            "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
+            "display": "Campus → Building",
+            "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
+            "custom_fields": {},
+            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+            "tree_depth": null,
+            "content_types": [
+                "ipam.vlan",
+                "dcim.rackgroup",
+                "ipam.vlangroup"
+            ],
+            "created": "2023-04-12T19:29:06.707759Z",
+            "last_updated": "2023-04-12T19:29:06.716482Z",
+            "name": "Building",
+            "slug": "building",
+            "description": "Protect growth bill all hair along.",
+            "nestable": false,
+            "parent": "e3d4a9af-c6c1-4582-b483-a13301eb6e28"
+        },
+        "tenant": null,
+        "tags": []
+    },
+    "location_type": {
+        ...
+        "parent": {
+            "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
+            "display": "Campus → Building",
+            "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
+            "custom_fields": {},
+            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+            "tree_depth": null,
+            "content_types": [
+                "ipam.vlan",
+                "dcim.rackgroup",
+                "ipam.vlangroup"
+            ],
+            "created": "2023-04-12T19:29:06.707759Z",
+            "last_updated": "2023-04-12T19:29:06.716482Z",
+            "name": "Building",
+            "slug": "building",
+            "description": "Protect growth bill all hair along.",
+            "nestable": false,
+            "parent": "e3d4a9af-c6c1-4582-b483-a13301eb6e28"
+        }
+    },
+    ...
 }
 ```
-
-The brief format is supported for both lists and individual objects.
 
 ### Retrieving Object Relationships and Relationship Associations
 
@@ -585,7 +824,7 @@ http://nautobot/api/ipam/prefixes/ \
   "status": {
       "display": "Active",
       "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
       "name": "Active",
       "slug": "active",
       "created": "2019-12-09T16:38:50.363404Z",
@@ -674,7 +913,7 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
   "status": {
       "display": "Reserved",
       "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+      "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
       "name": "Reserved",
       "slug": "reserved",
       "created": "2019-12-09T00:00:00Z",

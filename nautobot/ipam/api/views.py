@@ -140,7 +140,7 @@ class PrefixViewSet(NautobotModelViewSet):
                     available_prefixes.remove(allocated_prefix)
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
                 else:
@@ -215,7 +215,7 @@ class PrefixViewSet(NautobotModelViewSet):
                     requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.IPAddressSerializer(data=requested_ips, many=True, context=context)
                 else:

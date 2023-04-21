@@ -45,7 +45,10 @@ If you're adding a relational field (e.g. `ForeignKey`) and intend to include th
 
 ## 5. Update API serializer
 
-Extend the model's API serializer in `nautobot.<app>.api.serializers` to include the new field. In most cases, it will not be necessary to also extend the nested serializer, which produces a minimal representation of the model.
+Extend the model's API serializer in `nautobot.<app>.api.serializers` to include the new field, if necessary.
+
++++ 2.0.0
+Most model serializers now use `fields = [__all__]`, in which case you do not have to explicitly include the new field in the model's API serializer. The serializer will automatically pick up the field and render it according to Nautobot standards. If the default rendering does not meet your API needs, you can explicitly declare the field on the serializer.
 
 ## 6. Add field to forms
 

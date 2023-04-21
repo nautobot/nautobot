@@ -110,6 +110,7 @@ class TaggedItemTest(APITestCase):
             "slug": "test-location",
             "status": Status.objects.get_for_model(Location).first().pk,
             "tags": [tag.id],
+            "location_type": self.location_type.pk,
         }
         url = reverse("dcim-api:location-list")
         self.add_permissions("dcim.add_location")

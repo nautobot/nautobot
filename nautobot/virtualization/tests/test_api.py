@@ -25,7 +25,6 @@ class AppTest(APITestCase):
 
 class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
     model = ClusterType
-    brief_fields = ["cluster_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Cluster Type 4",
@@ -53,7 +52,6 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
 
 class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
     model = ClusterGroup
-    brief_fields = ["cluster_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Cluster Group 4",
@@ -81,7 +79,6 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
 
 class ClusterTest(APIViewTestCases.APIViewTestCase):
     model = Cluster
-    brief_fields = ["display", "id", "name", "url", "virtualmachine_count"]
     bulk_update_data = {
         "comments": "New comment",
     }
@@ -123,7 +120,6 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
 
 class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
     model = VirtualMachine
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = []
 
     @classmethod
@@ -245,7 +241,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(str(response.data["local_config_context_schema"]["id"]), str(schema.pk))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -272,7 +268,6 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
 
 class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     model = VMInterface
-    brief_fields = ["display", "id", "name", "url", "virtual_machine"]
     bulk_update_data = {
         "description": "New description",
     }
