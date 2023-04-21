@@ -1,6 +1,6 @@
 from functools import wraps
 
-from django.contrib.contenttypes.models import ContentType
+from django.apps import apps
 
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.registry import registry
@@ -40,6 +40,7 @@ def wrap_model_clean_methods():
     """
     Helper function that wraps plugin model validator registered clean methods for all applicable models
     """
-    for model in ContentType.objects.filter(FeatureQuery("custom_validators").get_query()):
-        model_class = model.model_class()
-        model_class.clean = custom_validator_clean(model_class.clean)
+    for app_label, models in FeatureQuery("custom_validators").get_dict():
+        for model in models:
+            model_class = apps.get_model(app_label=app_label, model_name=model)
+            model_class.clean = custom_validator_clean(model_class.clean)

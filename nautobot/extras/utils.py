@@ -123,10 +123,16 @@ class FeatureQuery:
         Given an extras feature, return a Q object for content type lookup
         """
         query = Q()
-        for app_label, models in registry["model_features"][self.feature].items():
+        for app_label, models in self.get_dict():
             query |= Q(app_label=app_label, model__in=models)
 
         return query
+
+    def get_dict(self):
+        """
+        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        """
+        return registry["model_features"][self.feature].items()
 
     def get_choices(self):
         """
