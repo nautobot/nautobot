@@ -478,9 +478,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         except DeviceBay.DoesNotExist:
             return None
         depth = int(self.context.get("depth", 0))
-        device_bay_data = return_nested_serializer_data_based_on_depth(
-            DeviceBaySerializer(device_bay), depth, obj, device_bay, "parent_bay"
-        )
+        device_bay_data = return_nested_serializer_data_based_on_depth(self, depth, obj, device_bay, "parent_bay")
         return device_bay_data
 
 
