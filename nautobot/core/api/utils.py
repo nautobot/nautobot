@@ -200,10 +200,9 @@ def format_output(field, field_value):
     from rest_framework.fields import IntegerField
     from rest_framework.serializers import ListSerializer
     from nautobot.core.api import ChoiceField
-    from nautobot.extras.api.fields import StatusSerializerField
 
     kwargs = {}
-    if isinstance(field_value, (WritableNestedSerializer, ListSerializer, StatusSerializerField)):
+    if isinstance(field_value, (WritableNestedSerializer, ListSerializer)):
         kwargs = {
             "type": "dynamic-choice-field",
         }
@@ -219,11 +218,6 @@ def format_output(field, field_value):
             extra_kwargs = {
                 "label": "Tags",
                 "required": False,
-            }
-        elif isinstance(field_value, StatusSerializerField):
-            extra_kwargs = {
-                "label": "Status",
-                "required": True,
             }
         kwargs.update(extra_kwargs)
     elif isinstance(field_value, ChoiceField):
