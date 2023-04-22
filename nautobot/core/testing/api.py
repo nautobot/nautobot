@@ -520,6 +520,25 @@ class APIViewTestCases:
             """
             PATCH a single object identified by its ID.
             """
+
+            def strip_serialized_object(this_object):
+                """
+                Only here to work around acceptable differences in PATCH response vs GET response which are known bugs.
+                """
+                # Work around for https://github.com/nautobot/nautobot/issues/3321
+                this_object.pop("last_updated", None)
+                # PATCH response always includes "opt-in" fields, but GET response does not.
+                this_object.pop("computed_fields", None)
+                this_object.pop("relationships", None)
+
+                for value in this_object.values():
+                    if isinstance(value, dict):
+                        strip_serialized_object(value)
+                    elif isinstance(value, list):
+                        for list_dict in value:
+                            if isinstance(list_dict, dict):
+                                strip_serialized_object(list_dict)
+
             self.maxDiff = None
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
@@ -538,11 +557,10 @@ class APIViewTestCases:
             obj_perm.actions = ["view"]
             obj_perm.save()
             # Get initial serialized object representation
-            get_response = self.client.get(url, **self.header)
+            get_response = self.client.get(url, {"depth": 1}, **self.header)
             self.assertHttpStatus(get_response, status.HTTP_200_OK)
             initial_serialized_object = get_response.json()
-            # Work around for https://github.com/nautobot/nautobot/issues/3321
-            initial_serialized_object.pop("last_updated", None)
+            strip_serialized_object(initial_serialized_object)
 
             # Redefine object-level permission for PATCH
             obj_perm.actions = ["change"]
@@ -551,11 +569,7 @@ class APIViewTestCases:
             response = self.client.patch(url, {}, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             serialized_object = response.json()
-            # Work around for https://github.com/nautobot/nautobot/issues/3321
-            serialized_object.pop("last_updated", None)
-            # PATCH response always includes "opt-in" fields, but GET response does not.
-            serialized_object.pop("computed_fields", None)
-            serialized_object.pop("relationships", None)
+            strip_serialized_object(serialized_object)
             self.assertEqual(initial_serialized_object, serialized_object)
 
             # Verify ObjectChange creation -- yes, even though nothing actually changed
