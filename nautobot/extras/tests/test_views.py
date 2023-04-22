@@ -2163,7 +2163,7 @@ class RelationshipAssociationTestCase(
         ).validated_save()
 
     def test_list_objects_with_constrained_permission(self):
-        instance1, instance2 = self.relationship.associations.all()[:2]
+        instance1, instance2 = self.relationship.relationship_associations.all()[:2]
 
         # Add object-level permission
         obj_perm = ObjectPermission(
