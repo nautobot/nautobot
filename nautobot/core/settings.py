@@ -358,7 +358,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -642,26 +641,6 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
-# v2 TODO(jathan): Remove all cacheops settings.
-# The django-cacheops plugin is used to cache querysets. The built-in Django
-# caching is not used.
-CACHEOPS = {
-    "auth.user": {"ops": "get", "timeout": 60 * 15},
-    "auth.*": {"ops": ("fetch", "get")},
-    "auth.permission": {"ops": "all"},
-    "circuits.*": {"ops": "all"},
-    "dcim.*": {"ops": "all"},
-    "ipam.*": {"ops": "all"},
-    "extras.*": {"ops": "all"},
-    "users.*": {"ops": "all"},
-    "tenancy.*": {"ops": "all"},
-    "virtualization.*": {"ops": "all"},
-}
-CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
-CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
 # The django-redis cache is used to establish concurrent locks using Redis.
 CACHES = {
     "default": {
@@ -669,7 +648,7 @@ CACHES = {
             "NAUTOBOT_CACHES_BACKEND",
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
-        "LOCATION": parse_redis_connection(redis_database=0),
+        "LOCATION": parse_redis_connection(redis_database=1),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",

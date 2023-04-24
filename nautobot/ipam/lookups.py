@@ -233,20 +233,12 @@ class NetIn(Lookup):
         for _ip in self.rhs:
             ip = get_ip_info(field_name, _ip, alias=self.lhs.alias)
             self.ips.append(ip)
-        # This is to satisfy an issue with django cacheops, specifically this line:
-        # https://github.com/Suor/django-cacheops/blob/a5ed1ac28c7259f5ad005e596cc045d1d61e2c51/cacheops/query.py#L175
-        # Without 1, and one 1 value as %s, will result in stacktrace. A non-impacting condition is added to the query
-        if _connection.vendor == "mysql":
-            self.query_starter = "'1' NOT IN %s AND "
-        elif _connection.vendor == "postgresql":
-            self.query_starter = "'1' != ANY(%s) AND "
         return self.rhs
 
     def as_sql(self, qn, connection):
         _, lhs_params = self.process_lhs(qn, connection)
         _, rhs_params = self.process_rhs(qn, connection)
-        query = self.query_starter
-        query += "OR ".join(f"{ip.q_ip} BETWEEN {ip.net_addr} AND {ip.bcast_addr} " for ip in self.ips)
+        query = "OR ".join(f"{ip.q_ip} BETWEEN {ip.net_addr} AND {ip.bcast_addr} " for ip in self.ips)
         return query, lhs_params + rhs_params
 
 

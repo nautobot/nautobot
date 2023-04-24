@@ -286,21 +286,6 @@ Configuration file created at '/home/example/.nautobot/nautobot_config.py
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
-### `invalidate`
-
-`nautobot-server invalidate`
-
-Invalidates cache for entire app, model or particular instance. Most commonly you will see us recommend clearing the entire cache using `invalidate all`:
-
-```no-highlight
-nautobot-server invalidate all
-```
-
-There are a number of other options not covered here.
-
-!!! note
-    This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
-
 ### `loaddata`
 
 `nautobot-server loaddata --traceback nautobot_dump.json`
@@ -420,19 +405,18 @@ This will run the following management commands with default settings, in order:
 - `collectstatic`
 - `remove_stale_contenttypes`
 - `clearsessions`
-- `invalidate all`
 
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
+
+--- 2.0.0
+    With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
 
 `--no-collectstatic`  
 Do not automatically collect static files into a single location.
-
-`--no-invalidate-all`  
-Do not automatically invalidate cache for entire application.
 
 `--no-migrate`  
 Do not automatically perform any database migrations.
@@ -442,6 +426,9 @@ Do not automatically remove stale content types.
 
 `--no-trace-paths`  
 Do not automatically generate missing cable paths.
+
+--- 2.0.0
+    With the removal of `django-cacheops` from Nautobot, the `--no-invalidate-all` flag was removed from this command.
 
 ```no-highlight
 nautobot-server post_upgrade
@@ -473,8 +460,6 @@ Collecting static files...
 Removing stale content types...
 
 Removing expired sessions...
-
-Invalidating cache...
 ```
 
 ### `remove_stale_scheduled_jobs`

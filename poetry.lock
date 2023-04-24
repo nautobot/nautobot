@@ -739,24 +739,6 @@ Django = ">=3.2"
 python-ldap = ">=3.1"
 
 [[package]]
-name = "django-cacheops"
-version = "6.0"
-description = "A slick ORM cache with automatic granular event-driven invalidation for Django."
-category = "main"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "django-cacheops-6.0.tar.gz", hash = "sha256:78e161ebd96a32e28e19ec7da31f2afed9e62a79726b8b5f0ed12dd16c2e5841"},
-    {file = "django_cacheops-6.0-py2.py3-none-any.whl", hash = "sha256:ee38b969c9fc68f7c88e769b6c811e19563cca1ae08210d9f553ff758b6c3e17"},
-]
-
-[package.dependencies]
-django = ">=2.1"
-funcy = ">=1.8,<2.0"
-redis = ">=3.0.0"
-six = ">=1.4.0"
-
-[[package]]
 name = "django-celery-beat"
 version = "2.2.1"
 description = "Database-backed Periodic Tasks."
@@ -1285,18 +1267,6 @@ files = [
 mccabe = ">=0.7.0,<0.8.0"
 pycodestyle = ">=2.10.0,<2.11.0"
 pyflakes = ">=3.0.0,<3.1.0"
-
-[[package]]
-name = "funcy"
-version = "1.18"
-description = "A fancy and practical functional tools"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "funcy-1.18-py2.py3-none-any.whl", hash = "sha256:00ce91afc850357a131dc54f0db2ad8a1110d5087f1fa4480d7ea3ba0249f89d"},
-    {file = "funcy-1.18.tar.gz", hash = "sha256:15448d19a8ebcc7a585afe7a384a19186d0bd67cbf56fb42cd1fd0f76313f9b2"},
-]
 
 [[package]]
 name = "future"
@@ -4040,4 +4010,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.11"
-content-hash = "966b436e5ac74c9d6f39e3fc49086328d3ce9badc8ec6333cf28d12cdc32097a"
+content-hash = "c340e8001b09452bf8f1b3927e7adb8ed7ed422660169c97c9d5943b30730f4e"

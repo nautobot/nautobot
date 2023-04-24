@@ -6,12 +6,6 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 
 
-E001 = Error(
-    "CACHEOPS_DEFAULTS['timeout'] value cannot be 0. To disable caching set CACHEOPS_ENABLED=False.",
-    id="nautobot.core.E001",
-    obj=settings,
-)
-
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
     id="nautobot.core.E002",
@@ -41,20 +35,6 @@ W005 = Warning(
     id="nautobot.core.W005",
     obj=settings,
 )
-
-W006 = Warning(
-    "CACHEOPS_ENABLED is set to True but cacheops is no longer recommended in v1.5. It can still be used but may lead to "
-    "inaccurate data responses. Cacheops will be removed in a later release.",
-    id="nautobot.core.W006",
-    obj=settings,
-)
-
-
-@register(Tags.caches)
-def check_cache_timeout(app_configs, **kwargs):
-    if settings.CACHEOPS_DEFAULTS.get("timeout") == 0:
-        return [E001]
-    return []
 
 
 @register(Tags.security)
@@ -93,13 +73,6 @@ def check_storage_config_and_backend(app_configs, **kwargs):
 def check_maintenance_mode(app_configs, **kwargs):
     if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
         return [E005]
-    return []
-
-
-@register(Tags.compatibility)
-def check_cacheops_enabled(app_configs, **kwargs):
-    if settings.CACHEOPS_ENABLED:
-        return [W006]
     return []
 
 
