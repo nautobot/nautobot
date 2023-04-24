@@ -557,7 +557,7 @@ class APIViewTestCases:
             obj_perm.actions = ["view"]
             obj_perm.save()
             # Get initial serialized object representation
-            get_response = self.client.get(url, {"depth": 1}, **self.header)
+            get_response = self.client.get(url, **self.header)
             self.assertHttpStatus(get_response, status.HTTP_200_OK)
             initial_serialized_object = get_response.json()
             strip_serialized_object(initial_serialized_object)
