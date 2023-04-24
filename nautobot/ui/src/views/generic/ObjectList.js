@@ -1,10 +1,11 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Text } from "@nautobot/nautobot-ui";
-import { LoadingWidget } from "@components/common/LoadingWidget";
-
-import ObjectListTable from "@components/common/ObjectListTable";
-
 import useSWR from "swr";
+
+import { LoadingWidget } from "@components/common/LoadingWidget";
+import ObjectListTable from "@components/common/ObjectListTable";
+import GenericView from "@views/generic/GenericView";
+
 const fetcher = (...urls) => {
     const f = (url) =>
         fetch(url, { credentials: "include" })
@@ -44,7 +45,11 @@ export default function GenericObjectListView() {
     }
 
     if (!app_name || !model_name) {
-        return <LoadingWidget />;
+        return (
+            <GenericView>
+                <LoadingWidget />
+            </GenericView>
+        );
     }
 
     // ===
@@ -68,20 +73,30 @@ export default function GenericObjectListView() {
     //   This doesn't currently use a global state manager which is 😭
 
     if (isLoadingData || !tableData.results || !tableFields.data) {
-        return <LoadingWidget name={model_name} />;
+        return (
+            <GenericView>
+                <LoadingWidget name={model_name} />
+            </GenericView>
+        );
     }
 
     if (error) {
-        return <Text>Error loading.</Text>;
+        return (
+            <GenericView>
+                <Text>Error loading.</Text>
+            </GenericView>
+        );
     }
 
     return (
-        <ObjectListTable
-            tableData={tableData.results}
-            tableHeader={tableFields.data}
-            totalCount={tableData.count}
-            active_page_number={active_page_number}
-            page_size={page_size}
-        />
+        <GenericView>
+            <ObjectListTable
+                tableData={tableData.results}
+                tableHeader={tableFields.data}
+                totalCount={tableData.count}
+                active_page_number={active_page_number}
+                page_size={page_size}
+            />
+        </GenericView>
     );
 }

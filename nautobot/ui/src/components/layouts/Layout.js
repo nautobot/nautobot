@@ -1,29 +1,21 @@
-import { Alert } from "@chakra-ui/react";
 import {
-    Flex,
     Box,
-    Sidebar,
-    Heading,
     DcimIcon,
-    StatusIndicator,
-    Text,
+    Flex,
+    Heading,
+    Link,
+    NautobotLogoIcon,
+    Sidebar,
     Button,
 } from "@nautobot/nautobot-ui";
-import { useLocation } from "react-router-dom";
-import {
-    GLOBAL_GRID_GAP,
-    GLOBAL_PADDING_RIGHT,
-    GLOBAL_PADDING_TOP,
-} from "@constants/size";
-import SidebarNav from "@components/common/SidebarNav";
-import RouterLink from "@components/common/RouterLink";
-import LoadingWidget from "@components/common/LoadingWidget";
 
-import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+import LoadingWidget from "@components/common/LoadingWidget";
 import RouterButton from "@components/common/RouterButton";
+import RouterLink from "@components/common/RouterLink";
+import SidebarNav from "@components/common/SidebarNav";
+import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 
 export default function Layout({ children }) {
-    const location = useLocation();
     const { data: sessionInfo, isSuccess: sessionLoaded } =
         useGetSessionQuery();
     const { isSuccess: menuLoaded } = useGetUIMenuQuery();
@@ -57,67 +49,45 @@ export default function Layout({ children }) {
     //   Also, a lot of these styles need to be made globally generic
     //   It would save us the `toRender` above.
     return (
-        <Flex direction="column" height="full" overflow="hidden" width="full">
-            <Flex flex="1" overflow="hidden" width="full" height="full">
-                <Box flex="none" height="100vh" width="var(--chakra-sizes-220)">
-                    <Sidebar>
-                        <Heading
-                            as="h1"
-                            paddingBottom="md"
-                            paddingTop="29px"
-                            paddingX="md"
-                            color="white"
-                        >
-                            <RouterLink to="/">Nautobot</RouterLink>
-                        </Heading>
-                        <Heading variant="sidebar">
-                            <DcimIcon />
-                            All
-                        </Heading>
-                        {sessionInfo && sessionInfo.logged_in ? (
-                            <>
-                                <SidebarNav />
-                                <RouterButton m={3} to="/logout/">
-                                    Log Out
-                                </RouterButton>
-                            </>
-                        ) : (
-                            <RouterButton m={3} to="/login/">
-                                Log In
-                            </RouterButton>
-                        )}
-                        <Button onClick={legacyUI} variant="link" color="white">
-                            Return to Legacy UI
-                        </Button>
-                    </Sidebar>
-                </Box>
-                <Box flex="1" overflow="auto">
-                    <Flex
-                        direction="column"
-                        gap={`${GLOBAL_GRID_GAP}px`}
-                        height="full"
-                        minWidth="fit-content"
-                        paddingLeft={`${GLOBAL_GRID_GAP}px`}
-                        paddingRight={`${GLOBAL_PADDING_RIGHT}px`}
-                        paddingTop={`${GLOBAL_PADDING_TOP}px`}
-                    >
-                        <Flex flex="1" minWidth="fit-content">
-                            <Box as="main" flex="1" minWidth="fit-content">
-                                <Alert status="info">
-                                    <StatusIndicator
-                                        variant="secondary"
-                                        breathe={true}
-                                    />
-                                    <Text ml={1}>
-                                        Current route is {location.pathname}
-                                    </Text>
-                                </Alert>
-                                {toRender}
-                            </Box>
-                        </Flex>
-                    </Flex>
-                </Box>
-            </Flex>
+        <Flex height="full" overflow="hidden" width="full">
+            <Sidebar>
+                <Heading
+                    as="h1"
+                    paddingBottom="md"
+                    paddingTop="29px"
+                    paddingX="md"
+                >
+                    <Link
+                        aria-label="Nautobot"
+                        as={RouterLink}
+                        leftIcon={<NautobotLogoIcon />}
+                        to="/"
+                    />
+                </Heading>
+                <Heading variant="sidebar">
+                    <DcimIcon />
+                    All
+                </Heading>
+                {sessionInfo && sessionInfo.logged_in ? (
+                    <>
+                        <SidebarNav />
+                        <RouterButton m={3} to="/logout/">
+                            Log Out
+                        </RouterButton>
+                    </>
+                ) : (
+                    <RouterButton m={3} to="/login/">
+                        Log In
+                    </RouterButton>
+                )}
+                <Button onClick={legacyUI} variant="link" color="white">
+                    Return to Legacy UI
+                </Button>
+            </Sidebar>
+
+            <Box flex="1" height="full">
+                {toRender}
+            </Box>
         </Flex>
     );
 }

@@ -11,6 +11,15 @@ const theme = {
         body: `'Ubuntu', sans-serif`,
         mono: `'Ubuntu Mono', monospace`,
     },
+
+    styles: {
+        global: {
+            "html, body, #root": {
+                height: "full",
+                width: "full",
+            },
+        },
+    },
 };
 
 // TODO: See if we can/need to continue this pattern:

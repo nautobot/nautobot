@@ -1,11 +1,13 @@
-import { useParams } from "react-router-dom";
-import { Button, Frame, Text } from "@nautobot/nautobot-ui";
 import { Card, CardHeader, CardBody } from "@chakra-ui/react"; // TODO import from nautobot-ui when available
-import { useState } from "react";
-import validator from "@rjsf/validator-ajv8";
+import { Button, Frame, Text } from "@nautobot/nautobot-ui";
 import Form from "@rjsf/core";
-import useSWR from "swr";
+import validator from "@rjsf/validator-ajv8";
 import axios from "axios";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import useSWR from "swr";
+
+import GenericView from "@views/generic/GenericView";
 
 const fetcher = (url) =>
     axios
@@ -18,14 +20,22 @@ export default function GenericObjectCreateView({ list_url }) {
     const { data, error } = useSWR(list_url, fetcher);
 
     if (!app_name || !model_name) {
-        return <></>;
+        return <GenericView />;
     }
+
     if (!list_url) {
         list_url = `/api/${app_name}/${model_name}/`;
     }
 
-    if (error) return <div>Failed to load schema from {list_url}</div>;
-    if (!data) return <></>;
+    if (error) {
+        return (
+            <GenericView>
+                <div>Failed to load schema from {list_url}</div>
+            </GenericView>
+        );
+    }
+
+    if (!data) return <GenericView />;
 
     const post_schema = data.serializer.schema;
     // const ui_schema = data.serializer.uiSchema
@@ -46,26 +56,30 @@ export default function GenericObjectCreateView({ list_url }) {
         });
 
     return (
-        <Frame>
-            <Card>
-                <CardHeader>
-                    Add a new {model_name_title} "{list_url}"
-                </CardHeader>
-                <CardBody>
-                    <Text>{model_name_title}</Text>
-                    <Form
-                        action={list_url}
-                        method="post"
-                        schema={post_schema}
-                        validator={validator}
-                        formData={formData}
-                        onChange={(e) => setFormData(Object.assign(e.formData))}
-                        onSubmit={onSubmit}
-                    >
-                        <Button type="submit">Create</Button>
-                    </Form>
-                </CardBody>
-            </Card>
-        </Frame>
+        <GenericView>
+            <Frame>
+                <Card>
+                    <CardHeader>
+                        Add a new {model_name_title} "{list_url}"
+                    </CardHeader>
+                    <CardBody>
+                        <Text>{model_name_title}</Text>
+                        <Form
+                            action={list_url}
+                            method="post"
+                            schema={post_schema}
+                            validator={validator}
+                            formData={formData}
+                            onChange={(e) =>
+                                setFormData(Object.assign(e.formData))
+                            }
+                            onSubmit={onSubmit}
+                        >
+                            <Button type="submit">Create</Button>
+                        </Form>
+                    </CardBody>
+                </Card>
+            </Frame>
+        </GenericView>
     );
 }

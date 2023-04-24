@@ -1,4 +1,4 @@
-import { Frame } from "@nautobot/nautobot-ui";
+import { Box } from "@nautobot/nautobot-ui";
 import { RouterButton } from "./RouterButton";
 import { ButtonGroup } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
@@ -14,10 +14,16 @@ export default function ObjectListTable({
     totalCount,
     active_page_number,
     page_size,
+    gridColumn,
 }) {
     let location = useLocation();
     return (
-        <Frame>
+        <Box
+            background="white-0"
+            borderRadius="md"
+            gridColumn={gridColumn}
+            padding="md"
+        >
             <ButtonGroup pb={2}>
                 <RouterButton to={`${location.pathname}add`} mr={2}>
                     <Icon.TbPlus /> Add
@@ -36,6 +42,6 @@ export default function ObjectListTable({
                 page_size={page_size}
                 active_page={active_page_number}
             ></Paginator>
-        </Frame>
+        </Box>
     );
 }
