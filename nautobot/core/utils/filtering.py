@@ -123,8 +123,13 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
-    elif isinstance(field, ContentTypeMultipleChoiceFilter):
-        plural_name = model._meta.verbose_name_plural
+    elif isinstance(
+        field, ContentTypeMultipleChoiceFilter
+    ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
+        # models that have sucha  filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
+
+        plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:
@@ -133,7 +138,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             # In this case use queryset
             queryset_map = {
                 "tags": TaggableClassesQuery,
-                "job hooks": ChangeLoggedModelsQuery,
+                "job_hooks": ChangeLoggedModelsQuery,
                 "roles": RoleModelsQuery,
             }
             form_field = MultipleContentTypeField(

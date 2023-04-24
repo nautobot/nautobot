@@ -138,10 +138,16 @@ class FeatureQuery:
 
         populate_model_features_registry()
         query = Q()
-        for app_label, models in registry["model_features"][self.feature].items():
+        for app_label, models in self.as_dict():
             query |= Q(app_label=app_label, model__in=models)
 
         return query
+
+    def as_dict(self):
+        """
+        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        """
+        return registry["model_features"][self.feature].items()
 
     def get_choices(self):
         """

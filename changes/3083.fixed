@@ -1,0 +1,1 @@
+Fixed an issue where unit tests might fail erroneously when dealing with objects whose name/display contains characters like `"<>`.

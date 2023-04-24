@@ -29,7 +29,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
-from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
+from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
@@ -894,7 +894,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         return Response(data)
 
 
-class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
+class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
     UI mixin to bulk create model instances.
     """
