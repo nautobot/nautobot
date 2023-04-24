@@ -4,7 +4,6 @@ import {
     Breadcrumb,
     Breadcrumbs,
     DcimIcon,
-    Divider,
     Flex,
     Input,
     InputGroup,
@@ -17,19 +16,11 @@ import {
     NautobotGrid,
     Navbar,
     NavbarMenuButton,
-    NavbarNotificationButton,
     NavbarSection,
     NavbarSections,
-    negateCssVar,
     PlatformIcon,
-    Popover,
-    PopoverArrow,
-    PopoverBody,
-    PopoverContent,
-    PopoverTrigger,
     SearchIcon,
     SecurityIcon,
-    Text,
 } from "@nautobot/nautobot-ui";
 import { useMemo } from "react";
 import {
@@ -174,26 +165,6 @@ export default function GenericView({
                     </InputLeftElement>
                     <Input placeholder="Search..." />
                 </InputGroup>
-
-                <Popover>
-                    <PopoverTrigger>
-                        <NavbarNotificationButton isDisabled={!isLoggedIn}>
-                            0
-                        </NavbarNotificationButton>
-                    </PopoverTrigger>
-                    <PopoverContent>
-                        <PopoverArrow />
-                        <PopoverBody>
-                            <Text paddingX="md">No notifications</Text>
-                        </PopoverBody>
-                    </PopoverContent>
-                </Popover>
-
-                <Divider
-                    height={20}
-                    marginLeft={negateCssVar("sm")}
-                    orientation="vertical"
-                />
 
                 <Menu>
                     <MenuButton as={NavbarMenuButton} isDisabled={!isLoggedIn}>
