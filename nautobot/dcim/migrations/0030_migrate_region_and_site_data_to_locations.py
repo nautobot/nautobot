@@ -6,7 +6,7 @@ import uuid
 from django.db import migrations
 from django.db.utils import IntegrityError
 
-from nautobot.core.models.generics import _NautobotTaggableManager
+from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
@@ -381,7 +381,7 @@ def reassign_model_instances_to_locations(apps, model):
     # https://github.com/jazzband/django-taggit/issues/101
     # https://github.com/jazzband/django-taggit/issues/454
     for model_loc in model_locs:
-        model_loc.tags = _NautobotTaggableManager(
+        model_loc.tags = TagsManager(
             through=extras_models.TaggedItem, model=Location, instance=model_loc, prefetch_cache_name="tags"
         )
 

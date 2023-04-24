@@ -1,4 +1,3 @@
-from taggit.managers import TaggableManager
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
@@ -12,6 +11,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -199,7 +199,7 @@ class APIViewTestCases:
             depth_fields = []
             for field in self.model._meta.fields:
                 if not field.name.startswith("_"):
-                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, TaggableManager)) and (
+                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
                         # we represent content-types as "app_label.modelname" rather than as FKs
                         field.related_model != ContentType
                         # user is a model field on Token but not a field on TokenSerializer

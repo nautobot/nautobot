@@ -18,7 +18,6 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
-from taggit.managers import _TaggableManager
 
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.mixins import WritableSerializerMixin
@@ -26,7 +25,7 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core.models.generics import _NautobotTaggableManager
+from nautobot.core.models.managers import TagsManager
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -199,10 +198,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         # makes the field impervious to the `?depth` parameter.
         # So we intercept it here to call build_nested_field()
         # which will make the tags field be rendered with TagSerializer() and respect the `depth` parameter.
-        if (
-            isinstance(getattr(model_class, field_name, None), (_NautobotTaggableManager, _TaggableManager))
-            and nested_depth > 0
-        ):
+        if isinstance(getattr(model_class, field_name, None), TagsManager) and nested_depth > 0:
             tags_field = getattr(model_class, field_name)
             relation_info = RelationInfo(
                 model_field=tags_field,
