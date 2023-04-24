@@ -1,6 +1,7 @@
 import copy
 import re
 
+from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -112,7 +113,7 @@ def copy_safe_request(request):
     )
 
 
-def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
+def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict
     while discarding `querydict` params which are not part of `filterset_class` params
@@ -137,7 +138,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ... }
     """
     query_dict = QueryDict(mutable=True)
-    filterset_class_fields = filterset_class().filters.keys()
+    filterset_class_fields = filterset.filters.keys()
 
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)
@@ -150,15 +151,25 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     num = 0
     request_querydict = request_querydict.copy()
     request_querydict.pop("q", None)
-    for lookup_type, value in request_querydict.items():
+    for filter_field_name, value in request_querydict.items():
         # Discard fields without values
         if value:
-            if lookup_type in filterset_class_fields:
-                lookup_field = re.sub(r"__\w+", "", lookup_type)
-                lookup_value = request_querydict.getlist(lookup_type)
+            if filter_field_name in filterset_class_fields:
+                if hasattr(filterset.filters[filter_field_name], "relationship"):
+                    lookup_field = filter_field_name
+                else:
+                    # convert_querydict_to_factory_formset_acceptable_querydict expects to have a QueryDict as input
+                    # which means we may not have the exact field name as defined in the filterset class
+                    # it may contain a lookup expression (e.g. `name__ic`), so we need to strip it
+                    # this is so we can select the correct field in the formset for the "field" column
+                    # TODO: Since we likely need to instantiate the filterset class early in the request anyway
+                    # the filterset can handle the QueryDict conversion and we can just pass the QueryDict to the filterset
+                    # then use the FilterSet to de-dupe the field names
+                    lookup_field = re.sub(r"__\w+", "", filter_field_name)
+                lookup_value = request_querydict.getlist(filter_field_name)
 
                 query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
-                query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
+                query_dict.setlistdefault(lookup_type_placeholder % num, [filter_field_name])
                 query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
                 num += 1
 
@@ -187,13 +198,13 @@ def ensure_content_type_and_field_name_in_query_params(query_params):
     return field_name, model
 
 
-def is_single_choice_field(filterset_class, field_name):
+def is_single_choice_field(filterset, field_name):
     # Some filter parameters do not accept multiple values, e.g DateTime, Boolean, Int fields and the q field, etc.
-    field = get_filterset_field(filterset_class, field_name)
+    field = get_filterset_field(filterset, field_name)
     return not isinstance(field, django_filters.MultipleChoiceFilter)
 
 
-def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
+def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset):
     """
     Remove any `non_filter_params` and fields that are not a part of the filterset from  `filter_params`
     to return only queryset filterable parameters.
@@ -201,7 +212,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     Args:
         filter_params(QueryDict): Filter param querydict
         non_filter_params(list): Non queryset filterable params
-        filterset_class: The FilterSet class
+        filterset: The FilterSet class
     """
     for non_filter_param in non_filter_params:
         filter_params.pop(non_filter_param, None)
@@ -215,7 +226,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             # If an exception is thrown, instead of throwing an exception, set `_is_single_choice_field` to 'False'
             # because the fields that were not discovered are still necessary.
             try:
-                _is_single_choice_field = is_single_choice_field(filterset_class, field)
+                _is_single_choice_field = is_single_choice_field(filterset, field)
             except exceptions.FilterSetFieldNotFound:
                 _is_single_choice_field = False
 
@@ -226,7 +237,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     return final_filter_params
 
 
-def normalize_querydict(querydict):
+def normalize_querydict(querydict, form_class=None):
     """
     Convert a QueryDict to a normal, mutable dictionary, preserving list values. For example,
 
@@ -238,7 +249,25 @@ def normalize_querydict(querydict):
 
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
+
+    A `form_class` can be provided as a way to hint which query parameters should be treated as lists.
     """
-    if not querydict:
-        return {}
-    return {k: v if len(v) > 1 else v[0] for k, v in querydict.lists()}
+    result = {}
+    if querydict:
+        for key, value_list in querydict.lists():
+            if len(value_list) > 1:
+                # More than one value in the querydict for this key, so keep it as a list
+                # TODO: we could check here and de-listify value_list if the form_class field is a single-value one?
+                result[key] = value_list
+            elif (
+                form_class is not None
+                and key in form_class.base_fields
+                # ModelMultipleChoiceField is *not* itself a subclass of MultipleChoiceField, thanks Django!
+                and isinstance(form_class.base_fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
+            ):
+                # Even though there's only a single value in the querydict for this key, the form wants it as a list
+                result[key] = value_list
+            else:
+                # Only a single value in the querydict for this key, and no guidance otherwise, so make it single
+                result[key] = value_list[0]
+    return result

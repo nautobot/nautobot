@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import factory
@@ -12,10 +13,10 @@ from nautobot.core.factory import (
     get_random_instances,
     random_instance,
 )
-from nautobot.dcim.models import Location, Site
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 
 
@@ -36,162 +37,6 @@ class RIRFactory(OrganizationalModelFactory):
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-
-
-class AggregateFactory(PrimaryModelFactory):
-    """Create random aggregates and 50% of the time generate prefixes within the aggregate IP space.
-
-    Child prefixes create nested child prefixes and ip addresses within the prefix IP space. Defaults
-    to creating 0-8 child prefixes which generate 0-4 grandchildren. Set `child_prefixes__max_count` to
-    an integer when calling the factory creation methods (`create()`, `create_batch()`, etc) to override
-    the maximum number of child prefixes generated. Set `child_prefixes__children__max_count` to an
-    integer when calling the factory creation methods (`create()`, `batch_create()`, etc) to override
-    the maximum number of grandchildren generated.
-
-    Examples:
-        Create 20 aggregates, approximately half will generate 0-8 child prefixes which will create child prefixes and ip addresses:
-
-            >>> AggregateFactory.create_batch(20)
-
-        Create 20 aggregates with no child prefixes:
-
-            >>> AggregateFactory.create_batch(20, child_prefixes__max_count=0)
-
-        Create 20 aggregates, approximately half will generate 0-8 child prefixes that will not create any children:
-
-            >>> AggregateFactory.create_batch(20, child_prefixes__children__max_count=0)
-    """
-
-    class Meta:
-        model = Aggregate
-        exclude = (
-            "has_date_added",
-            "has_description",
-            "has_tenant",
-            "has_tenant_group",
-            "is_ipv6",
-        )
-
-    rir = random_instance(RIR, allow_null=False)
-
-    has_tenant = NautobotBoolIterator()
-    has_tenant_group = NautobotBoolIterator()
-    tenant = factory.Maybe(
-        "has_tenant_group",
-        random_instance(Tenant.objects.filter(tenant_group__isnull=False), allow_null=False),
-        factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(tenant_group__isnull=True)), None),
-    )
-
-    has_date_added = NautobotBoolIterator()
-    date_added = factory.Maybe("has_date_added", factory.Faker("date"), None)
-
-    has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-
-    is_ipv6 = NautobotBoolIterator()
-
-    @factory.post_generation
-    def child_prefixes(self, create, extracted, **kwargs):
-        """Create child prefixes within the aggregate IP space.
-
-        Defaults to generating 0-8 child prefixes for 50% of aggregates. Set
-        `child_prefixes__max_count` to an integer when calling the factory
-        creation methods (`create()`, `create_batch()`, etc) to override the
-        maximum number of children generated.
-
-        Args:
-            create: True if `create` strategy was used.
-            extracted: None unless a value was passed in for the PostGeneration declaration at Factory declaration time
-            kwargs: Any extra parameters passed as attr__key=value when calling the Factory
-        """
-        if extracted:
-            # Objects have already been created, do nothing
-            return
-
-        # 50% chance to create child prefixes
-        if not faker.Faker().pybool():
-            return
-
-        action = "create" if create else "build"
-        method = getattr(PrefixFactory, action)
-        is_ipv6 = self.family == 6
-
-        # Default to maximum of 8 children unless overridden in kwargs
-        max_count = int(kwargs.pop("max_count", 8))
-        prefix_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
-        if prefix_count == 0:
-            return
-
-        # Calculate prefix length for child prefixes to allow them to fit in the aggregate
-        prefix_cidr = self.prefix_length + math.ceil(math.log(prefix_count, 2))
-
-        # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
-        if prefix_cidr > 128 or self.family == 4 and prefix_cidr > 32:
-            raise ValueError(f"Unable to create {prefix_count} prefixes in aggregate {self.cidr_str}")
-
-        # Set prefix tenant to aggregate tenant if one is present
-        if self.tenant is not None:
-            kwargs.setdefault("tenant", self.tenant)
-
-        # Create child prefixes, preserving tenant and is_ipv6 from aggregate
-        for count, subnet in enumerate(self.prefix.subnet(prefix_cidr)):
-            if count == max_count:
-                break
-            method(prefix=str(subnet.cidr), is_ipv6=is_ipv6, **kwargs)
-
-    @factory.lazy_attribute_sequence
-    def prefix(self, n):
-        """
-        Yes, this is probably over-complicated - but it's realistic!
-
-        Not guaranteed to work properly for n >> 100; there's only so many IPv4 aggregates to go around.
-        """
-        if self.rir.name == "RFC 1918":
-            if n < 16:
-                return f"10.{16 * n}.0.0/12"
-            if n < 32:
-                return f"172.{n}.0/16"
-            return f"192.168.{n - 32}.0/24"
-        if self.rir.name == "RFC 3849":
-            return f"2001:DB8:{n:x}::/48"
-        if self.rir.name == "RFC 4193":
-            unique_id = faker.Faker().pyint(0, 2**32 - 1)
-            hextets = (unique_id // (2**16), unique_id % (2**16))
-            return f"FD{n:02X}:{hextets[0]:X}:{hextets[1]:X}::/48"
-        if self.rir.name == "RFC 6598":
-            return f"100.{n + 64}.0.0/16"
-        if self.rir.name == "AFRINIC":
-            if not self.is_ipv6:
-                # 196/8 thru 197/8
-                return f"{196 + (n % 2)}.{n // 2}.0.0/16"
-            # 2001:4200::/23
-            return f"2001:42{n:02X}::/32"
-        if self.rir.name == "APNIC":
-            if not self.is_ipv6:
-                # 110/8 thru 126/8
-                return f"{110 + (n % 16)}.{16 * (n // 16)}.0.0/12"
-            # 2001:0200::/23
-            return f"2001:02{n:02X}::/32"
-        if self.rir.name == "ARIN":
-            if not self.is_ipv6:
-                # 63/8 thru 76/8
-                return f"{63 + (n % 14)}.{16 * (n // 14)}.0.0/12"
-            # 2600::/12
-            return f"2600:{n:X}00::/24"
-        if self.rir.name == "LACNIC":
-            if not self.is_ipv6:
-                # 186/8 thru 187/8
-                return f"{186 + (n % 2)}.{n // 2}.0.0/16"
-            # 2800::/12
-            return f"2800:{n:X}00::/24"
-        if self.rir.name == "RIPE NCC":
-            if not self.is_ipv6:
-                # 77/8 thru 95/8
-                return f"{77 + (n % 18)}.{16 * (n // 18)}.0.0/12"
-            # 2003:0000::/18
-            return f"2003:0{n:X}::/32"
-
-        raise RuntimeError(f"Don't know how to pick an address for RIR {self.rir.name}")
 
 
 def random_route_distinguisher():
@@ -281,13 +126,12 @@ class VLANGroupFactory(OrganizationalModelFactory):
         exclude = (
             "has_description",
             "has_location",
-            "has_site",
         )
 
     class Params:
         unique_name = UniqueFaker("word", part_of_speech="noun")
 
-    # TODO: name is not globally unique, but (site, name) tuple must be.
+    # TODO: name is not globally unique, but (location, name) tuple must be.
     # The likelihood of collision with random names is pretty low, but non-zero.
     # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
     name = factory.LazyAttribute(lambda o: o.unique_name.upper())
@@ -300,18 +144,6 @@ class VLANGroupFactory(OrganizationalModelFactory):
         "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
     )
 
-    has_site = NautobotBoolIterator()
-
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe(
-            "has_site",
-            random_instance(Site),
-            None,
-        ),
-    )
-
 
 class VLANFactory(PrimaryModelFactory):
     class Meta:
@@ -321,7 +153,6 @@ class VLANFactory(PrimaryModelFactory):
             "has_vlan_group",
             "has_location",
             "has_role",
-            "has_site",
             "has_tenant",
         )
 
@@ -330,7 +161,7 @@ class VLANFactory(PrimaryModelFactory):
     # and we might want to consider intentionally reusing non-unique values for test purposes?
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
     # Generate names like "vlan__0001__purple__GROUP__Floor-1__242_Vasquez_Freeway" or "vlan__1234__easy",
-    # depending on which of (group, location, site) are defined, if any.
+    # depending on which of (group, location) are defined, if any.
     name = factory.LazyAttribute(
         lambda o: "__".join(
             [
@@ -343,7 +174,6 @@ class VLANFactory(PrimaryModelFactory):
                         faker.Faker().word(part_of_speech="adjective"),
                         o.vlan_group,  # may be None
                         o.location,  # may be None
-                        str(o.site).replace(" ", "_") if o.site else None,  # may be None
                     ),
                 )
             ]
@@ -369,19 +199,8 @@ class VLANFactory(PrimaryModelFactory):
     has_location = NautobotBoolIterator()
     location = factory.Maybe(
         "has_vlan_group",
-        factory.LazyAttribute(lambda l: l.vlan_group.location),
+        factory.LazyAttribute(lambda vlan: vlan.vlan_group.location),
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
-    )
-
-    has_site = NautobotBoolIterator()
-    site = factory.Maybe(
-        "has_vlan_group",
-        factory.LazyAttribute(lambda l: l.vlan_group.site),
-        factory.Maybe(
-            "has_location",
-            factory.LazyAttribute(lambda l: l.location.site),
-            factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
-        ),
     )
 
     has_tenant = NautobotBoolIterator()
@@ -390,7 +209,7 @@ class VLANFactory(PrimaryModelFactory):
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("vlan_group", "location", "site", "tenant")
+        django_get_or_create = ("vlan_group", "location", "tenant")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -422,36 +241,26 @@ class PrefixFactory(PrimaryModelFactory):
         model = Prefix
 
     class Params:
+        has_date_allocated = NautobotBoolIterator()
         has_description = NautobotBoolIterator()
         has_location = NautobotBoolIterator()
+        has_rir = NautobotBoolIterator()
         has_role = NautobotBoolIterator()
-        has_site = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
         has_vlan = NautobotBoolIterator()
         has_vrf = NautobotBoolIterator()
         is_container = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
-        ipv6_cidr = factory.Faker("ipv6", network=True)
-        # faker ipv6 provider generates networks with /0 cidr, change to anything but /0
-        ipv6_fixed = factory.LazyAttribute(
-            lambda o: o.ipv6_cidr.replace("/0", f"/{UniqueFaker('pyint', min_length=1, max_length=128)!s}")
-        )
 
     prefix = factory.Maybe(
         "is_ipv6",
-        factory.SelfAttribute("ipv6_fixed"),
-        UniqueFaker("ipv4", network=True, private=True),
+        UniqueFaker("ipv6_network"),
+        UniqueFaker("ipv4", network=True),
     )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-    # TODO: create a LocationGetOrCreateFactory to get or create a location with matching site
+    # TODO: create a LocationGetOrCreateFactory to get or create a location
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
-    )
-    # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
-    site = factory.Maybe(
-        "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
     )
     role = factory.Maybe(
         "has_role",
@@ -473,7 +282,6 @@ class PrefixFactory(PrimaryModelFactory):
             VLANGetOrCreateFactory,
             vlan_group=None,
             location=factory.SelfAttribute("..location"),
-            site=factory.SelfAttribute("..site"),
             tenant=factory.SelfAttribute("..tenant"),
         ),
         None,
@@ -483,6 +291,8 @@ class PrefixFactory(PrimaryModelFactory):
         factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
         None,
     )
+    rir = factory.Maybe("has_rir", random_instance(RIR, allow_null=False), None)
+    date_allocated = factory.Maybe("has_date_allocated", factory.Faker("date_time", tzinfo=datetime.timezone.utc), None)
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
@@ -547,17 +357,17 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.family == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
-            # Create child prefixes, preserving site, location, vrf and is_ipv6 from parent
+            # Create child prefixes, preserving location, vrf and is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
                     break
                 method(
                     prefix=str(address.cidr),
-                    site=self.site,
                     location=self.location,
                     children__max_count=4,
                     is_ipv6=is_ipv6,
                     vrf=self.vrf,
+                    has_rir=False,
                     **kwargs,
                 )
 
@@ -565,11 +375,11 @@ class PrefixFactory(PrimaryModelFactory):
 class IPAddressFactory(PrimaryModelFactory):
     """Create random IPAddress objects with randomized data.
 
-    The fields `assigned_object`, `description`, `dns_name`, `nat_inside`, `role`, `tenant`, and `vrf`
-    have a 50% chance to be populated with randomized data, otherwise they are null or blank depending
-    on the field. The address has a 50% chance to be ipv4 or ipv6. Uses a self-referential SubFactory
-    to create random IPAddress objects to use for the `nat_inside` reference. This can be disabled by
-    passing `has_nat_inside=False` to the create/build methods.
+    The fields `description`, `dns_name`, `nat_inside`, `role`, `tenant`, and `vrf` have a 50% chance
+    to be populated with randomized data, otherwise they are null or blank depending on the field.
+    The address has a 50% chance to be ipv4 or ipv6. Uses a self-referential SubFactory to create
+    random IPAddress objects to use for the `nat_inside` reference. This can be disabled by passing
+    `has_nat_inside=False` to the create/build methods.
 
     Examples:
         Create 20 IP addresses with 50% chance to generate IP addresses for `nat_inside`:
@@ -585,7 +395,6 @@ class IPAddressFactory(PrimaryModelFactory):
         model = IPAddress
 
     class Params:
-        has_assigned_object = NautobotBoolIterator()
         has_description = NautobotBoolIterator()
         has_dns_name = NautobotBoolIterator()
         has_nat_inside = NautobotBoolIterator()
@@ -599,8 +408,6 @@ class IPAddressFactory(PrimaryModelFactory):
         UniqueFaker("ipv6"),
         UniqueFaker("ipv4_private"),
     )
-    # TODO: add objects for assigned_object when factories for dcim.interface and virtualization.vminterface are ready
-    assigned_object = factory.Maybe("has_assigned_object", None, None)
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     dns_name = factory.Maybe("has_dns_name", factory.Faker("hostname"), "")
     nat_inside = factory.SubFactory(

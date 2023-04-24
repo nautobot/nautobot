@@ -1,15 +1,16 @@
 from django.test import TestCase
 
 from nautobot.dcim.forms import CableCSVForm, DeviceForm, InterfaceCreateForm, InterfaceCSVForm
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceStatusChoices, InterfaceTypeChoices
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices
 
 from nautobot.dcim.models import (
     Device,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
     Platform,
     Rack,
-    Site,
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status
@@ -22,13 +23,12 @@ def get_id(model, slug):
 
 class DeviceTestCase(TestCase):
     def setUp(self):
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).first()
 
     @classmethod
     def setUpTestData(cls):
-
-        cls.site = Site.objects.first()
-        cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
 
         # Platforms that have a manufacturer.
         mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
@@ -45,17 +45,17 @@ class DeviceTestCase(TestCase):
 
         Device.objects.create(
             name="Device 1",
-            status=Status.objects.get_for_model(Device).get(slug="active"),
+            status=Status.objects.get_for_model(Device).first(),
             device_type=cls.device_type,
             role=cls.device_role,
-            site=cls.site,
+            location=cls.location,
             rack=cls.rack,
             position=1,
         )
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1")
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
-        SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1")
+        SecretsGroup.objects.create(name="Secrets Group 1")
 
     def test_racked_device(self):
         form = DeviceForm(
@@ -65,7 +65,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1 + self.device_type.u_height,
@@ -84,7 +84,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1,
@@ -103,7 +103,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": None,
                 "position": None,
@@ -123,7 +123,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": DeviceFaceChoices.FACE_REAR,
                 "platform": None,
@@ -141,7 +141,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "position": 10,
                 "platform": None,
@@ -155,19 +155,19 @@ class DeviceTestCase(TestCase):
 class LabelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
         )
 
     def test_interface_label_count_valid(self):
         """Test that a `label` can be generated for each generated `name` from `name_pattern` on InterfaceCreateForm"""
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        status_active = Status.objects.get_for_model(Interface).first()
         interface_data = {
             "device": self.device.pk,
             "name_pattern": "eth[0-9]",
@@ -196,20 +196,20 @@ class LabelTestCase(TestCase):
 class TestCableCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         cls.device_1 = Device.objects.create(
             name="Device 1",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
         )
         cls.device_2 = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
         )
         cls.interface_1 = Interface.objects.create(
             device=cls.device_1,
@@ -251,7 +251,7 @@ class TestCableCSVForm(TestCase):
 class TestInterfaceCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
 
@@ -260,19 +260,19 @@ class TestInterfaceCSVForm(TestCase):
                 name="Device 1",
                 device_type=device_type,
                 role=device_role,
-                site=site,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
                 role=device_role,
-                site=site,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
                 role=device_role,
-                site=site,
+                location=location,
             ),
         )
 
@@ -281,6 +281,7 @@ class TestInterfaceCSVForm(TestCase):
         )
         Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=virtualchassis, vc_position=1)
         Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=virtualchassis, vc_position=2)
+        cls.status = Status.objects.get_for_model(Interface).first()
 
         cls.interfaces = (
             Interface.objects.create(
@@ -328,11 +329,10 @@ class TestInterfaceCSVForm(TestCase):
 
     def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
-
         data_1 = {
             "device": self.devices[0].name,
             "name": "interface test",
-            "status": "active",
+            "status": self.status.name,
             "parent_interface": self.interfaces[0].name,
             "bridge": self.interfaces[2].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -350,7 +350,7 @@ class TestInterfaceCSVForm(TestCase):
         data_2 = {
             "device": self.devices[0].name,
             "name": "interface lagged",
-            "status": "active",
+            "status": self.status.name,
             "lag": self.interfaces[2].name,
             "bridge": self.interfaces[1].name,
             "type": InterfaceTypeChoices.TYPE_100ME_FIXED,
@@ -369,7 +369,7 @@ class TestInterfaceCSVForm(TestCase):
         data = {
             "device": self.devices[0].name,
             "name": "interface test",
-            "status": "active",
+            "status": self.status.name,
             "parent_interface": self.interfaces[4].name,
             "bridge": self.interfaces[4].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -384,7 +384,7 @@ class TestInterfaceCSVForm(TestCase):
         data = {
             "device": self.devices[0].name,
             "name": "interface lagged",
-            "status": "active",
+            "status": self.status.name,
             "lag": self.interfaces[3].name,
             "bridge": self.interfaces[1].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,

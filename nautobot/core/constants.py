@@ -6,25 +6,31 @@ SEARCH_MAX_RESULTS = 15
 
 SEARCH_MAX_RESULTS = 15
 
-FILTER_CHAR_BASED_LOOKUP_MAP = dict(
-    n="exact",
-    ic="icontains",
-    nic="icontains",
-    iew="iendswith",
-    niew="iendswith",
-    isw="istartswith",
-    nisw="istartswith",
-    ie="iexact",
-    nie="iexact",
-    re="regex",
-    nre="regex",
-    ire="iregex",
-    nire="iregex",
-)
+FILTER_CHAR_BASED_LOOKUP_MAP = {
+    "n": "exact",
+    "ic": "icontains",
+    "nic": "icontains",
+    "iew": "iendswith",
+    "niew": "iendswith",
+    "isw": "istartswith",
+    "nisw": "istartswith",
+    "ie": "iexact",
+    "nie": "iexact",
+    "re": "regex",
+    "nre": "regex",
+    "ire": "iregex",
+    "nire": "iregex",
+}
 
-FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
+FILTER_NUMERIC_BASED_LOOKUP_MAP = {
+    "n": "exact",
+    "lte": "lte",
+    "lt": "lt",
+    "gte": "gte",
+    "gt": "gt",
+}
 
-FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
+FILTER_NEGATION_LOOKUP_MAP = {"n": "exact"}
 
 
 #
@@ -48,3 +54,11 @@ HTTP_REQUEST_META_SAFE_COPY = [
     "SERVER_NAME",
     "SERVER_PORT",
 ]
+
+
+#
+# Factory defaults
+#
+
+NAUTOBOT_BOOL_ITERATOR_DEFAULT_LENGTH = 8
+NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY = 50

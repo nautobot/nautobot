@@ -5,6 +5,7 @@ from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
+from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -78,6 +79,22 @@ class NautobotAutoSchema(AutoSchema):
                 "required": True,
             }
 
+        # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
+        if "parameters" in operation:
+            for param in operation["parameters"]:
+                if param["name"] == "id" and "description" not in param:
+                    param["description"] = "Unique object identifier, either a UUID primary key or a natural-key slug."
+            if self.method == "GET":
+                if "depth" not in operation["parameters"]:
+                    operation["parameters"].append(
+                        {
+                            "in": "query",
+                            "name": "depth",
+                            "required": False,
+                            "description": "Serializer Depth",
+                            "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
+                        }
+                    )
         return operation
 
     def get_operation_id(self):
@@ -261,6 +278,14 @@ class NautobotFilterExtension(DjangoFilterExtension):
     """
 
     target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
+
+
+class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExtension):
+    """
+    Extend the PolymorphicProxySerializerExtension to cover Nautobot's PolymorphicProxySerializer class.
+    """
+
+    target_class = "nautobot.core.api.serializers.PolymorphicProxySerializer"
 
 
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):

@@ -26,8 +26,6 @@ from .models import (
     RackGroup,
     RackReservation,
     RearPort,
-    Region,
-    Site,
     VirtualChassis,
 )
 
@@ -37,61 +35,6 @@ router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 
 urlpatterns = [
-    # Regions
-    path("regions/", views.RegionListView.as_view(), name="region_list"),
-    path("regions/add/", views.RegionEditView.as_view(), name="region_add"),
-    path("regions/import/", views.RegionBulkImportView.as_view(), name="region_import"),
-    path(
-        "regions/delete/",
-        views.RegionBulkDeleteView.as_view(),
-        name="region_bulk_delete",
-    ),
-    path("regions/<uuid:pk>/", views.RegionView.as_view(), name="region"),
-    path("regions/<uuid:pk>/edit/", views.RegionEditView.as_view(), name="region_edit"),
-    path(
-        "regions/<uuid:pk>/delete/",
-        views.RegionDeleteView.as_view(),
-        name="region_delete",
-    ),
-    path(
-        "regions/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="region_changelog",
-        kwargs={"model": Region},
-    ),
-    path(
-        "regions/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="region_notes",
-        kwargs={"model": Region},
-    ),
-    # Sites
-    path("sites/", views.SiteListView.as_view(), name="site_list"),
-    path("sites/add/", views.SiteEditView.as_view(), name="site_add"),
-    path("sites/import/", views.SiteBulkImportView.as_view(), name="site_import"),
-    path("sites/edit/", views.SiteBulkEditView.as_view(), name="site_bulk_edit"),
-    path("sites/delete/", views.SiteBulkDeleteView.as_view(), name="site_bulk_delete"),
-    path("sites/<slug:slug>/", views.SiteView.as_view(), name="site"),
-    path("sites/<slug:slug>/edit/", views.SiteEditView.as_view(), name="site_edit"),
-    path("sites/<slug:slug>/delete/", views.SiteDeleteView.as_view(), name="site_delete"),
-    path(
-        "sites/<slug:slug>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="site_changelog",
-        kwargs={"model": Site},
-    ),
-    path(
-        "sites/<slug:slug>/notes/",
-        ObjectNotesView.as_view(),
-        name="site_notes",
-        kwargs={"model": Site},
-    ),
-    path(
-        "sites/<uuid:object_id>/images/add/",
-        ImageAttachmentEditView.as_view(),
-        name="site_add_image",
-        kwargs={"model": Site},
-    ),
     # Location types
     path("location-types/", views.LocationTypeListView.as_view(), name="locationtype_list"),
     path("location-types/add/", views.LocationTypeEditView.as_view(), name="locationtype_add"),
@@ -284,28 +227,28 @@ urlpatterns = [
         name="manufacturer_bulk_delete",
     ),
     path(
-        "manufacturers/<slug:slug>/",
+        "manufacturers/<uuid:pk>/",
         views.ManufacturerView.as_view(),
         name="manufacturer",
     ),
     path(
-        "manufacturers/<slug:slug>/edit/",
+        "manufacturers/<uuid:pk>/edit/",
         views.ManufacturerEditView.as_view(),
         name="manufacturer_edit",
     ),
     path(
-        "manufacturers/<slug:slug>/delete/",
+        "manufacturers/<uuid:pk>/delete/",
         views.ManufacturerDeleteView.as_view(),
         name="manufacturer_delete",
     ),
     path(
-        "manufacturers/<slug:slug>/changelog/",
+        "manufacturers/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="manufacturer_changelog",
         kwargs={"model": Manufacturer},
     ),
     path(
-        "manufacturers/<slug:slug>/notes/",
+        "manufacturers/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="manufacturer_notes",
         kwargs={"model": Manufacturer},
@@ -612,25 +555,25 @@ urlpatterns = [
         views.PlatformBulkDeleteView.as_view(),
         name="platform_bulk_delete",
     ),
-    path("platforms/<slug:slug>/", views.PlatformView.as_view(), name="platform"),
+    path("platforms/<uuid:pk>/", views.PlatformView.as_view(), name="platform"),
     path(
-        "platforms/<slug:slug>/edit/",
+        "platforms/<uuid:pk>/edit/",
         views.PlatformEditView.as_view(),
         name="platform_edit",
     ),
     path(
-        "platforms/<slug:slug>/delete/",
+        "platforms/<uuid:pk>/delete/",
         views.PlatformDeleteView.as_view(),
         name="platform_delete",
     ),
     path(
-        "platforms/<slug:slug>/changelog/",
+        "platforms/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="platform_changelog",
         kwargs={"model": Platform},
     ),
     path(
-        "platforms/<slug:slug>/notes/",
+        "platforms/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="platform_notes",
         kwargs={"model": Platform},

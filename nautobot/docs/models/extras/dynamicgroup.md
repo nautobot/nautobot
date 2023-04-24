@@ -82,9 +82,9 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 ```no-highlight
 (
   (
-    site__slug='ams01' OR site__slug='bkk01'
+    location__name='Campus-02' OR location__name='Room-01'
   ) AND (
-    status__slug='active' OR status__slug='offline'
+    status__name='Offline'
   )
 )
 ```
@@ -101,10 +101,10 @@ Now, let's say that you add a third site to your network. This site is currently
     (
       site__slug='ams01' OR site__slug='bkk01'
     ) AND (
-      status__slug='active' OR status__slug='offline'
+      status__name='Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__slug='active'
+    site__slug='can01' AND status__name='Active'
   )
 )
 ```
@@ -139,10 +139,10 @@ The "Devices of Interest" Dynamic Group now contains the filtered Devices from b
     (
       site__slug='ams01' OR site__slug='bkk01'
     ) AND (
-      status__slug='active' OR status__slug='offline'
+      status__name'Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__slug='active'
+    site__slug='can01' AND status__name='Active'
   )
 )
 ```
@@ -187,13 +187,13 @@ You can see the filter logic that this combination of groups results in:
     (
       site__slug='ams01' OR site__slug='bkk01'
     ) AND (
-      status__slug='active' OR status__slug='offline'
+      status__name='Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__slug='active'
+    site__slug='can01' AND status__name'Active'
   ) OR (
     site__slug='del01' AND (
-      NOT (site__slug='del01' AND status__slug='decommissioning')
+      NOT (site__slug='del01' AND status__name='Decommissioning')
     )
   )
 )
@@ -426,7 +426,7 @@ Response:
     "content_type": "dcim.device",
     "filter": {},
     "children": [],
-    "created": "2022-07-06",
+    "created": "2022-07-06T20:17:04.305663Z",
     "last_updated": "2022-07-06T20:17:04.305663Z",
     "custom_fields": {},
     "computed_fields": {},
@@ -563,7 +563,7 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
             "weight": 10
         }
     ],
-    "created": "2022-07-15",
+    "created": "2022-07-15T00:00:00Z",
     "last_updated": "2022-07-15T16:50:45.453965Z",
     "notes_url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/notes/",
     "custom_fields": {}

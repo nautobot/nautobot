@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models, transaction
-from django_cryptography.fields import encrypt
 
 from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
@@ -14,16 +13,12 @@ from nautobot.extras.utils import extras_features
 
 @extras_features(
     "config_context_owners",
-    "custom_fields",
     "export_template_owners",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
-
-    TOKEN_PLACEHOLDER = "********"
 
     name = models.CharField(
         max_length=100,
@@ -49,27 +44,13 @@ class GitRepository(PrimaryModel):
         blank=True,
     )
 
-    # Mark field as private so that it doesn't get included in ChangeLogging records!
-    _token = encrypt(
-        models.CharField(
-            max_length=200,
-            blank=True,
-            default="",
-        )
-    )
-
-    username = models.CharField(
-        max_length=64,
-        blank=True,
-        default="",
-    )
-
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
         default=None,
         blank=True,
         null=True,
+        related_name="git_repositories",
     )
 
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
@@ -89,9 +70,8 @@ class GitRepository(PrimaryModel):
         self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
 
-        # Store the initial repo slug and token so we can check for changes on save().
+        # Store the initial repo slug so we can check for changes on save().
         self.__initial_slug = self.slug
-        self.__initial_token = self._token
 
     def __str__(self):
         return self.name
@@ -102,15 +82,9 @@ class GitRepository(PrimaryModel):
             self.slug,
             self.remote_url,
             self.branch,
+            self.secrets_group.name if self.secrets_group else None,
             self.provided_contents,
         )
-
-    @property
-    def token_rendered(self):
-        if self._token:
-            return self.TOKEN_PLACEHOLDER
-        else:
-            return "—"
 
     @property
     def filesystem_path(self):
@@ -125,10 +99,6 @@ class GitRepository(PrimaryModel):
         self._dryrun = True
 
     def save(self, *args, trigger_resync=True, **kwargs):
-        if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
-            # User edited the repo but did NOT specify a new token value. Make sure we keep the existing value.
-            self._token = self.__initial_token
-
         super().save(*args, **kwargs)
 
         def on_commit_callback():
@@ -161,7 +131,6 @@ class GitRepository(PrimaryModel):
                     enqueue_pull_git_repository_and_refresh_data(self, self.request)
 
             # Update cached values
-            self.__initial_token = self._token
             self.__initial_slug = self.slug
 
         transaction.on_commit(on_commit_callback)

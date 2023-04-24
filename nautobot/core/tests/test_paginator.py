@@ -51,9 +51,12 @@ class PaginatorTestCase(testing.TestCase):
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):
         """Request an object list view and assert that the MAX_PAGE_SIZE setting is enforced"""
-        models.Site.objects.bulk_create([models.Site(name=f"TestSite{x}") for x in range(20)])
-        url = reverse("dcim:site_list")
-        self.add_permissions("dcim.view_site")
+        location_type = models.LocationType.objects.get(name="Campus")
+        models.Location.objects.bulk_create(
+            [models.Location(name=f"TestLocation{x}", location_type=location_type) for x in range(20)]
+        )
+        url = reverse("dcim:location_list")
+        self.add_permissions("dcim.view_location")
         self.client.force_login(self.user)
         with self.subTest("query parameter per_page=20 returns 10 rows"):
             response = self.client.get(url, {"per_page": 20})

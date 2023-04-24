@@ -18,7 +18,7 @@
 
 {% block extra_buttons %}
         {% if perms.ipam.add_prefix and active_tab == 'prefixes' and first_available_prefix %}
-        <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&vrf={{ object.vrf.pk }}&site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
+        <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&vrf={{ object.vrf.pk }}&location={{ object.location.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">
                 <i class="mdi mdi-plus-thick" aria-hidden="true"></i> Add Child Prefix
             </a>
         {% endif %}
@@ -81,25 +81,6 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Aggregate</td>
-                        <td>
-                            {% if aggregate %}
-                                {{ aggregate|hyperlinked_object }} ({{ aggregate.rir }})
-                            {% else %}
-                                <span class="text-warning">None</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Site</td>
-                        <td>
-                            {% if object.site and object.site.region %}
-                                {{ object.site.region|hyperlinked_object }} /
-                            {% endif %}
-                            {{ object.site|hyperlinked_object }}
-                        </td>
-                    </tr>
-                    <tr>
                         <td>Location</td>
                         <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
@@ -121,6 +102,14 @@
                     <tr>
                         <td>Role</td>
                         <td>{{ object.role | hyperlinked_object_with_color }}</td>
+                    </tr>
+                    <tr>
+                        <td>RIR</td>
+                        <td>{{ object.rir|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>Date Allocated</td>
+                        <td>{{ object.date_allocated|placeholder }}</td>
                     </tr>
                     <tr>
                         <td>Description</td>

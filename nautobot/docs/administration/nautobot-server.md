@@ -238,7 +238,6 @@ Creating Statuses...
 Creating TenantGroups...
 Creating Tenants...
 Creating RIRs...
-Creating Aggregates...
 Creating RouteTargets...
 Creating VRFs...
 Creating IP/VLAN Roles...
@@ -382,7 +381,7 @@ from nautobot.extras.models.roles import Role
 from nautobot.extras.models.secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag, TaggedItem
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VMInterface, VirtualMachine
@@ -396,10 +395,10 @@ from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, Wh
 from django.utils import timezone
 from django.urls import reverse
 from django.db.models import Exists, OuterRef, Subquery
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 3.2.18
+# Nautobot version 2.0.0a2
 # Example Nautobot App version 1.0.0
-Python 3.7.13 (default, May 11 2022, 08:57:12)
+Python 3.8.16 (default, Mar 23 2023, 04:48:11)
 [GCC 10.2.1 20210110] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)

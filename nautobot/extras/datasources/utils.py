@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.extras.choices import LogLevelChoices
 
 
-logger = logging.getLogger("nautobot.datasources.utils")
+logger = logging.getLogger(__name__)
 
 
 def files_from_contenttype_directories(base_path, job_result, log_grouping):

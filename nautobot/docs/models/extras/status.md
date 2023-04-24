@@ -33,7 +33,10 @@ For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be cust
     data models of their own that implement a `status` field. Proceed at your
     own risk!
 
-Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `dcim_device_related`).
+Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's verbose plural name (e.g. `devices`).
+
++/- 2.0.0
+    The related name for Statuses was changed to be based on the model's `verbose_name_plural` instead of the pattern `%(app_label)s_%(model)s_related`. For example, `Status.devices` and not `Status.dcim_device_related`.
 
 ### `StatusField` model field
 
@@ -58,13 +61,6 @@ Any model form that is intended to have a `status` field must inherit from one o
     In prior Nautobot versions these mixins were named `StatusFilterFormMixin` and `StatusBulkEditFormMixin`; the old names are still available as aliases but will be removed in a future major release.
 
 - FIXME: CSV import forms
-
-### `StatusModelSerializerMixin` serializer mixin
-
-Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
-
-+/- 2.0.0
-    The `StatusSerializerField` was changed to use a `NestedStatusSerializer` instead of presenting choices as a list of enums.
 
 ### Table field
 
@@ -92,10 +88,6 @@ To fully integrate a model to include a `status` field, assert the following:
 ### Filters
 
 - Filtersets for your model must inherit from `nautobot.extras.filters.StatusModelFilterSetMixin`
-
-### Serializers
-
-- Serializers for your model must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`
 
 ### Tables
 

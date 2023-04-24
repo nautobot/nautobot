@@ -10,11 +10,10 @@ Example one:
 
 1. Type in `10.10.10.0` in the Search Bar and click on `Search`
     * This takes you to a search results page
-2. **Aggregate** search result `10.0.0.0/8` (this is the Aggregate for the Prefix `10.10.10.0/24`)
-3. **Prefix** search result `10.10.10.0/24`
-4. **IP Address** search result `10.10.10.0/31`
-5. Interface related to `10.10.10.0/31`
-6. Interface Parent (Device) for `10.10.10.0/31`
+2. **Prefix** search result `10.10.10.0/24`
+3. **IP Address** search result `10.10.10.0/31`
+4. Interface related to `10.10.10.0/31`
+5. Interface Parent (Device) for `10.10.10.0/31`
 
 Clicking on any of these objects takes you to the main page for that object.
 This example shows the result of clicking on the **IP Address** object (4).

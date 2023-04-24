@@ -6,6 +6,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
@@ -34,7 +35,7 @@ from nautobot.core.graphql.schema import (
 )
 from nautobot.core.testing import NautobotTestClient, create_test_user
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
-from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
+from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import (
     Cable,
@@ -44,14 +45,14 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     Interface,
+    Location,
+    LocationType,
     PowerFeed,
     PowerPort,
     PowerOutlet,
     PowerPanel,
     Rack,
     RearPort,
-    Region,
-    Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import (
@@ -68,7 +69,8 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+from nautobot.virtualization.factory import ClusterTypeFactory
+from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -77,30 +79,28 @@ User = get_user_model()
 class GraphQLTestCase(TestCase):
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
-        GraphQLQuery.objects.create(name="GQL 1", slug="gql-1", query="{ query: sites {name} }")
-        GraphQLQuery.objects.create(
-            name="GQL 2", slug="gql-2", query="query ($name: [String!]) { sites(name:$name) {name} }"
-        )
-        self.region = Region.objects.first()
-        self.sites = (
-            Site.objects.create(name="Site-1", slug="site-1", region=self.region),
-            Site.objects.create(name="Site-2", slug="site-2", region=self.region),
-            Site.objects.create(name="Site-3", slug="site-3", region=self.region),
+        GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
+        GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
+        self.location_type = LocationType.objects.get(name="Campus")
+        self.locations = (
+            Location.objects.create(name="Location-1", slug="location-1", location_type=self.location_type),
+            Location.objects.create(name="Location-2", slug="location-2", location_type=self.location_type),
+            Location.objects.create(name="Location-3", slug="location-3", location_type=self.location_type),
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query(self):
-        query = "{ query: sites {name} }"
+        query = "{ query: locations {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(len(resp["data"]["query"]), Site.objects.all().count())
+        self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
-        query = "query ($name: [String!]) { sites(name:$name) {name} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
+        query = "query ($name: [String!]) { locations(name:$name) {name} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
         self.assertFalse(resp.get("error"))
-        self.assertEqual(len(resp["data"]["sites"]), 1)
+        self.assertEqual(len(resp["data"]["locations"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
@@ -108,17 +108,16 @@ class GraphQLTestCase(TestCase):
             execute_query(query, user=self.user).to_dict()
 
     def test_execute_saved_query(self):
-        resp = execute_saved_query("gql-1", user=self.user).to_dict()
+        resp = execute_saved_query("GQL 1", user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
 
     def test_execute_saved_query_with_variable(self):
-        resp = execute_saved_query("gql-2", user=self.user, variables={"name": "site-1"}).to_dict()
+        resp = execute_saved_query("GQL 2", user=self.user, variables={"name": "location-1"}).to_dict()
         self.assertFalse(resp["data"].get("error"))
 
 
 class GraphQLUtilsTestCase(TestCase):
     def test_str_to_var_name(self):
-
         self.assertEqual(str_to_var_name("IP Addresses"), "ip_addresses")
         self.assertEqual(str_to_var_name("My New VAR"), "my_new_var")
         self.assertEqual(str_to_var_name("My-VAR"), "my_var")
@@ -126,14 +125,12 @@ class GraphQLUtilsTestCase(TestCase):
 
 class GraphQLGenerateSchemaTypeTestCase(TestCase):
     def test_model_w_filterset(self):
-
         schema = generate_schema_type(app_name="dcim", model=Device)
         self.assertEqual(schema.__bases__[0], DjangoObjectType)
         self.assertEqual(schema._meta.model, Device)
         self.assertEqual(schema._meta.filterset_class, DeviceFilterSet)
 
     def test_model_wo_filterset(self):
-
         schema = generate_schema_type(app_name="wrong_app", model=ChangeLoggedModel)
         self.assertEqual(schema.__bases__[0], DjangoObjectType)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
@@ -142,7 +139,6 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
 
 class GraphQLExtendSchemaType(TestCase):
     def setUp(self):
-
         self.datas = (
             {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
             {
@@ -169,19 +165,18 @@ class GraphQLExtendSchemaType(TestCase):
             {"field_name": "my_url", "field_type": CustomFieldTypeChoices.TYPE_URL},
         )
 
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
 
-        # Create custom fields for Site objects
+        # Create custom fields for Location objects
         for data in self.datas:
-            cf = CustomField.objects.create(type=data["field_type"], name=data["field_name"], required=False)
+            cf = CustomField.objects.create(type=data["field_type"], label=data["field_name"], required=False)
             cf.content_types.set([obj_type])
 
-        self.schema = generate_schema_type(app_name="dcim", model=Site)
+        self.schema = generate_schema_type(app_name="dcim", model=Location)
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX="pr")
     def test_extend_custom_field_w_prefix(self):
-
-        schema = extend_schema_type_custom_field(self.schema, Site)
+        schema = extend_schema_type_custom_field(self.schema, Location)
 
         for data in self.datas:
             field_name = f"pr_{str_to_var_name(data['field_name'])}"
@@ -189,8 +184,7 @@ class GraphQLExtendSchemaType(TestCase):
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX="")
     def test_extend_custom_field_wo_prefix(self):
-
-        schema = extend_schema_type_custom_field(self.schema, Site)
+        schema = extend_schema_type_custom_field(self.schema, Location)
 
         for data in self.datas:
             field_name = str_to_var_name(data["field_name"])
@@ -198,42 +192,36 @@ class GraphQLExtendSchemaType(TestCase):
 
     @override_settings(GRAPHQL_CUSTOM_FIELD_PREFIX=None)
     def test_extend_custom_field_prefix_none(self):
-
-        schema = extend_schema_type_custom_field(self.schema, Site)
+        schema = extend_schema_type_custom_field(self.schema, Location)
 
         for data in self.datas:
             field_name = str_to_var_name(data["field_name"])
             self.assertIn(field_name, schema._meta.fields.keys())
 
     def test_extend_tags_enabled(self):
-
-        schema = extend_schema_type_tags(self.schema, Site)
+        schema = extend_schema_type_tags(self.schema, Location)
 
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
     def test_extend_config_context(self):
-
         schema = extend_schema_type_config_context(DeviceTypeGraphQL, Device)
         self.assertIn("config_context", schema._meta.fields.keys())
 
     def test_extend_schema_device(self):
-
         # The below *will* log an error as DeviceTypeGraphQL has already been extended automatically...?
         schema = extend_schema_type(DeviceTypeGraphQL)
         self.assertIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
-    def test_extend_schema_site(self):
-
+    def test_extend_schema_location(self):
         schema = extend_schema_type(self.schema)
         self.assertNotIn("config_context", schema._meta.fields.keys())
         self.assertTrue(hasattr(schema, "resolve_tags"))
         self.assertIsInstance(getattr(schema, "resolve_tags"), types.FunctionType)
 
     def test_extend_schema_null_field_choices(self):
-
         schema = extend_schema_type_null_field_choice(self.schema, Interface)
 
         self.assertTrue(hasattr(schema, "resolve_mode"))
@@ -242,8 +230,7 @@ class GraphQLExtendSchemaType(TestCase):
 
 class GraphQLExtendSchemaRelationship(TestCase):
     def setUp(self):
-
-        site_ct = ContentType.objects.get_for_model(Site)
+        location_ct = ContentType.objects.get_for_model(Location)
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
 
@@ -268,44 +255,44 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.m2m_2.validated_save()
 
         self.o2m_1 = Relationship(
-            name="generic site to vlan",
-            slug="site-vlan",
-            source_type=site_ct,
+            name="generic location to vlan",
+            slug="location-vlan",
+            source_type=location_ct,
             destination_type=vlan_ct,
             type="one-to-many",
         )
         self.o2m_1.validated_save()
 
         self.o2o_1 = Relationship(
-            name="Primary Rack per Site",
-            slug="primary-rack-site",
+            name="Primary Rack per Location",
+            slug="primary-rack-location",
             source_type=rack_ct,
             source_hidden=True,
-            destination_type=site_ct,
+            destination_type=location_ct,
             destination_label="Primary Rack",
             type="one-to-one",
         )
         self.o2o_1.validated_save()
 
         self.o2os_1 = Relationship(
-            name="Redundant Site",
-            slug="redundant-site",
-            source_type=site_ct,
-            destination_type=site_ct,
+            name="Redundant Location",
+            slug="redundant-location",
+            source_type=location_ct,
+            destination_type=location_ct,
             type="symmetric-one-to-one",
         )
         self.o2os_1.validated_save()
 
         self.o2m_same_type_1 = Relationship(
-            name="Some sort of site hierarchy?",
-            slug="site-hierarchy",
-            source_type=site_ct,
-            destination_type=site_ct,
+            name="Some sort of location hierarchy?",
+            slug="location-hierarchy",
+            source_type=location_ct,
+            destination_type=location_ct,
             type="one-to-many",
         )
         self.o2m_same_type_1.validated_save()
 
-        self.site_schema = generate_schema_type(app_name="dcim", model=Site)
+        self.location_schema = generate_schema_type(app_name="dcim", model=Location)
         self.vlan_schema = generate_schema_type(app_name="ipam", model=VLAN)
 
     def test_extend_relationship_default_prefix(self):
@@ -334,9 +321,9 @@ class GraphQLExtendSchemaRelationship(TestCase):
     @override_settings(GRAPHQL_RELATIONSHIP_PREFIX="pr")
     def test_extend_relationship_w_prefix(self):
         """Verify that relationships are correctly added to the schema when using a custom prefix setting."""
-        schema = extend_schema_type_relationships(self.site_schema, Site)
+        schema = extend_schema_type_relationships(self.location_schema, Location)
 
-        # Relationships on Site
+        # Relationships on Location
         for rel, peer_side in [
             (self.o2m_1, "destination"),
             (self.o2o_1, "source"),
@@ -361,7 +348,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
                 else:
                     self.assertNotIsInstance(schema._meta.fields[field_name].type, graphene.types.structures.List)
 
-        # Relationships not on Site
+        # Relationships not on Location
         for rel in [self.m2m_1, self.m2m_2]:
             field_name = f"pr_{str_to_var_name(rel.slug)}"
             self.assertNotIn(field_name, schema._meta.fields.keys())
@@ -369,12 +356,10 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
 class GraphQLSearchParameters(TestCase):
     def setUp(self):
-
-        self.schema = generate_schema_type(app_name="dcim", model=Site)
+        self.schema = generate_schema_type(app_name="dcim", model=Location)
 
     def test_search_parameters(self):
-
-        fields = SiteFilterSet().filters.keys()
+        fields = LocationFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
         exclude_filters = ["type"]
 
@@ -416,17 +401,13 @@ class GraphQLAPIPermissionTest(TestCase):
         self.clients[2].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
         self.clients[3].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[3].key}")
 
-        self.regions = (
-            Region.objects.create(name="Region 1", slug="region1"),
-            Region.objects.create(name="Region 2", slug="region2"),
+        self.location_type = LocationType.objects.get(name="Campus")
+        self.locations = (
+            Location.objects.create(name="Location 1", slug="test1", location_type=self.location_type),
+            Location.objects.create(name="Location 2", slug="test2", location_type=self.location_type),
         )
 
-        self.sites = (
-            Site.objects.create(name="Site 1", slug="test1", region=self.regions[0]),
-            Site.objects.create(name="Site 2", slug="test2", region=self.regions[1]),
-        )
-
-        site_object_type = ContentType.objects.get(app_label="dcim", model="site")
+        location_object_type = ContentType.objects.get(app_label="dcim", model="location")
         rack_object_type = ContentType.objects.get(app_label="dcim", model="rack")
 
         # Apply permissions only to User 1 & 2
@@ -435,28 +416,28 @@ class GraphQLAPIPermissionTest(TestCase):
             rack_obj_permission = ObjectPermission.objects.create(
                 name=f"Permission Rack {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"site__slug": f"test{i+1}"},
+                constraints={"location__slug": f"test{i+1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(self.groups[i])
             rack_obj_permission.users.add(self.users[i])
 
-            site_obj_permission = ObjectPermission.objects.create(
-                name=f"Permission Site {i+1}",
+            location_obj_permission = ObjectPermission.objects.create(
+                name=f"Permission Location {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"region__slug": f"region{i+1}"},
+                constraints={"slug": f"test{i+1}"},
             )
-            site_obj_permission.object_types.add(site_object_type)
-            site_obj_permission.groups.add(self.groups[i])
-            site_obj_permission.users.add(self.users[i])
+            location_obj_permission.object_types.add(location_object_type)
+            location_obj_permission.groups.add(self.groups[i])
+            location_obj_permission.users.add(self.users[i])
 
         self.rack_grp1 = (
-            Rack.objects.create(name="Rack 1-1", site=self.sites[0]),
-            Rack.objects.create(name="Rack 1-2", site=self.sites[0]),
+            Rack.objects.create(name="Rack 1-1", location=self.locations[0]),
+            Rack.objects.create(name="Rack 1-2", location=self.locations[0]),
         )
         self.rack_grp2 = (
-            Rack.objects.create(name="Rack 2-1", site=self.sites[1]),
-            Rack.objects.create(name="Rack 2-2", site=self.sites[1]),
+            Rack.objects.create(name="Rack 2-1", location=self.locations[1]),
+            Rack.objects.create(name="Rack 2-2", location=self.locations[1]),
         )
 
         self.api_url = reverse("graphql-api")
@@ -471,23 +452,23 @@ class GraphQLAPIPermissionTest(TestCase):
 
         self.get_racks_params_query = """
         query {
-            racks(site: "test1") {
+            racks(location: "test1") {
                 name
             }
         }
         """
 
         self.get_racks_var_query = """
-        query ($site: [String]) {
-            racks(site: $site) {
+        query ($location: [String]) {
+            racks(location: $location) {
                 name
             }
         }
         """
 
-        self.get_sites_racks_query = """
+        self.get_locations_racks_query = """
         query {
-            sites {
+            locations {
                 name
                 racks {
                     name
@@ -578,14 +559,14 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_query_variables(self):
         """Validate graphql variables are working as expected."""
-        payload = {"query": self.get_racks_var_query, "variables": {"site": "test1"}}
+        payload = {"query": self.get_racks_var_query, "variables": {"location": "test1"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2"])
 
-        payload = {"query": self.get_racks_var_query, "variables": {"site": "test2"}}
+        payload = {"query": self.get_racks_var_query, "variables": {"location": "test2"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -602,12 +583,12 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_query_multi_level(self):
         """Validate request with multiple levels return the proper information, following the permissions."""
-        response = self.clients[0].post(self.api_url, {"query": self.get_sites_racks_query}, format="json")
+        response = self.clients[0].post(self.api_url, {"query": self.get_locations_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["sites"], list)
-        site_names = [item["name"] for item in response.data["data"]["sites"]]
-        self.assertEqual(site_names, ["Site 1"])
-        rack_names = [item["name"] for item in response.data["data"]["sites"][0]["racks"]]
+        self.assertIsInstance(response.data["data"]["locations"], list)
+        location_names = [item["name"] for item in response.data["data"]["locations"]]
+        rack_names = [item["name"] for item in response.data["data"]["locations"][0]["racks"]]
+        self.assertEqual(location_names, ["Location 1"])
         self.assertEqual(rack_names, ["Rack 1-1", "Rack 1-2"])
 
     def test_graphql_query_format(self):
@@ -615,14 +596,14 @@ class GraphQLAPIPermissionTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
         response = self.client.post(
             self.api_url,
-            data=self.get_sites_racks_query,
+            data=self.get_locations_racks_query,
             content_type="application/graphql",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["sites"], list)
-        site_names = [item["name"] for item in response.data["data"]["sites"]]
-        site_list = list(Site.objects.values_list("name", flat=True))
-        self.assertEqual(site_names, site_list)
+        self.assertIsInstance(response.data["data"]["locations"], list)
+        location_names = [item["name"] for item in response.data["data"]["locations"]]
+        location_list = list(Location.objects.values_list("name", flat=True))
+        self.assertEqual(location_names, location_list)
 
 
 class GraphQLQueryTest(TestCase):
@@ -649,34 +630,40 @@ class GraphQLQueryTest(TestCase):
         cls.device_role1 = roles[0]
         cls.device_role2 = roles[1]
         cls.device_role3 = random.choice(roles)
-        cls.site_statuses = list(Status.objects.get_for_model(Site))[:2]
-        cls.region1 = Region.objects.create(name="Region1", slug="region1")
-        cls.region2 = Region.objects.create(name="Region2", slug="region2")
-        cls.site1 = Site.objects.create(
-            name="Site-1", slug="site-1", asn=65000, status=cls.site_statuses[0], region=cls.region1
-        )
-        cls.site2 = Site.objects.create(
-            name="Site-2", slug="site-2", asn=65099, status=cls.site_statuses[1], region=cls.region2
-        )
-        cls.rack1 = Rack.objects.create(name="Rack 1", site=cls.site1)
-        cls.rack2 = Rack.objects.create(name="Rack 2", site=cls.site2)
-        cls.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
-        cls.tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
+        cls.location_statuses = list(Status.objects.get_for_model(Location))[:2]
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.location1 = Location.objects.filter(location_type=cls.location_type).first()
+        cls.location2 = Location.objects.filter(location_type=cls.location_type).last()
+        cls.location1.name = "Location-1"
+        cls.location2.name = "Location-2"
+        cls.location1.status = cls.location_statuses[0]
+        cls.location2.status = cls.location_statuses[1]
+        cls.location1.validated_save()
+        cls.location2.validated_save()
+        cls.rack1 = Rack.objects.create(name="Rack 1", location=cls.location1)
+        cls.rack2 = Rack.objects.create(name="Rack 2", location=cls.location2)
+        cls.tenant1 = Tenant.objects.create(name="Tenant 1")
+        cls.tenant2 = Tenant.objects.create(name="Tenant 2")
 
-        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=cls.site1)
-        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, site=cls.site2)
+        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, location=cls.location1)
+        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, location=cls.location2)
 
-        cls.site1_power_panels = [
-            PowerPanel.objects.create(name="site1-powerpanel1", site=cls.site1),
-            PowerPanel.objects.create(name="site1-powerpanel2", site=cls.site1),
-            PowerPanel.objects.create(name="site1-powerpanel3", site=cls.site1),
+        cls.location1_power_panels = [
+            PowerPanel.objects.create(name="location1-powerpanel1", location=cls.location1),
+            PowerPanel.objects.create(name="location1-powerpanel2", location=cls.location1),
+            PowerPanel.objects.create(name="location1-powerpanel3", location=cls.location1),
         ]
-        cls.site1_power_feeds = [
+        powerfeed_status = Status.objects.get_for_model(PowerFeed).first()
+        cls.location1_power_feeds = [
             PowerFeed.objects.create(
-                name="site1-powerfeed1", status=Status.objects.get(name="Active"), power_panel=cls.site1_power_panels[0]
+                name="location1-powerfeed1",
+                status=powerfeed_status,
+                power_panel=cls.location1_power_panels[0],
             ),
             PowerFeed.objects.create(
-                name="site1-powerfeed2", status=Status.objects.get(name="Active"), power_panel=cls.site1_power_panels[1]
+                name="location1-powerfeed2",
+                status=powerfeed_status,
+                power_panel=cls.location1_power_panels[1],
             ),
         ]
 
@@ -685,7 +672,7 @@ class GraphQLQueryTest(TestCase):
             name="UPS 1",
             device_type=cls.device_type2,
             role=cls.device_role3,
-            site=cls.site1,
+            location=cls.location1,
             status=cls.device_statuses[0],
             rack=cls.rack1,
             tenant=cls.tenant1,
@@ -705,7 +692,7 @@ class GraphQLQueryTest(TestCase):
             name="Device 1",
             device_type=cls.device_type1,
             role=cls.device_role1,
-            site=cls.site1,
+            location=cls.location1,
             status=cls.device_statuses[0],
             rack=cls.rack1,
             tenant=cls.tenant1,
@@ -743,7 +730,7 @@ class GraphQLQueryTest(TestCase):
             PowerPort.objects.create(device=cls.device1, name="Power Port 2"),
         ]
 
-        cls.device1_frontports = [
+        cls.device1_front_ports = [
             FrontPort.objects.create(
                 device=cls.device1,
                 name="Front Port 1",
@@ -784,15 +771,14 @@ class GraphQLQueryTest(TestCase):
             device=cls.device1,
         )
         cls.ip_statuses = list(Status.objects.get_for_model(IPAddress))[:2]
-        cls.ipaddr1 = IPAddress.objects.create(
-            address="10.0.1.1/24", status=cls.ip_statuses[0], assigned_object=cls.interface11
-        )
+        cls.ipaddr1 = IPAddress.objects.create(address="10.0.1.1/24", status=cls.ip_statuses[0])
+        cls.interface11.add_ip_addresses(cls.ipaddr1)
 
         cls.device2 = Device.objects.create(
             name="Device 2",
             device_type=cls.device_type1,
             role=cls.device_role2,
-            site=cls.site1,
+            location=cls.location1,
             status=cls.device_statuses[1],
             rack=cls.rack2,
             tenant=cls.tenant2,
@@ -809,15 +795,14 @@ class GraphQLQueryTest(TestCase):
         cls.interface22 = Interface.objects.create(
             name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
         )
-        cls.ipaddr2 = IPAddress.objects.create(
-            address="10.0.2.1/30", status=cls.ip_statuses[1], assigned_object=cls.interface12
-        )
+        cls.ipaddr2 = IPAddress.objects.create(address="10.0.2.1/30", status=cls.ip_statuses[1])
+        cls.interface12.add_ip_addresses(cls.ipaddr2)
 
         cls.device3 = Device.objects.create(
             name="Device 3",
             device_type=cls.device_type1,
             role=cls.device_role1,
-            site=cls.site2,
+            location=cls.location2,
             status=cls.device_statuses[0],
         )
 
@@ -832,41 +817,41 @@ class GraphQLQueryTest(TestCase):
             enabled=False,
         )
 
+        cable_statuses = Status.objects.get_for_model(Cable)
         cls.cable1 = Cable.objects.create(
             termination_a=cls.interface11,
             termination_b=cls.interface12,
-            status=Status.objects.get_for_model(Cable)[0],
+            status=cable_statuses[0],
         )
         cls.cable2 = Cable.objects.create(
             termination_a=cls.interface31,
             termination_b=cls.interface21,
-            status=Status.objects.get_for_model(Cable)[1],
+            status=cable_statuses[1],
         )
 
         # Power Cables
         cls.cable3 = Cable.objects.create(
             termination_a=cls.device1_power_ports[0],
             termination_b=cls.upsdevice1_power_outlets[0],
-            status=Status.objects.get(name="Active"),
+            status=cable_statuses[0],
         )
         cls.cable3 = Cable.objects.create(
             termination_a=cls.upsdevice1_power_ports[0],
-            termination_b=cls.site1_power_feeds[0],
-            status=Status.objects.get(name="Active"),
+            termination_b=cls.location1_power_feeds[0],
+            status=cable_statuses[0],
         )
 
-        context1 = ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        context1.regions.add(cls.region1)
+        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
 
-        Provider.objects.create(name="provider 1", slug="provider-1", asn=1)
-        Provider.objects.create(name="provider 2", slug="provider-2", asn=4294967295)
+        Provider.objects.create(name="provider 1", asn=1)
+        Provider.objects.create(name="provider 2", asn=4294967295)
 
         webhook1 = Webhook.objects.create(name="webhook 1", type_delete=True, enabled=False)
         webhook1.content_types.add(ContentType.objects.get_for_model(Device))
         webhook2 = Webhook.objects.create(name="webhook 2", type_update=True, enabled=False)
         webhook2.content_types.add(ContentType.objects.get_for_model(Interface))
 
-        clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        clustertype = ClusterTypeFactory.create()
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype)
         cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
@@ -877,9 +862,8 @@ class GraphQLQueryTest(TestCase):
             virtual_machine=cls.virtualmachine,
             name="eth0",
         )
-        cls.vmipaddr = IPAddress.objects.create(
-            address="1.1.1.1/32", status=cls.ip_statuses[0], assigned_object=cls.vminterface
-        )
+        cls.vmipaddr = IPAddress.objects.create(address="1.1.1.1/32", status=cls.ip_statuses[0])
+        cls.vminterface.add_ip_addresses(cls.vmipaddr)
 
         cls.relationship_o2o_1 = Relationship(
             name="Device to VirtualMachine",
@@ -929,7 +913,6 @@ class GraphQLQueryTest(TestCase):
         cls.schema = graphene_settings.SCHEMA
 
     def execute_query(self, query, variables=None):
-
         document = self.backend.document_from_string(self.schema, query)
         if variables:
             return document.execute(context_value=self.request, variable_values=variables)
@@ -1006,7 +989,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
-
         query = (
             # pylint: disable=consider-using-f-string
             """
@@ -1202,7 +1184,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):
-
         query = (
             # pylint: disable=consider-using-f-string
             """
@@ -1213,7 +1194,7 @@ query {
                     }
                 }
             """
-            % (self.device_role1.slug,)
+            % (self.device_role1.name,)
         )
         result = self.execute_query(query)
 
@@ -1224,7 +1205,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_with_bad_filter(self):
-
         query = """
             query {
                 devices(role: "EXPECT NO ENTRIES") {
@@ -1239,49 +1219,44 @@ query {
         self.assertIsInstance(response.errors[0], GraphQLLocatedError)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_sites_filter(self):
-
+    def test_query_locations_filter(self):
         filters = (
-            ('name: "Site-1"', 1),
-            ('name: ["Site-1"]', 1),
-            ('name: ["Site-1", "Site-2"]', 2),
-            ('name__ic: "Site"', Site.objects.filter(name__icontains="Site").count()),
-            ('name__ic: ["Site"]', Site.objects.filter(name__icontains="Site").count()),
-            ('name__nic: "Site"', Site.objects.exclude(name__icontains="Site").count()),
-            ('name__nic: ["Site"]', Site.objects.exclude(name__icontains="Site").count()),
-            ('region: "region1"', 1),
-            ('region: ["region1"]', 1),
-            ('region: ["region1", "region2"]', 2),
-            ("asn: 65000", Site.objects.filter(asn="65000").count()),
-            ("asn: [65099]", Site.objects.filter(asn="65099").count()),
-            ("asn: [65000, 65099]", Site.objects.filter(asn__in=["65000", "65099"]).count()),
-            (f'id: "{self.site1.pk}"', 1),
-            (f'id: ["{self.site1.pk}"]', 1),
-            (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
+            ('name: "Location-1"', 1),
+            ('name: ["Location-1"]', 1),
+            ('name: ["Location-1", "Location-2"]', 2),
+            ('name__ic: "Location"', Location.objects.filter(name__icontains="Location").count()),
+            ('name__ic: ["Location"]', Location.objects.filter(name__icontains="Location").count()),
+            ('name__nic: "Location"', Location.objects.exclude(name__icontains="Location").count()),
+            ('name__nic: ["Location"]', Location.objects.exclude(name__icontains="Location").count()),
+            ("asn: 65000", Location.objects.filter(asn="65000").count()),
+            ("asn: [65099]", Location.objects.filter(asn="65099").count()),
+            ("asn: [65000, 65099]", Location.objects.filter(asn__in=["65000", "65099"]).count()),
+            (f'id: "{self.location1.pk}"', 1),
+            (f'id: ["{self.location1.pk}"]', 1),
+            (f'id: ["{self.location1.pk}", "{self.location2.pk}"]', 2),
             (
-                f'status: "{self.site_statuses[0].slug}"',
-                Site.objects.filter(status=self.site_statuses[0]).count(),
+                f'status: "{self.location_statuses[0].name}"',
+                Location.objects.filter(status=self.location_statuses[0]).count(),
             ),
             (
-                f'status: ["{self.site_statuses[1].slug}"]',
-                Site.objects.filter(status=self.site_statuses[1]).count(),
+                f'status: ["{self.location_statuses[1].name}"]',
+                Location.objects.filter(status=self.location_statuses[1]).count(),
             ),
             (
-                f'status: ["{self.site_statuses[0].slug}", "{self.site_statuses[1].slug}"]',
-                Site.objects.filter(status__in=self.site_statuses[:2]).count(),
+                f'status: ["{self.location_statuses[0].name}", "{self.location_statuses[1].name}"]',
+                Location.objects.filter(status__in=self.location_statuses[:2]).count(),
             ),
         )
 
         for filterv, nbr_expected_results in filters:
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { sites(" + filterv + "){ name }}"
+                query = "query { locations(" + filterv + "){ name }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["sites"]), nbr_expected_results)
+                self.assertEqual(len(result.data["locations"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_devices_filter(self):
-
         filterset_class = DeviceFilterSet
         queryset = Device.objects.all()
 
@@ -1301,25 +1276,22 @@ query {
             f'id: "{self.device1.pk}"': _count({"id": [self.device1.pk]}),
             f'id: ["{self.device1.pk}"]': _count({"id": [self.device1.pk]}),
             f'id: ["{self.device1.pk}", "{self.device2.pk}"]': _count({"id": [self.device1.pk, self.device2.pk]}),
-            f'role: "{self.device_role1.slug}"': _count({"role": [self.device_role1.slug]}),
-            f'role: ["{self.device_role1.slug}"]': _count({"role": [self.device_role1.slug]}),
-            f'role: ["{self.device_role1.slug}", "{self.device_role2.slug}"]': _count(
-                {"role": [self.device_role1.slug, self.device_role2.slug]}
+            f'role: "{self.device_role1.name}"': _count({"role": [self.device_role1.name]}),
+            f'role: ["{self.device_role1.name}"]': _count({"role": [self.device_role1.name]}),
+            f'role: ["{self.device_role1.name}", "{self.device_role2.name}"]': _count(
+                {"role": [self.device_role1.name, self.device_role2.name]}
             ),
-            f'site: "{self.site1.slug}"': _count({"site": [self.site1.slug]}),
-            f'site: ["{self.site1.slug}"]': _count({"site": [self.site1.slug]}),
-            f'site: ["{self.site1.slug}", "{self.site2.slug}"]': _count({"site": [self.site1.slug, self.site2.slug]}),
-            f'region: "{self.region1.slug}"': _count({"region": [self.region1.slug]}),
-            f'region: ["{self.region1.slug}"]': _count({"region": [self.region1.slug]}),
-            f'region: ["{self.region1.slug}", "{self.region2.slug}"]': _count(
-                {"region": [self.region1.slug, self.region2.slug]}
+            f'location: "{self.location1.slug}"': _count({"location": [self.location1.slug]}),
+            f'location: ["{self.location1.slug}"]': _count({"location": [self.location1.slug]}),
+            f'location: ["{self.location1.slug}", "{self.location2.slug}"]': _count(
+                {"location": [self.location1.slug, self.location2.slug]}
             ),
-            'face: "front"': _count({"face": "front"}),
-            'face: "rear"': _count({"face": "rear"}),
-            f'status: "{self.device_statuses[0].slug}"': _count({"status": [self.device_statuses[0].slug]}),
-            f'status: ["{self.device_statuses[1].slug}"]': _count({"status": [self.device_statuses[1].slug]}),
-            f'status: ["{self.device_statuses[0].slug}", "{self.device_statuses[1].slug}"]': _count(
-                {"status": [self.device_statuses[0].slug, self.device_statuses[1].slug]}
+            'face: "front"': _count({"face": ["front"]}),
+            'face: "rear"': _count({"face": ["rear"]}),
+            f'status: "{self.device_statuses[0].name}"': _count({"status": [self.device_statuses[0].name]}),
+            f'status: ["{self.device_statuses[1].name}"]': _count({"status": [self.device_statuses[1].name]}),
+            f'status: ["{self.device_statuses[0].name}", "{self.device_statuses[1].name}"]': _count(
+                {"status": [self.device_statuses[0].name, self.device_statuses[1].name]}
             ),
             "is_full_depth: true": _count({"is_full_depth": True}),
             "is_full_depth: false": _count({"is_full_depth": False}),
@@ -1344,7 +1316,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_ip_addresses_filter(self):
-
         filters = (
             (
                 'address: "10.0.1.1"',
@@ -1355,15 +1326,15 @@ query {
                 IPAddress.objects.ip_family(4).count(),
             ),
             (
-                f'status: "{self.ip_statuses[0].slug}"',
+                f'status: "{self.ip_statuses[0].name}"',
                 IPAddress.objects.filter(status=self.ip_statuses[0]).count(),
             ),
             (
-                f'status: ["{self.ip_statuses[1].slug}"]',
+                f'status: ["{self.ip_statuses[1].name}"]',
                 IPAddress.objects.filter(status=self.ip_statuses[1]).count(),
             ),
             (
-                f'status: ["{self.ip_statuses[0].slug}", "{self.ip_statuses[1].slug}"]',
+                f'status: ["{self.ip_statuses[0].name}", "{self.ip_statuses[1].name}"]',
                 IPAddress.objects.filter(status__in=[self.ip_statuses[0], self.ip_statuses[1]]).count(),
             ),
             (
@@ -1400,6 +1371,7 @@ query {
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @skip("TODO: convert to use interfaces and vm_interfaces reverse relationships")
     def test_query_ip_addresses_assigned_object(self):
         """Query IP Address assigned_object values."""
 
@@ -1448,7 +1420,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_cables_filter(self):
-
         filters = (
             (f'device_id: "{self.device1.id}"', 2),
             ('device: "Device 3"', 1),
@@ -1456,12 +1427,12 @@ query {
             (f'rack_id: "{self.rack1.id}"', 3),
             ('rack: "Rack 2"', 1),
             ('rack: ["Rack 1", "Rack 2"]', 4),
-            (f'site_id: "{self.site1.id}"', 4),
-            ('site: "site-2"', 1),
-            ('site: ["site-1", "site-2"]', 4),
+            (f'location_id: "{self.location1.id}"', 4),
+            (f'location: "{self.location2.slug}"', 1),
+            (f'location: ["{self.location1.slug}", "{self.location2.slug}"]', 4),
             (f'tenant_id: "{self.tenant1.id}"', 3),
-            ('tenant: "tenant-2"', 1),
-            ('tenant: ["tenant-1", "tenant-2"]', 4),
+            ('tenant: "Tenant 2"', 1),
+            ('tenant: ["Tenant 1", "Tenant 2"]', 4),
         )
 
         for filterv, nbr_expected_results in filters:
@@ -1472,43 +1443,69 @@ query {
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_frontport_filter_second_level(self):
+    def test_query_front_port_filter_second_level(self):
         """Test "second-level" filtering of FrontPorts within a Devices query."""
 
         filters = (
-            (f'name: "{self.device1_frontports[0].name}"', 1),
-            (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
+            (
+                f'name: "{self.device1_front_ports[0].name}"',
+                Q(name=self.device1_front_ports[0].name),
+            ),
+            (
+                f'device: "{self.device1.name}"',
+                Q(device=self.device1),
+            ),
+            (
+                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ frontports(" + filterv + "){ id }}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { devices{ id, front_ports(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
+                for device in result.data["devices"]:
+                    qs = FrontPort.objects.filter(device_id=device["id"])
+                    expected_count = qs.filter(qs_filter).count()
+                    matched = max(matched, len(device["front_ports"]))
+                    self.assertEqual(len(device["front_ports"]), expected_count)
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_query_frontport_filter_third_level(self):
-        """Test "third-level" filtering of FrontPorts within Devices within Sites."""
+    def test_query_front_port_filter_third_level(self):
+        """Test "third-level" filtering of FrontPorts within Devices within Locations."""
 
         filters = (
-            (f'name: "{self.device1_frontports[0].name}"', 1),
-            (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
+            (
+                f'name: "{self.device1_front_ports[0].name}"',
+                Q(name=self.device1_front_ports[0].name),
+            ),
+            (
+                f'device: "{self.device1.name}"',
+                Q(device=self.device1),
+            ),
+            (
+                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { sites{ devices{ frontports(" + filterv + "){ id }}}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { locations{ devices{ id, front_ports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                for count, _ in enumerate(result.data["sites"]):
-                    if result.data["sites"][count]["devices"]:
-                        self.assertEqual(
-                            len(result.data["sites"][count]["devices"][0]["frontports"]), nbr_expected_results
-                        )
-                        break
+                for location in result.data["locations"]:
+                    for device in location["devices"]:
+                        qs = FrontPort.objects.filter(device_id=device["id"])
+                        expected_count = qs.filter(qs_filter).count()
+                        matched = max(matched, len(device["front_ports"]))
+                        self.assertEqual(len(device["front_ports"]), expected_count)
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_front_ports_cable_peer(self):
@@ -1603,15 +1600,42 @@ query {
         """Test custom interface filter fields and boolean, not other concrete fields."""
 
         filters = (
-            (f'device_id: "{self.device1.id}"', 2),
-            ('device: "Device 3"', 2),
-            ('device: ["Device 1", "Device 3"]', 4),
-            ('kind: "virtual"', 5),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ("vlan: 100", 1),
-            (f'vlan_id: "{self.vlan1.id}"', 1),
-            ("mgmt_only: true", 1),
-            ("enabled: false", 1),
+            (
+                f'device_id: "{self.device1.id}"',
+                Interface.objects.filter(device=self.device1).count(),
+            ),
+            (
+                'device: "Device 3"',
+                Interface.objects.filter(device=self.device3).count(),
+            ),
+            (
+                'device: ["Device 1", "Device 3"]',
+                Interface.objects.filter(device__in=[self.device1, self.device3]).count(),
+            ),
+            (
+                'kind: "virtual"',
+                Interface.objects.filter(type=InterfaceTypeChoices.TYPE_VIRTUAL).count(),
+            ),
+            (
+                'mac_address: "00:11:11:11:11:11"',
+                Interface.objects.filter(mac_address="00:11:11:11:11:11").count(),
+            ),
+            (
+                "vlan: 100",
+                Interface.objects.filter(Q(untagged_vlan__vid=100) | Q(tagged_vlans__vid=100)).count(),
+            ),
+            (
+                f'vlan_id: "{self.vlan1.id}"',
+                Interface.objects.filter(Q(untagged_vlan=self.vlan1) | Q(tagged_vlans=self.vlan1)).count(),
+            ),
+            (
+                "mgmt_only: true",
+                Interface.objects.filter(mgmt_only=True).count(),
+            ),
+            (
+                "enabled: false",
+                Interface.objects.filter(enabled=False).count(),
+            ),
         )
 
         for filterv, nbr_expected_results in filters:
@@ -1626,43 +1650,81 @@ query {
         """Test "second-level" filtering of Interfaces within a Devices query."""
 
         filters = (
-            (f'device_id: "{self.device1.id}"', 2),
-            ('kind: "virtual"', 2),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ("vlan: 100", 1),
-            (f'vlan_id: "{self.vlan1.id}"', 1),
+            (
+                f'device_id: "{self.device1.id}"',
+                Q(device=self.device1),
+            ),
+            (
+                'kind: "virtual"',
+                Q(type=InterfaceTypeChoices.TYPE_VIRTUAL),
+            ),
+            (
+                'mac_address: "00:11:11:11:11:11"',
+                Q(mac_address="00:11:11:11:11:11"),
+            ),
+            (
+                "vlan: 100",
+                Q(untagged_vlan__vid=100) | Q(tagged_vlans__vid=100),
+            ),
+            (
+                f'vlan_id: "{self.vlan1.id}"',
+                Q(untagged_vlan=self.vlan1) | Q(tagged_vlans=self.vlan1),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ interfaces(" + filterv + "){ id }}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { devices{ id, interfaces(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
+                for device in result.data["devices"]:
+                    qs = Interface.objects.filter(device_id=device["id"])
+                    expected_count = qs.filter(qs_filter).count()
+                    matched = max(matched, len(device["interfaces"]))
+                    self.assertEqual(len(device["interfaces"]), expected_count)
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_filter_third_level(self):
-        """Test "third-level" filtering of Interfaces within Devices within Sites."""
+        """Test "third-level" filtering of Interfaces within Devices within Locations."""
 
         filters = (
-            (f'device_id: "{self.device1.id}"', 2),
-            ('kind: "virtual"', 2),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ("vlan: 100", 1),
-            (f'vlan_id: "{self.vlan1.id}"', 1),
+            (
+                f'device_id: "{self.device1.id}"',
+                Q(device=self.device1),
+            ),
+            (
+                'kind: "virtual"',
+                Q(type=InterfaceTypeChoices.TYPE_VIRTUAL),
+            ),
+            (
+                'mac_address: "00:11:11:11:11:11"',
+                Q(mac_address="00:11:11:11:11:11"),
+            ),
+            (
+                "vlan: 100",
+                Q(untagged_vlan__vid=100) | Q(tagged_vlans__vid=100),
+            ),
+            (
+                f'vlan_id: "{self.vlan1.id}"',
+                Q(untagged_vlan=self.vlan1) | Q(tagged_vlans=self.vlan1),
+            ),
         )
 
-        for filterv, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
-                query = "query { sites{ devices{ interfaces(" + filterv + "){ id }}}}"
+        for filterv, qs_filter in filters:
+            with self.subTest(msg=f"Checking {filterv}", filter=filterv, qs_filter=qs_filter):
+                matched = 0
+                query = "query { locations{ devices{ id, interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                for count, _ in enumerate(result.data["sites"]):
-                    if result.data["sites"][count]["devices"]:
-                        self.assertEqual(
-                            len(result.data["sites"][count]["devices"][0]["interfaces"]), nbr_expected_results
-                        )
-                        break
+                for location in result.data["locations"]:
+                    for device in location["devices"]:
+                        qs = Interface.objects.filter(device_id=device["id"])
+                        expected_count = qs.filter(qs_filter).count()
+                        matched = max(matched, len(device["interfaces"]))
+                        self.assertEqual(len(device["interfaces"]), expected_count)
+                self.assertGreater(matched, 0, msg="At least one object matched GraphQL query")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
@@ -1815,7 +1877,6 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
-
         query_pagination = """\
 query {
     interfaces(limit: 2, offset: 3) {

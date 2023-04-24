@@ -35,14 +35,12 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 
 
 class ProviderForm(NautobotModelForm):
-    slug = SlugField()
     comments = CommentField()
 
     class Meta:
         model = Provider
         fields = [
             "name",
-            "slug",
             "asn",
             "account",
             "portal_url",
@@ -153,7 +151,7 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
     field_order = ["q", "provider"]
     q = forms.CharField(required=False, label="Search")
     provider = DynamicModelMultipleChoiceField(
-        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="slug"
+        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="name"
     )
     tags = TagFilterField(model)
 
@@ -164,13 +162,10 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
 
 
 class CircuitTypeForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = CircuitType
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -282,8 +277,6 @@ class CircuitFilterForm(
         "provider",
         "provider_network",
         "status",
-        "region",
-        "site",
         "location",
         "tenant_group",
         "tenant",
@@ -291,9 +284,9 @@ class CircuitFilterForm(
     ]
     q = forms.CharField(required=False, label="Search")
     circuit_type = DynamicModelMultipleChoiceField(
-        queryset=CircuitType.objects.all(), to_field_name="slug", required=False
+        queryset=CircuitType.objects.all(), to_field_name="name", required=False
     )
-    provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
+    provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="name", required=False)
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
@@ -319,8 +312,6 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
         model = CircuitTermination
         fields = [
             "term_side",
-            "region",
-            "site",
             "location",
             "provider_network",
             "port_speed",

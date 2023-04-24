@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
@@ -41,18 +42,17 @@ from nautobot.dcim.models import (
     RackGroup,
     RearPort,
     RearPortTemplate,
-    Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.models import Tenant
 
 
 class CableLengthTestCase(TestCase):
     def setUp(self):
-        self.site = Site.objects.first()
-        self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.manufacturer = Manufacturer.objects.first()
         self.devicetype = DeviceType.objects.create(
             manufacturer=self.manufacturer,
             model="Test Device Type 1",
@@ -63,15 +63,15 @@ class CableLengthTestCase(TestCase):
             device_type=self.devicetype,
             role=self.devicerole,
             name="TestDevice1",
-            site=self.site,
+            location=self.location,
         )
         self.device2 = Device.objects.create(
             device_type=self.devicetype,
             role=self.devicerole,
             name="TestDevice2",
-            site=self.site,
+            location=self.location,
         )
-        self.status = Status.objects.get_for_model(Cable).get(slug="connected")
+        self.status = Status.objects.get_for_model(Cable).get(name="Connected")
 
     def test_cable_validated_save(self):
         interface1 = Interface.objects.create(device=self.device1, name="eth0")
@@ -107,13 +107,13 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
         """
         statuses = Status.objects.get_for_model(Device)
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_3", default="value_3"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 1", default="value_1"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 2", default="value_2"),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Field 3", default="value_3"),
         ]
         for custom_field in custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Interface)])
@@ -131,14 +131,14 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             mgmt_only=True,
         )
         interface_templates = [interface_template_1, interface_template_2]
-        device_type.interfacetemplates.set(interface_templates)
+        device_type.interface_templates.set(interface_templates)
         # instantiate_model() is run when device is created
         device = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=statuses[0],
             name="Test Device",
-            site=site,
+            location=location,
         )
         interfaces = device.interfaces.all()
         self.assertEqual(Interface.objects.get(pk=interfaces[0].pk).cf["field_1"], "value_1")
@@ -156,8 +156,8 @@ class InterfaceTemplateTestCase(TestCase):
         assert interface templates sets the interface status.
         """
         statuses = Status.objects.get_for_model(Device)
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         InterfaceTemplate.objects.create(
@@ -171,31 +171,33 @@ class InterfaceTemplateTestCase(TestCase):
             role=device_role,
             status=statuses[0],
             name="Test Device 1",
-            site=site,
+            location=location,
         )
 
-        active_status = Status.objects.get(slug="active")
-        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, active_status)
+        status = Status.objects.get_for_model(Interface).get(name="Active")
+        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, status)
 
         # Assert that a different status is picked if active status is not found for interface
         interface_ct = ContentType.objects.get_for_model(Interface)
-        active_status.content_types.remove(interface_ct)
+        status.content_types.remove(interface_ct)
 
         device_2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=statuses[0],
             name="Test Device 2",
-            site=site,
+            location=location,
         )
         first_status = Status.objects.get_for_model(Interface).first()
         self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
 
 
-class RackGroupTestCase(TestCase):
+class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
+    model = RackGroup
+
     def setUp(self):
         """
-        Site A (Location A)
+        Location A
           - RackGroup A1
             - RackGroup A2
               - Rack 2
@@ -203,54 +205,25 @@ class RackGroupTestCase(TestCase):
             - PowerPanel 1
         """
         self.location_type_a = LocationType.objects.get(name="Campus")
-        self.location_type_a.content_types.add(
-            ContentType.objects.get_for_model(RackGroup),
-            ContentType.objects.get_for_model(Rack),
-            ContentType.objects.get_for_model(PowerPanel),
-        )
-        self.location_a = Location.objects.filter(location_type=self.location_type_a)[0]
-        self.site_a = self.location_a.site
-
-        self.rackgroup_a1 = RackGroup(
-            site=self.site_a, location=self.location_a, name="RackGroup A1", slug="rackgroup-a1"
-        )
+        self.location_a = Location.objects.filter(location_type=self.location_type_a).first()
+        self.rackgroup_a1 = RackGroup(location=self.location_a, name="RackGroup A1", slug="rackgroup-a1")
         self.rackgroup_a1.save()
-        self.rackgroup_a2 = RackGroup(
-            site=self.site_a, location=self.location_a, parent=self.rackgroup_a1, name="RackGroup A2"
-        )
+        self.rackgroup_a2 = RackGroup(location=self.location_a, parent=self.rackgroup_a1, name="RackGroup A2")
         self.rackgroup_a2.save()
 
-        self.rack1 = Rack.objects.create(
-            site=self.site_a, location=self.location_a, group=self.rackgroup_a1, name="Rack 1"
-        )
-        self.rack2 = Rack.objects.create(
-            site=self.site_a, location=self.location_a, group=self.rackgroup_a2, name="Rack 2"
-        )
+        self.rack1 = Rack.objects.create(location=self.location_a, rack_group=self.rackgroup_a1, name="Rack 1")
+        self.rack2 = Rack.objects.create(location=self.location_a, rack_group=self.rackgroup_a2, name="Rack 2")
 
         self.powerpanel1 = PowerPanel.objects.create(
-            site=self.site_a, location=self.location_a, rack_group=self.rackgroup_a1, name="Power Panel 1"
+            location=self.location_a, rack_group=self.rackgroup_a1, name="Power Panel 1"
         )
 
     def test_rackgroup_location_validation(self):
         """Check that rack group locations are validated correctly."""
-        # Child group cannot belong to a different site than its parent
-        site_b = Site.objects.exclude(locations__in=[self.location_a]).first()
-        child = RackGroup(site=site_b, parent=self.rackgroup_a1, name="Child Group")
-        with self.assertRaises(ValidationError) as cm:
-            child.validated_save()
-        self.assertIn("must belong to the same site", str(cm.exception))
-
-        # Group location, if specified, must belong to the right site
-        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=site_b)
-        child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_b, name="Child Group")
-        with self.assertRaises(ValidationError) as cm:
-            child.validated_save()
-        self.assertIn(f'Location "{location_b.name}" does not belong to site "{self.site_a.name}"', str(cm.exception))
-
         # Group location, if specified, must permit RackGroups
         location_type_c = LocationType.objects.get(name="Elevator")
-        location_c = Location.objects.create(name="Location C", location_type=location_type_c, site=self.site_a)
-        child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_c, name="Child Group")
+        location_c = Location.objects.create(name="Location C", location_type=location_type_c)
+        child = RackGroup(parent=self.rackgroup_a1, location=location_c, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
         self.assertIn(f'Rack groups may not associate to locations of type "{location_type_c}"', str(cm.exception))
@@ -259,7 +232,7 @@ class RackGroupTestCase(TestCase):
         location_type_d = LocationType.objects.get(name="Room")
         location_type_d.content_types.add(ContentType.objects.get_for_model(RackGroup))
         location_d = Location.objects.create(name="Location D", location_type=location_type_d, parent=location_c)
-        child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_d, name="Child Group")
+        child = RackGroup(parent=self.rackgroup_a1, location=location_d, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
         self.assertIn(
@@ -267,37 +240,13 @@ class RackGroupTestCase(TestCase):
             str(cm.exception),
         )
 
-    def test_change_rackgroup_site(self):
-        """
-        Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup is moved to a new Site.
-        """
-        existing_rackgroup_site = self.rackgroup_a1.site
-        site_b = Site.objects.exclude(pk=existing_rackgroup_site.pk).last()
-
-        # Move RackGroup A1 to Site B
-        self.rackgroup_a1.site = site_b
-        self.rackgroup_a1.location = None
-        self.rackgroup_a1.save()
-
-        # Check that all objects within RackGroup A1 now belong to Site B and no location
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).site, site_b)
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).location, None)
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).site, site_b)
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, None)
-        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).site, site_b)
-        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, None)
-        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).site, site_b)
-        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, None)
-        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).site, site_b)
-        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, None)
-
     def test_change_rackgroup_location_children_permitted(self):
         """
         Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup changes Locations.
 
         In this test, the new Location permits Racks and PowerPanels so the Location should match.
         """
-        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=self.site_a)
+        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a)
 
         self.rackgroup_a1.location = location_b
         self.rackgroup_a1.save()
@@ -319,18 +268,19 @@ class RackGroupTestCase(TestCase):
         location_c = Location.objects.create(name="Location C", location_type=location_type_c, parent=self.location_a)
 
         self.rackgroup_a1.location = location_c
-        self.rackgroup_a1.save()
+        with self.assertRaises(ValidationError) as cm:
+            self.rackgroup_a1.save()
+        self.assertIn(f'Racks may not associate to locations of type "{location_type_c}"', str(cm.exception))
+        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, self.location_a)
+        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, self.location_a)
+        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, self.location_a)
+        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, self.location_a)
 
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a1.pk).location, location_c)
-        self.assertEqual(RackGroup.objects.get(pk=self.rackgroup_a2.pk).location, location_c)
-        self.assertEqual(Rack.objects.get(pk=self.rack1.pk).location, None)
-        self.assertEqual(Rack.objects.get(pk=self.rack2.pk).location, None)
-        self.assertEqual(PowerPanel.objects.get(pk=self.powerpanel1.pk).location, None)
 
+class RackTestCase(ModelTestCases.BaseModelTestCase):
+    model = Rack
 
-class RackTestCase(TestCase):
     def setUp(self):
-
         self.status = Status.objects.get_for_model(Rack).first()
         self.location_type_a = LocationType.objects.create(name="Location Type A")
         self.location_type_a.content_types.add(
@@ -339,23 +289,19 @@ class RackTestCase(TestCase):
             ContentType.objects.get_for_model(Device),
         )
 
-        self.site1 = Site.objects.first()
-        self.location1 = Location.objects.create(name="Location1", location_type=self.location_type_a, site=self.site1)
-        self.site2 = Site.objects.all()[1]
-        self.group1 = RackGroup.objects.create(
-            name="TestGroup1", slug="test-group-1", site=self.site1, location=self.location1
-        )
-        self.group2 = RackGroup.objects.create(name="TestGroup2", slug="test-group-2", site=self.site2)
+        self.location1 = Location.objects.create(name="Location1", location_type=self.location_type_a)
+        self.location2 = Location.objects.create(name="Location2", location_type=self.location_type_a)
+        self.group1 = RackGroup.objects.create(name="TestGroup1", slug="test-group-1", location=self.location1)
+        self.group2 = RackGroup.objects.create(name="TestGroup2", slug="test-group-2", location=self.location2)
         self.rack = Rack.objects.create(
             name="TestRack1",
             facility_id="A101",
-            site=self.site1,
             location=self.location1,
-            group=self.group1,
+            rack_group=self.group1,
             status=self.status,
             u_height=42,
         )
-        self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        self.manufacturer = Manufacturer.objects.first()
 
         self.device_type = {
             "ff2048": DeviceType.objects.create(
@@ -370,31 +316,14 @@ class RackTestCase(TestCase):
                 u_height=0,
             ),
         }
-        self.role = {
-            "Server": Role.objects.create(
-                name="Server",
-                slug="server",
-            ),
-            "Switch": Role.objects.create(
-                name="Switch",
-                slug="switch",
-            ),
-            "Console Server": Role.objects.create(
-                name="Console Server",
-                slug="console-server",
-            ),
-            "PDU": Role.objects.create(
-                name="PDU",
-                slug="pdu",
-            ),
-        }
+        self.roles = Role.objects.get_for_model(Rack)
+        self.device_roles = Role.objects.get_for_model(Device)
 
     def test_rack_device_outside_height(self):
-
         rack1 = Rack(
             name="TestRack2",
             facility_id="A102",
-            site=self.site1,
+            location=self.location1,
             status=self.status,
             u_height=42,
         )
@@ -402,9 +331,9 @@ class RackTestCase(TestCase):
 
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            role=Role.objects.get(slug="switch"),
-            site=self.site1,
+            device_type=self.device_type["ff2048"],
+            role=self.device_roles[0],
+            location=self.location1,
             rack=rack1,
             position=43,
             face=DeviceFaceChoices.FACE_FRONT,
@@ -414,28 +343,12 @@ class RackTestCase(TestCase):
         with self.assertRaises(ValidationError):
             rack1.clean()
 
-    def test_rack_group_site(self):
-
-        rack_invalid_group = Rack(
-            name="TestRack2",
-            facility_id="A102",
-            site=self.site1,
-            status=self.status,
-            u_height=42,
-            group=self.group2,
-        )
-        rack_invalid_group.save()
-
-        with self.assertRaises(ValidationError):
-            rack_invalid_group.clean()
-
     def test_mount_single_device(self):
-
         device1 = Device(
             name="TestSwitch1",
-            device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            role=Role.objects.get(slug="switch"),
-            site=self.site1,
+            device_type=self.device_type["ff2048"],
+            role=self.device_roles[1],
+            location=self.location1,
             rack=self.rack,
             position=10,
             face=DeviceFaceChoices.FACE_REAR,
@@ -462,44 +375,14 @@ class RackTestCase(TestCase):
     def test_mount_zero_ru(self):
         pdu = Device.objects.create(
             name="TestPDU",
-            role=self.role.get("PDU"),
+            role=self.device_roles[3],
             device_type=self.device_type.get("cc5000"),
-            site=self.site1,
+            location=self.location1,
             rack=self.rack,
             position=None,
             face="",
         )
         self.assertTrue(pdu)
-
-    def test_change_rack_site(self):
-        """
-        Check that child Devices get updated when a Rack is moved to a new Site.
-        """
-        site_a = Site.objects.first()
-        location_a = Location.objects.create(name="Location A", location_type=self.location_type_a, site=site_a)
-        site_b = Site.objects.all()[1]
-        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=site_b)
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        device_role = Role.objects.get_for_model(Device).first()
-
-        # Create Rack1 in Site A and Location A
-        rack1 = Rack.objects.create(site=site_a, location=location_a, name="Rack 1", status=self.status)
-
-        # Create Device1 in Rack1 and Location A
-        device1 = Device.objects.create(
-            site=site_a, location=location_a, rack=rack1, device_type=device_type, role=device_role
-        )
-
-        # Move Rack1 to Site B and Location B
-        rack1.site = site_b
-        rack1.location = location_b
-        rack1.save()
-
-        # Check that Device1 is now assigned to Site B and Location B
-        self.assertEqual(Device.objects.get(pk=device1.pk).site, site_b)
-        self.assertEqual(Device.objects.get(pk=device1.pk).location, location_b)
 
     def test_change_rack_location_devices_permitted(self):
         """
@@ -509,27 +392,26 @@ class RackTestCase(TestCase):
         """
         # Device1 is explicitly assigned to the same location as the Rack
         device1 = Device.objects.create(
-            site=self.site1,
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
-        # Device2 is defaulted to a null Location
+        # Device2 is explicitly assigned to the same location as the Rack
         device2 = Device.objects.create(
-            site=self.site1,
+            location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
 
         # Move self.rack to a new location
-        location2 = Location.objects.create(name="Location2", location_type=self.location_type_a, site=self.site1)
+        location2 = Location.objects.create(name="Location2", location_type=self.location_type_a)
         self.rack.location = location2
         self.rack.save()
 
         self.assertEqual(Device.objects.get(pk=device1.pk).location, location2)
-        self.assertEqual(Device.objects.get(pk=device2.pk).location, None)
+        self.assertEqual(Device.objects.get(pk=device2.pk).location, location2)
 
     def test_change_rack_location_devices_not_permitted(self):
         """
@@ -537,39 +419,26 @@ class RackTestCase(TestCase):
 
         In this test, the new Location does not permit Devices.
         """
-        device1 = Device.objects.create(
-            site=self.site1,
+        Device.objects.create(
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            role=self.role["Switch"],
+            role=self.device_roles[3],
         )
 
         # Move self.rack to a new location that permits Racks but not Devices
         location_type_b = LocationType.objects.create(name="Location Type B")
         location_type_b.content_types.add(ContentType.objects.get_for_model(Rack))
-        location2 = Location.objects.create(name="Location2", location_type=location_type_b, site=self.site1)
+        location2 = Location.objects.create(name="Location2", location_type=location_type_b)
         self.rack.location = location2
-        self.rack.save()
-
-        self.assertEqual(Device.objects.get(pk=device1.pk).location, None)
+        with self.assertRaises(ValidationError) as cm:
+            self.rack.save()
+        self.assertIn(f'Devices may not associate to locations of type "{location_type_b}"', str(cm.exception))
 
     def test_rack_location_validation(self):
-        # Rack and group site must match
-        rack = Rack(name="Rack", site=self.site2, group=self.group1, status=self.status)
-        with self.assertRaises(ValidationError) as cm:
-            rack.validated_save()
-        self.assertIn("Assigned rack group must belong to parent site", str(cm.exception))
-
-        # Rack location and site must match
-        rack = Rack(name="Rack", site=self.site2, location=self.location1, status=self.status)
-        with self.assertRaises(ValidationError) as cm:
-            rack.validated_save()
-        self.assertIn(f'Location "Location1" does not belong to site "{self.site2.name}"', str(cm.exception))
-
         # Rack group location and rack location must relate
-        location2 = Location.objects.create(name="Location2", location_type=self.location_type_a, site=self.site1)
-        rack = Rack(name="Rack", site=self.site1, group=self.group1, location=location2, status=self.status)
+        location2 = Location.objects.create(name="Location2", location_type=self.location_type_a)
+        rack = Rack(name="Rack", rack_group=self.group1, location=location2, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             rack.validated_save()
         self.assertIn(
@@ -579,8 +448,8 @@ class RackTestCase(TestCase):
 
         # Location type must permit Racks
         location_type_b = LocationType.objects.create(name="Location Type B")
-        locationb = Location.objects.create(name="Location2", location_type=location_type_b, site=self.site1)
-        rack = Rack(name="Rack", site=self.site1, location=locationb, status=self.status)
+        locationb = Location.objects.create(name="Location2", location_type=location_type_b)
+        rack = Rack(name="Rack", location=locationb, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             rack.validated_save()
         self.assertIn('Racks may not associate to locations of type "Location Type B"', str(cm.exception))
@@ -609,9 +478,8 @@ class LocationTypeTestCase(TestCase):
         child.validated_save()
 
         # Once there are Locations using it, parent cannot be changed.
-        site = Site.objects.create(name="Test Site", status=Status.objects.get_for_model(Site).first())
         parent_loc = Location.objects.create(
-            name="Parent 1", location_type=parent, site=site, status=Status.objects.get_for_model(Location).first()
+            name="Parent 1", location_type=parent, status=Status.objects.get_for_model(Location).first()
         )
         child_loc = Location.objects.create(
             name="Child 1", location_type=child, parent=parent_loc, status=Status.objects.get_for_model(Location).last()
@@ -628,7 +496,9 @@ class LocationTypeTestCase(TestCase):
         child.validated_save()
 
 
-class LocationTestCase(TestCase):
+class LocationTestCase(ModelTestCases.BaseModelTestCase):
+    model = Location
+
     def setUp(self):
         self.root_type = LocationType.objects.get(name="Campus")
         self.intermediate_type = LocationType.objects.get(name="Building")
@@ -639,18 +509,55 @@ class LocationTestCase(TestCase):
             name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
         )
 
-        self.status = Status.objects.get(slug="active")
-        self.site = Site.objects.first()
+        self.status = Status.objects.get_for_model(Location).first()
+
+    def test_custom_natural_key_field_lookups(self):
+        """Test that the custom implementation of Location.natural_key_field_lookups works as intended."""
+        # We know that with current test data, the maximum tree depth is 5:
+        # Campus-00 -> Campus-07 -> Building-29 -> Floor-32 -> Room-39
+        # but let's try to make this a *bit* more robust!
+        expected = [
+            "name",
+            "parent__name",
+            "parent__parent__name",
+            "parent__parent__parent__name",
+            "parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__parent__name",
+            "parent__parent__parent__parent__parent__parent__parent__name",
+        ][: Location.objects.max_tree_depth() + 1]
+        self.assertEqual(
+            len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
+        )
+        self.assertEqual(expected, Location.natural_key_field_lookups)
+
+    def test_custom_natural_key_args_to_kwargs(self):
+        """Test that the custom implementation of Location.natural_key_args_to_kwargs works as intended."""
+        natural_key_field_lookups = Location.natural_key_field_lookups
+        for args in [
+            # fewer args than natural_key_field_lookups
+            ("me",),
+            ("me", "my_parent", "my_grandparent"),
+            # more args than natural_key_field_lookups
+            ("me", "my_parent", "my_grandparent", "my_g_gp", "my_g2_gp", "my_g3_gp", "my_g4_gp", "my_g5_gp"),
+        ]:
+            kwargs = Location.natural_key_args_to_kwargs(args)
+            self.assertEqual(len(kwargs), max(len(args), len(natural_key_field_lookups)))
+            for i, value in enumerate(kwargs.values()):
+                if i < len(args):
+                    self.assertEqual(args[i], value)
+                else:
+                    # not-specified args get set as None
+                    self.assertIsNone(value)
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        status = Status.objects.get_for_model(Location).first()
         location = Location(
             location_type=self.root_type,
-            site=self.site,
             name="Location A",
             slug="location-a",
-            status=active_status,
+            status=status,
             longitude=55.1234567896,
             latitude=55.1234567896,
         )
@@ -661,16 +568,16 @@ class LocationTestCase(TestCase):
 
     def test_validate_unique(self):
         """Confirm that the uniqueness constraint on (parent, name) works when parent is None."""
-        location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_1 = Location(name="Campus 1", location_type=self.root_type, status=self.status)
         location_1.validated_save()
 
-        location_2 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_2 = Location(name="Campus 1", location_type=self.root_type, status=self.status)
         with self.assertRaises(ValidationError):
             location_2.validated_save()
 
     def test_changing_type_forbidden(self):
         """Once created, a location cannot change location_type."""
-        location = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location = Location(name="Campus 1", location_type=self.root_type, status=self.status)
         location.validated_save()
         location.location_type = self.root_nestable_type
         with self.assertRaises(ValidationError) as cm:
@@ -680,7 +587,7 @@ class LocationTestCase(TestCase):
 
     def test_parent_type_must_match(self):
         """A location's parent's location_type must match its location_type's parent."""
-        location_1 = Location(name="Building 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_1 = Location(name="Building 1", location_type=self.root_type, status=self.status)
         location_1.validated_save()
         location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
         with self.assertRaises(ValidationError) as cm:
@@ -691,21 +598,14 @@ class LocationTestCase(TestCase):
 
     def test_parent_type_nestable_logic(self):
         """A location of a nestable type may have a parent of the same type."""
-        # A location using a root-level nestable type can have a site rather than a parent
-        location_1 = Location(
-            name="Region 1", location_type=self.root_nestable_type, site=self.site, status=self.status
-        )
+        # A location using a root-level nestable type can have no parent
+        location_1 = Location(name="Region 1", location_type=self.root_nestable_type, status=self.status)
         location_1.validated_save()
-        # A location using a root-level nestable type can have a parent rather than a site
+        # A location using a root-level nestable type can have no parent
         location_2 = Location(
             name="Region 1-A", location_type=self.root_nestable_type, parent=location_1, status=self.status
         )
         location_2.validated_save()
-        # A location can't have both a parent and a site, even if it's a "root" location-type.
-        location_2.site = self.site
-        with self.assertRaises(ValidationError) as cm:
-            location_2.validated_save()
-        self.assertIn("cannot have both a parent Location and an associated Site", str(cm.exception))
         # A location using a lower-level nestable type can be parented under the parent location type
         location_3 = Location(
             name="RackGroup 3", location_type=self.leaf_nestable_type, parent=location_2, status=self.status
@@ -723,7 +623,7 @@ class LocationTestCase(TestCase):
             )
             location_5.validated_save()
         self.assertIn("only have a Location of the same type as its parent", str(cm.exception))
-        location_6 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_6 = Location(name="Campus 1", location_type=self.root_type, status=self.status)
         location_6.validated_save()
         with self.assertRaises(ValidationError) as cm:
             location_7 = Location(
@@ -738,42 +638,34 @@ class LocationTestCase(TestCase):
             str(cm.exception),
         )
 
-    def test_site_forbidden_for_non_root(self):
-        """A Location of a non-root type must have a parent, not a Site."""
-        location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
-        location_1.validated_save()
-        location_2 = Location(
-            name="Building 1",
-            location_type=self.intermediate_type,
-            parent=location_1,
-            site=self.site,
-            status=self.status,
-        )
-        with self.assertRaises(ValidationError) as cm:
-            location_2.validated_save()
-        self.assertIn("must not have an associated Site", str(cm.exception))
 
+class DeviceTestCase(ModelTestCases.BaseModelTestCase):
+    model = Device
 
-class DeviceTestCase(TestCase):
     def setUp(self):
-
-        self.site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
         self.device_role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
+        self.location_type_3 = LocationType.objects.get(name="Campus")
         self.location_type_2.content_types.add(ContentType.objects.get_for_model(Device))
+        self.location_type_3.content_types.add(ContentType.objects.get_for_model(Device))
         self.location_1 = Location.objects.create(
-            name="Root", status=self.device_status, location_type=self.location_type_1, site=self.site
+            name="Root", status=self.device_status, location_type=self.location_type_1
         )
         self.location_2 = Location.objects.create(
             name="Leaf", status=self.device_status, location_type=self.location_type_2, parent=self.location_1
+        )
+        self.location_3 = Location.objects.create(
+            name="Device Allowed Location",
+            status=self.device_status,
+            location_type=self.location_type_3,
         )
         self.device_redundancy_group = DeviceRedundancyGroup.objects.first()
 
@@ -793,7 +685,7 @@ class DeviceTestCase(TestCase):
         PowerOutletTemplate(
             device_type=self.device_type,
             name="Power Outlet 1",
-            power_port=ppt,
+            power_port_template=ppt,
             feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
         ).save()
 
@@ -816,60 +708,60 @@ class DeviceTestCase(TestCase):
             device_type=self.device_type,
             name="Front Port 1",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rpt,
+            rear_port_template=rpt,
             rear_port_position=2,
         ).save()
 
         DeviceBayTemplate(device_type=self.device_type, name="Device Bay 1").save()
 
+        self.device = Device(
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            name="Test Device 1",
+        )
+        self.device.validated_save()
+
     def test_device_creation(self):
         """
         Ensure that all Device components are copied automatically from the DeviceType.
         """
-        d = Device(
-            site=self.site,
-            device_type=self.device_type,
-            role=self.device_role,
-            name="Test Device 1",
-        )
-        d.save()
+        ConsolePort.objects.get(device=self.device, name="Console Port 1")
 
-        ConsolePort.objects.get(device=d, name="Console Port 1")
+        ConsoleServerPort.objects.get(device=self.device, name="Console Server Port 1")
 
-        ConsoleServerPort.objects.get(device=d, name="Console Server Port 1")
-
-        pp = PowerPort.objects.get(device=d, name="Power Port 1", maximum_draw=1000, allocated_draw=500)
+        pp = PowerPort.objects.get(device=self.device, name="Power Port 1", maximum_draw=1000, allocated_draw=500)
 
         PowerOutlet.objects.get(
-            device=d,
+            device=self.device,
             name="Power Outlet 1",
             power_port=pp,
             feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
         )
 
         Interface.objects.get(
-            device=d,
+            device=self.device,
             name="Interface 1",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             mgmt_only=True,
         )
 
-        rp = RearPort.objects.get(device=d, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C, positions=8)
+        rp = RearPort.objects.get(device=self.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C, positions=8)
 
         FrontPort.objects.get(
-            device=d,
+            device=self.device,
             name="Front Port 1",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rp,
             rear_port_position=2,
         )
 
-        DeviceBay.objects.get(device=d, name="Device Bay 1")
+        DeviceBay.objects.get(device=self.device, name="Device Bay 1")
 
     def test_multiple_unnamed_devices(self):
-
         device1 = Device(
-            site=self.site,
+            location=self.location_3,
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
@@ -878,7 +770,7 @@ class DeviceTestCase(TestCase):
         device1.save()
 
         device2 = Device(
-            site=device1.site,
+            location=device1.location,
             device_type=device1.device_type,
             role=device1.role,
             status=self.device_status,
@@ -890,56 +782,32 @@ class DeviceTestCase(TestCase):
         self.assertEqual(Device.objects.filter(name="").count(), 2)
 
     def test_device_duplicate_names(self):
-
-        device1 = Device(
-            site=self.site,
-            device_type=self.device_type,
-            role=self.device_role,
-            status=self.device_status,
-            name="Test Device 1",
-        )
-        device1.save()
-
         device2 = Device(
-            site=device1.site,
-            device_type=device1.device_type,
-            role=device1.role,
+            location=self.device.location,
+            device_type=self.device.device_type,
+            role=self.device.role,
             status=self.device_status,
-            name=device1.name,
+            name=self.device.name,
         )
 
-        # Two devices assigned to the same Site and no Tenant should fail validation
+        # Two devices assigned to the same Location and no Tenant should fail validation
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
-        tenant = Tenant.objects.create(name="Test Tenant 1", slug="test-tenant-1")
-        device1.tenant = tenant
-        device1.save()
+        tenant = Tenant.objects.first()
+        self.device.tenant = tenant
+        self.device.save()
         device2.tenant = tenant
 
-        # Two devices assigned to the same Site and the same Tenant should fail validation
+        # Two devices assigned to the same Location and the same Tenant should fail validation
         with self.assertRaises(ValidationError):
             device2.full_clean()
 
         device2.tenant = None
 
-        # Two devices assigned to the same Site and different Tenants should pass validation
+        # Two devices assigned to the same Location and different Tenants should pass validation
         device2.full_clean()
         device2.save()
-
-    def test_device_location_site_mismatch(self):
-        other_site = Site.objects.all()[1]
-        device = Device(
-            name="Device 3",
-            device_type=self.device_type,
-            role=self.device_role,
-            status=self.device_status,
-            site=other_site,
-            location=self.location_2,
-        )
-        with self.assertRaises(ValidationError) as cm:
-            device.validated_save()
-        self.assertIn(f'Location "Leaf" does not belong to site "{other_site.name}"', str(cm.exception))
 
     def test_device_location_content_type_not_allowed(self):
         device = Device(
@@ -947,7 +815,6 @@ class DeviceTestCase(TestCase):
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            site=self.site,
             location=self.location_1,
         )
         with self.assertRaises(ValidationError) as cm:
@@ -957,35 +824,26 @@ class DeviceTestCase(TestCase):
         )
 
     def test_device_redundancy_group_validation(self):
-        d1 = Device(
-            name="Test Device 1",
-            device_type=self.device_type,
-            role=self.device_role,
-            status=self.device_status,
-            site=self.site,
-        )
-        d1.validated_save()
-
         d2 = Device(
             name="Test Device 2",
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            site=self.site,
+            location=self.location_3,
         )
         d2.validated_save()
 
         # Validate we can set a redundancy group without any priority set
-        d1.device_redundancy_group = self.device_redundancy_group
-        d1.validated_save()
+        self.device.device_redundancy_group = self.device_redundancy_group
+        self.device.validated_save()
 
         # Validate two devices can be a part of the same redundancy group without any priority set
         d2.device_redundancy_group = self.device_redundancy_group
         d2.validated_save()
 
         # Validate we can assign a priority to at least one device in the group
-        d1.device_redundancy_group_priority = 1
-        d1.validated_save()
+        self.device.device_redundancy_group_priority = 1
+        self.device.validated_save()
 
         # Validate both devices in the same group can have the same priority
         d2.device_redundancy_group_priority = 1
@@ -996,18 +854,19 @@ class DeviceTestCase(TestCase):
         d2.validated_save()
 
         # Validate devices cannot have an assigned priority without an assigned group
-        d1.device_redundancy_group = None
+        self.device.device_redundancy_group = None
         with self.assertRaisesMessage(
             ValidationError, "Must assign a redundancy group when defining a redundancy group priority."
         ):
-            d1.validated_save()
+            self.device.validated_save()
 
 
-class CableTestCase(TestCase):
+class CableTestCase(ModelTestCases.BaseModelTestCase):
+    model = Cable
+
     def setUp(self):
-
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        location = Location.objects.first()
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
@@ -1018,18 +877,18 @@ class CableTestCase(TestCase):
             device_type=devicetype,
             role=devicerole,
             name="TestDevice1",
-            site=site,
+            location=location,
         )
         self.device2 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
             name="TestDevice2",
-            site=site,
+            location=location,
         )
         self.interface1 = Interface.objects.create(device=self.device1, name="eth0")
         self.interface2 = Interface.objects.create(device=self.device2, name="eth0")
         self.interface3 = Interface.objects.create(device=self.device2, name="eth1")
-        self.status = Status.objects.get_for_model(Cable).get(slug="connected")
+        self.status = Status.objects.get_for_model(Cable).get(name="Connected")
         self.cable = Cable(
             termination_a=self.interface1,
             termination_b=self.interface2,
@@ -1042,7 +901,7 @@ class CableTestCase(TestCase):
             device_type=devicetype,
             role=devicerole,
             name="TestPatchPanel",
-            site=site,
+            location=location,
         )
         self.rear_port1 = RearPort.objects.create(device=self.patch_panel, name="RP1", type="8p8c")
         self.front_port1 = FrontPort.objects.create(
@@ -1076,13 +935,17 @@ class CableTestCase(TestCase):
             rear_port=self.rear_port4,
             rear_port_position=1,
         )
-        self.provider = Provider.objects.create(name="Provider 1", slug="provider-1")
+        self.provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=self.provider)
-        self.circuittype = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        self.circuittype = CircuitType.objects.first()
         self.circuit1 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="1")
         self.circuit2 = Circuit.objects.create(provider=self.provider, circuit_type=self.circuittype, cid="2")
-        self.circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="A")
-        self.circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit1, site=site, term_side="Z")
+        self.circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit1, location=location, term_side="A"
+        )
+        self.circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit1, location=location, term_side="Z"
+        )
         self.circuittermination3 = CircuitTermination.objects.create(
             circuit=self.circuit2, provider_network=provider_network, term_side="Z"
         )
@@ -1238,7 +1101,8 @@ class CableTestCase(TestCase):
         """Test for https://github.com/nautobot/nautobot/issues/2081"""
         # Delete all cables because some cables has connected status.
         Cable.objects.all().delete()
-        Status.objects.get(slug=CableStatusChoices.STATUS_CONNECTED).delete()
+        connected_status_name = CableStatusChoices.as_dict()[CableStatusChoices.STATUS_CONNECTED]
+        Status.objects.get(name=connected_status_name).delete()
         device = Device.objects.first()
 
         interfaces = (
@@ -1263,40 +1127,20 @@ class CableTestCase(TestCase):
         self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
 
 
-class PowerPanelTestCase(TestCase):
+class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
-        active = Status.objects.get(name="Active")
-        site_1 = Site.objects.first()
-        site_1.status = active
+        status = Status.objects.get_for_model(Location).first()
         location_type_1 = LocationType.objects.create(name="Location Type 1")
-        location_1 = Location.objects.create(
-            name="Location 1", location_type=location_type_1, site=site_1, status=active
-        )
-        power_panel = PowerPanel(name="Power Panel 1", site=site_1, location=location_1)
+        location_1 = Location.objects.create(name="Location 1", location_type=location_type_1, status=status)
+        power_panel = PowerPanel(name="Power Panel 1", location=location_1)
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
         self.assertIn(f'Power panels may not associate to locations of type "{location_type_1}"', str(cm.exception))
 
         location_type_1.content_types.add(ContentType.objects.get_for_model(PowerPanel))
-        site_2 = Site.objects.all()[1]
-        power_panel.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            power_panel.validated_save()
-        self.assertIn(f'Location "{location_1.name}" does not belong to site "{site_2.name}"', str(cm.exception))
-
-        power_panel.site = site_1
-        rack_group = RackGroup.objects.create(name="Rack Group 1", site=site_2)
+        rack_group = RackGroup.objects.create(name="Rack Group 1", location=location_1)
         power_panel.rack_group = rack_group
-        with self.assertRaises(ValidationError) as cm:
-            power_panel.validated_save()
-        self.assertIn(
-            f"Rack group Rack Group 1 ({site_2.name}) is in a different site than {site_1.name}", str(cm.exception)
-        )
-
-        rack_group.site = site_1
-        location_2 = Location.objects.create(
-            name="Location 2", location_type=location_type_1, site=site_1, status=active
-        )
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type_1, status=status)
         rack_group.location = location_2
         rack_group.save()
         with self.assertRaises(ValidationError) as cm:
@@ -1307,23 +1151,27 @@ class PowerPanelTestCase(TestCase):
         )
 
 
-class InterfaceTestCase(TestCase):
+class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
     def setUp(self):
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        site = Site.objects.create(name="Site-1", slug="site-1")
-        self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site)
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)
         status = Status.objects.get_for_model(Device)[0]
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
             role=devicerole,
-            site=site,
+            location=location,
             status=status,
         )
-        self.other_site_vlan = VLAN.objects.create(
-            name="Other Site VLAN", vid=100, site=Site.objects.create(name="Other Site")
+        self.other_location_vlan = VLAN.objects.create(
+            name="Other Location VLAN",
+            vid=100,
+            location=Location.objects.create(
+                name="Other Location", location_type=LocationType.objects.get(name="Campus")
+            ),
         )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
@@ -1338,33 +1186,69 @@ class InterfaceTestCase(TestCase):
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
 
-    def test_error_raised_when_adding_tagged_vlan_with_different_site_from_interface_parent_site(self):
+    def test_error_raised_when_adding_tagged_vlan_with_different_location_from_interface_parent_location(self):
         with self.assertRaises(ValidationError) as err:
             interface = Interface.objects.create(
                 name="Test Interface",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
             )
-            interface.tagged_vlans.add(self.other_site_vlan)
+            interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0],
-            f"Tagged VLAN with names {[self.other_site_vlan.name]} must all belong to the "
-            f"same site as the interface's parent device, or it must be global.",
+            f"Tagged VLAN with names {[self.other_location_vlan.name]} must all belong to the "
+            f"same location as the interface's parent device, or it must be global.",
         )
 
-
-class SiteTestCase(TestCase):
-    def test_latitude_or_longitude(self):
-        """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Site).get(slug="active")
-        site = Site(
-            name="Site A",
-            slug="site-a",
-            status=active_status,
-            longitude=55.1234567896,
-            latitude=55.1234567896,
+    def test_add_ip_addresses(self):
+        """Test the `add_ip_addresses` helper method on `Interface`"""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
         )
-        site.validated_save()
+        ips = list(IPAddress.objects.all()[:10])
 
-        self.assertEqual(site.longitude, Decimal("55.123457"))
-        self.assertEqual(site.latitude, Decimal("55.123457"))
+        # baseline (no interface to ip address relationships exists)
+        self.assertFalse(IPAddressToInterface.objects.filter(interface=interface).exists())
+
+        # add single instance
+        count = interface.add_ip_addresses(ips[-1])
+        self.assertEqual(count, 1)
+        self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], interface=interface).count(), 1)
+
+        # add multiple instances
+        count = interface.add_ip_addresses(ips[:5])
+        self.assertEqual(count, 5)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 6)
+        for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
+
+    def test_remove_ip_addresses(self):
+        """Test the `remove_ip_addresses` helper method on `Interface`"""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+        )
+        ips = list(IPAddress.objects.all()[:10])
+
+        # baseline (no interface to ip address relationships exists)
+        self.assertFalse(IPAddressToInterface.objects.filter(interface=interface).exists())
+
+        interface.add_ip_addresses(ips)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 10)
+
+        # remove single instance
+        count = interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(count, 1)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 9)
+
+        # remove multiple instances
+        count = interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(count, 5)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 4)
+
+        count = interface.remove_ip_addresses(ips)
+        self.assertEqual(count, 4)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 0)

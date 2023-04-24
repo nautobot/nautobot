@@ -2,7 +2,7 @@ import binascii
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser, Group, UserManager
+from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
@@ -10,9 +10,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import flatten_dict
 
 
@@ -29,6 +28,14 @@ __all__ = (
 #
 
 
+class UserManager(BaseManager, UserManager_):
+    """
+    Natural-key subclass of Django's UserManager.
+
+    Note that this is *NOT* based around RestrictedQuerySet.
+    """
+
+
 class User(BaseModel, AbstractUser):
     """
     Nautobot implements its own User model to suport several specific use cases.
@@ -38,11 +45,11 @@ class User(BaseModel, AbstractUser):
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
-    # We must use the stock UserManager instead of RestrictedQuerySet from BaseModel
     objects = UserManager()
 
     class Meta:
         db_table = "auth_user"
+        ordering = ["username"]
 
     def get_config(self, path, default=None):
         """
@@ -243,8 +250,6 @@ class ObjectPermission(BaseModel):
         null=True,
         help_text="Queryset filter matching the applicable objects of the selected type(s)",
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         ordering = ["name"]

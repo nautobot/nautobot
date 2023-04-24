@@ -3,7 +3,7 @@ from django.db import models
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
@@ -27,14 +27,9 @@ class TagQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
-
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
-    "relationships",
 )
 class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
     content_types = models.ManyToManyField(
@@ -50,13 +45,10 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     csv_headers = ["name", "slug", "color", "description"]
 
-    objects = TagQuerySet.as_manager()
+    objects = BaseManager.from_queryset(TagQuerySet)()
 
     class Meta:
         ordering = ["name"]
-
-    def natural_key(self):
-        return (self.name,)
 
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)
@@ -84,3 +76,8 @@ class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
 
     class Meta:
         index_together = ("content_type", "object_id")
+        # TODO: unique_together = [["content_type", "object_id", "tag"]]
+
+    # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
+    # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
+    natural_key_field_names = ["content_type", "object_id", "tag"]

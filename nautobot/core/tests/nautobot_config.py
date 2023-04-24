@@ -51,3 +51,6 @@ TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_STORE_EAGER_RESULT = True
 CELERY_BROKER_URL = "memory://"
+
+# Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
+METRICS_ENABLED = True

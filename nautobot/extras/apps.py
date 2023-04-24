@@ -10,7 +10,7 @@ from nautobot.core.apps import NautobotConfig
 from nautobot.core.signals import nautobot_database_ready
 
 
-logger = logging.getLogger("nautobot.extras.apps")
+logger = logging.getLogger(__name__)
 
 
 class ExtrasConfig(NautobotConfig):

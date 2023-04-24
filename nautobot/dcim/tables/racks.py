@@ -29,15 +29,14 @@ __all__ = (
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")
     actions = ButtonsColumn(model=RackGroup, prepend_template=RACKGROUP_ELEVATIONS)
 
     class Meta(BaseTable.Meta):
         model = RackGroup
-        fields = ("pk", "name", "site", "location", "rack_count", "description", "slug", "actions")
-        default_columns = ("pk", "name", "site", "location", "rack_count", "description", "actions")
+        fields = ("pk", "name", "location", "rack_count", "description", "slug", "actions")
+        default_columns = ("pk", "name", "location", "rack_count", "description", "actions")
 
 
 #
@@ -48,8 +47,7 @@ class RackGroupTable(BaseTable):
 class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(order_by=("_name",), linkify=True)
-    group = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
+    rack_group = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
@@ -59,9 +57,8 @@ class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            "site",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -75,9 +72,8 @@ class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
         default_columns = (
             "pk",
             "name",
-            "site",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -102,9 +98,8 @@ class RackDetailTable(RackTable):
         fields = (
             "pk",
             "name",
-            "site",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -122,9 +117,8 @@ class RackDetailTable(RackTable):
         default_columns = (
             "pk",
             "name",
-            "site",
             "location",
-            "group",
+            "rack_group",
             "status",
             "facility_id",
             "tenant",
@@ -144,7 +138,6 @@ class RackDetailTable(RackTable):
 class RackReservationTable(BaseTable):
     pk = ToggleColumn()
     reservation = tables.Column(accessor="pk", linkify=True)
-    site = tables.Column(accessor=Accessor("rack__site"), linkify=True)
     location = tables.Column(accessor=Accessor("rack__location"), linkify=True)
     tenant = TenantColumn()
     rack = tables.Column(linkify=True)
@@ -157,7 +150,6 @@ class RackReservationTable(BaseTable):
         fields = (
             "pk",
             "reservation",
-            "site",
             "location",
             "rack",
             "unit_list",
@@ -171,7 +163,6 @@ class RackReservationTable(BaseTable):
         default_columns = (
             "pk",
             "reservation",
-            "site",
             "location",
             "rack",
             "unit_list",

@@ -34,12 +34,11 @@ class ClusterTypeView(generic.ObjectView):
     queryset = ClusterType.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Clusters
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(cluster_type=instance)
-            .select_related("cluster_group", "site", "tenant")
+            .select_related("cluster_group", "location", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -94,12 +93,11 @@ class ClusterGroupView(generic.ObjectView):
     queryset = ClusterGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Clusters
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(cluster_group=instance)
-            .select_related("cluster_type", "site", "tenant")
+            .select_related("cluster_type", "location", "tenant")
         ).annotate(
             device_count=count_related(Device, "cluster"),
             vm_count=count_related(VirtualMachine, "cluster"),
@@ -162,7 +160,7 @@ class ClusterView(generic.ObjectView):
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(cluster=instance)
-            .select_related("site", "rack", "tenant", "device_type__manufacturer")
+            .select_related("location", "rack", "tenant", "device_type__manufacturer")
         )
         device_table = DeviceTable(list(devices), orderable=False)
         if request.user.has_perm("virtualization.change_cluster"):
@@ -190,14 +188,14 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "location")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "site")
+    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "location")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 
@@ -209,7 +207,7 @@ class ClusterAddDevicesView(generic.ObjectEditView):
 
     def get(self, request, *args, **kwargs):
         cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = self.form(cluster, initial=normalize_querydict(request.GET))
+        form = self.form(cluster, initial=normalize_querydict(request.GET, form_class=self.form))
 
         return render(
             request,
@@ -226,10 +224,8 @@ class ClusterAddDevicesView(generic.ObjectEditView):
         form = self.form(cluster, request.POST)
 
         if form.is_valid():
-
             device_pks = form.cleaned_data["devices"]
             with transaction.atomic():
-
                 # Assign the selected Devices to the Cluster
                 for device in Device.objects.filter(pk__in=device_pks):
                     device.cluster = cluster
@@ -258,16 +254,13 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
     template_name = "generic/object_bulk_remove.html"
 
     def post(self, request, *args, **kwargs):
-
         cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
 
         if "_confirm" in request.POST:
             form = self.form(request.POST)
             if form.is_valid():
-
                 device_pks = form.cleaned_data["pk"]
                 with transaction.atomic():
-
                     # Remove the selected Devices from the Cluster
                     for device in Device.objects.filter(pk__in=device_pks):
                         device.cluster = None
@@ -415,7 +408,9 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("site", "vlan_group", "tenant", "role"):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
+            "location", "vlan_group", "tenant", "role"
+        ):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
@@ -461,6 +456,12 @@ class VMInterfaceBulkEditView(generic.BulkEditView):
 class VMInterfaceBulkRenameView(generic.BulkRenameView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceBulkRenameForm
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            return selected_object.virtual_machine.name
+        return None
 
 
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):

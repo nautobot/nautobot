@@ -17,7 +17,7 @@ class NautobotFilterBackend(DjangoFilterBackend):
 
         for non_filter_param in (
             "api_version",  # used to select the Nautobot API version
-            "brief",  # used to select NestedSerializer rather than Serializer
+            "depth",  # nested levels of the serializers default to depth=0
             "format",  # "json" or "api", used in the interactive HTML REST API views
             "include",  # used to include computed fields (excluded by default)
             "limit",  # pagination

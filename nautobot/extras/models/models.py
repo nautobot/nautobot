@@ -20,12 +20,12 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import AutoSlugField, ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
-    CustomLinkButtonClassChoices,
+    ButtonClassChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
@@ -60,12 +60,18 @@ class ConfigContextSchemaValidationMixin:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
 
+def limit_dynamic_group_choices():
+    return models.Q(content_type__app_label="virtualization", content_type__model="virtualmachine") | models.Q(
+        content_type__app_label="dcim", content_type__model="device"
+    )
+
+
 @extras_features("graphql")
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
-    qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
-    will be available to a Device in site A assigned to tenant B. Data is stored in JSON format.
+    qualifiers (location, tenant, etc.). For example, the data stored in a ConfigContext assigned to location A and tenant B
+    will be available to a Device in location A assigned to tenant B. Data is stored in JSON format.
     """
 
     name = models.CharField(max_length=100, db_index=True)
@@ -78,6 +84,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         default=None,
         null=True,
         blank=True,
+        related_name="config_contexts",
     )
     owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
@@ -90,15 +97,14 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     is_active = models.BooleanField(
         default=True,
     )
-    schema = models.ForeignKey(
+    config_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",
+        related_name="config_contexts",
     )
-    regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
-    sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
     # TODO(timizuo): Find a way to limit role choices to Device; as of now using
     #  limit_choices_to=Role.objects.get_for_model(Device), causes a partial import error
@@ -111,9 +117,14 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
+
+    # Due to feature flag CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED this field will remain empty unless set to True.
+    dynamic_groups = models.ManyToManyField(
+        to="extras.DynamicGroup", related_name="+", blank=True, limit_choices_to=limit_dynamic_group_choices
+    )
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
-    objects = ConfigContextQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextQuerySet)()
 
     class Meta:
         ordering = ["weight", "name"]
@@ -132,7 +143,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
         # Validate data against schema
-        self._validate_with_schema("data", "schema")
+        self._validate_with_schema("data", "config_context_schema")
 
         # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
         # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
@@ -155,23 +166,21 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         blank=True,
         null=True,
     )
-    local_config_context_schema = models.ForeignKey(
+    local_config_context_schema = ForeignKeyWithAutoRelatedName(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_related",
         help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    local_config_context_data_owner_content_type = models.ForeignKey(
+    local_config_context_data_owner_content_type = ForeignKeyWithAutoRelatedName(
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("config_context_owners"),
         default=None,
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_related",
     )
     local_config_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     local_config_context_data_owner = GenericForeignKey(
@@ -232,10 +241,8 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ConfigContextSchema(OrganizationalModel):
     """
@@ -256,6 +263,7 @@ class ConfigContextSchema(OrganizationalModel):
         default=None,
         null=True,
         blank=True,
+        related_name="config_context_schemas",
     )
     owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
@@ -313,6 +321,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_links"),
+        related_name="custom_links",
     )
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
@@ -332,8 +341,8 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     button_class = models.CharField(
         max_length=30,
-        choices=CustomLinkButtonClassChoices,
-        default=CustomLinkButtonClassChoices.CLASS_DEFAULT,
+        choices=ButtonClassChoices,
+        default=ButtonClassChoices.CLASS_DEFAULT,
         help_text="The class of the first link in a group will be used for the dropdown button",
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")
@@ -352,7 +361,6 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 
 @extras_features(
     "graphql",
-    "relationships",
 )
 class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
@@ -374,6 +382,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("export_templates"),
+        related_name="export_templates",
     )
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200, blank=True)
@@ -503,7 +512,12 @@ class FileProxy(BaseModel):
     class Meta:
         get_latest_by = "uploaded_at"
         ordering = ["name"]
+        # TODO: unique_together = [["name", "uploaded_at"]]
         verbose_name_plural = "file proxies"
+
+    # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
+    # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
+    natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
         delete_file_if_needed(self, "file")
@@ -522,12 +536,11 @@ class FileProxy(BaseModel):
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
     class Meta:
-        ordering = ("slug",)
+        ordering = ("name",)
         verbose_name = "GraphQL query"
         verbose_name_plural = "GraphQL queries"
 
@@ -586,7 +599,7 @@ class ImageAttachment(BaseModel):
     An uploaded image which is associated with an object.
     """
 
-    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="image_attachments")
     object_id = models.UUIDField(db_index=True)
     parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
@@ -605,7 +618,6 @@ class ImageAttachment(BaseModel):
         return filename.split("_", 2)[2]
 
     def delete(self, *args, **kwargs):
-
         _name = self.image.name
 
         super().delete(*args, **kwargs)
@@ -649,13 +661,13 @@ class Note(BaseModel, ChangeLoggedModel):
     Notes allow anyone with proper permissions to add a note to an object.
     """
 
-    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="notes")
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="note",
+        related_name="notes",
         blank=True,
         null=True,
     )
@@ -663,7 +675,7 @@ class Note(BaseModel, ChangeLoggedModel):
 
     slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
-    objects = NotesQuerySet.as_manager()
+    objects = BaseManager.from_queryset(NotesQuerySet)()
 
     class Meta:
         ordering = ["created"]

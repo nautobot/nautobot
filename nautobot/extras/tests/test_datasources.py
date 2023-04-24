@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
 from nautobot.core.testing import TransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, LocationType, Location, Manufacturer
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -56,21 +56,19 @@ class GitTest(TransactionTestCase):
         # Needed for use with the change_logging decorator
         self.mock_request.id = uuid.uuid4()
 
-        self.site = Site.objects.create(name="Test Site", slug="test-site")
         self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
-        self.location = Location.objects.create(location_type=self.location_type, name="Test Location", site=self.site)
-        self.manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        self.location = Location.objects.create(location_type=self.location_type, name="Test Location")
+        self.manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
         self.role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             name="test-device",
             role=self.role,
             device_type=self.device_type,
-            site=self.site,
             location=self.location,
             status=self.device_status,
         )
@@ -134,7 +132,7 @@ class GitTest(TransactionTestCase):
                         "weight": 1500,
                         "description": "NTP servers for Frobozz 1000 devices **only**",
                         "is_active": True,
-                        "schema": "Config Context Schema 1",
+                        "config_context_schema": "Config Context Schema 1",
                         "device_types": [{"slug": self.device_type.slug}],
                     },
                     "ntp-servers": ["172.16.10.22", "172.16.10.33"],
@@ -224,7 +222,7 @@ class GitTest(TransactionTestCase):
             {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
             config_context.data,
         )
-        self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.schema.name)
+        self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.config_context_schema.name)
 
     def assert_implicit_config_context_exists(self, name):
         """Helper function to assert that an 'implicit' ConfigContext exists and is configured appropriately."""
@@ -239,7 +237,7 @@ class GitTest(TransactionTestCase):
         self.assertFalse(config_context.is_active)  # explicit metadata
         self.assertEqual(list(config_context.locations.all()), [self.location])  # implicit from the file path
         self.assertEqual({"domain_name": "example.com"}, config_context.data)
-        self.assertIsNone(config_context.schema)
+        self.assertIsNone(config_context.config_context_schema)
 
     def assert_export_template_html_exist(self, name):
         """Helper function to assert ExportTemplate exists"""
@@ -293,84 +291,6 @@ class GitTest(TransactionTestCase):
                 warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
                 warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
 
-    def test_pull_git_repository_and_refresh_data_with_token(self, MockGitRepo):
-        """
-        The pull_git_repository_and_refresh_data job should correctly make use of a token.
-        """
-        with tempfile.TemporaryDirectory() as tempdir:
-            with self.settings(GIT_ROOT=tempdir):
-
-                def create_empty_repo(path, url):
-                    os.makedirs(path, exist_ok=True)
-                    return mock.DEFAULT
-
-                MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
-
-                # Check that token-based authentication is handled as expected
-                self.repo._token = "1:3@/?=ab@"
-                self.repo.save(trigger_resync=False)
-                # For verisimilitude, don't re-use the old request and job_result
-                self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
-                )
-
-                # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                self.assertEqual(
-                    self.job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
-                )
-                MockGitRepo.assert_called_with(
-                    os.path.join(tempdir, self.repo.slug), "http://1%3A3%40%2F%3F%3Dab%40@localhost/git.git"
-                )
-
-    def test_pull_git_repository_and_refresh_data_with_username_and_token(self, MockGitRepo):
-        """
-        The pull_git_repository_and_refresh_data job should correctly make use of a username + token.
-        """
-        with tempfile.TemporaryDirectory() as tempdir:
-            with self.settings(GIT_ROOT=tempdir):
-
-                def create_empty_repo(path, url):
-                    os.makedirs(path, exist_ok=True)
-                    return mock.DEFAULT
-
-                MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
-
-                # Check that username/password authentication is handled as expected
-                self.repo.username = "núñez"
-                self.repo._token = "1:3@/?=ab@"
-                self.repo.save(trigger_resync=False)
-                # For verisimilitude, don't re-use the old request and job_result
-                self.mock_request.id = uuid.uuid4()
-                self.job_result = JobResult.objects.create(
-                    name=self.repo.name,
-                    obj_type=ContentType.objects.get_for_model(GitRepository),
-                    task_id=uuid.uuid4(),
-                )
-
-                # Run the Git operation and refresh the object from the DB
-                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
-                self.job_result.refresh_from_db()
-
-                self.assertEqual(
-                    self.job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    self.job_result.data,
-                )
-                MockGitRepo.assert_called_with(
-                    os.path.join(tempdir, self.repo.slug),
-                    "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
-                )
-
     def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
         """
         The pull_git_repository_and_refresh_data job should correctly make use of secrets.
@@ -386,33 +306,31 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
-                    handle.write("user1234")
+                    handle.write("núñez")
 
                 with open(os.path.join(tempdir, "token.txt"), "wt") as handle:
-                    handle.write("1234abcd5678ef90")
+                    handle.write("1:3@/?=ab@")
 
                 username_secret = Secret.objects.create(
                     name="Git Username",
-                    slug="git-username",
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "username.txt")},
                 )
                 token_secret = Secret.objects.create(
                     name="Git Token",
-                    slug="git-token",
                     provider="text-file",
                     parameters={"path": os.path.join(tempdir, "token.txt")},
                 )
-                secrets_group = SecretsGroup.objects.create(name="Git Credentials", slug="git-credentials")
+                secrets_group = SecretsGroup.objects.create(name="Git Credentials")
                 SecretsGroupAssociation.objects.create(
                     secret=username_secret,
-                    group=secrets_group,
+                    secrets_group=secrets_group,
                     access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
                     secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
                 )
                 SecretsGroupAssociation.objects.create(
                     secret=token_secret,
-                    group=secrets_group,
+                    secrets_group=secrets_group,
                     access_type=SecretsGroupAccessTypeChoices.TYPE_HTTP,
                     secret_type=SecretsGroupSecretTypeChoices.TYPE_TOKEN,
                 )
@@ -438,7 +356,7 @@ class GitTest(TransactionTestCase):
                 )
                 MockGitRepo.assert_called_with(
                     os.path.join(tempdir, self.repo.slug),
-                    "http://user1234:1234abcd5678ef90@localhost/git.git",
+                    "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
                 )
 
     def test_pull_git_repository_and_refresh_data_with_valid_data(self, MockGitRepo):
@@ -447,7 +365,6 @@ class GitTest(TransactionTestCase):
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
-
                 MockGitRepo.side_effect = self.populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
@@ -667,6 +584,10 @@ class GitTest(TransactionTestCase):
                                     "weight": 1500,
                                     "description": "NTP servers for region NYC",
                                     "is_active": True,
+                                    # Changing this from `config_context_schema` to `schema` to assert that schema can
+                                    # be used inplace of `config_context_schema`.
+                                    # TODO(timizuo): Replace `schema` with `config_context_schema` when `schema`
+                                    #  backwards-compatibility is removed.
                                     "schema": "Config Context Schema 1",
                                 },
                                 "ntp-servers": ["172.16.10.22", "172.16.10.33"],
@@ -721,7 +642,7 @@ class GitTest(TransactionTestCase):
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
-                self.assertEqual(config_context_schema_record, config_context.schema)
+                self.assertEqual(config_context_schema_record, config_context.config_context_schema)
 
                 config_context_schema = self.config_context_schema
                 config_context_schema_metadata = config_context_schema["_metadata"]

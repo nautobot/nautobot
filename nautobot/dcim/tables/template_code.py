@@ -103,7 +103,7 @@ POWERFEED_CABLETERMINATION = """
 """
 
 RACKGROUP_ELEVATIONS = """
-<a href="{% url 'dcim:rack_elevation_list' %}?site={{ record.site.slug }}&group_id={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
+<a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.slug }}&rack_group_id={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
     <i class="mdi mdi-server"></i>
 </a>
 """
@@ -190,11 +190,14 @@ POWEROUTLET_BUTTONS = """
 {% endif %}
 """
 
+# TODO: re-introduce assign ip address button?
 INTERFACE_BUTTONS = """
 {% if perms.ipam.add_ipaddress %}
+    <!--
     <a href="{% url 'ipam:ipaddress_add' %}?interface={{ record.pk }}&return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
+    -->
 {% endif %}
 {% if record.cable %}
     <a href="{% url 'dcim:interface_trace' pk=record.pk %}" class="btn btn-primary btn-xs" title="Trace"><i class="mdi mdi-transit-connection-variant"></i></a>
