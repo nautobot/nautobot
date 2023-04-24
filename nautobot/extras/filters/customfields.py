@@ -8,7 +8,7 @@ from nautobot.utilities.filters import (
     MultiValueDateFilter,
     MultiValueNumberFilter,
 )
-from nautobot.utilities.forms import NullableDateField
+from nautobot.utilities.forms import NullableDateField, StaticSelect2Multiple
 
 
 EXACT_FILTER_TYPES = (
@@ -75,6 +75,15 @@ class CustomFieldMultiSelectFilter(CustomFieldFilterMixin, MultiValueCharFilter)
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("lookup_expr", "contains")
+        super().__init__(*args, **kwargs)
+
+
+class CustomFieldMultiValueSelectFilter(CustomFieldFilterMixin, django_filters.MultipleChoiceFilter):
+    """This provides functionality for filtering custom fields with select type"""
+
+    def __init__(self, *args, **kwargs):
+        # TODO(jathan): See if I can make this user `kwargs` instead.
+        self.field_class.widget = StaticSelect2Multiple
         super().__init__(*args, **kwargs)
 
 

@@ -891,8 +891,11 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
-    if isinstance(field, CustomFieldFilterMixin):
-        form_field = field.custom_field.to_filter_form_field()
+    # If we allow CustomFieldFilters to pass through their choices are always [('null', 'None')] and
+    # not populated from the actual choices. If we can get the form field that is emitted by default
+    # to provide the correct choices, this won't be necessary.
+    if isinstance(field, CustomFieldFilterMixin) and field.lookup_expr == "exact":
+        form_field = field.custom_field.to_form_field()
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, filters.ModelMultipleChoiceFilter):
