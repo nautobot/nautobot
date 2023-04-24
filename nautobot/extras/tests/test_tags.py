@@ -80,7 +80,7 @@ class TaggedItemTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         tag_name_list = Tag.objects.filter(pk__in=response.data["tags"]).values_list("name", flat=True)
         self.assertListEqual(
-            sorted([name for name in tag_name_list]),
+            sorted(list(tag_name_list)),
             sorted([t["name"] for t in data["tags"]]),
         )
         location = Location.objects.get(pk=response.data["id"])
