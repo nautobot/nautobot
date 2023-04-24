@@ -1,0 +1,1 @@
+Updated `sqlparse` to `0.4.4` due to CVE-2023-30608. This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
