@@ -221,7 +221,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         Create a property field for model methods and properties.
         """
-        if isinstance(getattr(model_class, field_name, None), (_NautobotTaggableManager, _TaggableManager)):
+        if isinstance(getattr(model_class, field_name, None), TagsManager):
             field_class = NautobotPrimaryKeyRelatedField
             field_kwargs = {
                 "queryset": Tag.objects.get_for_model(model_class),
