@@ -165,7 +165,7 @@ The following environment variables may also be set for some of the above values
 * `NAUTOBOT_CACHES_BACKEND`
 
 +/- 2.0.0
-    The default value of `CACHES["default"]["LOCATION"] has changed from `redis://localhost:6379/0` to `redis://localhost:6379/1`, as Django's native caching is now taking the role previously occupied by `django-cacheops`.
+    The default value of `CACHES["default"]["LOCATION"]` has changed from `redis://localhost:6379/0` to `redis://localhost:6379/1`, as Django's native caching is now taking the role previously occupied by `django-cacheops`.
 
 ### Task Queuing with Celery
 
