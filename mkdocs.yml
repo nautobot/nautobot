@@ -71,6 +71,8 @@ markdown_extensions:
   - "toc":
       permalink: true
   - "attr_list"
+  - "markdown_data_tables":
+      base_path: "docs"
   - "md_in_html"
   - "pymdownx.details"
   - "pymdownx.highlight":
@@ -108,9 +110,10 @@ nav:
           - Nautobot Docker Images: "docker/index.md"
       - Migration:
           - Migrating from NetBox: "installation/migrating-from-netbox.md"
+          - Migrating from PostgreSQL to MySQL: "installation/migrating-from-postgresql.md"
           - Upgrading Nautobot: "installation/upgrading.md"
           - Upgrading Nautobot from v1.X to v2.0: "installation/upgrading-from-nautobot-v1.md"
-          - Migrating from PostgreSQL to MySQL: "installation/migrating-from-postgresql.md"
+          - Migrating from Region and Site to Location: "installation/region-and-site-data-migration-guide.md"
       - Configuration:
           - Configuring Nautobot: "configuration/index.md"
           - Required Settings: "configuration/required-settings.md"
@@ -166,6 +169,7 @@ nav:
           - Git Repositories: "models/extras/gitrepository.md"
           - Health Check: "additional-features/healthcheck.md"
           - Jobs: "additional-features/jobs.md"
+          - Job Buttons: "models/extras/jobbutton.md"
           - Job Hooks: "models/extras/jobhook.md"
           - Job Scheduling and Approvals: "additional-features/job-scheduling-and-approvals.md"
           - NAPALM: "additional-features/napalm.md"
@@ -211,6 +215,8 @@ nav:
       - Extending Models: "development/extending-models.md"
       - Testing: 'development/testing.md'
       - Application Registry: "development/application-registry.md"
+      - Model Features: "development/model-features.md"
+      - Natural Keys: "development/natural-keys.md"
       - Page Templates: "development/templates.md"
       - Navigation Menu: "development/navigation-menu.md"
       - Home Page Panels: "development/homepage.md"
@@ -229,9 +235,12 @@ nav:
       - Overview: "apps/index.md"
       - Network to Code App Docs:
           - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
+          - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
+          - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
+          - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
           - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
-          - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
           - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
-          - Nautobot Single Source of Truth: "https://nautobot-plugin-ssot.readthedocs.io/en/latest/"
+          - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
+          - Nautobot Single Source of Truth: "https://docs.nautobot.com/projects/ssot/en/latest/"
       - Community Apps: "apps/nautobot-apps.md"
   - Nautobot Docs Home ↗︎: "https://docs.nautobot.com/"

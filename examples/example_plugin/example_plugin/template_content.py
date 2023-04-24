@@ -69,20 +69,20 @@ class DeviceContent(TemplateExtension):
         """
 
 
-class SiteContent(TemplateExtension):
-    model = "dcim.site"
+class LocationContent(TemplateExtension):
+    model = "dcim.location"
 
     def left_page(self):
-        return "SITE CONTENT - LEFT PAGE"
+        return "LOCATION CONTENT - LEFT PAGE"
 
     def right_page(self):
-        return "SITE CONTENT - RIGHT PAGE"
+        return "LOCATION CONTENT - RIGHT PAGE"
 
     def full_width_page(self):
-        return "SITE CONTENT - FULL WIDTH PAGE"
+        return "LOCATION CONTENT - FULL WIDTH PAGE"
 
     def buttons(self):
-        return "SITE CONTENT - BUTTONS"
+        return "LOCATION CONTENT - BUTTONS"
 
 
 class ExampleModelContent(TemplateExtension):
@@ -132,4 +132,4 @@ class ExampleModelContent(TemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [ExampleModelContent, SiteContent, CircuitContent, DeviceContent]
+template_extensions = [ExampleModelContent, LocationContent, CircuitContent, DeviceContent]

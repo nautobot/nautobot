@@ -2,9 +2,9 @@ import factory
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation, Site
-from nautobot.extras.models import Role, Status
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
+from nautobot.extras.models import Role, Status, Tag
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -20,7 +20,7 @@ from nautobot.virtualization.factory import (
 )
 
 
-class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
+class TenantGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = TenantGroup.objects.all()
     filterset = TenantGroupFilterSet
 
@@ -37,7 +37,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(parent__in=[parent_groups[0], parent_groups[1]]),
         )
-        params = {"parent": [parent_groups[0].slug, parent_groups[1].slug]}
+        params = {"parent": [parent_groups[0].name, parent_groups[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(parent__in=[parent_groups[0], parent_groups[1]]),
@@ -46,7 +46,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_children(self):
         """Test the `children` filter."""
         child_groups = TenantGroup.objects.filter(parent__isnull=False)
-        params = {"children": [child_groups[0].pk, child_groups[1].slug]}
+        params = {"children": [child_groups[0].pk, child_groups[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(children__in=[child_groups[0], child_groups[1]]).distinct(),
@@ -68,7 +68,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_tenants(self):
         """Test the `tenants` filter."""
         tenants = Tenant.objects.filter(tenant_group__isnull=False)
-        params = {"tenants": [tenants[0].pk, tenants[1].slug]}
+        params = {"tenants": [tenants[0].pk, tenants[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(tenants__in=[tenants[0], tenants[1]]).distinct(),
@@ -88,22 +88,17 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
 
-class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
+class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Tenant.objects.all()
     filterset = TenantFilterSet
 
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(name="Active")
-        site = Site.objects.first()
+        status = Status.objects.get_for_model(Tenant).first()
         location_type = LocationType.objects.create(name="Root Type")
         cls.locations = (
-            Location.objects.create(
-                name="Root 1", location_type=location_type, site=site, status=active, tenant=cls.queryset[0]
-            ),
-            Location.objects.create(
-                name="Root 2", location_type=location_type, site=site, status=active, tenant=cls.queryset[1]
-            ),
+            Location.objects.create(name="Root 1", location_type=location_type, status=status, tenant=cls.queryset[0]),
+            Location.objects.create(name="Root 2", location_type=location_type, status=status, tenant=cls.queryset[1]),
         )
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
@@ -123,8 +118,8 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
                 device_type=DeviceType.objects.first(),
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
-                site=Site.objects.first(),
-                status=active,
+                location=cls.locations[0],
+                status=status,
                 tenant=Tenant.objects.first(),
             ),
             Device.objects.create(
@@ -132,11 +127,14 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
                 device_type=DeviceType.objects.first(),
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
-                site=Site.objects.first(),
-                status=active,
+                location=cls.locations[0],
+                status=status,
                 tenant=Tenant.objects.last(),
             ),
         )
+
+        tenant = Tenant.objects.first()
+        tenant.tags.set(Tag.objects.all()[:2])
 
     def test_description(self):
         params = {
@@ -148,35 +146,13 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"comments": Tenant.objects.exclude(comments__exact="").values_list("comments", flat=True)[:2]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_aggregates(self):
-        """Test the `aggregates` filter."""
-        aggregates = list(Aggregate.objects.filter(tenant__isnull=False))[:2]
-        params = {"aggregates": [aggregates[0].pk, aggregates[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__in=aggregates).distinct(),
-        )
-
-    def test_has_aggregates(self):
-        """Test the `has_aggregates` filter."""
-        params = {"has_aggregates": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__isnull=False).distinct(),
-        )
-        params = {"has_aggregates": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(aggregates__isnull=True).distinct(),
-        )
-
     def test_circuits(self):
         """Test the `circuits` filter."""
         circuits = list(Circuit.objects.filter(tenant__isnull=False))[:2]
         params = {"circuits": [circuits[0].pk, circuits[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(circuits__in=circuits),
+            self.queryset.filter(circuits__in=circuits).distinct(),
         )
 
     def test_has_circuits(self):
@@ -245,7 +221,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(tenant_group__in=groups_including_children),
         )
-        params = {"tenant_group": [groups[0].slug, groups[1].slug]}
+        params = {"tenant_group": [groups[0].name, groups[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(tenant_group__in=groups_including_children),
@@ -320,7 +296,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"rack_reservations": [rack_reservations[0].pk, rack_reservations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservations__in=rack_reservations).distinct(),
+            self.queryset.filter(rack_reservations__in=rack_reservations).distinct(),
         )
 
     def test_has_rack_reservations(self):
@@ -328,12 +304,12 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"has_rack_reservations": True}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservations__isnull=False).distinct(),
+            self.queryset.filter(rack_reservations__isnull=False).distinct(),
         )
         params = {"has_rack_reservations": False}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rackreservations__isnull=True).distinct(),
+            self.queryset.filter(rack_reservations__isnull=True).distinct(),
         )
 
     def test_racks(self):
@@ -378,28 +354,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(route_targets__isnull=True).distinct(),
-        )
-
-    def test_sites(self):
-        """Test the `sites` filter."""
-        sites = list(Site.objects.filter(tenant__isnull=False))[:2]
-        params = {"sites": [sites[0].pk, sites[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__in=sites).distinct(),
-        )
-
-    def test_has_sites(self):
-        """Test the `has_sites` filter."""
-        params = {"has_sites": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__isnull=False).distinct(),
-        )
-        params = {"has_sites": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(sites__isnull=True).distinct(),
         )
 
     def test_virtual_machines(self):

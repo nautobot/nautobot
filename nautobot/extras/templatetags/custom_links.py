@@ -44,7 +44,6 @@ def custom_links(context, obj):
     group_names = OrderedDict()
 
     for cl in links:
-
         # Organize custom links by group
         if cl.group_name and cl.group_name in group_names:
             group_names[cl.group_name].append(cl)
@@ -67,7 +66,6 @@ def custom_links(context, obj):
 
     # Add grouped links to template
     for group, links in group_names.items():
-
         links_rendered = []
 
         for cl in links:

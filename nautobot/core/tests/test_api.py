@@ -54,8 +54,8 @@ class APIDocsTestCase(TestCase):
 
     def setUp(self):
         # Populate a CustomField to activate CustomFieldSerializer
-        content_type = ContentType.objects.get_for_model(dcim_models.Site)
-        self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")
+        content_type = ContentType.objects.get_for_model(dcim_models.Location)
+        self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, label="test")
         self.cf_text.save()
         self.cf_text.content_types.set([content_type])
         self.cf_text.save()
@@ -82,9 +82,6 @@ class APIPaginationTestCase(testing.APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        for i in range(10):
-            Provider.objects.create(name=f"Provider {i}", slug=f"provider-{i}")
-
         cls.url = reverse("circuits-api:provider-list")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=5, MAX_PAGE_SIZE=10)
@@ -266,14 +263,14 @@ class LookupTypeChoicesTestCase(testing.APITestCase):
             self.assertEqual(response.data, "content_type not found")
 
         with self.subTest("Test invalid field_name"):
-            response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
+            response = self.client.get(url + "?content_type=dcim.location&field_name=fake", **self.header)
 
             self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_choices(self):
         url = reverse("core-api:filtersetfield-list-lookupchoices")
-        response = self.client.get(url + "?content_type=dcim.site&field_name=status", **self.header)
+        response = self.client.get(url + "?content_type=dcim.location&field_name=status", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -305,14 +302,14 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             self.assertEqual(response.data, "content_type not found")
 
         with self.subTest("Test invalid field_name"):
-            response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
+            response = self.client.get(url + "?content_type=dcim.location&field_name=fake", **self.header)
 
             self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
-        response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
+        response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -332,10 +329,36 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             {
                 "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
-                'display-field="display" value-field="slug" data-url="/api/extras/roles/" id="id_for_role" '
+                'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             },
         )
+
+        with self.subTest("Assert correct lookup field dom element is generated"):
+            response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
+                },
+            )
+
+        with self.subTest("Assert TempFilterForm is used if model filterform raises error at initialization"):
+            # The generation of a lookup field DOM representation is dependent on the ModelForm of the field;;
+            # if an error occurs when initializing the ModelForm, it should fall back to creating a temp ModelForm.
+            # Because the InterfaceModelForm requires a device to initialize, this is a perfect example to test that
+            # the Temp ModelForm is used.
+            response = self.client.get(url + "?content_type=dcim.interface&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
+                },
+            )
 
 
 class WritableNestedSerializerTest(testing.APITestCase):
@@ -346,34 +369,49 @@ class WritableNestedSerializerTest(testing.APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.region_a = dcim_models.Region.objects.filter(sites__isnull=True).first()
-        self.status = extras_models.Status.objects.get(name="Active")
-        self.site1 = dcim_models.Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
-        self.site2 = dcim_models.Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
+        self.location_type_1 = dcim_models.LocationType.objects.get(name="Campus")
+        self.location_type_2 = dcim_models.LocationType.objects.get(name="Building")
+
+        self.location1 = dcim_models.Location.objects.create(
+            location_type=self.location_type_1, name="Location 1", slug="location-1"
+        )
+        self.location2 = dcim_models.Location.objects.create(
+            location_type=self.location_type_2,
+            name="Location 2",
+            slug="location-2",
+            parent=self.location1,
+        )
+        self.location3 = dcim_models.Location.objects.create(
+            location_type=self.location_type_2,
+            name="Location 3",
+            slug="location-3",
+            parent=self.location1,
+        )
+        self.statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
 
     def test_related_by_pk(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "site": self.site1.pk,
-            "status": self.status.pk,
+            "location": self.location1.pk,
+            "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
+        self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.site, self.site1)
-        self.assertEqual(vlan.status, self.status)
+        self.assertEqual(vlan.status, self.statuses.first())
+        self.assertEqual(vlan.location, self.location1)
 
     def test_related_by_pk_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "site": "00000000-0000-0000-0000-0000000009eb",
-            "status": self.status.pk,
+            "location": "00000000-0000-0000-0000-0000000009eb",
+            "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -382,31 +420,30 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["site"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": {"name": self.status.name},
-            "site": {"name": "Site 1"},
+            "status": self.statuses.first().pk,
+            "location": {"name": "Location 1"},
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
+        self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.site, self.site1)
-        self.assertEqual(vlan.status, self.status)
+        self.assertEqual(vlan.location, self.location1)
 
     def test_related_by_attributes_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": self.status.pk,
-            "site": {"name": "Site X"},
+            "status": self.statuses.first().pk,
+            "location": {"name": "Location X"},
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -415,16 +452,16 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["site"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "status": self.status.pk,
-            "site": {
-                "region": {
-                    "name": self.region_a.name,
+            "status": self.statuses.first().pk,
+            "location": {
+                "parent": {
+                    "name": self.location1.name,
                 },
             },
         }
@@ -435,14 +472,14 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["site"][0].startswith("Multiple objects match"))
+        self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
 
     def test_related_by_invalid(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "site": "XXX",
-            "status": self.status.pk,
+            "location": "XXX",
+            "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")

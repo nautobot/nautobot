@@ -23,7 +23,7 @@ from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
-logger = logging.getLogger("nautobot.extras.signals")
+logger = logging.getLogger(__name__)
 
 
 #
@@ -145,8 +145,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        # 2.0 TODO: #824 instance.slug rather than instance.name
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
@@ -287,7 +286,6 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
         for module_details in modules.values():
             for job_class in module_details["jobs"].values():
-                # TODO(Glenn): catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
                 if job_model is not None:
                     job_models.append(job_model)

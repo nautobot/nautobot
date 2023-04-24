@@ -30,6 +30,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
+    JobButton,
     JobHook,
     JobResult,
     JobLogEntry,
@@ -152,14 +153,14 @@ class ConfigContextTable(BaseTable):
             "weight",
             "is_active",
             "description",
-            "regions",
-            "sites",
+            "locations",
             "roles",
             "platforms",
             "cluster_groups",
             "clusters",
             "tenant_groups",
             "tenants",
+            "dynamic_groups",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -207,23 +208,6 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
     label = tables.Column(linkify=True)
-    # 2.0 TODO: #824 Remove name column
-    name = tables.TemplateColumn(
-        template_code="""
-{{ value }}
-{% if value != record.slug %}
-<span class="text-warning mdi mdi-alert" title="Name does not match slug '{{ record.slug }}'"></span>
-{% endif %}
-"""
-    )
-    slug = tables.TemplateColumn(
-        template_code="""
-{{ value }}
-{% if value != record.name %}
-<span class="text-warning mdi mdi-alert" title="Name '{{ record.name }}' does not match slug"></span>
-{% endif %}
-"""
-    )
     content_types = ContentTypesColumn(truncate_words=15)
     required = BooleanColumn()
 
@@ -232,9 +216,7 @@ class CustomFieldTable(BaseTable):
         fields = (
             "pk",
             "label",
-            # 2.0 TODO: #824 Remove name column
-            "name",
-            "slug",
+            "key",
             "content_types",
             "type",
             "description",
@@ -245,7 +227,7 @@ class CustomFieldTable(BaseTable):
         default_columns = (
             "pk",
             "label",
-            "slug",
+            "key",
             "content_types",
             "type",
             "required",
@@ -291,7 +273,7 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug")
+    actions = ButtonsColumn(DynamicGroup)
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
@@ -316,7 +298,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -395,7 +377,7 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
     """
 
     name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
-    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
 
     class Meta(DynamicGroupTable.Meta):
         fields = ["name", "members", "description", "actions"]
@@ -514,7 +496,6 @@ class GraphQLQueryTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
         )
 
 
@@ -542,6 +523,7 @@ class JobTable(BaseTable):
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
+    is_job_button_receiver = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
@@ -578,6 +560,7 @@ class JobTable(BaseTable):
             "hidden",
             "read_only",
             "is_job_hook_receiver",
+            "is_job_button_receiver",
             "approval_required",
             "soft_time_limit",
             "time_limit",
@@ -713,7 +696,7 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
-        log_objects = record.logs.all()
+        log_objects = record.job_log_entries.all()
         success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
@@ -744,6 +727,37 @@ class JobResultTable(BaseTable):
             "actions",
         )
         default_columns = ("pk", "date_created", "name", "linked_record", "user", "status", "summary", "actions")
+
+
+class JobButtonTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    job = tables.Column(linkify=True)
+    confirmation = BooleanColumn()
+    content_types = ContentTypesColumn(truncate_words=15)
+
+    class Meta(BaseTable.Meta):
+        model = JobButton
+        fields = (
+            "pk",
+            "name",
+            "content_types",
+            "text",
+            "job",
+            "group_name",
+            "weight",
+            "button_class",
+            "confirmation",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "group_name",
+            "weight",
+            "job",
+            "confirmation",
+        )
 
 
 #
@@ -863,14 +877,14 @@ class RoleTable(BaseTable):
     """Table for list view of `Role` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:role", args=[Accessor("slug")])
+    name = tables.Column(linkify=True)
     color = ColorColumn()
-    actions = ButtonsColumn(Role, pk_field="slug")
+    actions = ButtonsColumn(Role)
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
         model = Role
-        fields = ["pk", "name", "slug", "color", "weight", "content_types", "description"]
+        fields = ["pk", "name", "color", "weight", "content_types", "description"]
 
 
 class RoleTableMixin(BaseTable):
@@ -941,14 +955,14 @@ class StatusTable(BaseTable):
     """Table for list view of `Status` objects."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:status", args=[Accessor("slug")])
+    name = tables.Column(linkify=True)
     color = ColorColumn()
-    actions = ButtonsColumn(Status, pk_field="slug")
+    actions = ButtonsColumn(Status)
     content_types = ContentTypesColumn(truncate_words=15)
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ["pk", "name", "slug", "color", "content_types", "description"]
+        fields = ["pk", "name", "color", "content_types", "description"]
 
 
 class StatusTableMixin(BaseTable):

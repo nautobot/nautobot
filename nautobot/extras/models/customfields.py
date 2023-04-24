@@ -11,7 +11,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.forms.widgets import TextInput
-from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.core.forms import (
@@ -25,7 +24,7 @@ from nautobot.core.forms import (
     StaticSelect2Multiple,
     add_blank_choice,
 )
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
@@ -35,12 +34,12 @@ from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTy
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.utils import check_if_key_is_graphql_safe, FeatureQuery, extras_features
 
 logger = logging.getLogger(__name__)
 
 
-class ComputedFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     def get_for_model(self, model):
@@ -61,6 +60,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_fields"),
+        related_name="computed_fields",
     )
     slug = AutoSlugField(
         populate_from="label",
@@ -93,9 +93,6 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def __str__(self):
         return self.label
-
-    def get_absolute_url(self):
-        return reverse("extras:computedfield", args=[self.slug])
 
     def render(self, context):
         try:
@@ -161,8 +158,7 @@ class CustomFieldModel(models.Model):
         fields = CustomField.objects.get_for_model(self)
         if advanced_ui is not None:
             fields = fields.filter(advanced_ui=advanced_ui)
-        # 2.0 TODO: #824 field.slug rather than field.name
-        return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
+        return OrderedDict([(field, self.cf.get(field.key)) for field in fields])
 
     def get_custom_field_groupings_basic(self):
         """
@@ -208,7 +204,7 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
 
         for field in fields:
-            data = (field, self.cf.get(field.name))
+            data = (field, self.cf.get(field.key))
             record.setdefault(field.grouping, []).append(data)
         record = dict(sorted(record.items()))
         return record
@@ -216,25 +212,23 @@ class CustomFieldModel(models.Model):
     def clean(self):
         super().clean()
 
-        # 2.0 TODO: #824 replace cf.name with cf.slug
-        custom_fields = {cf.name: cf for cf in CustomField.objects.get_for_model(self)}
+        custom_fields = {cf.key: cf for cf in CustomField.objects.get_for_model(self)}
 
         # Validate all field values
-        for field_name, value in self._custom_field_data.items():
-            if field_name not in custom_fields:
+        for field_key, value in self._custom_field_data.items():
+            if field_key not in custom_fields:
                 # log a warning instead of raising a ValidationError so as not to break the UI
-                logger.warning(f"Unknown field name '{field_name}' in custom field data for {self} ({self.pk}).")
+                logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                custom_fields[field_name].validate(value)
+                custom_fields[field_key].validate(value)
             except ValidationError as e:
-                raise ValidationError(f"Invalid value for custom field '{field_name}': {e.message}")
+                raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
         # Check for missing required values
         for cf in custom_fields.values():
-            # 2.0 TODO: #824 replace cf.name with cf.slug
-            if cf.required and cf.name not in self._custom_field_data:
-                raise ValidationError(f"Missing required custom field '{cf.name}'.")
+            if cf.required and cf.key not in self._custom_field_data:
+                raise ValidationError(f"Missing required custom field '{cf.key}'.")
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
@@ -283,7 +277,7 @@ class CustomFieldModel(models.Model):
         return computed_fields_dict
 
 
-class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     def get_for_model(self, model):
@@ -314,18 +308,17 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         default=CustomFieldTypeChoices.TYPE_TEXT,
         help_text="The type of value(s) allowed for this field.",
     )
-    # 2.0 TODO: #824 remove `name` field as redundant, make `label` mandatory, populate `slug` from `label` field.
-    name = models.CharField(max_length=50, unique=True, help_text="Human-readable unique name of this field.")
     label = models.CharField(
         max_length=50,
-        blank=True,
-        help_text="Name of the field as displayed to users (if not provided, the field's name will be used.)",
-    )
-    slug = AutoSlugField(
+        help_text="Name of the field as displayed to users.",
         blank=False,
+    )
+    key = AutoSlugField(
+        blank=True,
         max_length=50,
+        separator="_",
         populate_from="label",
-        help_text="Internal field name. Please use underscores rather than dashes in this slug.",
+        help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
     description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
@@ -397,48 +390,22 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     ]
 
     class Meta:
-        ordering = ["weight", "name"]
+        ordering = ["weight", "label"]
 
     def __str__(self):
-        return self.label or self.name.replace("_", " ").capitalize()
-
-    def _fixup_empty_fields(self):
-        """Handle the case when a new instance is created and some fields are left blank."""
-        if self.present_in_database:
-            return
-
-        # 2.0 TODO: this is to handle the UI case where `name` is no longer a directly configured form.
-        # Once `name` is no longer a model field, we can remove this.
-        if self.slug and not self.name:
-            self.name = self.slug
-
-        # 2.0 TODO: this is to fixup existing ORM usage when caller specifies a name but not a label;
-        # in 2.0 we should make `label` a mandatory field when getting rid of `name`.
-        if self.name and not self.label:
-            self.label = self.name
-
-        # This is to fix up existing ORM usage when caller doesn't specify a slug since it wasn't a field before.
-        if not self.slug:
-            self.slug = slugify_dashes_to_underscores(self.label or self.name)
-
-    def clean_fields(self, exclude=None):
-        # Ensure now-mandatory fields are correctly populated, as otherwise cleaning will fail.
-        self._fixup_empty_fields()
-        super().clean_fields(exclude=exclude)
+        return self.label
 
     def clean(self):
         super().clean()
 
+        if self.key != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
 
-            # 2.0 TODO: #824 once self.name is no longer used as a dict key, can remove this constraint
-            if self.name != database_object.name:
-                raise ValidationError({"name": "Name cannot be changed once created"})
-
-            if self.slug != database_object.slug:
-                raise ValidationError({"slug": "Slug cannot be changed once created"})
+            if self.key != database_object.key:
+                raise ValidationError({"key": "Key cannot be changed once created"})
 
             if self.type != database_object.type:
                 raise ValidationError({"type": "Type cannot be changed once created"})
@@ -463,7 +430,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             )
 
         # Choices can be set only on selection fields
-        if self.choices.exists() and self.type not in (
+        if self.custom_field_choices.exists() and self.type not in (
             CustomFieldTypeChoices.TYPE_SELECT,
             CustomFieldTypeChoices.TYPE_MULTISELECT,
         ):
@@ -473,18 +440,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         if (
             self.type == CustomFieldTypeChoices.TYPE_SELECT
             and self.default
-            and self.default not in self.choices.values_list("value", flat=True)
+            and self.default not in self.custom_field_choices.values_list("value", flat=True)
         ):
             raise ValidationError(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
-
-    def save(self, *args, **kwargs):
-        # Prior to Nautobot 1.4, `slug` was a non-existent field, but now it's mandatory.
-        # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
-        # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
-        self._fixup_empty_fields()
-        super().save(*args, **kwargs)
 
     def to_form_field(
         self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
@@ -547,7 +507,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
-
             if simple_json_filter:
                 field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
             else:
@@ -555,8 +514,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         # Select or Multi-select
         else:
-            choices = [(cfc.value, cfc.value) for cfc in self.choices.all()]
-            default_choice = self.choices.filter(value=self.default).first()
+            choices = [(cfc.value, cfc.value) for cfc in self.custom_field_choices.all()]
+            default_choice = self.custom_field_choices.filter(value=self.default).first()
 
             if not required or default_choice is None:
                 choices = add_blank_choice(choices)
@@ -594,10 +553,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         Validate a value according to the field's type validation rules.
         """
         if value not in [None, "", []]:
-
             # Validate text field
             if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
-
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
 
@@ -634,15 +591,15 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
             # Validate selected choice
             if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-                if value not in self.choices.values_list("value", flat=True):
+                if value not in self.custom_field_choices.values_list("value", flat=True):
                     raise ValidationError(
-                        f"Invalid choice ({value}). Available choices are: {', '.join(self.choices.values_list('value', flat=True))}"
+                        f"Invalid choice ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
                     )
 
             if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                if not set(value).issubset(self.choices.values_list("value", flat=True)):
+                if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
                     raise ValidationError(
-                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices.values_list('value', flat=True))}"
+                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
                     )
 
         elif self.required:
@@ -656,11 +613,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         super().delete(*args, **kwargs)
 
-        # 2.0 TODO: #824 use self.slug as key instead of self.name
-        delete_custom_field_data.delay(self.name, content_types)
+        delete_custom_field_data.delay(self.key, content_types)
 
-    def get_absolute_url(self):
-        return reverse("extras:customfield", args=[self.slug])
+    def add_prefix_to_cf_key(self):
+        return "cf_" + str(self.key)
 
 
 @extras_features(
@@ -672,10 +628,10 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     The custom field choice is used to store the possible set of values for a selection type custom field
     """
 
-    field = models.ForeignKey(
+    custom_field = models.ForeignKey(
         to="extras.CustomField",
         on_delete=models.CASCADE,
-        related_name="choices",
+        related_name="custom_field_choices",
         limit_choices_to=models.Q(
             type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
         ),
@@ -684,18 +640,18 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     class Meta:
-        ordering = ["field", "weight", "value"]
-        unique_together = ["field", "value"]
+        ordering = ["custom_field", "weight", "value"]
+        unique_together = ["custom_field", "value"]
 
     def __str__(self):
         return self.value
 
     def clean(self):
-        if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
+        if self.custom_field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
 
-        if not re.search(self.field.validation_regex, self.value):
-            raise ValidationError(f"Value must match regex {self.field.validation_regex} got {self.value}.")
+        if not re.search(self.custom_field.validation_regex, self.value):
+            raise ValidationError(f"Value must match regex {self.custom_field.validation_regex} got {self.value}.")
 
     def save(self, *args, **kwargs):
         """
@@ -710,32 +666,31 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         if self.value != database_object.value:
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(self.field.pk, database_object.value, self.value)
+                lambda: update_custom_field_choice_data.delay(self.custom_field.pk, database_object.value, self.value)
             )
 
     def delete(self, *args, **kwargs):
         """
         When a custom field choice is deleted, remove references to in custom field data
         """
-        if self.field.default:
+        if self.custom_field.default:
             # Cannot delete the choice if it is the default value.
-            if self.field.type == CustomFieldTypeChoices.TYPE_SELECT and self.field.default == self.value:
+            if self.custom_field.type == CustomFieldTypeChoices.TYPE_SELECT and self.custom_field.default == self.value:
                 raise models.ProtectedError(
                     msg="Cannot delete this choice because it is the default value for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
-            elif self.value in self.field.default:
+            elif self.value in self.custom_field.default:
                 raise models.ProtectedError(
                     msg="Cannot delete this choice because it is one of the default values for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
 
-        if self.field.type == CustomFieldTypeChoices.TYPE_SELECT:
+        if self.custom_field.type == CustomFieldTypeChoices.TYPE_SELECT:
             # Check if this value is in active use in a select field
-            for ct in self.field.content_types.all():
+            for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
-                # 2.0 TODO: #824 self.field.slug instead of self.field.name
-                if model.objects.filter(**{f"_custom_field_data__{self.field.name}": self.value}).exists():
+                if model.objects.filter(**{f"_custom_field_data__{self.custom_field.key}": self.value}).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
@@ -743,10 +698,11 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         else:
             # Check if this value is in active use in a multi-select field
-            for ct in self.field.content_types.all():
+            for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
-                # 2.0 TODO: #824 self.field.slug instead of self.field.name
-                if model.objects.filter(**{f"_custom_field_data__{self.field.name}__contains": self.value}).exists():
+                if model.objects.filter(
+                    **{f"_custom_field_data__{self.custom_field.key}__contains": self.value}
+                ).exists():
                     raise models.ProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
@@ -757,7 +713,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the parent field
         try:
-            field = self.field
+            field = self.custom_field
         except ObjectDoesNotExist:
             # The parent field has already been deleted
             field = None

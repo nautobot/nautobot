@@ -10,13 +10,9 @@ class NavBarTestCase(SeleniumTestCase):
     fixtures = ["user-data.json"]
     navbar = {
         "Organization": {
-            "Sites": {
-                "Sites": {
-                    "permission": "dcim.view_site",
-                    "buttons": ["Add", "Import"],
-                },
-                "Regions": {
-                    "permission": "dcim.view_region",
+            "Locations": {
+                "Locations": {
+                    "permission": "dcim.view_location",
                     "buttons": ["Add", "Import"],
                 },
             },
@@ -93,7 +89,7 @@ class NavBarTestCase(SeleniumTestCase):
         """
         Render navbar from home page with limited permissions.
         """
-        self.add_permissions("dcim.view_site")
+        self.add_permissions("dcim.view_location")
         self.add_permissions("extras.view_relationship")
         user_permissions = self.user.get_all_permissions()
 

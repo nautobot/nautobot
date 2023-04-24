@@ -1,17 +1,14 @@
 from django.db import models
-from django.urls import reverse
 
 from nautobot.apps.models import extras_features, OrganizationalModel
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ExampleModel(OrganizationalModel):
@@ -26,9 +23,6 @@ class ExampleModel(OrganizationalModel):
     def __str__(self):
         return f"{self.name} - {self.number}"
 
-    def get_absolute_url(self):
-        return reverse("plugins:example_plugin:examplemodel", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.name,
@@ -37,13 +31,12 @@ class ExampleModel(OrganizationalModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     # "graphql", Not specified here as we have a custom type for this model, see example_plugin.graphql.types
-    "relationships",
     "webhooks",
+    "relationships",  # Defined here to ensure no clobbering: https://github.com/nautobot/nautobot/issues/3592
 )
 class AnotherExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20)
@@ -51,6 +44,3 @@ class AnotherExampleModel(OrganizationalModel):
 
     class Meta:
         ordering = ["name"]
-
-    def get_absolute_url(self):
-        return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})

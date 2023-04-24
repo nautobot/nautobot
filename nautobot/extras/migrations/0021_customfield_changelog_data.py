@@ -93,7 +93,6 @@ def migrate_history(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0020_customfield_changelog"),
     ]

@@ -1,12 +1,15 @@
 import pickle
 
 from django import forms as django_forms
+from django.contrib.auth.models import Group
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import RequestFactory, TestCase
 
 from example_plugin.models import ExampleModel
 
+from nautobot.circuits import models as circuits_models
 from nautobot.core import constants, exceptions, forms, settings_funcs, testing
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
@@ -17,6 +20,7 @@ from nautobot.dcim import models as dcim_models
 from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
+from nautobot.extras.choices import RelationshipTypeChoices
 
 
 class DictToFilterParamsTest(TestCase):
@@ -25,7 +29,6 @@ class DictToFilterParamsTest(TestCase):
     """
 
     def test_dict_to_filter_params(self):
-
         input_ = {
             "a": True,
             "foo": {
@@ -67,7 +70,6 @@ class DeepMergeTest(TestCase):
     """
 
     def test_deepmerge(self):
-
         dict1 = {
             "active": True,
             "foo": 123,
@@ -164,8 +166,8 @@ class GetFooForModelTest(TestCase):
         """
         self.assertEqual(lookup.get_filterset_for_model("dcim.device"), dcim_filters.DeviceFilterSet)
         self.assertEqual(lookup.get_filterset_for_model(dcim_models.Device), dcim_filters.DeviceFilterSet)
-        self.assertEqual(lookup.get_filterset_for_model("dcim.site"), dcim_filters.SiteFilterSet)
-        self.assertEqual(lookup.get_filterset_for_model(dcim_models.Site), dcim_filters.SiteFilterSet)
+        self.assertEqual(lookup.get_filterset_for_model("dcim.location"), dcim_filters.LocationFilterSet)
+        self.assertEqual(lookup.get_filterset_for_model(dcim_models.Location), dcim_filters.LocationFilterSet)
 
     def test_get_form_for_model(self):
         """
@@ -173,12 +175,12 @@ class GetFooForModelTest(TestCase):
         """
         self.assertEqual(lookup.get_form_for_model("dcim.device", "Filter"), dcim_forms.DeviceFilterForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Device, "Filter"), dcim_forms.DeviceFilterForm)
-        self.assertEqual(lookup.get_form_for_model("dcim.site", "Filter"), dcim_forms.SiteFilterForm)
-        self.assertEqual(lookup.get_form_for_model(dcim_models.Site, "Filter"), dcim_forms.SiteFilterForm)
+        self.assertEqual(lookup.get_form_for_model("dcim.location", "Filter"), dcim_forms.LocationFilterForm)
+        self.assertEqual(lookup.get_form_for_model(dcim_models.Location, "Filter"), dcim_forms.LocationFilterForm)
         self.assertEqual(lookup.get_form_for_model("dcim.device"), dcim_forms.DeviceForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Device), dcim_forms.DeviceForm)
-        self.assertEqual(lookup.get_form_for_model("dcim.site"), dcim_forms.SiteForm)
-        self.assertEqual(lookup.get_form_for_model(dcim_models.Site), dcim_forms.SiteForm)
+        self.assertEqual(lookup.get_form_for_model("dcim.location"), dcim_forms.LocationForm)
+        self.assertEqual(lookup.get_form_for_model(dcim_models.Location), dcim_forms.LocationForm)
 
     def test_get_route_for_model(self):
         """
@@ -187,8 +189,8 @@ class GetFooForModelTest(TestCase):
         # UI
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Device, "list"), "dcim:device_list")
-        self.assertEqual(lookup.get_route_for_model("dcim.site", "list"), "dcim:site_list")
-        self.assertEqual(lookup.get_route_for_model(dcim_models.Site, "list"), "dcim:site_list")
+        self.assertEqual(lookup.get_route_for_model("dcim.location", "list"), "dcim:location_list")
+        self.assertEqual(lookup.get_route_for_model(dcim_models.Location, "list"), "dcim:location_list")
         self.assertEqual(
             lookup.get_route_for_model("example_plugin.examplemodel", "list"),
             "plugins:example_plugin:examplemodel_list",
@@ -198,8 +200,14 @@ class GetFooForModelTest(TestCase):
         # API
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Device, "list", api=True), "dcim-api:device-list")
-        self.assertEqual(lookup.get_route_for_model("dcim.site", "detail", api=True), "dcim-api:site-detail")
-        self.assertEqual(lookup.get_route_for_model(dcim_models.Site, "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(lookup.get_route_for_model("dcim.location", "detail", api=True), "dcim-api:location-detail")
+        self.assertEqual(lookup.get_route_for_model(ContentType, "list", api=True), "extras-api:contenttype-list")
+        self.assertEqual(lookup.get_route_for_model(ContentType, "detail", api=True), "extras-api:contenttype-detail")
+        self.assertEqual(lookup.get_route_for_model(Group, "list", api=True), "users-api:group-list")
+        self.assertEqual(lookup.get_route_for_model(Group, "detail", api=True), "users-api:group-detail")
+        self.assertEqual(
+            lookup.get_route_for_model(dcim_models.Location, "detail", api=True), "dcim-api:location-detail"
+        )
         self.assertEqual(
             lookup.get_route_for_model("example_plugin.examplemodel", "list", api=True),
             "plugins-api:example_plugin-api:examplemodel-list",
@@ -215,36 +223,36 @@ class GetFooForModelTest(TestCase):
         """
         self.assertEqual(lookup.get_table_for_model("dcim.device"), tables.DeviceTable)
         self.assertEqual(lookup.get_table_for_model(dcim_models.Device), tables.DeviceTable)
-        self.assertEqual(lookup.get_table_for_model("dcim.site"), tables.SiteTable)
-        self.assertEqual(lookup.get_table_for_model(dcim_models.Site), tables.SiteTable)
+        self.assertEqual(lookup.get_table_for_model("dcim.location"), tables.LocationTable)
+        self.assertEqual(lookup.get_table_for_model(dcim_models.Location), tables.LocationTable)
 
     def test_get_model_from_name(self):
         """
         Test the util function `get_model_from_name` returns the appropriate Model, if the dotted name provided.
         """
         self.assertEqual(lookup.get_model_from_name("dcim.device"), dcim_models.Device)
-        self.assertEqual(lookup.get_model_from_name("dcim.site"), dcim_models.Site)
+        self.assertEqual(lookup.get_model_from_name("dcim.location"), dcim_models.Location)
 
 
 class IsTaggableTest(TestCase):
     def test_is_taggable_true(self):
         # Classes
-        self.assertTrue(models_utils.is_taggable(dcim_models.Site))
+        self.assertTrue(models_utils.is_taggable(dcim_models.Location))
         self.assertTrue(models_utils.is_taggable(dcim_models.Device))
 
         # Instances
-        self.assertTrue(models_utils.is_taggable(dcim_models.Site(name="Test Site")))
+        self.assertTrue(models_utils.is_taggable(dcim_models.Location(name="Test Location")))
 
     def test_is_taggable_false(self):
         class FakeOut:
             tags = "Nope!"
 
         # Classes
-        self.assertFalse(models_utils.is_taggable(dcim_models.Region))
+        self.assertFalse(models_utils.is_taggable(dcim_models.Manufacturer))
         self.assertFalse(models_utils.is_taggable(FakeOut))
 
         # Instances
-        self.assertFalse(models_utils.is_taggable(dcim_models.Region(name="Test Region")))
+        self.assertFalse(models_utils.is_taggable(dcim_models.Manufacturer(name="Test Manufacturer")))
         self.assertFalse(models_utils.is_taggable(FakeOut()))
 
         self.assertFalse(models_utils.is_taggable(None))
@@ -278,14 +286,15 @@ class PrettyPrintQueryTest(TestCase):
         # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         queries = [
-            ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
-            (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
-            Q(site__slug="ams01") | Q(site__slug="ang01"),
-            Q(site__slug="ang01") & ~Q(status__slug="active"),
-            Q(site__slug="ams01", status__slug="planned"),
-            Q(site__slug="ang01"),
+            ((Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__name="Active"))
+            | Q(status__name="Planned"),
+            (Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__name="Active"),
+            Q(location__slug="ams01") | Q(location__slug="ang01"),
+            Q(location__slug="ang01") & ~Q(status__name="Active"),
+            Q(location__slug="ams01", status__name="Planned"),
+            Q(location__slug="ang01"),
             Q(status__id=12345),
-            Q(site__slug__in=["ams01", "ang01"]),
+            Q(location__slug__in=["ams01", "ang01"]),
         ]
         # pylint: enable=unsupported-binary-operation
         results = [
@@ -293,37 +302,37 @@ class PrettyPrintQueryTest(TestCase):
 (
   (
     (
-      site__slug='ams01' OR site__slug='ang01'
+      location__slug='ams01' OR location__slug='ang01'
     ) AND (
-      NOT (status__slug='active')
+      NOT (status__name='Active')
     )
-  ) OR status__slug='planned'
+  ) OR status__name='Planned'
 )""",
             """\
 (
   (
-    site__slug='ams01' OR site__slug='ang01'
+    location__slug='ams01' OR location__slug='ang01'
   ) AND (
-    NOT (status__slug='active')
+    NOT (status__name='Active')
   )
 )""",
             """\
 (
-  site__slug='ams01' OR site__slug='ang01'
+  location__slug='ams01' OR location__slug='ang01'
 )""",
             """\
 (
-  site__slug='ang01' AND (
-    NOT (status__slug='active')
+  location__slug='ang01' AND (
+    NOT (status__name='Active')
   )
 )""",
             """\
 (
-  site__slug='ams01' AND status__slug='planned'
+  location__slug='ams01' AND status__name='Planned'
 )""",
             """\
 (
-  site__slug='ang01'
+  location__slug='ang01'
 )""",
             """\
 (
@@ -331,7 +340,7 @@ class PrettyPrintQueryTest(TestCase):
 )""",
             """\
 (
-  site__slug__in=['ams01', 'ang01']
+  location__slug__in=['ams01', 'ang01']
 )""",
         ]
 
@@ -355,25 +364,30 @@ class SlugifyFunctionsTest(TestCase):
 
     def test_slugify_dashes_to_underscores(self):
         for content, expected in (
-            ("Sites / Regions", "sites_regions"),
+            ("Locations / Regions", "locations_regions"),
             ("alpha-beta_gamma delta", "alpha_beta_gamma_delta"),
+            ("123 main st", "a123_main_st"),
+            (" 123 main st", "a_123_main_st"),
         ):
             self.assertEqual(core_fields.slugify_dashes_to_underscores(content), expected)
 
 
 class LookupRelatedFunctionTest(TestCase):
     def test_is_single_choice_field(self):
-        # Assert function returns True for any field starting with create or has_
-        # Cause these fields are either boolean fields or date time fields which one accepts single values
-        filterset_class = dcim_filters.SiteFilterSet
+        """
+        Assert that is_single_choice_field() correctly distinguishes between single-value and multi-value filter fields.
+        """
+        location_filterset = dcim_filters.LocationFilterSet()
 
-        single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters", "q")
+        single_choice_fields = ("has_vlans", "has_clusters")
         for field in single_choice_fields:
-            self.assertTrue(requests.is_single_choice_field(filterset_class, field))
+            with self.subTest(f"Single choice field: {field}"):
+                self.assertTrue(requests.is_single_choice_field(location_filterset, field))
 
-        multi_choice_fields = ("status", "tenant", "tags")
+        multi_choice_fields = ("created", "status", "tenant", "tags")
         for field in multi_choice_fields:
-            self.assertFalse(requests.is_single_choice_field(filterset_class, field))
+            with self.subTest(f"Multi choice field: {field}"):
+                self.assertFalse(requests.is_single_choice_field(location_filterset, field))
 
     def test_build_lookup_label(self):
         with self.subTest():
@@ -390,14 +404,14 @@ class LookupRelatedFunctionTest(TestCase):
 
     def test_get_all_lookup_expr_for_field(self):
         with self.subTest():
-            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Site, "status")
+            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Location, "status")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not exact (n)"}],
             )
 
         with self.subTest("Test field with has_ prefix"):
-            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Site, "has_vlans")
+            lookup_expr = filtering.get_all_lookup_expr_for_field(dcim_models.Location, "has_vlans")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "has_vlans", "name": "exact"}],
@@ -405,24 +419,25 @@ class LookupRelatedFunctionTest(TestCase):
 
         with self.subTest("Test unknown field"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_all_lookup_expr_for_field(dcim_models.Site, "unknown_field")
+                filtering.get_all_lookup_expr_for_field(dcim_models.Location, "unknown_field")
             self.assertEqual(str(err.exception), "field_name not found")
 
     def test_get_filterset_field(self):
+        location_filterset = dcim_filters.LocationFilterSet()
         with self.subTest():
-            field = filtering.get_filterset_field(dcim_filters.SiteFilterSet, "name")
-            self.assertEqual(field.__class__, dcim_filters.SiteFilterSet().filters.get("name").__class__)
+            field = filtering.get_filterset_field(location_filterset, "name")
+            self.assertEqual(field.__class__, location_filterset.filters.get("name").__class__)
 
         with self.subTest("Test invalid field"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_filterset_field(dcim_filters.SiteFilterSet, "unknown")
-            self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
+                filtering.get_filterset_field(location_filterset, "unknown")
+            self.assertEqual(str(err.exception), "unknown is not a valid LocationFilterSet field")
 
     def test_get_filterset_parameter_form_field(self):
         with self.subTest("Test get CharFields"):
-            site_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
-            for field_name in site_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+            location_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
+            for field_name in location_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
                 self.assertIsInstance(form_field, django_forms.CharField)
 
             device_fields = ["serial", "name"]
@@ -431,7 +446,7 @@ class LookupRelatedFunctionTest(TestCase):
                 self.assertIsInstance(form_field, django_forms.CharField)
 
         with self.subTest("Test IntegerField"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, "asn")
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "asn")
             self.assertIsInstance(form_field, django_forms.IntegerField)
 
             device_fields = ["vc_position", "vc_priority"]
@@ -440,45 +455,46 @@ class LookupRelatedFunctionTest(TestCase):
                 self.assertIsInstance(form_field, django_forms.IntegerField)
 
         with self.subTest("Test DynamicModelMultipleChoiceField"):
-            site_fields = ["region", "tenant", "status"]
-            for field_name in site_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+            location_fields = ["tenant", "status"]
+            for field_name in location_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
-            device_fields = ["cluster", "device_type", "region"]
+            device_fields = ["cluster", "device_type", "location"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
+
+        with self.subTest("Test NullBooleanField"):
+            location_fields = ["has_circuit_terminations", "has_devices"]
+            for field_name in location_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
+                self.assertIsInstance(form_field, django_forms.NullBooleanField)
+
+            device_fields = ["has_console_ports", "has_interfaces"]
+            for field_name in device_fields:
+                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
+                self.assertIsInstance(form_field, django_forms.NullBooleanField)
 
         with self.subTest("Test ChoiceField"):
-            site_fields = ["has_locations", "has_circuit_terminations", "has_devices"]
-            for field_name in site_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, field_name)
-                self.assertIsInstance(form_field, django_forms.ChoiceField)
-
-            device_fields = ["has_console_ports", "has_interfaces", "face"]
-            for field_name in device_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIsInstance(form_field, django_forms.ChoiceField)
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "face")
+            self.assertIsInstance(form_field, django_forms.ChoiceField)
 
         with self.subTest("Test DateTimePicker"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, "last_updated")
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "last_updated")
             self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "last_updated")
             self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
         with self.subTest("Test DatePicker"):
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Site, "created")
-            self.assertIsInstance(form_field.widget, forms.DatePicker)
-
-            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "created")
+            form_field = filtering.get_filterset_parameter_form_field(circuits_models.Circuit, "install_date")
             self.assertIsInstance(form_field.widget, forms.DatePicker)
 
         with self.subTest("Test Invalid parameter"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
-                filtering.get_filterset_parameter_form_field(dcim_models.Site, "unknown")
-            self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
+                filtering.get_filterset_parameter_form_field(dcim_models.Location, "unknown")
+            self.assertEqual(str(err.exception), "unknown is not a valid LocationFilterSet field")
 
         with self.subTest("Test Content types"):
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Status, "content_types")
@@ -494,15 +510,17 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(form_field.queryset.count(), extras_utils.ChangeLoggedModelsQuery().as_queryset().count())
 
     def test_convert_querydict_to_factory_formset_dict(self):
+        location_filter_set = dcim_filters.LocationFilterSet()
+
         with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):
             request_querydict = QueryDict(mutable=True)
             request_querydict.setlistdefault("status", ["active", "decommissioning"])
-            request_querydict.setlistdefault("name__ic", ["site"])
+            request_querydict.setlistdefault("name__ic", ["location"])
             request_querydict.setlistdefault("invalid_field", ["invalid"])  # Should be ignored
             request_querydict.setlistdefault("name__iew", [""])  # Should be ignored since it has no value
 
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.SiteFilterSet
+                request_querydict, location_filter_set
             )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
@@ -514,7 +532,7 @@ class LookupRelatedFunctionTest(TestCase):
             expected_querydict.setlistdefault("form-0-lookup_value", ["active", "decommissioning"])
             expected_querydict.setlistdefault("form-1-lookup_field", ["name"])
             expected_querydict.setlistdefault("form-1-lookup_type", ["name__ic"])
-            expected_querydict.setlistdefault("form-1-lookup_value", ["site"])
+            expected_querydict.setlistdefault("form-1-lookup_value", ["location"])
 
             self.assertEqual(data, expected_querydict)
 
@@ -522,7 +540,7 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict = QueryDict(mutable=True)
 
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.SiteFilterSet
+                request_querydict, location_filter_set
             )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
@@ -535,10 +553,10 @@ class LookupRelatedFunctionTest(TestCase):
         with self.subTest("Ignores q field"):
             request_querydict = QueryDict(mutable=True)
             request_querydict.setlistdefault("status", ["active"])
-            request_querydict.setlistdefault("q", "site")  # Should be ignored
+            request_querydict.setlistdefault("q", "location")  # Should be ignored
 
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.SiteFilterSet
+                request_querydict, location_filter_set
             )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
@@ -553,14 +571,15 @@ class LookupRelatedFunctionTest(TestCase):
 
     def test_get_filterable_params_from_filter_params(self):
         filter_params = QueryDict(mutable=True)
-        filter_params.update({"page": "1", "per_page": "20", "name": "Site 1"})
+        filter_params.update({"page": "1", "per_page": "20", "name": "Location 1"})
         filter_params.setlistdefault("status", ["active", "planned"])
 
         non_filter_params = ["page", "per_page"]
-        filterset_class = dcim_filters.SiteFilterSet
-        data = requests.get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
+        data = requests.get_filterable_params_from_filter_params(
+            filter_params, non_filter_params, dcim_filters.LocationFilterSet()
+        )
 
-        self.assertEqual(data, {"name": ["Site 1"], "status": ["active", "planned"]})
+        self.assertEqual(data, {"name": ["Location 1"], "status": ["active", "planned"]})
 
     def test_ensure_content_type_and_field_name_in_query_params(self):
         with self.assertRaises(django_forms.ValidationError) as err:
@@ -630,3 +649,67 @@ class NautobotFakeRequestTest(testing.TestCase):
         # It should then be cached and not require re-lookup from the DB
         with self.assertNumQueries(0):
             new_fake_request.user
+
+
+class GetFilterFieldLabelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        device_ct = ContentType.objects.get_for_model(dcim_models.Device)
+        cls.peer_relationship = extras_models.Relationship(
+            name="HA Device Peer",
+            slug="ha_device_peer",
+            source_type=device_ct,
+            destination_type=device_ct,
+            source_label="Peer",
+            destination_label="Peer",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+        cls.peer_relationship.validated_save()
+
+        cls.custom_field = extras_models.CustomField(key="labeled_custom_field", label="Moo!", type="text")
+        cls.custom_field.validated_save()
+        cls.custom_field.content_types.add(device_ct)
+
+    def test_get_filter_field_label(self):
+        """Validate the operation of get_filter_field_label()."""
+
+        device_filter_set_filters = dcim_filters.DeviceFilterSet().filters
+
+        with self.subTest("Simple field name"):
+            self.assertEqual(filtering.get_filter_field_label(device_filter_set_filters["id"]), "Id")
+
+        with self.subTest("Semi-complex field name"):
+            self.assertEqual(
+                filtering.get_filter_field_label(device_filter_set_filters["has_interfaces"]), "Has interfaces"
+            )
+
+        with self.subTest("Relationship field name"):
+            self.assertEqual(
+                filtering.get_filter_field_label(device_filter_set_filters[f"cr_{self.peer_relationship.slug}__peer"]),
+                self.peer_relationship.source_label,
+            )
+
+        with self.subTest("Custom field with label"):
+            self.assertEqual(
+                filtering.get_filter_field_label(device_filter_set_filters[f"cf_{self.custom_field.key}"]),
+                "Moo!",
+            )
+
+
+class FieldNameToDisplayTest(TestCase):
+    def test__field_name_to_display(self):
+        """Validate the operation of _field_name_to_display()."""
+
+        with self.subTest("id => Id"):
+            self.assertEqual(filtering._field_name_to_display("id"), "Id")
+
+        with self.subTest("device_type => Device Type"):
+            self.assertEqual(filtering._field_name_to_display("device_type"), "Device type")
+
+        with self.subTest("_custom_field_data__site_type => Site Type"):
+            self.assertEqual(filtering._field_name_to_display("_custom_field_data__site_type"), "Site type")
+
+        with self.subTest("cr_sister_sites__peer => Peer"):
+            # This shouldn't ever be an input because get_filter_field_label
+            # will use the label from the custom field instead of the field name
+            self.assertEqual(filtering._field_name_to_display("cr_sister_sites__peer"), "Cr_sister_sites peer")

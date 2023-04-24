@@ -16,7 +16,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     widgets,
 )
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
@@ -47,7 +47,7 @@ class RelationshipModel(models.Model):
         "extras.RelationshipAssociation",
         content_type_field="source_type",
         object_id_field="source_id",
-        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_site', 'source_ipam_vlan'
+        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_location', 'source_ipam_vlan'
     )
     destination_for_associations = GenericRelation(
         "extras.RelationshipAssociation",
@@ -174,7 +174,6 @@ class RelationshipModel(models.Model):
         }
         for side, relationships in relationships_by_side.items():
             for relationship, queryset in relationships.items():
-
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
 
                 resp[side][relationship] = {
@@ -238,7 +237,6 @@ class RelationshipModel(models.Model):
         required_relationships = Relationship.objects.get_required_for_model(cls)
         relationships_field_errors = {}
         for relation in required_relationships:
-
             opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
 
             if relation.skip_required(cls, opposite_side):
@@ -269,7 +267,6 @@ class RelationshipModel(models.Model):
             field_errors = {field_key: []}
 
             if not required_model_class.objects.exists():
-
                 hint = (
                     f"You need to create {num_required_verbose} {required_model_meta.verbose_name} "
                     f"before instantiating a {cls._meta.verbose_name}."
@@ -300,7 +297,6 @@ class RelationshipModel(models.Model):
                 field_errors[field_key].append(error_message)
 
             if initial_data is not None:
-
                 supplied_data = []
 
                 if output_for == "ui":
@@ -325,7 +321,7 @@ class RelationshipModel(models.Model):
         return relationships_field_errors
 
 
-class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     def get_for_model(self, model):
@@ -350,7 +346,6 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-
     name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
     slug = AutoSlugField(
         populate_from="name",
@@ -459,9 +454,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             return self.source_type
         return None
 
-    def get_absolute_url(self):
-        return reverse("extras:relationship", args=[self.slug])
-
     def get_label(self, side):
         """Return the label for a given side, source or destination.
 
@@ -548,7 +540,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             queryset = None
 
         field_class = None
-        if queryset:
+        if queryset is not None:
             if self.has_many(peer_side):
                 field_class = DynamicModelMultipleChoiceField
             else:
@@ -567,7 +559,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         return field
 
     def clean(self):
-
         # Check if source and destination filters are valid
         for side in ["source", "destination"]:
             if not getattr(self, f"{side}_filter"):
@@ -691,7 +682,9 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
 @extras_features("custom_validators")
 class RelationshipAssociation(BaseModel):
-    relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
+    relationship = models.ForeignKey(
+        to="extras.Relationship", on_delete=models.CASCADE, related_name="relationship_associations"
+    )
 
     source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     source_id = models.UUIDField(db_index=True)
@@ -738,6 +731,9 @@ class RelationshipAssociation(BaseModel):
 
         return None
 
+    def get_absolute_url(self):
+        return self.relationship.get_absolute_url()
+
     def get_source(self):
         """Accessor for self.source - returns None if the object cannot be located."""
         return self._get_genericforeignkey("source")
@@ -760,7 +756,6 @@ class RelationshipAssociation(BaseModel):
         return None
 
     def clean(self):
-
         if self.source_type != self.relationship.source_type:
             raise ValidationError(
                 {"source_type": f"source_type has a different value than defined in {self.relationship}"}

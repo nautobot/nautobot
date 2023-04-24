@@ -2,11 +2,10 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
-from django.urls import reverse
 
-from nautobot.core.models.fields import MACAddressCharField, NaturalOrderingField
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
@@ -59,7 +58,7 @@ class ComponentModel(PrimaryModel):
     An abstract model inherited by any model which has a parent Device.
     """
 
-    device = models.ForeignKey(to="dcim.Device", on_delete=models.CASCADE, related_name="%(class)ss")
+    device = ForeignKeyWithAutoRelatedName(to="dcim.Device", on_delete=models.CASCADE)
     name = models.CharField(max_length=64, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
@@ -154,12 +153,11 @@ class PathEndpoint(models.Model):
     `connected_endpoint()` is a convenience method for returning the destination of the associated CablePath, if any.
     """
 
-    _path = models.ForeignKey(
+    _path = ForeignKeyWithAutoRelatedName(
         to="dcim.CablePath",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="%(app_label)s_%(class)s_related",
     )
 
     class Meta:
@@ -200,11 +198,9 @@ class PathEndpoint(models.Model):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
@@ -225,9 +221,6 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    def get_absolute_url(self):
-        return reverse("dcim:consoleport", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.device.identifier,
@@ -247,7 +240,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
 class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
@@ -265,9 +258,6 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:consoleserverport", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -290,11 +280,9 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class PowerPort(CableTermination, PathEndpoint, ComponentModel):
@@ -334,9 +322,6 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:powerport", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -431,7 +416,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
 class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical power outlet (output) within a Device which provides power to a PowerPort.
@@ -448,7 +433,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name="poweroutlets",
+        related_name="power_outlets",
     )
     # todoindex:
     feed_leg = models.CharField(
@@ -471,9 +456,6 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:poweroutlet", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -545,11 +527,11 @@ class BaseInterface(RelationshipModel, StatusModel):
             raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
 
     def save(self, *args, **kwargs):
-
         if not self.status:
             query = Status.objects.get_for_model(self)
             try:
-                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+                status_as_dict = InterfaceStatusChoices.as_dict()
+                status = query.get(name=status_as_dict.get(InterfaceStatusChoices.STATUS_ACTIVE))
             except Status.DoesNotExist:
                 raise ValidationError({"status": "Default status 'active' does not exist"})
             self.status = status
@@ -563,11 +545,9 @@ class BaseInterface(RelationshipModel, StatusModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -611,11 +591,12 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         verbose_name="Tagged VLANs",
     )
-    ip_addresses = GenericRelation(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
-        content_type_field="assigned_object_type",
-        object_id_field="assigned_object_id",
-        related_query_name="interface",
+        through="ipam.IPAddressToInterface",
+        related_name="interfaces",
+        blank=True,
+        verbose_name="IP Addresses",
     )
 
     csv_headers = [
@@ -639,9 +620,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         ordering = ("device", CollateAsChar("_name"))
         unique_together = ("device", "name")
 
-    def get_absolute_url(self):
-        return reverse("dcim:interface", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.device.identifier if self.device else None,
@@ -652,7 +630,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.enabled,
             self.mac_address,
             self.mtu,
-            self.mgmt_only,
+            str(self.mgmt_only),
             self.description,
             self.get_mode_display(),
             self.get_status_display(),
@@ -665,7 +643,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # LAG validation
         if self.lag is not None:
-
             # A LAG interface cannot be its own parent
             if self.lag_id == self.pk:
                 raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
@@ -705,7 +682,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # Parent validation
         if self.parent_interface is not None:
-
             # An interface cannot be its own parent
             if self.parent_interface_id == self.pk:
                 raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
@@ -739,11 +715,13 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                     )
 
         # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site_id not in [self.device.site_id, None]:
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
+        # the parent Locations or the child locations of `device.location`?
+        if self.untagged_vlan and self.untagged_vlan.location_id not in [self.device.location_id, None]:
             raise ValidationError(
                 {
                     "untagged_vlan": (
-                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the interface's parent "
+                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same location as the interface's parent "
                         f"device, or it must be global."
                     )
                 }
@@ -751,7 +729,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
         # Bridge validation
         if self.bridge is not None:
-
             # An interface cannot be bridged to itself
             if self.bridge_id == self.pk:
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
@@ -777,6 +754,69 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                         }
                     )
 
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
+
+        Returns:
+            Number of instances added.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        with transaction.atomic():
+            for ip in ip_addresses:
+                instance = self.ip_addresses.through(
+                    ip_address=ip,
+                    interface=self,
+                    is_source=is_source,
+                    is_destination=is_destination,
+                    is_default=is_default,
+                    is_preferred=is_preferred,
+                    is_primary=is_primary,
+                    is_secondary=is_secondary,
+                    is_standby=is_standby,
+                )
+                instance.validated_save()
+        return len(ip_addresses)
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        count = 0
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+        with transaction.atomic():
+            for ip in ip_addresses:
+                qs = self.ip_addresses.through.objects.filter(ip_address=ip, interface=self)
+                deleted_count, _ = qs.delete()
+                count += deleted_count
+        return count
+
     @property
     def is_connectable(self):
         return self.type not in NONCONNECTABLE_IFACE_TYPES
@@ -794,7 +834,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         return self.type == InterfaceTypeChoices.TYPE_LAG
 
     @property
-    def count_ipaddresses(self):
+    def ip_address_count(self):
         return self.ip_addresses.count()
 
     @property
@@ -807,14 +847,14 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 #
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
 class FrontPort(CableTermination, ComponentModel):
     """
     A pass-through port on the front of a Device.
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
-    rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="frontports")
+    rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="front_ports")
     rear_port_position = models.PositiveSmallIntegerField(
         default=1,
         validators=[
@@ -839,9 +879,6 @@ class FrontPort(CableTermination, ComponentModel):
             ("device", "name"),
             ("rear_port", "rear_port_position"),
         )
-
-    def get_absolute_url(self):
-        return reverse("dcim:frontport", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -875,7 +912,7 @@ class FrontPort(CableTermination, ComponentModel):
             )
 
 
-@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
 class RearPort(CableTermination, ComponentModel):
     """
     A pass-through port on the rear of a Device.
@@ -896,19 +933,16 @@ class RearPort(CableTermination, ComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    def get_absolute_url(self):
-        return reverse("dcim:rearport", kwargs={"pk": self.pk})
-
     def clean(self):
         super().clean()
 
         # Check that positions count is greater than or equal to the number of associated FrontPorts
-        frontport_count = self.frontports.count()
-        if self.positions < frontport_count:
+        front_port_count = self.front_ports.count()
+        if self.positions < front_port_count:
             raise ValidationError(
                 {
                     "positions": f"The number of positions cannot be less than the number of mapped front ports "
-                    f"({frontport_count})"
+                    f"({front_port_count})"
                 }
             )
 
@@ -932,7 +966,7 @@ class RearPort(CableTermination, ComponentModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("custom_validators", "graphql", "webhooks")
 class DeviceBay(ComponentModel):
     """
     An empty space within a Device which can house a child device
@@ -951,9 +985,6 @@ class DeviceBay(ComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def get_absolute_url(self):
-        return reverse("dcim:devicebay", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (
@@ -996,11 +1027,9 @@ class DeviceBay(ComponentModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class InventoryItem(TreeModel, ComponentModel):
@@ -1049,9 +1078,6 @@ class InventoryItem(TreeModel, ComponentModel):
         ordering = ("_name",)
         unique_together = ("device", "parent", "name")
 
-    def get_absolute_url(self):
-        return reverse("dcim:inventoryitem", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.device.name or f"{{{self.device.pk}}}",
@@ -1061,6 +1087,6 @@ class InventoryItem(TreeModel, ComponentModel):
             self.part_id,
             self.serial,
             self.asset_tag,
-            self.discovered,
+            str(self.discovered),
             self.description,
         )

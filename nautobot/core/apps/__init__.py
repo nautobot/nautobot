@@ -19,7 +19,7 @@ from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 
 
-logger = logging.getLogger("nautobot.core.apps")
+logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
 registry["homepage_layout"] = {"panels": {}}
 
@@ -79,7 +79,6 @@ def register_menu_items(tab_list):
 
                 group_perms = set()
                 for item in group.items:
-
                     # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
                     try:
                         item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
@@ -654,19 +653,13 @@ class CoreConfig(NautobotConfig):
     verbose_name = "Nautobot Core"
 
     def ready(self):
-        # Register netutils jinja2 filters in django_jinja and Django Template
-        from django import template
+        # Register netutils jinja2 filters in django_jinja
         from django_jinja import library
         from netutils.utils import jinja2_convenience_function
-
-        register = template.Library()
 
         for name, func in jinja2_convenience_function().items():
             # Register in django_jinja
             library.filter(name=name, fn=func)
-
-            # Register in Django Template
-            register.filter(name, func)
 
         from graphene_django.converter import convert_django_field
         from nautobot.core.graphql import BigInteger

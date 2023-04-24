@@ -18,7 +18,6 @@ User = get_user_model()
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("users-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -27,7 +26,6 @@ class AppTest(APITestCase):
 
 class UserTest(APIViewTestCases.APIViewTestCase):
     model = User
-    brief_fields = ["display", "id", "url", "username"]
     validation_excluded_fields = ["password"]
     create_data = [
         {
@@ -46,7 +44,6 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         User.objects.create(username="User_1")
         User.objects.create(username="User_2")
         User.objects.create(username="User_3")
@@ -55,7 +52,6 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 class GroupTest(APIViewTestCases.APIViewTestCase):
     model = Group
     filterset = GroupFilterSet
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "Group 4",
@@ -78,7 +74,6 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
@@ -86,7 +81,6 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
 
 class TokenTest(APIViewTestCases.APIViewTestCase):
     model = Token
-    brief_fields = ["display", "id", "key", "url", "write_enabled"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -270,21 +264,9 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     model = ObjectPermission
-    brief_fields = [
-        "actions",
-        "display",
-        "enabled",
-        "groups",
-        "id",
-        "name",
-        "object_types",
-        "url",
-        "users",
-    ]
 
     @classmethod
     def setUpTestData(cls):
-
         groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
@@ -312,7 +294,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Permission 4",
-                "object_types": ["dcim.site"],
+                "object_types": ["dcim.location"],
                 "groups": [groups[0].pk],
                 "users": [users[0].pk],
                 "actions": ["view", "add", "change", "delete"],
@@ -320,7 +302,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Permission 5",
-                "object_types": ["dcim.site"],
+                "object_types": ["dcim.location"],
                 "groups": [groups[1].pk],
                 "users": [users[1].pk],
                 "actions": ["view", "add", "change", "delete"],
@@ -328,7 +310,7 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Permission 6",
-                "object_types": ["dcim.site"],
+                "object_types": ["dcim.location"],
                 "groups": [groups[2].pk],
                 "users": [users[2].pk],
                 "actions": ["view", "add", "change", "delete"],

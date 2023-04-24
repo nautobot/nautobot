@@ -10,9 +10,12 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
+from django.test import override_settings
+
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -20,7 +23,6 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     Platform,
-    Site,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -29,6 +31,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    DynamicGroup,
     ExportTemplate,
     FileAttachment,
     FileProxy,
@@ -47,7 +50,7 @@ from nautobot.extras.models import (
 from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -56,14 +59,16 @@ from nautobot.virtualization.models import (
 )
 
 
-class ComputedFieldTest(TestCase):
+class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `ComputedField` Model
     """
 
+    model = ComputedField
+
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="good_computed_field",
             label="Good Computed Field",
             template="{{ obj.name }} is awesome!",
@@ -71,7 +76,7 @@ class ComputedFieldTest(TestCase):
             weight=100,
         )
         self.bad_computed_field = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="bad_computed_field",
             label="Bad Computed Field",
             template="{{ not_in_context | not_a_filter }} is horrible!",
@@ -79,69 +84,80 @@ class ComputedFieldTest(TestCase):
             weight=50,
         )
         self.blank_fallback_value = ComputedField.objects.create(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             slug="blank_fallback_value",
             label="Blank Fallback Value",
             template="{{ obj.location }}",
             weight=50,
         )
-        self.site1 = Site.objects.first()
+        self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
     def test_render_method(self):
-        rendered_value = self.good_computed_field.render(context={"obj": self.site1})
-        self.assertEqual(rendered_value, f"{self.site1.name} is awesome!")
+        rendered_value = self.good_computed_field.render(context={"obj": self.location1})
+        self.assertEqual(rendered_value, f"{self.location1.name} is awesome!")
 
     def test_render_method_undefined_error(self):
-        rendered_value = self.blank_fallback_value.render(context={"obj": self.site1})
+        rendered_value = self.blank_fallback_value.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, "")
 
     def test_render_method_bad_template(self):
-        rendered_value = self.bad_computed_field.render(context={"obj": self.site1})
+        rendered_value = self.bad_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
 
 
-class ConfigContextTest(TestCase):
+class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     """
     These test cases deal with the weighting, ordering, and deep merge logic of config context data.
 
     It also ensures the various config context querysets are consistent.
     """
 
-    def setUp(self):
+    model = ConfigContext
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+    def setUp(self):
+        manufacturer = Manufacturer.objects.first()
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
         self.devicerole = Role.objects.get_for_model(Device).first()
-        self.site = Site.objects.filter(region__isnull=False).first()
-        self.region = self.site.region
         location_type = LocationType.objects.create(name="Location Type 1")
-        self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
-        self.platform = Platform.objects.create(name="Platform")
-        self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
-        self.tenant = Tenant.objects.create(name="Tenant", tenant_group=self.tenantgroup)
+        self.location = Location.objects.create(name="Location 1", location_type=location_type)
+        self.platform = Platform.objects.first()
+        self.tenant = Tenant.objects.first()
+        self.tenantgroup = self.tenant.tenant_group
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
+        self.dynamic_groups = DynamicGroup.objects.create(
+            name="Dynamic Group",
+            content_type=ContentType.objects.get_for_model(Device),
+            filter={"name": ["Device 1", "Device 2"]},
+        )
+        self.dynamic_group_2 = DynamicGroup.objects.create(
+            name="Dynamic Group 2",
+            content_type=ContentType.objects.get_for_model(Device),
+            filter={"name": ["Device 2"]},
+        )
+        self.vm_dynamic_group = DynamicGroup.objects.create(
+            name="VM Dynamic Group",
+            content_type=ContentType.objects.get_for_model(VirtualMachine),
+            filter={"name": ["VM 1"]},
+        )
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=self.devicetype,
             role=self.devicerole,
-            site=self.site,
             location=self.location,
         )
 
-    def test_higher_weight_wins(self):
+        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
 
-        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
+    def test_higher_weight_wins(self):
+        ConfigContext.objects.create(name="context 2", weight=99, data={"a": 123, "b": 456, "c": 789})
 
         expected_data = {"a": 123, "b": 456, "c": 777}
         self.assertEqual(self.device.get_config_context(), expected_data)
 
     def test_name_ordering_after_weight(self):
-
-        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
         expected_data = {"a": 123, "b": 456, "c": 789}
@@ -151,7 +167,6 @@ class ConfigContextTest(TestCase):
         """
         Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
         """
-        ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         with self.assertRaises(ValidationError):
             duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
             duplicate_context.validated_save()
@@ -161,7 +176,6 @@ class ConfigContextTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
 
@@ -173,22 +187,16 @@ class ConfigContextTest(TestCase):
         This test incorporates features from all of the above tests cases to ensure
         the annotate_config_context_data() and get_for_object() queryset methods are the same.
         """
-        ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
-        ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
-        ConfigContext.objects.create(name="context 3", weight=99, data={"d": 1})
-        ConfigContext.objects.create(name="context 4", weight=99, data={"d": 2})
+        ConfigContext.objects.create(name="context 2", weight=99, data={"a": 123, "b": 456, "c": 789})
+        ConfigContext.objects.create(name="context 3", weight=98, data={"d": 1})
+        ConfigContext.objects.create(name="context 4", weight=98, data={"d": 2})
 
         annotated_queryset = Device.objects.filter(name=self.device.name).annotate_config_context_data()
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_annotation_same_as_get_for_object_device_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
-        site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
-        site_context.sites.add(self.site)
-        region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
-        region_context.regions.add(self.region)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
         platform_context.platforms.add(self.platform)
         tenant_group_context = ConfigContext.objects.create(name="tenant group", weight=100, data={"tenant_group": 1})
@@ -197,10 +205,13 @@ class ConfigContextTest(TestCase):
         tenant_context.tenants.add(self.tenant)
         tag_context = ConfigContext.objects.create(name="tag", weight=100, data={"tag": 1})
         tag_context.tags.add(self.tag)
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic group", weight=100, data={"dynamic_group": 1}
+        )
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
 
         device = Device.objects.create(
             name="Device 2",
-            site=self.site,
             location=self.location,
             tenant=self.tenant,
             platform=self.platform,
@@ -212,17 +223,12 @@ class ConfigContextTest(TestCase):
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "site", "region", "platform", "tenant_group", "tenant", "tag"]:
+        for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
-        site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
-        site_context.sites.add(self.site)
-        region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
-        region_context.regions.add(self.region)
         platform_context = ConfigContext.objects.create(name="platform", weight=100, data={"platform": 1})
         platform_context.platforms.add(self.platform)
         tenant_group_context = ConfigContext.objects.create(name="tenant group", weight=100, data={"tenant_group": 1})
@@ -241,11 +247,14 @@ class ConfigContextTest(TestCase):
             name="Cluster",
             cluster_group=cluster_group,
             cluster_type=cluster_type,
-            site=self.site,
             location=self.location,
         )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
+        dynamic_group_context = ConfigContext.objects.create(
+            name="vm dynamic group", weight=100, data={"vm_dynamic_group": 1}
+        )
+        dynamic_group_context.dynamic_groups.add(self.vm_dynamic_group)
 
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
@@ -258,17 +267,17 @@ class ConfigContextTest(TestCase):
 
         annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
+
         self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
         for key in [
             "location",
-            "site",
-            "region",
             "platform",
             "tenant_group",
             "tenant",
             "tag",
             "cluster_group",
             "cluster",
+            "vm_dynamic_group",
         ]:
             self.assertIn(key, vm_context)
 
@@ -287,7 +296,7 @@ class ConfigContextTest(TestCase):
 
         device = Device.objects.create(
             name="Device 3",
-            site=self.site,
+            location=self.location,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
@@ -297,7 +306,7 @@ class ConfigContextTest(TestCase):
         device.tags.add(self.tag2)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 1)
+        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)  # including one from setUp()
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_multiple_tags_return_distinct_objects_with_seperate_config_contexts(self):
@@ -318,7 +327,7 @@ class ConfigContextTest(TestCase):
 
         device = Device.objects.create(
             name="Device 3",
-            site=self.site,
+            location=self.location,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
@@ -328,14 +337,46 @@ class ConfigContextTest(TestCase):
         device.tags.add(self.tag2)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 2)
+        self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 3)  # including one from setUp()
         self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
 
+    @override_settings(CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED=True)
+    def test_dynamic_group_assignment_uniqueness(self):
+        """
+        Assert that a Device in a given Dynamic Group with a Config Context associated to it
+        does not have a Config Context applied that is associated to another Dynamic Group that
+        the device is not a member of.
+        """
 
-class ConfigContextSchemaTestCase(TestCase):
+        device2 = Device.objects.create(
+            name="Device 2",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            device_type=self.devicetype,
+        )
+        dynamic_group_context = ConfigContext.objects.create(
+            name="dynamic context 1", weight=100, data={"dynamic_group": "dynamic context 1"}
+        )
+        dynamic_group_context_2 = ConfigContext.objects.create(
+            name="dynamic context 2", weight=100, data={"dynamic_group": "dynamic context 2"}
+        )
+        dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        dynamic_group_context_2.dynamic_groups.add(self.dynamic_group_2)
+
+        self.assertIn("dynamic context 1", self.device.get_config_context().values())
+        self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
+        self.assertIn("dynamic context 2", device2.get_config_context().values())
+        self.assertNotIn("dynamic context 1", device2.get_config_context().values())
+
+
+class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
     """
     Tests for the ConfigContextSchema model
     """
+
+    model = ConfigContextSchema
 
     def setUp(self):
         context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
@@ -380,14 +421,14 @@ class ConfigContextSchemaTestCase(TestCase):
         self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
 
         # Device
-        status = Status.objects.get(slug="active")
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             name="device",
-            site=site,
+            location=location,
             device_type=device_type,
             role=device_role,
             status=status,
@@ -395,7 +436,7 @@ class ConfigContextSchemaTestCase(TestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         self.virtual_machine = VirtualMachine.objects.create(
             name="virtual_machine", cluster=cluster, status=status, local_config_context_data=context_data
@@ -408,7 +449,7 @@ class ConfigContextSchemaTestCase(TestCase):
         And the config context context data is valid for the schema
         Assert calling clean on the config context object DOES NOT raise a ValidationError
         """
-        self.config_context.schema = self.schema_validation_pass
+        self.config_context.config_context_schema = self.schema_validation_pass
 
         try:
             self.config_context.full_clean()
@@ -423,7 +464,7 @@ class ConfigContextSchemaTestCase(TestCase):
         Assert calling clean on the config context object DOES raise a ValidationError
         """
         for schema in self.schemas_validation_fail:
-            self.config_context.schema = schema
+            self.config_context.config_context_schema = schema
 
             with self.assertRaises(ValidationError):
                 self.config_context.full_clean()
@@ -577,10 +618,18 @@ class ConfigContextSchemaTestCase(TestCase):
             invalid_schema.full_clean()
 
 
-class ExportTemplateTest(TestCase):
+class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the ExportTemplate model class.
     """
+
+    model = ExportTemplate
+
+    def setUp(self):
+        self.device_ct = ContentType.objects.get_for_model(Device)
+        ExportTemplate.objects.create(
+            content_type=self.device_ct, name="Export Template 1", template_code="hello world"
+        )
 
     def test_name_contenttype_uniqueness(self):
         """
@@ -588,11 +637,10 @@ class ExportTemplateTest(TestCase):
 
         See GitHub issue #431.
         """
-        device_ct = ContentType.objects.get_for_model(Device)
-        ExportTemplate.objects.create(content_type=device_ct, name="Export Template 1", template_code="hello world")
-
         with self.assertRaises(ValidationError):
-            duplicate_template = ExportTemplate(content_type=device_ct, name="Export Template 1", template_code="foo")
+            duplicate_template = ExportTemplate(
+                content_type=self.device_ct, name="Export Template 1", template_code="foo"
+            )
             duplicate_template.validated_save()
 
         # A differently owned ExportTemplate may have the same name
@@ -600,44 +648,43 @@ class ExportTemplateTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
         nonduplicate_template = ExportTemplate(
-            content_type=device_ct, name="Export Template 1", owner=repo, template_code="bar"
+            content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
         )
         nonduplicate_template.validated_save()
 
 
-class FileProxyTest(TestCase):
+class FileProxyTest(ModelTestCases.BaseModelTestCase):
+    model = FileProxy
+
     def setUp(self):
         self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+        self.fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
         # Now refresh it and make sure it was saved and retrieved correctly.
-        fp.refresh_from_db()
+        self.fp.refresh_from_db()
         self.test_file.seek(0)  # Reset cursor since it was previously read
-        self.assertEqual(fp.name, self.test_file.name)
-        self.assertEqual(fp.file.read(), self.test_file.read())
+        self.assertEqual(self.fp.name, self.test_file.name)
+        self.assertEqual(self.fp.file.read(), self.test_file.read())
 
     def test_delete_file_proxy(self):
         """Test deletion of `FileProxy` object."""
-        fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
-
         # Assert counts before delete
         self.assertEqual(FileProxy.objects.count(), 1)
         self.assertEqual(FileAttachment.objects.count(), 1)
 
         # Assert counts after delete
-        fp.delete()
+        self.fp.delete()
         self.assertEqual(FileProxy.objects.count(), 0)
         self.assertEqual(FileAttachment.objects.count(), 0)
 
 
-class GitRepositoryTest(TransactionTestCase):
+class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Tests for the GitRepository model class.
 
@@ -652,35 +699,11 @@ class GitRepositoryTest(TransactionTestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         self.repo.save(trigger_resync=False)
 
-    def test_token_rendered(self):
-        self.assertEqual(self.repo.token_rendered, "—")
-        self.repo._token = self.SAMPLE_TOKEN
-        self.assertEqual(self.repo.token_rendered, GitRepository.TOKEN_PLACEHOLDER)
-        self.repo._token = ""
-        self.assertEqual(self.repo.token_rendered, "—")
-
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
-
-    def test_save_preserve_token(self):
-        self.repo._token = self.SAMPLE_TOKEN
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had submitted an "Edit" form, which displays the token placeholder instead of the actual token
-        self.repo._token = GitRepository.TOKEN_PLACEHOLDER
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, self.SAMPLE_TOKEN)
-        # As if the user had deleted a pre-existing token from the UI
-        self.repo._token = ""
-        self.repo.save(trigger_resync=False)
-        self.assertEqual(self.repo._token, "")
-
-    def test_verify_user(self):
-        self.assertEqual(self.repo.username, "oauth2")
 
     def test_save_relocate_directory(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -698,10 +721,12 @@ class GitRepositoryTest(TransactionTestCase):
                 self.assertTrue(os.path.isdir(new_path))
 
 
-class JobModelTest(TestCase):
+class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
     """
+
+    model = JobModel
 
     @classmethod
     def setUpTestData(cls):
@@ -735,8 +760,17 @@ class JobModelTest(TestCase):
             self.assertTrue(job_model.installed)
             self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                else:
+                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
+                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+
+    def test_duplicate_job_name(self):
+        self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
+        self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta (2)").exists())
+        self.assertTrue(JobModel.objects.filter(name="This name is not unique.").exists())
+        self.assertTrue(JobModel.objects.filter(name="This name is not unique. (2)").exists())
 
     def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
@@ -866,7 +900,6 @@ class JobResultTest(TestCase):
             name="Test Git Repository",
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
-            username="oauth2",
         )
         repo.save(trigger_resync=False)
 
@@ -908,39 +941,37 @@ class RoleTest(TestCase):
         self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
-class SecretTest(TestCase):
+class SecretTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Secret` model class.
     """
 
+    model = Secret
+
     def setUp(self):
         self.environment_secret = Secret.objects.create(
             name="Environment Variable Secret",
-            slug="env-var",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
         )
         self.environment_secret_templated = Secret.objects.create(
             name="Environment Variable Templated Secret",
-            slug="env-var-templated",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_{{ obj.slug | upper }}"},
         )
         self.text_file_secret = Secret.objects.create(
             name="Text File Secret",
-            slug="text",
             provider="text-file",
             parameters={"path": os.path.join(tempfile.gettempdir(), "secret-file.txt")},
         )
         self.text_file_secret_templated = Secret.objects.create(
             name="Text File Templated Secret",
-            slug="text-templated",
             provider="text-file",
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
 
-        self.site = Site.objects.first()
-        self.site.slug = "nyc"
+        self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        self.location.slug = "nyc"
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""
@@ -963,7 +994,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.environment_secret.get_value(obj=self.site)
+            self.environment_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.environment_secret}" '
@@ -972,7 +1003,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.environment_secret_templated.get_value(obj=self.site)
+            self.environment_secret_templated.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
@@ -1003,7 +1034,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretParametersError) as handler:
-            self.environment_secret.get_value(obj=self.site)
+            self.environment_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretParametersError: Secret "{self.environment_secret}" '
@@ -1038,7 +1069,7 @@ class SecretTest(TestCase):
         # Malformed Jinja2
         self.environment_secret_templated.parameters["variable"] = "{{ obj."
         with self.assertRaises(SecretParametersError) as handler:
-            self.environment_secret_templated.get_value(obj=self.site)
+            self.environment_secret_templated.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretParametersError: Secret "{self.environment_secret_templated}" '
@@ -1050,7 +1081,7 @@ class SecretTest(TestCase):
         # Since we're not using Jinja2's StrictUndefined, this just renders as an empty string
         self.environment_secret_templated.parameters["variable"] = "{{ obj.primary_ip4 }}"
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.environment_secret_templated.get_value(obj=self.site)
+            self.environment_secret_templated.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
@@ -1063,24 +1094,23 @@ class SecretTest(TestCase):
         """Successful retrieval of an environment variable secret."""
         self.assertEqual(self.environment_secret.get_value(), "supersecretvalue")
         # It's OK to pass a context obj even if the secret in question isn't templated
-        self.assertEqual(self.environment_secret.get_value(obj=self.site), "supersecretvalue")
+        self.assertEqual(self.environment_secret.get_value(obj=self.location), "supersecretvalue")
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": ""})
     def test_environment_variable_value_success_empty(self):
         """Successful retrieval of an environment variable secret even if set to an empty string."""
         self.assertEqual(self.environment_secret.get_value(), "")
         # It's OK to pass a context obj even if the secret in question isn't templated
-        self.assertEqual(self.environment_secret.get_value(obj=self.site), "")
+        self.assertEqual(self.environment_secret.get_value(obj=self.location), "")
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_NYC": "lessthansecretvalue"})
     def test_environment_variable_templated_success(self):
         """Successful retrieval of a templated environment variable secret."""
-        self.assertEqual(self.environment_secret_templated.get_value(obj=self.site), "lessthansecretvalue")
+        self.assertEqual(self.environment_secret_templated.get_value(obj=self.location), "lessthansecretvalue")
 
     def test_text_file_clean_validation(self):
         secret = Secret.objects.create(
             name="Path shenanigans",
-            slug="path-shenanigans",
             provider="text-file",
             parameters={"path": "relative/path/to/file"},
         )
@@ -1110,7 +1140,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretValueNotFoundError) as handler:
-            self.text_file_secret.get_value(obj=self.site)
+            self.text_file_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretValueNotFoundError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
@@ -1137,7 +1167,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretParametersError) as handler:
-            self.text_file_secret.get_value(obj=self.site)
+            self.text_file_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretParametersError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
@@ -1151,7 +1181,7 @@ class SecretTest(TestCase):
         try:
             self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
             # It's OK to pass a context obj even if the secret in question isn't templated
-            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+            self.assertEqual(self.text_file_secret.get_value(obj=self.location), "Hello world!")
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
@@ -1162,7 +1192,7 @@ class SecretTest(TestCase):
         try:
             self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
             # It's OK to pass a context obj even if the secret in question isn't templated
-            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+            self.assertEqual(self.text_file_secret.get_value(obj=self.location), "Hello world!")
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
@@ -1173,19 +1203,19 @@ class SecretTest(TestCase):
         try:
             self.assertEqual(self.text_file_secret.get_value(), "")
             # It's OK to pass a context obj even if the secret in question isn't templated
-            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "")
+            self.assertEqual(self.text_file_secret.get_value(obj=self.location), "")
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
     def test_text_file_templated_value_success(self):
         """Successful retrieval of a templated text file secret."""
-        path = self.text_file_secret_templated.rendered_parameters(obj=self.site)["path"]
+        path = self.text_file_secret_templated.rendered_parameters(obj=self.location)["path"]
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         with open(path, "w", encoding="utf8") as file_handle:
             file_handle.write("Hello?")
         try:
-            self.assertEqual(self.text_file_secret_templated.get_value(obj=self.site), "Hello?")
+            self.assertEqual(self.text_file_secret_templated.get_value(obj=self.location), "Hello?")
         finally:
             os.remove(path)
             os.rmdir(os.path.dirname(path))
@@ -1217,7 +1247,7 @@ class SecretTest(TestCase):
         )
 
         with self.assertRaises(SecretProviderError) as handler:
-            self.environment_secret.get_value(obj=self.site)
+            self.environment_secret.get_value(obj=self.location)
         self.assertEqual(
             str(handler.exception),
             f'SecretProviderError: Secret "{self.environment_secret}" (provider "it-is-a-mystery"): '
@@ -1225,24 +1255,25 @@ class SecretTest(TestCase):
         )
 
 
-class SecretsGroupTest(TestCase):
+class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `SecretsGroup` model class.
     """
 
+    model = SecretsGroup
+
     def setUp(self):
-        self.secrets_group = SecretsGroup(name="Secrets Group 1", slug="secrets-group-1")
+        self.secrets_group = SecretsGroup(name="Secrets Group 1")
         self.secrets_group.validated_save()
 
         self.environment_secret = Secret.objects.create(
             name="Environment Variable Secret",
-            slug="env-var",
             provider="environment-variable",
             parameters={"variable": "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"},
         )
 
         SecretsGroupAssociation.objects.create(
-            group=self.secrets_group,
+            secrets_group=self.secrets_group,
             secret=self.environment_secret,
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
@@ -1297,25 +1328,27 @@ class SecretsGroupTest(TestCase):
         )
 
 
-class StatusTest(TestCase):
+class StatusTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Status` model class.
     """
+
+    model = Status
 
     def setUp(self):
         self.status = Status.objects.create(name="New Device Status")
         self.status.content_types.add(ContentType.objects.get_for_model(Device))
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
             role=devicerole,
-            site=site,
+            location=location,
             status=self.status,
         )
 
@@ -1360,7 +1393,9 @@ class StatusTest(TestCase):
             self.assertEqual(str(self.status), test)
 
 
-class TagTest(TestCase):
+class TagTest(ModelTestCases.BaseModelTestCase):
+    model = Tag
+
     def test_create_tag_unicode(self):
         tag = Tag(name="Testing Unicode: 台灣")
         tag.save()
@@ -1368,7 +1403,7 @@ class TagTest(TestCase):
         self.assertEqual(tag.slug, "testing-unicode-台灣")
 
 
-class JobLogEntryTest(TestCase):
+class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
     Tests for the JobLogEntry Model.
     """
@@ -1386,7 +1421,6 @@ class JobLogEntryTest(TestCase):
         )
 
     def test_log_entry_creation(self):
-
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
             job_result=self.job_result,
@@ -1436,7 +1470,7 @@ class JobLogEntryTest(TestCase):
         self.assertEqual(expected_data, csv_data)
 
 
-class WebhookTest(TestCase):
+class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
     def test_type_error_not_raised_when_calling_check_for_conflicts(self):
         """
         Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments

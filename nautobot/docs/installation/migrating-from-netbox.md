@@ -110,7 +110,7 @@ Update it to this:
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Device
 
-Device.objects.filter(status=Status.objects.get(slug="planned"))
+Device.objects.filter(status=Status.objects.get(name="Planned"))
 ```
 
 ### UUID Primary Database Keys
@@ -139,14 +139,14 @@ Custom Fields have been overhauled for asserting data integrity and improving us
 !!! tip
     Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
 
-All IPAM objects with network field types (`ipam.Aggregate`, `ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
+All IPAM objects with network field types (`ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
 
 #### Technical Details
 
 Below is a summary of the underlying technical changes to network fields. These will be explained in more detail in the following sections.
 
 - For `IPAddress`, the `address` field was exploded out to `host`, `broadcast`, and `prefix_length` fields; `address` was converted into a computed field.
-- For `Aggregate` and `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length` fields; `prefix` was converted into a computed field.
+- For `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length` fields; `prefix` was converted into a computed field.
 - The `host`, `network`, and `broadcast` fields are now of a `varbinary` database type, which is represented as a packed binary integer (for example, the host `1.1.1.1` is packed as `b"\x01\x01\x01\x01"`)
 - Network membership queries are accomplished by triangulating the "position" of an address using the IP, broadcast, and prefix length of the source and target addresses.
 
@@ -252,9 +252,11 @@ If the prefix length is any larger (e.g. `/24`), `broadcast` will be that of the
 
 #### Changes to `Aggregate` and `Prefix`
 
-The following fields have changed when working with `ipam.Aggregate` and `ipam.Prefix` objects. These objects share the same field changes.
+The following fields have changed when working with `ipam.Aggregate` and `ipam.Prefix` objects.
 
-For these examples we will be using `Prefix` objects, but they apply just as equally to `Aggregate` objects.
+##### `Aggregate` model merged into `Prefix`
+
+The Aggregate model has been removed in Nautobot and its functionality was moved to the Prefix model. The `rir` and `tenant` fields were directly copied over to Prefix, the `date_added` field was renamed to `date_allocated` and changed to a DateTimeField in Prefix.
 
 ##### `prefix` is now a computed field
 
@@ -286,7 +288,7 @@ The network component of the address is now stored in the `network` field.
 '1.1.1.0'
 ```
 
-##### Aggregate/Prefix `prefix_length` contains the prefix length
+##### Prefix `prefix_length` contains the prefix length
 
 This is an integer, such as `24` for `/24`.
 
@@ -308,7 +310,7 @@ For example, if you have multiple `Prefix` objects with the same `network` value
 <PrefixQuerySet [<Prefix: 1.1.1.0/25>]>
 ```
 
-##### Aggregate/Prefix `broadcast` contains the broadcast address
+##### Prefix `broadcast` contains the broadcast address
 
 The `broadcast` will be derived from the `prefix_length` and will be that of the last network address for that prefix length (e.g. `1.1.1.255`):
 

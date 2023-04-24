@@ -12,7 +12,6 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -69,20 +68,9 @@ class RouteTargetViewSet(NautobotModelViewSet):
 
 
 class RIRViewSet(NautobotModelViewSet):
-    queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     serializer_class = serializers.RIRSerializer
     filterset_class = filters.RIRFilterSet
-
-
-#
-# Aggregates
-#
-
-
-class AggregateViewSet(NautobotModelViewSet):
-    queryset = Aggregate.objects.select_related("rir").prefetch_related("tags")
-    serializer_class = serializers.AggregateSerializer
-    filterset_class = filters.AggregateFilterSet
 
 
 #
@@ -93,7 +81,6 @@ class AggregateViewSet(NautobotModelViewSet):
 class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
         "role",
-        "site",
         "status",
         "tenant",
         "vlan",
@@ -119,7 +106,6 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
-
             with cache.lock("available-prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
                 available_prefixes = prefix.get_available_prefixes()
 
@@ -137,7 +123,6 @@ class PrefixViewSet(NautobotModelViewSet):
                 requested_prefixes = serializer.validated_data
                 # Allocate prefixes to the requested objects based on availability within the parent
                 for requested_prefix in requested_prefixes:
-
                     # Find the first available prefix equal to or larger than the requested size
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
@@ -155,7 +140,7 @@ class PrefixViewSet(NautobotModelViewSet):
                     available_prefixes.remove(allocated_prefix)
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
                 else:
@@ -205,9 +190,7 @@ class PrefixViewSet(NautobotModelViewSet):
 
         # Create the next available IP within the prefix
         if request.method == "POST":
-
             with cache.lock("available-ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
-
                 # Normalize to a list of objects
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
 
@@ -232,7 +215,7 @@ class PrefixViewSet(NautobotModelViewSet):
                     requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.IPAddressSerializer(data=requested_ips, many=True, context=context)
                 else:
@@ -283,7 +266,7 @@ class IPAddressViewSet(NautobotModelViewSet):
         "role",
         "tenant",
         "vrf__tenant",
-    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
+    ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 
@@ -294,7 +277,7 @@ class IPAddressViewSet(NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -308,7 +291,7 @@ class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
             "vlan_group",
-            "site",
+            "location",
             "status",
             "role",
             "tenant",

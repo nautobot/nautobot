@@ -4,6 +4,7 @@ from django.db.models import Count
 from django.test import tag
 
 from nautobot.core.filters import RelatedMembershipBooleanFilter
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
 
@@ -46,7 +47,8 @@ class FilterTestCases:
 
             if len(test_values) < 2:
                 raise ValueError(
-                    f"Cannot find valid test data for {queryset.model._meta.object_name} field {field_name}"
+                    f"Cannot find enough valid test data for {queryset.model._meta.object_name} field {field_name} "
+                    f"(found {len(test_values)} option(s): {test_values}) but need at least 2 of them"
                 )
             return test_values
 
@@ -80,14 +82,15 @@ class FilterTestCases:
         def test_filters_generic(self):
             """Test all multiple choice filters declared in `self.generic_filter_tests`.
 
-            This test uses `get_filterset_test_values()` to retrieve a valid set of test data and asserts that the filterset
-            filter output matches the corresponding queryset filter. The majority of Nautobot filters use conjoined=False,
-            so the extra logic to support conjoined=True has not been implemented here. TagFilter and similar "AND" filters
-            are not supported.
+            This test uses `get_filterset_test_values()` to retrieve a valid set of test data and asserts
+            that the filterset filter output matches the corresponding queryset filter.
+            The majority of Nautobot filters use conjoined=False, so the extra logic to support conjoined=True has not
+            been implemented here. TagFilter and similar "AND" filters are not supported.
 
             Examples:
-                Multiple tests can be performed for the same filter by adding multiple entries in `generic_filter_tests` with
-                explicit field names. For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
+                Multiple tests can be performed for the same filter by adding multiple entries in
+                `generic_filter_tests` with explicit field names.
+                For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
                     generic_filter_tests = (
                         ["filter_name", "field_name__slug"],
                         ["filter_name", "field_name__id"],
@@ -99,6 +102,9 @@ class FilterTestCases:
                     )
                 This expects a field named `devices` on the model and a filter named `devices` on the filterset.
             """
+            if not self.generic_filter_tests:
+                self.skipTest("No generic_filter_tests defined?")
+
             for test in self.generic_filter_tests:
                 filter_name = test[0]
                 field_name = test[-1]  # default to filter_name if a second list item was not supplied
@@ -128,15 +134,38 @@ class FilterTestCases:
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": True}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
-    class NameSlugFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name and by slug."""
+        def test_tags_filter(self):
+            """Test the `tags` filter which should be present on all PrimaryModel filtersets."""
+            if not issubclass(self.queryset.model, PrimaryModel):
+                self.skipTest("Not a PrimaryModel")
+
+            # Find an instance with at least two tags (should be common given our factory design)
+            for instance in list(self.queryset):
+                if len(instance.tags.all()) >= 2:
+                    tags = list(instance.tags.all()[:2])
+                    break
+            else:
+                self.fail(f"Couldn't find any {self.queryset.model._meta.object_name} with at least two Tags.")
+            params = {"tags": [tags[0].slug, tags[1].pk]}
+            filterset_result = self.filterset(params, self.queryset).qs
+            # Tags is an AND filter not an OR filter
+            qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
+            self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+
+    class NameOnlyFilterTestCase(FilterTestCase):
+        """Add simple tests for filtering by name."""
 
         def test_name(self):
             """Verify that the filterset supports filtering by name."""
-            params = {"name": self.queryset.values_list("name", flat=True)[:2]}
+            params = {"name": list(self.queryset.values_list("name", flat=True)[:2])}
             filterset = self.filterset(params, self.queryset)
             self.assertTrue(filterset.is_valid())
-            self.assertEqual(filterset.qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(
+                filterset.qs.order_by("name"), self.queryset.filter(name__in=params["name"]).order_by("name")
+            )
+
+    class NameSlugFilterTestCase(NameOnlyFilterTestCase):
+        """Add simple tests for filtering by name and by slug."""
 
         def test_slug(self):
             """Verify that the filterset supports filtering by slug."""
@@ -156,7 +185,7 @@ class FilterTestCases:
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
-            params = {"tenant": [tenants[0].slug, tenants[1].slug]}
+            params = {"tenant": [tenants[0].name, tenants[1].name]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
@@ -178,7 +207,7 @@ class FilterTestCases:
                 ordered=False,
             )
 
-            params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
+            params = {"tenant_group": [tenant_groups[0].name, tenant_groups[1].name]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant__tenant_group__in=tenant_groups_including_children),

@@ -3,7 +3,7 @@ from django.urls import reverse
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Status
 
 
@@ -17,46 +17,29 @@ class AppTest(APITestCase):
 
 class ProviderTest(APIViewTestCases.APIViewTestCase):
     model = Provider
-    brief_fields = ["circuit_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Provider 4",
-            "slug": "provider-4",
         },
         {
             "name": "Provider 5",
-            "slug": "provider-5",
         },
         {
             "name": "Provider 6",
-            "slug": "provider-6",
         },
         {"name": "Provider 7"},
     ]
     bulk_update_data = {
         "asn": 1234,
     }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        Provider.objects.create(name="Provider 1", slug="provider-1")
-        Provider.objects.create(name="Provider 2", slug="provider-2")
-        Provider.objects.create(name="Provider 3", slug="provider-3")
 
 
 class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
     model = ProviderNetwork
-    brief_fields = ["display", "id", "name", "slug", "url"]
 
     @classmethod
     def setUpTestData(cls):
-        providers = (
-            Provider(name="Provider 1", slug="provider-1"),
-            Provider(name="Provider 2", slug="provider-2"),
-        )
-        Provider.objects.bulk_create(providers)
+        providers = Provider.objects.all()[:2]
 
         provider_networks = (
             ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
@@ -91,51 +74,38 @@ class ProviderNetworkTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
     model = CircuitType
-    brief_fields = ["circuit_count", "display", "id", "name", "slug", "url"]
     create_data = (
         {
             "name": "Circuit Type 4",
-            "slug": "circuit-type-4",
         },
         {
             "name": "Circuit Type 5",
-            "slug": "circuit-type-5",
         },
         {
             "name": "Circuit Type 6",
-            "slug": "circuit-type-6",
         },
         {"name": "Circuit Type 7"},
     )
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-
-        CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
-        CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
+        # TODO: There is not enough CircuitTypes without associated Circuits for test_bulk_delete to jus work
+        CircuitType.objects.create(name="Circuit Type 1")
+        CircuitType.objects.create(name="Circuit Type 2")
+        CircuitType.objects.create(name="Circuit Type 3")
 
 
 class CircuitTest(APIViewTestCases.APIViewTestCase):
     model = Circuit
-    brief_fields = ["cid", "display", "id", "url"]
 
     @classmethod
     def setUpTestData(cls):
+        providers = Provider.objects.all()[:2]
 
-        providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1"),
-            Provider.objects.create(name="Provider 2", slug="provider-2"),
-        )
-
-        circuit_types = (
-            CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),
-            CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2"),
-        )
+        circuit_types = CircuitType.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Circuit)
 
@@ -186,7 +156,6 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
 
 class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
     model = CircuitTermination
-    brief_fields = ["cable", "circuit", "display", "id", "term_side", "url"]
     choices_fields = ["term_side"]
 
     @classmethod
@@ -194,13 +163,13 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         SIDE_A = CircuitTerminationSideChoices.SIDE_A
         SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
 
-        sites = (
-            Site.objects.first(),
-            Site.objects.last(),
+        locations = (
+            Location.objects.first(),
+            Location.objects.last(),
         )
 
-        provider = Provider.objects.create(name="Provider 1", slug="provider-1")
-        circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
 
         circuits = (
             Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),
@@ -208,25 +177,32 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Circuit.objects.create(cid="Circuit 3", provider=provider, circuit_type=circuit_type),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side=SIDE_A)
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[1], term_side=SIDE_Z)
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side=SIDE_A)
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side=SIDE_Z)
+        CircuitTermination.objects.create(circuit=circuits[0], location=locations[0], term_side=SIDE_A)
+        CircuitTermination.objects.create(circuit=circuits[0], location=locations[1], term_side=SIDE_Z)
+        CircuitTermination.objects.create(circuit=circuits[1], location=locations[0], term_side=SIDE_A)
+        CircuitTermination.objects.create(circuit=circuits[1], location=locations[1], term_side=SIDE_Z)
 
         cls.create_data = [
             {
                 "circuit": circuits[2].pk,
                 "term_side": SIDE_A,
-                "site": sites[1].pk,
+                "location": locations[0].pk,
                 "port_speed": 200000,
             },
             {
                 "circuit": circuits[2].pk,
                 "term_side": SIDE_Z,
-                "site": sites[1].pk,
+                "location": locations[1].pk,
                 "port_speed": 200000,
             },
         ]
+        # Cannot use cls.create_data for test_update_object() here.
+        # Because the first instance of CircuitTermination might have a provider_network
+        # Setting a location on that instance will raise an validation error.
+        cls.update_data = {
+            "circuit": circuits[2].pk,
+            "term_side": SIDE_A,
+            "port_speed": 200000,
+        }
 
         cls.bulk_update_data = {"port_speed": 123456}
-        cls.update_data = {"port_speed": 123456}

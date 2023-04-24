@@ -36,7 +36,7 @@ def settings(request):
 
     return {
         "settings": django_settings,
-        "base_template": "base_react.html" if request.COOKIES.get("newui", False) else "base_django.html",
+        "root_template": "base_react.html" if request.COOKIES.get("newui", False) else "base_django.html",
     }
 
 

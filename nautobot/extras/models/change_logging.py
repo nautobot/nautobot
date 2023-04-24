@@ -26,7 +26,7 @@ class ChangeLoggedModel(models.Model):
     null to facilitate adding these fields to existing instances via a database migration.
     """
 
-    created = models.DateField(auto_now_add=True, blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
@@ -77,7 +77,7 @@ class ObjectChange(BaseModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="changes",
+        related_name="object_changes",
         blank=True,
         null=True,
     )
@@ -136,13 +136,16 @@ class ObjectChange(BaseModel):
                 name="extras_objectchange_double_idx",
                 fields=["request_id", "changed_object_type_id"],
             ),
+            models.Index(
+                name="extras_objectchange_rtime_idx",
+                fields=["-time"],
+            ),
         ]
 
     def __str__(self):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
     def save(self, *args, **kwargs):
-
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
             if self.user:
@@ -154,9 +157,6 @@ class ObjectChange(BaseModel):
             self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return reverse("extras:objectchange", args=[self.pk])
 
     def to_csv(self):
         return (

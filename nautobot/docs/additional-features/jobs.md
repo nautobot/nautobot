@@ -472,7 +472,7 @@ Markdown rendering is supported for log messages.
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 !!! note
-    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising `nautobot.core.exceptions.AbortTransaction` will ensure that any database changes are rolled back as part of the process of ending the job.
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising any exception (e.g. `ValueError` for malformed input values) will ensure that any database changes are rolled back as part of the process of ending the job. `AbortTransaction` from Nautobot, which was recommended in past versions of the docs, should explicitly **not** be used, as it is only intended for use by Nautobot's internal job handling.
 
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
@@ -744,6 +744,30 @@ class MyJobTestCase(TransactionTestCase):
         populate_status_choices(apps, None)
 ```
 
+## Debugging job performance
+
++++ 1.5.17
+
+Debugging the performance of Nautobot jobs can be tricky, because they are executed in the worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the job execution.
+
+The 'profile' form field on jobs is automatically available when the `DEBUG` settings is `True`. When you select that checkbox, a profiling report in the pstats format will be written to the file system of the environment where the job runs. Normally, this is on the file system of the worker process, but if you are using the `nautobot-server runjob` command with `--local`, it will end up in the file system of the web application itself. The path of the written file will be logged in the job.
+
+!!! note
+    If you need to run this in an environment where `DEBUG` is `False`, you have the option of using `nautobot-server runjob` with the `--profile` flag. According to the docs, `cProfile` should have minimal impact on the performance of the job; still, proceed with caution when using this in a production environment.
+
+### Reading profiling reports
+
+A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual), but here is something to get you started:
+
+```python
+import pstats
+job_result_uuid = "66b70231-002f-412b-8cc4-1cc9609c2c9b"
+stats = pstats.Stats(f"/tmp/job-result-{job_result_uuid}.pstats")
+stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
+```
+
+This will print the 10 functions that the job execution spent the most time in - adapt this to your needs!
+
 ## Example Jobs
 
 ### Creating objects for a planned site
@@ -791,7 +815,7 @@ class NewBranch(Job):
     )
 
     def run(self, data, commit):
-        STATUS_PLANNED = Status.objects.get(slug='planned')
+        STATUS_PLANNED = Status.objects.get(name='Planned')
 
         # Create the new site
         site = Site(
@@ -846,7 +870,7 @@ class DeviceConnectionsReport(Job):
     description = "Validate the minimum physical connections for each device"
 
     def test_console_connection(self):
-        STATUS_ACTIVE = Status.objects.get(slug='active')
+        STATUS_ACTIVE = Status.objects.get(name='Active')
 
         # Check that every console port for every active device has a connection defined.
         for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
@@ -864,7 +888,7 @@ class DeviceConnectionsReport(Job):
                 self.log_success(obj=console_port.device)
 
     def test_power_connections(self):
-        STATUS_ACTIVE = Status.objects.get(slug='active')
+        STATUS_ACTIVE = Status.objects.get(name='Active')
 
         # Check that every active device has at least two connected power supplies.
         for device in Device.objects.filter(status=STATUS_ACTIVE):

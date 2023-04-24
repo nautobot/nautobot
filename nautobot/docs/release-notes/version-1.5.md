@@ -148,6 +148,185 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.17 (2023-04-17)
+
+### Added
+
+- [#3484](https://github.com/nautobot/nautobot/issues/3484) - Added job profiling option to job execution when in DEBUG mode.
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - Added the ability to change the `CACHES["default"]["BACKEND"]` via an environment variable `NAUTOBOT_CACHES_BACKEND`
+
+### Changed
+
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - The default database backend if `METRICS_ENABLED` is `True` is now "django_prometheus.db.backends.postgresql"
+- [#3544](https://github.com/nautobot/nautobot/issues/3544) - The default CACHES backend if `METRICS_ENABLED` is `True` is now "django_prometheus.cache.backends.redis.RedisCache"
+- [#3548](https://github.com/nautobot/nautobot/issues/3548) - Changed Git Repository docs to include admonition about Github Apps.
+- [#3595](https://github.com/nautobot/nautobot/issues/3595) - Update the warning provided when a bad reverse entry is not found in serializer to point to correct import location.
+
+### Dependencies
+
+- [#3525](https://github.com/nautobot/nautobot/issues/3525) - Added explicit dependency on `packaging` that had been inadvertently omitted.
+
+### Fixed
+
+- [#3116](https://github.com/nautobot/nautobot/issues/3116) - Fixed JSON comparison of `data_scheme` keys in `assertInstanceEqual` tests.
+- [#3573](https://github.com/nautobot/nautobot/issues/3573) - Fixed advanced filtering on interface UI list page not working.
+- [#3577](https://github.com/nautobot/nautobot/issues/3577) - Fixed `NautobotUIViewSet` documentation example for case sensitive typos.
+- [#3577](https://github.com/nautobot/nautobot/issues/3577) - Fixed `NautobotUIViewSet` documentation example not including imports.
+- [#3598](https://github.com/nautobot/nautobot/issues/3598) - Fixed default sanitizer patterns to account for strings beginning with `i` or `is`.
+
+## v1.5.16 (2023-04-10)
+
+### Added
+
+- [#3557](https://github.com/nautobot/nautobot/issues/3557) - Added docs page for Circuit Maintenance.
+
+### Fixed
+
+- [#2944](https://github.com/nautobot/nautobot/issues/2944) - Fixed slow performance of relationships on ObjectListView.
+- [#3345](https://github.com/nautobot/nautobot/issues/3345) - Fixed missing Relationships in DynamicFilterForm.
+- [#3477](https://github.com/nautobot/nautobot/issues/3477) - Added a note under heading Setting ViewSet Attributes to mention the caveat of not using `slug` or `pk`.
+- [#3502](https://github.com/nautobot/nautobot/issues/3502) - Updated upstream workflow to support testing apps `next-2.0` branches against `next`.
+- [#3550](https://github.com/nautobot/nautobot/issues/3550) - Fixed display name of filtered relationships on ObjectListView.
+
+## v1.5.15 (2023-04-04)
+
+### Added
+
+- [#3446](https://github.com/nautobot/nautobot/issues/3446) - Added documentation links for Device Onboarding and LifeCycle Management plugins to docs.nautobot.com menu.
+
+### Changed
+
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Moved extra information stored previously in `block sidebar` to `block header_extra` in page templates (`aggregate_list.html` and `objectchange_list.html`).
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Documented `block header_extra` in `docs/development/templates.md`.
+
+### Dependencies
+
+- [#3499](https://github.com/nautobot/nautobot/issues/3499) - Updated `redis` to 4.5.4. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+
+### Fixed
+
+- [#3206](https://github.com/nautobot/nautobot/issues/3206) - Fixed Docker tag syntax on prerelease workflow.
+- [#3480](https://github.com/nautobot/nautobot/issues/3480) - Fixed an error that could be seen in certain cases with IPAddress records.
+
+### Removed
+
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Removed all remaining instances of `block sidebar` from page templates (`aggregate_list.html` and `objectchange_list.html`).
+- [#3384](https://github.com/nautobot/nautobot/issues/3384) - Removed documentation about `block sidebar` from `docs/development/templates.md`.
+
+### Security
+
+- [#3499](https://github.com/nautobot/nautobot/issues/3499) - Updated `redis` to 4.5.4 due to CVE-2023-28858 and CVE-2023-28859. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+## v1.5.14 (2023-03-20)
+
+### Added
+
+- [#2618](https://github.com/nautobot/nautobot/issues/2618) - Added the ability to stand up a local dev env for SSO using Keycloak.
+- [#3033](https://github.com/nautobot/nautobot/issues/3033) - Added `JobButton` model to create single click execution buttons in the web UI to run jobs based on a single object.
+- [#3377](https://github.com/nautobot/nautobot/issues/3377) - Added additional choices for many data types in `nautobot.dcim`.
+
+### Changed
+
+- [#3434](https://github.com/nautobot/nautobot/issues/3434) - Changed the recommended exception to raise to end jobs early.
+
+### Fixed
+
+- [#3419](https://github.com/nautobot/nautobot/issues/3419) - Fixed `test_queryset_to_csv` to format data fetched from the model.
+
+## v1.5.13 (2023-03-14)
+
+### Added
+
+- [#766](https://github.com/nautobot/nautobot/issues/766) - Added option for apps to extend Nautobot's Prometheus metrics, based on `nautobot_capacity_metrics`.
+- [#3410](https://github.com/nautobot/nautobot/issues/3410) - Added `-time` index for ObjectChange records.
+
+### Changed
+
+- [#3410](https://github.com/nautobot/nautobot/issues/3410) - Changed Homepage ObjectChange query to not join User or Content Type tables, use record cache for user entries instead.
+- [#3416](https://github.com/nautobot/nautobot/issues/3416) - Updated Windows development documentation.
+
+### Dependencies
+
+- [#3405](https://github.com/nautobot/nautobot/issues/3405) - Updated version of `pyopenssl` in Nautobot dev environment and Docker images to 23.0.0 due to an incompatibility between older versions of `pyopenssl` and version 39.x of `cryptography`. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+- [#3405](https://github.com/nautobot/nautobot/issues/3405) - Updated `cryptography` to 39.0.2. This is not a direct dependency of Nautobot so it will not auto-update when upgrading. Please update your local environment as needed.
+
+### Fixed
+
+- [#3347](https://github.com/nautobot/nautobot/issues/3347) - Fixed (again) `Location.parent` not populating correctly in the form when editing an existing Location.
+
+### Removed
+
+- [#3407](https://github.com/nautobot/nautobot/issues/3407) - Removed permission checks for ContentTypeAPIViewSet.
+
+## v1.5.12 (2023-03-03)
+
+### Added
+
+- [#3182](https://github.com/nautobot/nautobot/issues/3182) - Added support for assigning Config Context objects via Dynamic Groups.
+- [#3219](https://github.com/nautobot/nautobot/issues/3219) - Added support for custom fields to Dynamic Groups.
+- [#3220](https://github.com/nautobot/nautobot/issues/3220) - Added support for relationships to Dynamic Groups.
+
+### Changed
+
+- [#3369](https://github.com/nautobot/nautobot/issues/3369) - Changed `RelationshipModelFilterSetMixin` to perform a single OR query including `select_related` for `source_type` and `destination_type` vs. two single queries for each source/destination types.
+
+### Dependencies
+
+- [#3388](https://github.com/nautobot/nautobot/issues/3388) - Updated `GitPython` to 3.1.31.
+- [#3388](https://github.com/nautobot/nautobot/issues/3388) - Updated `drf-yasg` to 1.21.5. Note: this is automatic for the Nautobot-provided containers, but because our dependency on it goes away in 2.0, it's an optional update for other installations.
+- [#3388](https://github.com/nautobot/nautobot/issues/3388) - Updated `netutils` to 1.4.1.
+
+### Fixed
+
+- [#3295](https://github.com/nautobot/nautobot/issues/3295) - Fixed kombu serialization error on `User` object that arose when `CELERY_RESULT_EXTENDED == True` or when `enqueue_job` was called from within an existing `Job`.
+- [#3318](https://github.com/nautobot/nautobot/issues/3318) - Fixed a bug in prefix factory when a /0 ipv6 network is generated by faker.
+- [#3341](https://github.com/nautobot/nautobot/issues/3341) - Fixed missing `get_route_for_model()` logic for the `ContentType` and `Group` models.
+- [#3353](https://github.com/nautobot/nautobot/issues/3353) - Fixed a bug in `nautobot.extras.forms.mixins.CustomFieldModelFilterFormMixin` where the list of custom field names were not being stored on `self.custom_fields`.
+- [#3353](https://github.com/nautobot/nautobot/issues/3353) - Fixed a bug in `nautobot.utilities.filters.MappedPredicatesFilterMixin` (from which `SearchFilter` inherits) that was preventing `q` fields from being used in Dynamic Group filters.
+
+## v1.5.11 (2023-02-18)
+
+### Added
+
+- [#3168](https://github.com/nautobot/nautobot/issues/3168) - Add device name to bulk interface rename header.
+- [#3184](https://github.com/nautobot/nautobot/issues/3184) - Added Git 2.0+ as a mandatory dependency in the installation instructions.
+- [#3255](https://github.com/nautobot/nautobot/issues/3255) - Added `--cache-test-fixtures` command line argument to Nautobot unit and integration tests.
+
+### Changed
+
+- [#3134](https://github.com/nautobot/nautobot/issues/3134) - Migrate ModelMultipleChoiceFilters to NaturalKeyOrPKMultipleChoiceFilter.
+- [#3224](https://github.com/nautobot/nautobot/issues/3224) - Updates to our deprecation policy: Prior-major REST API versions will be dropped upon next-major release.
+- [#3264](https://github.com/nautobot/nautobot/issues/3264) - Changed `DynamicGroup.objects.get_for_object()` to be a little more efficient.
+- [#3311](https://github.com/nautobot/nautobot/issues/3311) - Add Links to Branch Names to README.md.
+- [#3314](https://github.com/nautobot/nautobot/issues/3314) - Updated developer documentation for user and prototype branching conventions.
+- [#3314](https://github.com/nautobot/nautobot/issues/3314) - Updated pre-commit hook to validate user namespace prefix on branch name.
+
+### Dependencies
+
+- [#3251](https://github.com/nautobot/nautobot/issues/3251) - Updated `oauthlib` to 3.2.2.
+- [#3258](https://github.com/nautobot/nautobot/issues/3258) - Updated `cryptography` to 39.0.1.
+- [#3320](https://github.com/nautobot/nautobot/issues/3320) - Updated `django` to 3.2.18.
+- [#3333](https://github.com/nautobot/nautobot/issues/3333) - Updated `netutils` constraint from ~1.4.0 to ^1.4.0 to permit semver upgrades.
+
+### Fixed
+
+- [#2580](https://github.com/nautobot/nautobot/issues/2580) - Fixed fragile generic view test.
+- [#3187](https://github.com/nautobot/nautobot/issues/3187) - Fixed `DynamicModelChoiceField`s having a generic default label when one is provided.
+- [#3274](https://github.com/nautobot/nautobot/issues/3274) - Fixed ObjectListViewMixin's filtering when exporting objects in NautobotUIViewSet.
+- [#3277](https://github.com/nautobot/nautobot/issues/3277) - Fixed incorrect test data in `nautobot.extras.tests.test_api.NoteTest`.
+- [#3278](https://github.com/nautobot/nautobot/issues/3278) - Fixed docker development environment error when the Nautobot container tries to start before the database is ready.
+- [#3290](https://github.com/nautobot/nautobot/issues/3290) - Fixed an issue preventing the inclusion of `netutils` functions in Django templates.
+- [#3308](https://github.com/nautobot/nautobot/issues/3308) - Fixed incorrect documentation for object permissions.
+- [#3327](https://github.com/nautobot/nautobot/issues/3327) - Fixed Azure AD tenant configuration documentation.
+- [#3332](https://github.com/nautobot/nautobot/issues/3332) - Fixed missing imports in Secrets Providers plugin development documentation.
+- [#3335](https://github.com/nautobot/nautobot/issues/3335) - Fixed inability to change filtering on custom field (selection) once filter is configured.
+
+### Security
+
+- [#3251](https://github.com/nautobot/nautobot/issues/3251) - Updated `oauthlib` to 3.2.2 due to CVE-2022-36087. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3258](https://github.com/nautobot/nautobot/issues/3258) - Updated `cryptography` to 39.0.1 due to CVE-2023-0286, CVE-2023-23931. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#3320](https://github.com/nautobot/nautobot/issues/3320) - Updated `django` to 3.2.18 due to CVE-2023-24580.
+
 ## v1.5.10 (2023-02-06)
 
 ### Added

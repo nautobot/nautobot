@@ -5,7 +5,6 @@ class DCIMConfig(NautobotConfig):
     name = "nautobot.dcim"
     verbose_name = "DCIM"
     searchable_models = [
-        "site",
         "location",
         "rack",
         "rackgroup",

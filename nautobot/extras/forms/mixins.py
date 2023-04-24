@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,6 @@ __all__ = (
 
 class CustomFieldModelFilterFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self.model)
 
         super().__init__(*args, **kwargs)
@@ -75,20 +75,20 @@ class CustomFieldModelFilterFormMixin(forms.Form):
         custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
             filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
         )
+        self.custom_fields = []
         for cf in custom_fields:
-            # 2.0 TODO: #824 cf.name to cf.slug throughout
-            field_name = f"cf_{cf.name}"
+            field_name = cf.add_prefix_to_cf_key()
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
                     set_initial=False, enforce_required=False, simple_json_filter=True
                 )
             else:
                 self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
+            self.custom_fields.append(field_name)
 
 
 class CustomFieldModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.custom_fields = []
 
@@ -102,11 +102,10 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         """
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = f"cf_{cf.slug}"
+            field_name = cf.add_prefix_to_cf_key()
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
-                # 2.0 TODO: #824 self.instance.cf.get(cf.slug)
-                self.fields[field_name].initial = self.instance.cf.get(cf.name)
+                self.fields[field_name].initial = self.instance.cf.get(cf.key)
             else:
                 self.fields[field_name] = cf.to_form_field()
 
@@ -114,14 +113,9 @@ class CustomFieldModelFormMixin(forms.ModelForm):
             self.custom_fields.append(field_name)
 
     def clean(self):
-
         # Save custom field data on instance
         for field_name in self.custom_fields:
-            # 2.0 TODO: #824 will let us just do:
-            # self.instance.cf[field_name[3:]] = self.cleaned_data.get(field_name)
-            # but for now we need:
-            cf = CustomField.objects.get(slug=field_name[3:])
-            self.instance.cf[cf.name] = self.cleaned_data.get(field_name)
+            self.instance.cf[remove_prefix_from_cf_key(field_name)] = self.cleaned_data.get(field_name)
 
         return super().clean()
 
@@ -137,7 +131,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
         for cf in custom_fields:
-            field_name = f"cf_{cf.slug}"
+            field_name = cf.add_prefix_to_cf_key()
             # Annotate non-required custom fields as nullable
             if not cf.required:
                 self.nullable_fields.append(field_name)
@@ -351,7 +345,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                         logger.debug("Deleted %s RelationshipAssociation(s)", source_count + destination_count)
 
     def clean(self):
-
         # Get any initial required relationship objects errors (i.e. non-existent required objects)
         required_objects_errors = self.model.required_related_objects_errors(output_for="ui")
         already_invalidated_slugs = []
@@ -378,7 +371,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         # Get difference of add/remove objects for each required relationship:
         required_relationships_to_check = []
         for required_relationship in required_relationships:
-
             required_field = f"cr_{required_relationship['slug']}__{required_relationship['required_side']}"
 
             add_list = []
@@ -439,7 +431,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                         relationship_data_errors.setdefault(requires_message, []).append(str(editing))
 
         for relationship_message, object_list in relationship_data_errors.items():
-
             if len(object_list) > 5:
                 self.add_error(None, f"{len(object_list)} {relationship_message}")
             else:
@@ -450,7 +441,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
 
 class RelationshipModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.relationships = []
         super().__init__(*args, **kwargs)
@@ -641,7 +631,6 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 association.save()
 
     def save(self, commit=True):
-
         obj = super().save(commit)
         if commit:
             self._save_relationships()
@@ -660,11 +649,16 @@ class RelationshipModelFilterFormMixin(forms.Form):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        source_relationships = Relationship.objects.filter(source_type=self.obj_type, source_hidden=False)
-        self._append_relationships_side(source_relationships, RelationshipSideChoices.SIDE_SOURCE)
+        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
+            destination_type=self.obj_type, destination_hidden=False
+        )
+        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
 
-        dest_relationships = Relationship.objects.filter(destination_type=self.obj_type, destination_hidden=False)
-        self._append_relationships_side(dest_relationships, RelationshipSideChoices.SIDE_DESTINATION)
+        for rel in relationships.iterator():
+            if rel.source_type == self.obj_type and not rel.source_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE)
+            if rel.destination_type == self.obj_type and not rel.destination_hidden:
+                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION)
 
     def _append_relationships_side(self, relationships, initial_side):
         """
@@ -721,7 +715,7 @@ class RoleModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Role.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -766,7 +760,7 @@ class StatusModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
@@ -776,7 +770,7 @@ class StatusModelCSVFormMixin(CSVModelForm):
 
     status = CSVModelChoiceField(
         queryset=Status.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         help_text="Operational status",
     )
 

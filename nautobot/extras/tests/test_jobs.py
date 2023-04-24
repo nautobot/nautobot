@@ -4,6 +4,7 @@ import logging
 import re
 import uuid
 from io import StringIO
+from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -22,7 +23,7 @@ from nautobot.core.testing import (
     run_job_for_testing,
 )
 from nautobot.core.utils.lookup import get_changes_for_model
-from nautobot.dcim.models import Device, Site
+from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -45,12 +46,12 @@ def get_job_class_and_model(module, name):
     return (job_class, job_model)
 
 
-def create_job_result_and_run_job(module, name, *, data=None, commit=True, request=None):
+def create_job_result_and_run_job(module, name, *, data=None, commit=True, profile=False, request=None):
     """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
     if data is None:
         data = {}
     _job_class, job_model = get_job_class_and_model(module, name)
-    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
+    job_result = run_job_for_testing(job=job_model, data=data, commit=commit, profile=profile, request=request)
     job_result.refresh_from_db()
     return job_result
 
@@ -160,7 +161,9 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit", "_profile"]
+        )
 
     def test_no_field_order(self):
         """
@@ -170,7 +173,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -182,7 +185,7 @@ class JobTest(TransactionTestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit", "_profile"],
         )
 
     def test_read_only_job_pass(self):
@@ -193,7 +196,7 @@ class JobTest(TransactionTestCase):
         name = "TestReadOnlyPass"
         job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
-        self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
+        self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
 
     def test_read_only_job_fail(self):
         """
@@ -205,7 +208,7 @@ class JobTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, commit=False)
         logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
+        self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
         run_log = JobLogEntry.objects.filter(grouping="run")
         for log in run_log:
@@ -241,14 +244,14 @@ class JobTest(TransactionTestCase):
         job_class, _job_model = get_job_class_and_model(module, name)
 
         # Fill out the form
-        form_data = dict(
-            ipv4_address="1.2.3.4",
-            ipv4_with_mask="1.2.3.4/32",
-            ipv4_network="1.2.3.0/24",
-            ipv6_address="2001:db8::1",
-            ipv6_with_mask="2001:db8::1/64",
-            ipv6_network="2001:db8::/64",
-        )
+        form_data = {
+            "ipv4_address": "1.2.3.4",
+            "ipv4_with_mask": "1.2.3.4/32",
+            "ipv4_network": "1.2.3.0/24",
+            "ipv6_address": "2001:db8::1",
+            "ipv6_with_mask": "2001:db8::1/64",
+            "ipv6_network": "2001:db8::/64",
+        }
         form = job_class().as_form(form_data)
         self.assertTrue(form.is_valid())
 
@@ -320,7 +323,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_object_var_optional"
         name = "TestOptionalObjectVar"
-        data = {"region": None}
+        data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, data=data, commit=True, request=self.request)
 
         info_log = JobLogEntry.objects.filter(
@@ -330,8 +333,8 @@ class JobTest(TransactionTestCase):
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(info_log.log_object, "")
-        self.assertEqual(info_log.message, "The Region if any that the user provided.")
-        self.assertEqual(job_result.data["output"], "\nNice Region (or not)!")
+        self.assertEqual(info_log.message, "The Location if any that the user provided.")
+        self.assertEqual(job_result.data["output"], "\nNice Location (or not)!")
 
     def test_required_object_var(self):
         """
@@ -339,7 +342,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
-        data = {"region": None}
+        data = {"location": None}
         logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
         logging.disable(logging.NOTSET)
@@ -349,7 +352,7 @@ class JobTest(TransactionTestCase):
         log_failure = JobLogEntry.objects.filter(
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
-        self.assertIn("region is a required field", log_failure.message)
+        self.assertIn("location is a required field", log_failure.message)
 
     def test_job_data_as_string(self):
         """
@@ -379,7 +382,7 @@ class JobTest(TransactionTestCase):
         job_result_2 = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_SUCCESS)
         _job_class, job_model = get_job_class_and_model(module, name)
-        self.assertGreaterEqual(job_model.results.count(), 2)
+        self.assertGreaterEqual(job_model.job_results.count(), 2)
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
@@ -401,7 +404,8 @@ class JobTest(TransactionTestCase):
             <span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
-            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
 
@@ -426,9 +430,27 @@ class JobTest(TransactionTestCase):
             </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
-            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
             form.as_table(),
         )
+
+    def test_job_profiling(self):
+        module = "test_profiling"
+        name = "TestProfilingJob"
+
+        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
+        job_result = create_job_result_and_run_job(module, name, profile=True)
+
+        self.assertEqual(
+            job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
+        )
+
+        profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
+        self.assertTrue(profiling_result.exists())
+        profiling_result.unlink()
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -545,7 +567,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command(job_model.class_path)
+        out, err = self.run_command("--no-color", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         self.assertIn(f"{module}: 1 success, 1 info, 0 warning, 0 failure", out)
         self.assertIn("success: None", out)
@@ -556,13 +578,13 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def test_runjob_db_change_no_commit(self):
         """A job that changes the DB, when run with commit=False, doesn't modify the database."""
         with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
+            Status.objects.get(name="test status")
 
         module = "test_modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command(job_model.class_path)
+        out, err = self.run_command("--no-color", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         self.assertIn(f"{module}: 1 success, 1 info, 0 warning, 0 failure", out)
         self.assertIn("success: Test Status: Status created successfully.", out)
@@ -571,7 +593,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         self.assertEqual("", err)
 
         with self.assertRaises(ObjectDoesNotExist):
-            Status.objects.get(slug="test-status")
+            Status.objects.get(name="test status")
 
         info_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_INFO).first()
         self.assertEqual("Database changes have been reverted automatically.", info_log.message)
@@ -600,7 +622,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--commit", "--username", "test_user", job_model.class_path)
+        out, err = self.run_command("--no-color", "--commit", "--username", "test_user", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
         self.assertIn(f"{module}: 1 success, 0 info, 0 warning, 0 failure", out)
@@ -610,14 +632,14 @@ class RunJobManagementCommandTest(TransactionTestCase):
         success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
         self.assertEqual(success_log.message, "Status created successfully.")
 
-        status = Status.objects.get(slug="test-status")
+        status = Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
 
         status.delete()
 
 
-class JobSiteCustomFieldTest(TransactionTestCase):
-    """Test a job that creates a site and a custom field."""
+class JobLocationCustomFieldTest(TransactionTestCase):
+    """Test a job that creates a location and a custom field."""
 
     databases = ("default", "job_logs")
 
@@ -629,24 +651,81 @@ class JobSiteCustomFieldTest(TransactionTestCase):
         self.request.user = self.user
 
     def test_run(self):
-
-        module = "test_site_with_custom_field"
-        name = "TestCreateSiteWithCustomField"
+        module = "test_location_with_custom_field"
+        name = "TestCreateLocationWithCustomField"
         job_result = create_job_result_and_run_job(module, name, request=self.request, commit=True)
         job_result.refresh_from_db()
 
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
-        # Test site with a value for custom_field
-        site_1 = Site.objects.filter(slug="test-site-one")
-        self.assertEqual(site_1.count(), 1)
-        self.assertEqual(CustomField.objects.filter(name="cf1").count(), 1)
-        self.assertEqual(site_1[0].cf["cf1"], "some-value")
+        # Test location with a value for custom_field
+        location_1 = Location.objects.filter(slug="test-location-one")
+        self.assertEqual(location_1.count(), 1)
+        self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
+        self.assertEqual(location_1[0].cf["cf1"], "some-value")
 
-        # Test site with default value for custom field
-        site_2 = Site.objects.filter(slug="test-site-two")
-        self.assertEqual(site_2.count(), 1)
-        self.assertEqual(site_2[0].cf["cf1"], "-")
+        # Test location with default value for custom field
+        location_2 = Location.objects.filter(slug="test-location-two")
+        self.assertEqual(location_2.count(), 1)
+        self.assertEqual(location_2[0].cf["cf1"], "-")
+
+
+class JobButtonReceiverTest(TransactionTestCase):
+    """
+    Test job button receiver.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Initialize fake request that will be required to run jobs
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        self.location_type = LocationType.objects.create(name="Test Root Type 2")
+        self.location = Location.objects.create(name="Test Job Button Location 1", location_type=self.location_type)
+        content_type = ContentType.objects.get_for_model(Location)
+        self.data = {
+            "object_pk": self.location.pk,
+            "object_model_name": f"{content_type.app_label}.{content_type.model}",
+        }
+
+    def test_form_field(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        job_class, _job_model = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_commit", "_profile"]
+        )
+
+    def test_hidden(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        _job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_model.hidden)
+
+    def test_is_job_button(self):
+        with self.subTest(expected=False):
+            module = "test_pass"
+            name = "TestPass"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertFalse(job_model.is_job_button_receiver)
+
+        with self.subTest(expected=True):
+            module = "test_job_button_receiver"
+            name = "TestJobButtonReceiverSimple"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertTrue(job_model.is_job_button_receiver)
+
+    def test_missing_receive_job_button_method(self):
+        module = "test_job_button_receiver"
+        name = "TestJobButtonReceiverFail"
+        logging.disable(logging.ERROR)
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        logging.disable(logging.NOTSET)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
 class JobHookReceiverTest(TransactionTestCase):
@@ -662,12 +741,13 @@ class JobHookReceiverTest(TransactionTestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
-        # generate an ObjectChange by creating a new site
+        # generate an ObjectChange by creating a new location
         with web_request_context(self.user):
-            site = Site(name="Test Site 1")
-            site.save()
-        site.refresh_from_db()
-        oc = get_changes_for_model(site).first()
+            location_type = LocationType.objects.create(name="Test Root Type 1")
+            location = Location(name="Test Location 1", location_type=location_type)
+            location.save()
+        location.refresh_from_db()
+        oc = get_changes_for_model(location).first()
         self.data = {"object_change": oc.id}
 
     def test_form_field(self):
@@ -675,7 +755,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit", "_profile"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"
@@ -684,7 +764,6 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
-
         with self.subTest(expected=False):
             module = "test_pass"
             name = "TestPass"
@@ -701,8 +780,8 @@ class JobHookReceiverTest(TransactionTestCase):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverChange"
         create_job_result_and_run_job(module, name, data=self.data, request=self.request)
-        test_site = Site.objects.get(name="test_jhr")
-        oc = get_changes_for_model(test_site).first()
+        test_location = Location.objects.get(name="test_jhr")
+        oc = get_changes_for_model(test_location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
         self.assertEqual(oc.user_id, self.user.pk)
 
@@ -715,7 +794,7 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
-class JobHookTest(TransactionTestCase):
+class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Test job hooks.
     """
@@ -731,19 +810,20 @@ class JobHookTest(TransactionTestCase):
             type_create=True,
             job=self.job_model,
         )
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
+        self.location_type = LocationType.objects.create(name="Test Root Type 2")
         job_hook.save()
         job_hook.content_types.set([obj_type])
 
     def test_enqueue_job_hook(self):
         with web_request_context(user=self.user):
-            Site.objects.create(name="Test Job Hook Site 1")
+            Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type)
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
-                ("info", f"change: dcim | site Test Job Hook Site 1 created by {self.user.username}"),
+                ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
                 ("info", "action: create"),
                 ("info", f"request.user: {self.user.username}"),
-                ("success", "Test Job Hook Site 1"),
+                ("success", "Test Job Hook Location 1"),
             ]
             log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
             self.assertSequenceEqual(log_messages, expected_log_messages)
@@ -752,7 +832,7 @@ class JobHookTest(TransactionTestCase):
     def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
         change_context = JobHookChangeContext(user=self.user)
         with change_logging(change_context):
-            Site.objects.create(name="Test Job Hook Site 2")
+            Location.objects.create(name="Test Job Hook Location 2", location_type=self.location_type)
 
         self.assertFalse(mock_enqueue_job.called)
 

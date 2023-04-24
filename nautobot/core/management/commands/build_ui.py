@@ -12,7 +12,6 @@ import jinja2
 
 
 class Command(BaseCommand):
-
     help = "Build the user interface for the Nautobot server environment and installed Nautobot Apps."
 
     def add_arguments(self, parser):

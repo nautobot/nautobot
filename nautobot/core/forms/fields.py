@@ -60,7 +60,6 @@ class CSVDataField(django_forms.CharField):
     widget = django_forms.Textarea
 
     def __init__(self, from_form, *args, **kwargs):
-
         form = from_form()
         self.model = form.Meta.model
         self.fields = form.fields
@@ -106,7 +105,6 @@ class CSVFileField(django_forms.FileField):
     """
 
     def __init__(self, from_form, *args, **kwargs):
-
         form = from_form()
         self.model = form.Meta.model
         self.fields = form.fields
@@ -194,9 +192,7 @@ class CSVModelChoiceField(django_forms.ModelChoiceField):
         try:
             return super().to_python(value)
         except MultipleObjectsReturned:
-            raise django_forms.ValidationError(
-                f'"{value}" is not a unique value for this field; multiple objects were found'
-            )
+            raise ValidationError(f'"{value}" is not a unique value for this field; multiple objects were found')
 
 
 class CSVContentTypeField(CSVModelChoiceField):
@@ -232,11 +228,11 @@ class CSVContentTypeField(CSVModelChoiceField):
         try:
             app_label, model = value.split(".")
         except ValueError:
-            raise django_forms.ValidationError('Object type must be specified as "<app_label>.<model>"')
+            raise ValidationError('Object type must be specified as "<app_label>.<model>"')
         try:
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
-            raise django_forms.ValidationError("Invalid object type")
+            raise ValidationError("Invalid object type")
 
 
 class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
@@ -308,7 +304,7 @@ class MultiValueCharField(django_forms.CharField):
 
         return [
             # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            self.field_class.to_python(self, v)
             for v in value
             if v
         ]
@@ -333,7 +329,7 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
                 try:
                     model = apps.get_model(v)
                 except (ValueError, LookupError):
-                    raise django_forms.ValidationError(
+                    raise ValidationError(
                         self.error_messages["invalid_choice"],
                         code="invalid_choice",
                         params={"value": v},
@@ -426,7 +422,7 @@ class MACAddressField(django_forms.Field):
         try:
             value = EUI(value.strip())
         except AddrFormatError:
-            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
+            raise ValidationError(self.error_messages["invalid"], code="invalid")
 
         return value
 
@@ -487,7 +483,7 @@ class DynamicModelChoiceMixin:
     :param null_option: The string used to represent a null selection (if any)
     :param disabled_indicator: The name of the field which, if populated, will disable selection of the
         choice (optional)
-    :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
+    :param depth: Nested serialization depth when making API requests (default: `0` or a flat representation)
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -500,7 +496,7 @@ class DynamicModelChoiceMixin:
         initial_params=None,
         null_option=None,
         disabled_indicator=None,
-        brief_mode=True,
+        depth=0,
         *args,
         **kwargs,
     ):
@@ -509,7 +505,7 @@ class DynamicModelChoiceMixin:
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
-        self.brief_mode = brief_mode
+        self.depth = depth
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
@@ -534,15 +530,29 @@ class DynamicModelChoiceMixin:
         if self.disabled_indicator is not None:
             attrs["disabled-indicator"] = self.disabled_indicator
 
-        # Toggle brief mode
-        if not self.brief_mode:
-            attrs["data-full"] = "true"
+        # Toggle depth
+        attrs["data-depth"] = self.depth
 
         # Attach any static query parameters
         for key, value in self.query_params.items():
             widget.add_query_param(key, value)
 
         return attrs
+
+    def prepare_value(self, value):
+        """
+        Augment the behavior of forms.ModelChoiceField.prepare_value().
+
+        Specifically, if `value` is a PK, but we have `to_field_name` set, we need to look up the model instance
+        from the given PK, so that the base class will get the appropriate field value rather than just keeping the PK,
+        because the rendered form field needs this in order to correctly prepopulate a default selection.
+        """
+        if self.to_field_name and data_utils.is_uuid(value):
+            try:
+                value = self.queryset.get(pk=value)
+            except ObjectDoesNotExist:
+                pass
+        return super().prepare_value(value)
 
     def get_bound_field(self, form, field_name):
         bound_field = BoundField(form, self, field_name)
@@ -604,20 +614,6 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, django_forms.Mode
 
     filter = django_filters.ModelMultipleChoiceFilter
     widget = widgets.APISelectMultiple
-
-    def prepare_value(self, value):
-        """
-        Ensure that a single string value (i.e. UUID) is accurately represented as a list of one item.
-
-        This is necessary because otherwise the superclass will split the string into individual characters,
-        resulting in an error (https://github.com/nautobot/nautobot/issues/512).
-
-        Note that prepare_value() can also be called with an object instance or list of instances; in that case,
-        we do *not* want to convert a single instance to a list of one entry.
-        """
-        if isinstance(value, str):
-            value = [value]
-        return super().prepare_value(value)
 
 
 class LaxURLField(django_forms.URLField):

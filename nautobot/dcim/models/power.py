@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.urls import reverse
 
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
@@ -29,13 +28,11 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class PowerPanel(PrimaryModel):
@@ -43,29 +40,24 @@ class PowerPanel(PrimaryModel):
     A distribution point for electrical power; e.g. a data center RPP.
     """
 
-    site = models.ForeignKey(to="Site", on_delete=models.PROTECT)
-    location = models.ForeignKey(
-        to="dcim.Location", on_delete=models.PROTECT, related_name="powerpanels", blank=True, null=True
+    location = models.ForeignKey(to="dcim.Location", on_delete=models.PROTECT, related_name="power_panels")
+    rack_group = models.ForeignKey(
+        to="RackGroup", on_delete=models.PROTECT, blank=True, null=True, related_name="power_panels"
     )
-    rack_group = models.ForeignKey(to="RackGroup", on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=100, db_index=True)
 
-    csv_headers = ["site", "location", "rack_group", "name"]
+    csv_headers = ["location", "rack_group", "name"]
 
     class Meta:
-        ordering = ["site", "name"]
-        unique_together = ["site", "name"]
+        ordering = ["location", "name"]
+        unique_together = ["location", "name"]
 
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:powerpanel", args=[self.pk])
-
     def to_csv(self):
         return (
-            self.site.name,
-            self.location.name if self.location else None,
+            self.location.name,
             self.rack_group.name if self.rack_group else None,
             self.name,
         )
@@ -75,11 +67,6 @@ class PowerPanel(PrimaryModel):
 
         # Validate location
         if self.location is not None:
-            if self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
-
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {
@@ -88,12 +75,8 @@ class PowerPanel(PrimaryModel):
                     }
                 )
 
-        # RackGroup must belong to assigned Site and Location
+        # RackGroup must belong to assigned Location
         if self.rack_group:
-            if self.rack_group.site != self.site:
-                raise ValidationError(
-                    f"Rack group {self.rack_group} ({self.rack_group.site}) is in a different site than {self.site}"
-                )
             if (
                 self.location is not None
                 and self.rack_group.location is not None
@@ -109,12 +92,10 @@ class PowerPanel(PrimaryModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -123,8 +104,8 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     An electrical circuit delivered from a PowerPanel.
     """
 
-    power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="powerfeeds")
-    rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True)
+    power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="power_feeds")
+    rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
     name = models.CharField(max_length=100)
     type = models.CharField(
         max_length=50,
@@ -152,7 +133,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     comments = models.TextField(blank=True)
 
     csv_headers = [
-        "site",
+        "location",
         "power_panel",
         "rack_group",
         "rack",
@@ -186,14 +167,11 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:powerfeed", args=[self.pk])
-
     def to_csv(self):
         return (
-            self.power_panel.site.name,
+            self.power_panel.location.name,
             self.power_panel.name,
-            self.rack.group.name if self.rack and self.rack.group else None,
+            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
             self.rack.name if self.rack else None,
             self.name,
             self.get_status_display(),
@@ -209,10 +187,10 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     def clean(self):
         super().clean()
 
-        # Rack must belong to same Site as PowerPanel
-        if self.rack and self.rack.site != self.power_panel.site:
+        # Rack must belong to same Location as PowerPanel
+        if self.rack and self.rack.location != self.power_panel.location:
             raise ValidationError(
-                f"Rack {self.rack} ({self.rack.site}) and power panel {self.power_panel} ({self.power_panel.site}) are in different sites"
+                f"Rack {self.rack} ({self.rack.location}) and power panel {self.power_panel} ({self.power_panel.location}) are in different locations"
             )
 
         # AC voltage cannot be negative
@@ -220,7 +198,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
             raise ValidationError({"voltage": "Voltage cannot be negative for AC supply"})
 
     def save(self, *args, **kwargs):
-
         # Cache the available_power property on the instance
         kva = abs(self.voltage) * self.amperage * (self.max_utilization / 100)
         if self.phase == PowerFeedPhaseChoices.PHASE_3PHASE:

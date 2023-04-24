@@ -271,6 +271,19 @@ The number of days to retain logged changes (object creations, updates, and dele
 
 ---
 
+## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED`
+
+If `True`, it will be possible to apply Config Context objects to Devices and Virtual Machines via Dynamic Group membership. When set to `False` this behavior will not be available.
+
+!!! warning
+    With a large number of dynamic groups, enabling this could invoke a performance penalty when processing Config Contexts.
+
+---
+
 ## CORS_ALLOW_ALL_ORIGINS
 
 Default: `False`
@@ -751,7 +764,7 @@ Default:
 ```python
 [
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
 ]
 ```
 
@@ -1093,10 +1106,10 @@ Additional examples are available in the [`/examples/logging`](https://github.co
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
 * `nautobot.auth.*` - Authentication events
-* `nautobot.jobs.*` - Job execution (`* = JobClassName`)
-* `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
-* `nautobot.plugins.*` - Plugin loading and activity
-* `nautobot.views.*` - Views which handle business logic for the web UI
+* `nautobot.extras.jobs.*` - Job execution (`* = JobClassName`)
+* `nautobot.core.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
+* `nautobot.extras.plugins.*` - Plugin loading and activity
+* `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
 
 ---
 

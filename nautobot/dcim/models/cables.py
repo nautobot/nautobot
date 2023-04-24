@@ -6,7 +6,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models import Sum
-from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ColorField
@@ -45,12 +44,10 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -136,15 +133,12 @@ class Cable(PrimaryModel, StatusModel):
         pk = self.pk or self._pk
         return self.label or f"#{pk}"
 
-    def get_absolute_url(self):
-        return reverse("dcim:cable", args=[self.pk])
-
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_CONNECTED(cls):  # pylint: disable=no-self-argument
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, "__status_connected", None) is None:
             try:
-                cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+                cls.__status_connected = Status.objects.get_for_model(Cable).get(name="Connected")
             except Status.DoesNotExist:
                 logger.warning("Status 'connected' not found for dcim.cable")
                 return None
@@ -261,7 +255,6 @@ class Cable(PrimaryModel, StatusModel):
             self.length_unit = ""
 
     def save(self, *args, **kwargs):
-
         # Store the given length (if any) in meters for use in database ordering
         if self.length and self.length_unit:
             self._abs_length = to_meters(self.length, self.length_unit)

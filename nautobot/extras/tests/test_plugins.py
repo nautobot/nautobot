@@ -11,7 +11,7 @@ import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
@@ -69,17 +69,17 @@ class PluginTest(TestCase):
         """
         Check that plugin TemplateExtensions are registered.
         """
-        from example_plugin.template_content import SiteContent
+        from example_plugin.template_content import LocationContent
 
-        self.assertIn(SiteContent, registry["plugin_template_extensions"]["dcim.site"])
+        self.assertIn(LocationContent, registry["plugin_template_extensions"]["dcim.location"])
 
     def test_custom_validators_registration(self):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
+        from example_plugin.custom_validators import LocationCustomValidator, RelationshipAssociationCustomValidator
 
-        self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+        self.assertIn(LocationCustomValidator, registry["plugin_custom_validators"]["dcim.location"])
         self.assertIn(
             RelationshipAssociationCustomValidator,
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
@@ -243,12 +243,15 @@ class PluginTest(TestCase):
         class ExampleConfigWithDefaultSettings(example_config):
             default_settings = {
                 "bar": 123,
+                "SAMPLE_VARIABLE": "Testing",
             }
 
         # Populate the default value if setting has not been specified
         user_config = {}
         ExampleConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config["bar"], 123)
+        # Don't overwrite constance_config Keys.
+        self.assertNotIn("SAMPLE_VARIABLE", user_config)
 
         # Don't overwrite specified values
         user_config = {"bar": 456}
@@ -297,10 +300,10 @@ class PluginTest(TestCase):
         Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
+        cf = CustomField.objects.get(key="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
-        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
+        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])
 
     def test_secrets_provider(self):
         """
@@ -309,7 +312,6 @@ class PluginTest(TestCase):
         # The "constant-value" provider is implemented by the plugin
         secret = Secret.objects.create(
             name="Constant Secret",
-            slug="constant-secret",
             provider="constant-value",
             parameters={"constant": "It's a secret to everybody"},
         )
@@ -402,7 +404,6 @@ class PluginDetailViewTest(TestCase):
 )
 class PluginAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "number": 2600,
     }
@@ -441,7 +442,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.serializers.reverse")
+    @mock.patch("nautobot.core.api.serializers.reverse")
     def test_get_notes_url_on_object_raise_no_reverse_match(self, mock_reverse):
         # This test is to check the error handling when the user implemented a model without NotesMixin
         # But include the NotesSerializerMixin in the Model APIViewSet with NautobotModelViewSet
@@ -460,7 +461,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         url = self._get_detail_url(instance)
 
         # Check if log messages and API data is properly rendered
-        with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
+        with self.assertLogs(logger="nautobot.core.api", level="WARNING") as cm:
             response = self.client.get(url, **self.header)
             self.assertHttpStatus(response, 200)
             self.assertIn("notes_url", response.data)
@@ -471,7 +472,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
                     f"Notes feature is not available for model {model_name}. "
                     "Please make sure to: "
                     f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
-                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.views in the {model_name}ViewSet "
                     "before including NotesSerializerMixin in the model serializer"
                 ),
                 cm.output[0],
@@ -491,10 +492,11 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-        site = Site(name="this site has a matching name", slug="site1")
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location(name="this location has a matching name", slug="location1", location_type=location_type)
 
         with self.assertRaises(ValidationError):
-            site.clean()
+            location.clean()
 
     def test_relationship_association_validator_raises_exception(self):
         status = Status.objects.get_for_model(IPAddress).first()
@@ -522,34 +524,38 @@ class FilterExtensionTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
+        tenant_groups = TenantGroup.objects.all()[:3]
+        tenants = (
+            Tenant.objects.create(name="Tenant 1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"),
+            Tenant.objects.create(name="Tenant 2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"),
+            Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"),
+        )
+        location_type = LocationType.objects.get(name="Campus")
+        Location.objects.create(
+            name="Location 1",
+            slug="location-1",
+            tenant=tenants[0],
+            location_type=location_type,
+        )
+        Location.objects.create(
+            name="Location 2",
+            slug="location-2",
+            tenant=tenants[1],
+            location_type=location_type,
+        )
+        Location.objects.create(
+            name="Location 3",
+            slug="location-3",
+            tenant=tenants[2],
+            location_type=location_type,
         )
 
-        Tenant.objects.create(
-            name="Tenant 1", slug="tenant-1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 2", slug="tenant-2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 3", slug="tenant-3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"
-        )
-
-        Site.objects.create(name="Site 1", slug="site-1", tenant=Tenant.objects.get(slug="tenant-1"))
-        Site.objects.create(name="Site 2", slug="site-2", tenant=Tenant.objects.get(slug="tenant-2"))
-        Site.objects.create(name="Site 3", slug="site-3", tenant=Tenant.objects.get(slug="tenant-3"))
-
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
+        manufactures = Manufacturer.objects.all()[:3]
 
         roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufactures[0],
             model="Model 1",
             slug="model-1",
             part_number="Part Number 1",
@@ -557,7 +563,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufactures[1],
             model="Model 2",
             slug="model-2",
             part_number="Part Number 2",
@@ -565,7 +571,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufactures[2],
             model="Model 3",
             slug="model-3",
             part_number="Part Number 3",
@@ -577,22 +583,22 @@ class FilterExtensionTest(TestCase):
             name="Device 1",
             device_type=DeviceType.objects.get(slug="model-1"),
             role=roles[0],
-            tenant=Tenant.objects.get(slug="tenant-1"),
-            site=Site.objects.get(slug="site-1"),
+            tenant=tenants[0],
+            location=Location.objects.get(slug="location-1"),
         )
         Device.objects.create(
             name="Device 2",
             device_type=DeviceType.objects.get(slug="model-2"),
             role=roles[1],
-            tenant=Tenant.objects.get(slug="tenant-2"),
-            site=Site.objects.get(slug="site-2"),
+            tenant=tenants[1],
+            location=Location.objects.get(slug="location-2"),
         )
         Device.objects.create(
             name="Device 3",
             device_type=DeviceType.objects.get(slug="model-2"),
             role=roles[3],
-            tenant=Tenant.objects.get(slug="tenant-3"),
-            site=Site.objects.get(slug="site-3"),
+            tenant=tenants[2],
+            location=Location.objects.get(slug="location-3"),
         )
 
     def test_basic_custom_filter(self):
@@ -633,8 +639,6 @@ class FilterExtensionTest(TestCase):
             data={
                 "example_plugin_description": "tenant-1.nautobot.com",
                 "example_plugin_dtype": "model-1",
-                "slug__ic": "tenant-1",
-                "slug": "tenant-1",
                 "example_plugin_sdescrip": "tenant-1",
             }
         )
@@ -676,19 +680,18 @@ class TestPluginCoreViewOverrides(TestCase):
     def setUp(self):
         super().setUp()
         self.device = create_test_device("Device")
-        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
         self.circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
             circuit_type=circuit_type,
-            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+            status=Status.objects.get_for_model(Circuit).first(),
         )
         self.user.is_superuser = True
         self.user.save()
 
     def test_views_are_overridden(self):
-
         response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
         self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
 

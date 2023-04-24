@@ -3,7 +3,6 @@ from django.urls import path
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from . import views
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -87,61 +86,20 @@ urlpatterns = [
     path("rirs/add/", views.RIREditView.as_view(), name="rir_add"),
     path("rirs/import/", views.RIRBulkImportView.as_view(), name="rir_import"),
     path("rirs/delete/", views.RIRBulkDeleteView.as_view(), name="rir_bulk_delete"),
-    path("rirs/<slug:slug>/", views.RIRView.as_view(), name="rir"),
-    path("rirs/<slug:slug>/edit/", views.RIREditView.as_view(), name="rir_edit"),
-    path("rirs/<slug:slug>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
+    path("rirs/<uuid:pk>/", views.RIRView.as_view(), name="rir"),
+    path("rirs/<uuid:pk>/edit/", views.RIREditView.as_view(), name="rir_edit"),
+    path("rirs/<uuid:pk>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
     path(
-        "rirs/<slug:slug>/changelog/",
+        "rirs/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="rir_changelog",
         kwargs={"model": RIR},
     ),
     path(
-        "rirs/<slug:slug>/notes/",
+        "rirs/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="rir_notes",
         kwargs={"model": RIR},
-    ),
-    # Aggregates
-    path("aggregates/", views.AggregateListView.as_view(), name="aggregate_list"),
-    path("aggregates/add/", views.AggregateEditView.as_view(), name="aggregate_add"),
-    path(
-        "aggregates/import/",
-        views.AggregateBulkImportView.as_view(),
-        name="aggregate_import",
-    ),
-    path(
-        "aggregates/edit/",
-        views.AggregateBulkEditView.as_view(),
-        name="aggregate_bulk_edit",
-    ),
-    path(
-        "aggregates/delete/",
-        views.AggregateBulkDeleteView.as_view(),
-        name="aggregate_bulk_delete",
-    ),
-    path("aggregates/<uuid:pk>/", views.AggregateView.as_view(), name="aggregate"),
-    path(
-        "aggregates/<uuid:pk>/edit/",
-        views.AggregateEditView.as_view(),
-        name="aggregate_edit",
-    ),
-    path(
-        "aggregates/<uuid:pk>/delete/",
-        views.AggregateDeleteView.as_view(),
-        name="aggregate_delete",
-    ),
-    path(
-        "aggregates/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="aggregate_changelog",
-        kwargs={"model": Aggregate},
-    ),
-    path(
-        "aggregates/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="aggregate_notes",
-        kwargs={"model": Aggregate},
     ),
     # Prefixes
     path("prefixes/", views.PrefixListView.as_view(), name="prefix_list"),
@@ -222,6 +180,11 @@ urlpatterns = [
         ObjectDynamicGroupsView.as_view(),
         name="ipaddress_dynamicgroups",
         kwargs={"model": IPAddress},
+    ),
+    path(
+        "ip-addresses/<uuid:pk>/interfaces/",
+        views.IPAddressInterfacesView.as_view(),
+        name="ipaddress_interfaces",
     ),
     path(
         "ip-addresses/<uuid:pk>/notes/",

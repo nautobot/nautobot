@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
@@ -23,12 +22,10 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ProviderNetwork(PrimaryModel):
@@ -56,9 +53,6 @@ class ProviderNetwork(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:providernetwork", args=[self.slug])
-
     def to_csv(self):
         return (
             self.provider.name,
@@ -74,12 +68,10 @@ class ProviderNetwork(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Provider(PrimaryModel):
@@ -89,7 +81,6 @@ class Provider(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     asn = ASNField(
         blank=True,
         null=True,
@@ -105,7 +96,6 @@ class Provider(PrimaryModel):
 
     csv_headers = [
         "name",
-        "slug",
         "asn",
         "account",
         "portal_url",
@@ -127,13 +117,9 @@ class Provider(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:provider", args=[self.slug])
-
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.asn,
             self.account,
             self.portal_url,
@@ -143,7 +129,7 @@ class Provider(PrimaryModel):
         )
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships")
+@extras_features("custom_validators", "graphql")
 class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
@@ -151,13 +137,12 @@ class CircuitType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(
         max_length=200,
         blank=True,
     )
 
-    csv_headers = ["name", "slug", "description"]
+    csv_headers = ["name", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -165,24 +150,18 @@ class CircuitType(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:circuittype", args=[self.slug])
-
     def to_csv(self):
         return (
             self.name,
-            self.slug,
             self.description,
         )
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -255,9 +234,6 @@ class Circuit(PrimaryModel, StatusModel):
     def __str__(self):
         return self.cid
 
-    def get_absolute_url(self):
-        return reverse("circuits:circuit", args=[self.pk])
-
     def to_csv(self):
         return (
             self.cid,
@@ -274,25 +250,16 @@ class Circuit(PrimaryModel, StatusModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="circuit_terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="circuit_terminations",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -323,27 +290,18 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return f"Termination {self.term_side}: {self.site or self.provider_network}"
-
-    def get_absolute_url(self):
-        return reverse("circuits:circuittermination", args=[self.pk])
+        return f"Termination {self.term_side}: {self.location or self.provider_network}"
 
     def clean(self):
         super().clean()
 
-        # Must define either site *or* provider network
-        if self.site is None and self.provider_network is None:
-            raise ValidationError("A circuit termination must attach to either a site or a provider network.")
-        if self.site and self.provider_network:
-            raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
+        # Must define either location *or* provider network
+        if self.location is None and self.provider_network is None:
+            raise ValidationError("A circuit termination must attach to either a location or a provider network.")
+        if self.location and self.provider_network:
+            raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
         # If and only if a site is defined, a location *may* also be defined.
         if self.location is not None:
-            if self.provider_network is not None:
-                raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {
@@ -353,7 +311,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
                 )
 
     def to_objectchange(self, action, related_object=None, **kwargs):
-
         # Annotate the parent Circuit
         try:
             related_object = self.circuit
@@ -370,6 +327,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     def get_peer_termination(self):
         peer_side = "Z" if self.term_side == "A" else "A"
         try:
-            return CircuitTermination.objects.select_related("site").get(circuit=self.circuit, term_side=peer_side)
+            return CircuitTermination.objects.select_related("location").get(circuit=self.circuit, term_side=peer_side)
         except CircuitTermination.DoesNotExist:
             return None

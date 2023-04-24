@@ -5,7 +5,6 @@ import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0010_vminterface_mac_address_data_migration"),
     ]

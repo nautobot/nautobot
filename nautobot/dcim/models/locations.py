@@ -2,25 +2,23 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
+from django.utils.functional import classproperty
 
 from timezone_field import TimeZoneField
 
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
+from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class LocationType(TreeModel, OrganizationalModel):
@@ -54,9 +52,6 @@ class LocationType(TreeModel, OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:locationtype", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -122,13 +117,15 @@ class LocationQuerySet(TreeQuerySet):
         return self.filter(location_type__content_types=content_type)
 
 
+class LocationManager(TreeManager.from_queryset(LocationQuerySet)):
+    pass
+
+
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
@@ -169,13 +166,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         on_delete=models.PROTECT,
         related_name="locations",
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.CASCADE,
-        related_name="locations",
-        blank=True,
-        null=True,
-    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -214,13 +204,12 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = LocationQuerySet.as_manager(with_tree_fields=True)
+    objects = LocationManager()
 
     csv_headers = [
         "name",
         "slug",
         "location_type",
-        "site",
         "status",
         "parent",
         "tenant",
@@ -240,7 +229,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
 
     clone_fields = [
         "location_type",
-        "site",
         "status",
         "parent",
         "tenant",
@@ -264,15 +252,39 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:location", args=[self.slug])
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        Due to the recursive nature of Location's natural key, we need a custom implementation of this property.
+
+        This returns a set of natural key lookups based on the current maximum depth of the Location tree.
+        For example if the tree is 2 layers deep, it will return ["name", "parent__name", "parent__parent__name"].
+
+        Without this custom implementation, the generic `natural_key_field_lookups` would recurse infinitely.
+        """
+        lookups = []
+        name = "name"
+        for _ in range(cls.objects.max_tree_depth() + 1):
+            lookups.append(name)
+            name = f"parent__{name}"
+        return lookups
+
+    @classmethod
+    def natural_key_args_to_kwargs(cls, args):
+        """Handle the possibility that more recursive "parent" lookups were specified than we initially expected."""
+        args = list(args)
+        natural_key_field_lookups = list(cls.natural_key_field_lookups)
+        while len(args) < len(natural_key_field_lookups):
+            args.append(None)
+        while len(args) > len(natural_key_field_lookups):
+            natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
+        return dict(zip(natural_key_field_lookups, args))
 
     def to_csv(self):
         return (
             self.name,
             self.slug,
             self.location_type.name,
-            self.site.name if self.site else None,
             self.get_status_display(),
             self.parent.name if self.parent else None,
             self.tenant.name if self.tenant else None,
@@ -289,11 +301,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
             self.contact_email,
             self.comments,
         )
-
-    @property
-    def base_site(self):
-        """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
-        return self.site or self.ancestors().first().site
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
@@ -335,22 +342,7 @@ class Location(TreeModel, StatusModel, PrimaryModel):
                         {"parent": f"A Location of type {self.location_type} must not have a parent Location."}
                     )
 
-                # In a future release, Site will become a kind of Location, and the resulting data migration will be
-                # much cleaner if it doesn't have to deal with Locations that have two "parents".
-                if self.site is not None:
-                    raise ValidationError(
-                        {"site": "A Location cannot have both a parent Location and an associated Site."}
-                    )
-
         else:  # Our location type has a parent type of its own
-            # We must *not* have a site.
-            # In a future release, Site will become a kind of Location, and the resulting data migration will be
-            # much cleaner if it doesn't have to deal with Locations that have two "parents".
-            if self.site is not None:
-                raise ValidationError(
-                    {"site": f"A location of type {self.location_type} must not have an associated Site."}
-                )
-
             # We *must* have a parent location.
             if self.parent is None:
                 raise ValidationError(
