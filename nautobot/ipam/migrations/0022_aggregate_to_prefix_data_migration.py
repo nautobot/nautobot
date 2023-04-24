@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import migrations
 from django.utils.timezone import make_aware
 
-from nautobot.core.models.generics import _NautobotTaggableManager
+from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
@@ -197,7 +197,7 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
         # make tag manager available in migration for nautobot.core.models.utils.serialize_object
         # https://github.com/jazzband/django-taggit/issues/101
         # https://github.com/jazzband/django-taggit/issues/454
-        prefix.tags = _NautobotTaggableManager(
+        prefix.tags = TagsManager(
             through=extras_models.TaggedItem, model=Prefix, instance=prefix, prefetch_cache_name="tags"
         )
 

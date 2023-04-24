@@ -3,13 +3,11 @@ import uuid
 from unittest import skipIf
 
 from django.db import connection
-from taggit.managers import TaggableManager
 
+from nautobot.core.models.fields import TagsField
 from nautobot.core.models.utils import serialize_object
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.core.models.generics import _NautobotTaggableManager
 from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
 
 
 class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
@@ -34,14 +32,11 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
     def populateDataBeforeMigration(self, apps):
         """Populate Aggregate data before migrating to Prefixes"""
 
+        self.aggregate = apps.get_model("ipam", "Aggregate")
         # Workaround for django-taggit manager not working in migrations.
         # https://github.com/jazzband/django-taggit/issues/101
         # https://github.com/jazzband/django-taggit/issues/454
-        taggable_manager = TaggableManager(
-            through=extras_models.TaggedItem, manager=_NautobotTaggableManager, ordering=["name"]
-        )
-        self.aggregate = apps.get_model("ipam", "Aggregate")
-        self.aggregate.tags = taggable_manager
+        self.aggregate.tags = TagsField()
         self.computed_field = apps.get_model("extras", "computedfield")
         self.content_type = apps.get_model("contenttypes", "ContentType")
         self.custom_field = apps.get_model("extras", "customfield")
@@ -51,7 +46,7 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.object_change = apps.get_model("extras", "objectchange")
         self.object_permission = apps.get_model("users", "objectpermission")
         self.prefix = apps.get_model("ipam", "prefix")
-        self.prefix.tags = taggable_manager
+        self.prefix.tags = TagsField()
         self.relationship = apps.get_model("extras", "relationship")
         self.relationship_association = apps.get_model("extras", "relationshipassociation")
         self.rir = apps.get_model("ipam", "RIR")

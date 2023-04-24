@@ -5,7 +5,6 @@ from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
 import django_filters
-from taggit.managers import TaggableManager
 from tree_queries.models import TreeNodeForeignKey
 
 from nautobot.core import filters, testing
@@ -356,7 +355,7 @@ class TestModel(django_models.Model):
     timefield = django_models.TimeField()
     treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
 
-    tags = TaggableManager(through=extras_models.TaggedItem)
+    tags = core_fields.TagsField()
 
 
 class BaseFilterSetTest(TestCase):
