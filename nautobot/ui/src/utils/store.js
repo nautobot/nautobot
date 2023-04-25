@@ -11,6 +11,7 @@ import {
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import { combineReducers } from "redux";
+import { createSlice } from "@reduxjs/toolkit";
 
 // Configure redux-persist to save state in Local Storage for performance
 const persistConfig = {
@@ -19,12 +20,28 @@ const persistConfig = {
     storage,
 };
 
+const initialState = "";
+
+const appContextSlice = createSlice({
+    name: "appContext",
+    initialState,
+    reducers: {
+        updateAppContext(state, action) {
+            state = action.payload;
+            return state;
+        },
+    },
+});
+
 const rootReducer = combineReducers({
     [baseApi.reducerPath]: baseApi.reducer,
+    appContext: appContextSlice.reducer,
 });
 
 // Instantiate the persistent reducer to pull state from cache
 const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const { updateAppContext } = appContextSlice.actions;
 
 // Global Redux store for global state management
 export const store = configureStore({

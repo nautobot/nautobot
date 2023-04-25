@@ -703,15 +703,6 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         responses={
             200: {
                 "type": "object",
-                "properties": {
-                    "django-version": {"type": "string"},
-                    "installed-apps": {"type": "object"},
-                    "nautobot-version": {"type": "string"},
-                    "plugins": {"type": "object"},
-                    "python-version": {"type": "string"},
-                    "rq-workers-running": {"type": "integer"},
-                    "celery-workers-running": {"type": "integer"},
-                },
             }
         },
         exclude=True,
@@ -720,7 +711,7 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         # TODO: do we need this local import or can it be moved globally?
         from nautobot.extras.registry import registry
 
-        return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])
+        return Response(registry["nav_menu"])
 
 
 #

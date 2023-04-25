@@ -1,6 +1,5 @@
 import {
     Box,
-    DcimIcon,
     Flex,
     Heading,
     Link,
@@ -65,10 +64,6 @@ export default function Layout({ children }) {
                         leftIcon={<NautobotLogoIcon />}
                         to="/"
                     />
-                </Heading>
-                <Heading variant="sidebar">
-                    <DcimIcon />
-                    All
                 </Heading>
                 {sessionInfo && sessionInfo.logged_in ? (
                     <>

@@ -14,8 +14,8 @@ class Registry(dict):
             raise KeyError(f"Invalid store: {key}")
 
     def __setitem__(self, key, value):
-        if key in self:
-            raise KeyError(f"Store already set: {key}")
+        # if key in self:
+        #     raise KeyError(f"Store already set: {key}")
         super().__setitem__(key, value)
 
     def __delitem__(self, key):

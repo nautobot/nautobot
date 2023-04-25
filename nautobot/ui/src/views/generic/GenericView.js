@@ -44,66 +44,163 @@ export default function GenericView({
 
     const breadcrumbs = useMemo(
         () =>
-            (menu?.data ?? []).reduce((breadcrumbs, root) => {
-                // Use `for ... in` instead of array methods to simplify return.
-                for (const group in root.properties.groups) {
-                    const { items } = root.properties.groups[group];
-
-                    for (const item in items) {
-                        if (pathname.startsWith(item)) {
-                            return [
-                                {
-                                    children: root.name,
-                                    key: `0_${root.name}`,
-                                    type: "text",
-                                },
-                                {
-                                    children: group,
-                                    items: Object.keys(
-                                        root.properties.groups
-                                    ).map((name) => ({
-                                        as: ReactRouterLink,
-                                        children: name,
-                                        to: Object.entries(
-                                            root.properties.groups[name].items
-                                        ).sort(
-                                            ([, a], [, b]) =>
-                                                a.weight - b.weight
-                                        )[0][0],
-                                    })),
-                                    key: `1_${group}`,
-                                    type: "menu",
-                                },
-                                {
-                                    children: items[item].name,
-                                    items: Object.entries(items).map(
-                                        ([to, { name }]) => ({
+            (function () {
+                for (const context in menu.data) {
+                    for (const group in menu.data[context].groups) {
+                        for (const urlPatternOrSubgroup in menu.data[context]
+                            .groups[group].items) {
+                            if (pathname.startsWith(urlPatternOrSubgroup)) {
+                                return [
+                                    {
+                                        children: context,
+                                        key: `0_${context}`,
+                                        type: "text",
+                                    },
+                                    {
+                                        children: group,
+                                        items: Object.keys(
+                                            menu.data[context].groups
+                                        ).map((name) => ({
+                                            as: ReactRouterLink,
+                                            children: name,
+                                            to: Object.entries(
+                                                menu.data[context].groups[name]
+                                                    .items
+                                            ).sort(
+                                                ([, a], [, b]) =>
+                                                    a.weight - b.weight
+                                            )[0][0],
+                                        })),
+                                        key: `1_${group}`,
+                                        type: "menu",
+                                    },
+                                    {
+                                        children:
+                                            menu.data[context].groups[group]
+                                                .items[urlPatternOrSubgroup]
+                                                .name,
+                                        items: Object.entries(
+                                            menu.data[context].groups[group]
+                                                .items
+                                        ).map(([to, { name }]) => ({
                                             as: ReactRouterLink,
                                             children: name,
                                             to,
-                                        })
-                                    ),
-                                    key: `2_${items[item].name}`,
-                                    type: "menu",
-                                },
-                                ...(objectData
-                                    ? [
-                                          {
-                                              as: ReactRouterLink,
-                                              children: objectData.name,
-                                              key: `3_${objectData.id}`,
-                                              to: `${item}${objectData.id}`,
-                                              type: "link",
-                                          },
-                                      ]
-                                    : []),
-                            ];
+                                        })),
+                                        key: `2_${menu.data[context].groups[group].items[urlPatternOrSubgroup].name}`,
+                                        type: "menu",
+                                    },
+                                    ...(objectData
+                                        ? [
+                                              {
+                                                  as: ReactRouterLink,
+                                                  children: objectData.name,
+                                                  key: `3_${objectData.id}`,
+                                                  to: `${urlPatternOrSubgroup}${objectData.id}`,
+                                                  type: "link",
+                                              },
+                                          ]
+                                        : []),
+                                ];
+                            }
+                            for (const urlPattern in menu.data[context].groups[
+                                group
+                            ].items[urlPatternOrSubgroup].items) {
+                                console.log(
+                                    menu.data[context].groups[group].items[
+                                        urlPatternOrSubgroup
+                                    ]
+                                );
+                                if (pathname.startsWith(urlPattern)) {
+                                    return [
+                                        {
+                                            children: context,
+                                            key: `0_${context}`,
+                                            type: "text",
+                                        },
+                                        {
+                                            children: group,
+                                            items: Object.keys(
+                                                menu.data[context].groups
+                                            ).map((name) => ({
+                                                as: ReactRouterLink,
+                                                children: name,
+                                                to: Object.entries(
+                                                    menu.data[context].groups[
+                                                        name
+                                                    ].items
+                                                ).sort(
+                                                    ([, a], [, b]) =>
+                                                        a.weight - b.weight
+                                                )[0][0],
+                                            })),
+                                            key: `1_${group}`,
+                                            type: "menu",
+                                        },
+                                        {
+                                            children: urlPatternOrSubgroup,
+                                            items: Object.keys(
+                                                menu.data[context].groups[group]
+                                                    .items
+                                            ).map((name) => ({
+                                                as: ReactRouterLink,
+                                                children:
+                                                    menu.data[context].groups[
+                                                        group
+                                                    ].items[name].name || name,
+                                                to: menu.data[context].groups[
+                                                    group
+                                                ].items[name].items
+                                                    ? Object.entries(
+                                                          menu.data[context]
+                                                              .groups[group]
+                                                              .items[name]
+                                                              .items ?? {}
+                                                      ).sort(
+                                                          ([, a], [, b]) =>
+                                                              a.weight -
+                                                              b.weight
+                                                      )[0][0]
+                                                    : name,
+                                            })),
+                                            key: `2_${urlPatternOrSubgroup}`,
+                                            type: "menu",
+                                        },
+                                        {
+                                            children:
+                                                menu.data[context].groups[group]
+                                                    .items[urlPatternOrSubgroup]
+                                                    .items[urlPattern].name,
+                                            items: Object.entries(
+                                                menu.data[context].groups[group]
+                                                    .items[urlPatternOrSubgroup]
+                                                    .items
+                                            ).map(([to, { name }]) => ({
+                                                as: ReactRouterLink,
+                                                children: name,
+                                                to,
+                                            })),
+                                            key: `3_${menu.data[context].groups[group].items[urlPatternOrSubgroup].items[urlPattern].name}`,
+                                            type: "menu",
+                                        },
+                                        ...(objectData
+                                            ? [
+                                                  {
+                                                      as: ReactRouterLink,
+                                                      children: objectData.name,
+                                                      key: `3_${objectData.id}`,
+                                                      to: `${urlPatternOrSubgroup}${objectData.id}`,
+                                                      type: "link",
+                                                  },
+                                              ]
+                                            : []),
+                                    ];
+                                }
+                            }
                         }
                     }
                 }
-
-                return breadcrumbs;
-            }, []),
+            })(),
         [menu, objectData, pathname]
     );
 
@@ -124,12 +221,12 @@ export default function GenericView({
                         {
                             children: "Inventory",
                             leftIcon: <DcimIcon />,
-                            to: "/dcim",
+                            to: "/dcim/devices/",
                         },
                         {
                             children: "Networks",
                             leftIcon: <IpamIcon />,
-                            to: "/ipam",
+                            to: "/ipam/ip-addresses/",
                         },
                         {
                             children: "Security",
@@ -139,12 +236,12 @@ export default function GenericView({
                         {
                             children: "Automation",
                             leftIcon: <AutomationIcon />,
-                            to: "/automation",
+                            to: "/extras/jobs/",
                         },
                         {
                             children: "Platform",
                             leftIcon: <PlatformIcon />,
-                            to: "/platform",
+                            to: "/plugins/installed-plugins/",
                         },
                     ].map(({ to, ...rest }) => (
                         <ReactRouterNavLink key={to} to={to}>
