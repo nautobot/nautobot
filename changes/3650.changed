@@ -1,0 +1,1 @@
+Updated ui 2.0 jsconfig.json to exclude `node_modules` and `build` directories.

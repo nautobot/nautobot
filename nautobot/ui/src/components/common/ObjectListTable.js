@@ -1,4 +1,4 @@
-import { Box } from "@nautobot/nautobot-ui";
+import { Box, Heading } from "@nautobot/nautobot-ui";
 import { RouterButton } from "./RouterButton";
 import { ButtonGroup } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
@@ -15,6 +15,7 @@ export default function ObjectListTable({
     active_page_number,
     page_size,
     gridColumn,
+    model_name = "Model Name",
 }) {
     let location = useLocation();
     return (
@@ -24,17 +25,20 @@ export default function ObjectListTable({
             gridColumn={gridColumn}
             padding="md"
         >
-            <ButtonGroup pb={2}>
-                <RouterButton to={`${location.pathname}add`} mr={2}>
-                    <Icon.TbPlus /> Add
-                </RouterButton>
-                <RouterButton to="#" variant="secondary" mr={2}>
-                    <Icon.TbDatabaseImport /> Import
-                </RouterButton>
-                <RouterButton to="#" variant="secondary" mr={2}>
-                    <Icon.TbDatabaseExport /> Export
-                </RouterButton>
-            </ButtonGroup>
+            <Box display="flex" justifyContent="space-between">
+                <Heading>&gt; &gt; &gt; {model_name}</Heading>
+                <ButtonGroup pb="sm">
+                    <RouterButton to={`${location.pathname}add`} mr={2}>
+                        <Icon.TbPlus /> Add
+                    </RouterButton>
+                    <RouterButton to="#" variant="secondary" mr={2}>
+                        <Icon.TbDatabaseImport /> Import
+                    </RouterButton>
+                    <RouterButton to="#" variant="secondary" mr={2}>
+                        <Icon.TbDatabaseExport /> Export
+                    </RouterButton>
+                </ButtonGroup>
+            </Box>
             <NautobotTable data={tableData} headers={tableHeader} />
             <Paginator
                 url={location.pathname}
