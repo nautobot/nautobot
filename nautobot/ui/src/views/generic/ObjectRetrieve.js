@@ -2,12 +2,16 @@ import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui wh
 import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    Heading,
     Tab,
     Tabs,
     TabList,
     TabPanel,
     TabPanels,
     Table,
+    Tbody,
+    Td,
+    Tr,
 } from "@nautobot/nautobot-ui";
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
@@ -15,6 +19,7 @@ import useSWR from "swr";
 import AppFullWidthComponentsWithProps from "@components/apps/AppFullWidthComponents";
 import create_app_tab from "@components/apps/AppTab";
 import AppComponents from "@components/core/Apps";
+import { LoadingWidget } from "@components/common/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
 
 const fetcher = (url) =>
@@ -45,7 +50,7 @@ function render_value(value) {
             return value === null ? (
                 <FontAwesomeIcon icon={faMinus} />
             ) : Array.isArray(value) ? (
-                <ul></ul>
+                value.map((v) => <ul key={v}>{v}</ul>)
             ) : (
                 value["display"]
             );
@@ -80,10 +85,10 @@ function RenderRow(props) {
         .join(" ");
 
     return (
-        <tr>
-            <td>{key}</td>
-            <td>{render_value(value)}</td>
-        </tr>
+        <Tr>
+            <Td>{key}</Td>
+            <Td>{render_value(value)}</Td>
+        </Tr>
     );
 }
 
@@ -111,33 +116,34 @@ export default function ObjectRetrieve({ api_url }) {
     }
 
     // if (!objectData) return <GenericView objectData={objectData} />;
+    if (!objectData) {
+        return (
+            <GenericView>
+                <LoadingWidget />
+            </GenericView>
+        );
+    }
 
-    if (!appConfig) return <GenericView objectData={objectData} />;
+    // if (!appConfig) return <GenericView objectData={objectData} />;
+    appConfig = {
+        "main": "main page",
+        "advanced": "advanced attributes",
+        "note": "object notes",
+        "change_log": "object changes",
+    };
 
     const route_name = `${app_name}:${model_name}`;
 
-    let obj = objectData.formData;
-
+    let obj = objectData;
     const default_view = (
-        <>
-            <h1>{obj.name}</h1>
-            <p>
-                <small className="text-muted">
-                    {obj.created && <>Created {obj.created} &middot; </>}
-                    <>
-                        {" "}
-                        Updated{" "}
-                        <span title={obj.last_updated}>xyz seconds</span> ago
-                    </>
-                </small>
-            </p>
-            <div className="pull-right noprint"></div>
+        <GenericView>
             <Tabs>
+                <Heading>{obj.display}</Heading>
+                <br></br>
                 <TabList>
-                    <Tab>Main</Tab>
-                    <Tab>Advanced</Tab>
-                    <Tab>Notes</Tab>
-                    <Tab>Change Log</Tab>
+                    {Object.keys(appConfig).map((key, idx) => (
+                        <Tab>{key.charAt(0).toUpperCase() + key.slice(1)}</Tab>
+                    ))}
                 </TabList>
                 <TabPanels>
                     <TabPanel key="main" eventKey="main" title="Main">
@@ -147,7 +153,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 <strong>Main</strong>
                             </CardHeader>
                             <Table>
-                                <tbody>
+                                <Tbody>
                                     {Object.keys(obj).map((key, idx) => (
                                         <RenderRow
                                             identifier={key}
@@ -156,7 +162,7 @@ export default function ObjectRetrieve({ api_url }) {
                                             key={idx}
                                         />
                                     ))}
-                                </tbody>
+                                </Tbody>
                             </Table>
                         </Card>
                         <br />
@@ -175,7 +181,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 <strong>Advanced</strong>
                             </CardHeader>
                             <Table>
-                                <tbody>
+                                <Tbody>
                                     {Object.keys(obj).map((key, idx) => (
                                         <RenderRow
                                             identifier={key}
@@ -184,7 +190,7 @@ export default function ObjectRetrieve({ api_url }) {
                                             key={idx}
                                         />
                                     ))}
-                                </tbody>
+                                </Tbody>
                             </Table>
                         </Card>
                     </TabPanel>
@@ -198,10 +204,9 @@ export default function ObjectRetrieve({ api_url }) {
                     >
                         <p>Changelog to be rendered here</p>
                     </TabPanel>
-                    {appConfig}
                 </TabPanels>
             </Tabs>
-        </>
+        </GenericView>
     );
 
     let return_view = default_view;
@@ -213,5 +218,5 @@ export default function ObjectRetrieve({ api_url }) {
         return_view = <CustomView {...obj} />;
     }
 
-    return <GenericView objectData={objectData}>{return_view}</GenericView>;
+    return return_view
 }
