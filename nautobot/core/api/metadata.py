@@ -76,6 +76,13 @@ class NautobotSchemaProcessor(SchemaProcessor):
             {
                 "ContentTypeField": {"type": "string", "enum": "choices"},
                 "CustomFieldsDataField": {"type": "object"},
+                # FIXME(jathan): ImageField of type "image" reports "Unsupported field schema", so
+                # it's coerced to "string" for now.
+                # "ImageField": {"type": "image", "widget": "file"},
+                # "ImageField": {"type": "string", "format": "data-url"},
+                "ImageField": {"type": "string", "widget": "file"},
+                "IPFieldSerializer": {"type": "string"},
+                "JSONField": {"type": "string", "widget": "textarea"},
                 "ManyRelatedField": {"type": "array", "required": []},
                 "NautobotPrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
                 "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},

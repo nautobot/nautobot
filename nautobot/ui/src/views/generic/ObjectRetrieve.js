@@ -22,6 +22,7 @@ import create_app_tab from "@components/apps/AppTab";
 import AppComponents from "@components/core/Apps";
 import { LoadingWidget } from "@components/common/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
+import ObjectListTableNoButtons from "@components/common/ObjectListTableNoButtons";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -117,23 +118,32 @@ export default function ObjectRetrieve({ api_url }) {
         : null;
     var { data: appConfig } = useSWR(() => ui_url, fetcherTabs);
 
-    if (error) {
+    const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`
+    const { data: changelogData, changelog_error } = useSWR(() => changelog_url, fetcher);
+    const changelog_header_url = `/api/${app_name}/${model_name}/changelog-table-fields/`
+    const { data: changelogTableFields, changelog_table_error } = useSWR(() => changelog_header_url, fetcher);
+    const notes_url = `/api/${app_name}/${model_name}/${object_id}/notes/`
+    const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
+
+    const notes_header_url = `/api/${app_name}/${model_name}/note-table-fields/`
+    // Current fetcher allows to be passed multiple endpoints and fetch them at once
+    const { data: noteTableFields, note_table_error } = useSWR(() => notes_header_url, fetcher);
+    if (error || note_error || changelog_error || note_table_error || changelog_table_error) {
         return (
             <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>
             </GenericView>
         );
     }
-
     // if (!objectData) return <GenericView objectData={objectData} />;
-    if (!objectData) {
+
+    if (!objectData || !noteData || !noteTableFields || !changelogTableFields) {
         return (
             <GenericView>
                 <LoadingWidget />
             </GenericView>
         );
     }
-
     // if (!appConfig) return <GenericView objectData={objectData} />;
     // TODO Right now overloading appConfig to see if Tabs can be dynamically rendered
     appConfig = {
@@ -206,14 +216,34 @@ export default function ObjectRetrieve({ api_url }) {
                         </Card>
                     </TabPanel>
                     <TabPanel key="notes" eventKey="notes" title="Notes">
-                        Notes to be rendered here.
+                        <Card>
+                            <CardHeader>
+                                <strong>Notes</strong>
+                            </CardHeader>
+                            <ObjectListTableNoButtons
+                                tableData={noteData.results}
+                                tableHeader={noteTableFields.data}
+                                totalCount={noteData.count}
+                            >
+                            </ObjectListTableNoButtons>
+                        </Card>
                     </TabPanel>
                     <TabPanel
                         key="change_log"
                         eventKey="change_log"
                         title="Change Log"
                     >
-                        <p>Changelog to be rendered here</p>
+                        <Card>
+                            <CardHeader>
+                                <strong>Change Log</strong>
+                            </CardHeader>
+                            <ObjectListTableNoButtons
+                                tableData={changelogData.results}
+                                tableHeader={changelogTableFields.data}
+                                totalCount={changelogData.count}
+                            >
+                            </ObjectListTableNoButtons>
+                        </Card>
                     </TabPanel>
                 </TabPanels>
             </Tabs>
