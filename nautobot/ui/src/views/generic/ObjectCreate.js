@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardBody } from "@chakra-ui/react"; // TODO import from nautobot-ui when available
-import { Button, Frame, Text } from "@nautobot/nautobot-ui";
+import { Button, Frame } from "@nautobot/nautobot-ui";
 import Form from "@rjsf/chakra-ui";
 import validator from "@rjsf/validator-ajv8";
 import axios from "axios";
@@ -10,9 +10,7 @@ import useSWR from "swr";
 import GenericView from "@views/generic/GenericView";
 
 const fetcher = (url) =>
-    axios
-        .options(url, { withCredentials: true })
-        .then((res) => res.data);
+    axios.options(url, { withCredentials: true }).then((res) => res.data);
 
 export default function GenericObjectCreateView({ list_url }) {
     const { app_name, model_name } = useParams();
@@ -54,8 +52,7 @@ export default function GenericObjectCreateView({ list_url }) {
             headers: {
                 "Content-Type": "application/json",
             },
-        })
-        .then(function(res) {
+        }).then(function (res) {
             navigate(res.data.web_url);
         });
 

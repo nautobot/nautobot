@@ -126,10 +126,10 @@ export default function ObjectRetrieve({ api_url }) {
 
     // if (!appConfig) return <GenericView objectData={objectData} />;
     appConfig = {
-        "main": "main page",
-        "advanced": "advanced attributes",
-        "note": "object notes",
-        "change_log": "object changes",
+        main: "main page",
+        advanced: "advanced attributes",
+        note: "object notes",
+        change_log: "object changes",
     };
 
     const route_name = `${app_name}:${model_name}`;
@@ -218,5 +218,5 @@ export default function ObjectRetrieve({ api_url }) {
         return_view = <CustomView {...obj} />;
     }
 
-    return return_view
+    return return_view;
 }
