@@ -13,7 +13,6 @@ from django.urls.exceptions import NoReverseMatch
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
-from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
@@ -80,7 +79,7 @@ def register_menu_items(tab_list):
 
         tab_perms = set()
         registry_groups = registry["nav_menu"][nav_tab.name]["groups"]
-        # TODO: allow for recursive (more than two-level) nesting of groups? 
+        # TODO: allow for recursive (more than two-level) nesting of groups?
         for group in nav_tab.groups:
             if not isinstance(group, NavMenuGroup):
                 raise TypeError(f"Expected a NavMenuGroup, but got {group}")
@@ -454,9 +453,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
     @property
     def fixed_fields(self) -> tuple:
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
-        return (
-            ("weight", self.weight),
-        )
+        return (("weight", self.weight),)
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
         """
@@ -503,9 +500,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
     @property
     def fixed_fields(self) -> tuple:
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
-        return (
-            ("weight", self.weight),
-        )
+        return (("weight", self.weight),)
 
     def __init__(self, name, items=None, weight=1000):
         """

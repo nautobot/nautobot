@@ -43,63 +43,69 @@ export default function GenericView({
     const session = useGetSessionQuery();
 
     const breadcrumbs = useMemo(
-        () => function() {
-            for (const context in menu.data) {
-                for (const group in menu.data[context].groups) {
-                    for (const item in menu.data[context].groups[group].items) {
-                        if (pathname.startsWith(item)) {
-                            return [
-                                {
-                                    children: context,
-                                    key: `0_${context}`,
-                                    type: "text",
-                                },
-                                {
-                                    children: group,
-                                    items: Object.keys(
-                                        menu.data[context].groups
-                                    ).map((name) => ({
-                                        as: ReactRouterLink,
-                                        children: name,
-                                        to: Object.entries(
-                                            menu.data[context].groups[name].items
-                                        ).sort(
-                                            ([, a], [, b]) =>
-                                                a.weight - b.weight
-                                        )[0][0],
-                                    })),
-                                    key: `1_${group}`,
-                                    type: "menu",
-                                },
-                                {
-                                    children: menu.data[context].groups[group].items[item].name,
-                                    items: Object.entries(menu.data[context].groups[group].items).map(
-                                        ([to, { name }]) => ({
+        () =>
+            (function () {
+                for (const context in menu.data) {
+                    for (const group in menu.data[context].groups) {
+                        for (const item in menu.data[context].groups[group]
+                            .items) {
+                            if (pathname.startsWith(item)) {
+                                return [
+                                    {
+                                        children: context,
+                                        key: `0_${context}`,
+                                        type: "text",
+                                    },
+                                    {
+                                        children: group,
+                                        items: Object.keys(
+                                            menu.data[context].groups
+                                        ).map((name) => ({
+                                            as: ReactRouterLink,
+                                            children: name,
+                                            to: Object.entries(
+                                                menu.data[context].groups[name]
+                                                    .items
+                                            ).sort(
+                                                ([, a], [, b]) =>
+                                                    a.weight - b.weight
+                                            )[0][0],
+                                        })),
+                                        key: `1_${group}`,
+                                        type: "menu",
+                                    },
+                                    {
+                                        children:
+                                            menu.data[context].groups[group]
+                                                .items[item].name,
+                                        items: Object.entries(
+                                            menu.data[context].groups[group]
+                                                .items
+                                        ).map(([to, { name }]) => ({
                                             as: ReactRouterLink,
                                             children: name,
                                             to,
-                                        })
-                                    ),
-                                    key: `2_${menu.data[context].groups[group].items[item].name}`,
-                                    type: "menu",
-                                },
-                                ...(objectData
-                                    ? [
-                                          {
-                                              as: ReactRouterLink,
-                                              children: objectData.name,
-                                              key: `3_${objectData.id}`,
-                                              to: `${item}${objectData.id}`,
-                                              type: "link",
-                                          },
-                                      ]
-                                    : []),
-                            ];
+                                        })),
+                                        key: `2_${menu.data[context].groups[group].items[item].name}`,
+                                        type: "menu",
+                                    },
+                                    ...(objectData
+                                        ? [
+                                              {
+                                                  as: ReactRouterLink,
+                                                  children: objectData.name,
+                                                  key: `3_${objectData.id}`,
+                                                  to: `${item}${objectData.id}`,
+                                                  type: "link",
+                                              },
+                                          ]
+                                        : []),
+                                ];
+                            }
                         }
                     }
                 }
-            }
-        }(),
+            })(),
         [menu, objectData, pathname]
     );
 

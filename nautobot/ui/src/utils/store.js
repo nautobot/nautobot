@@ -23,19 +23,19 @@ const persistConfig = {
 const initialState = "";
 
 const appContextSlice = createSlice({
-  name: "appContext",
-  initialState,
-  reducers: {
-      updateAppContext(state, action) {
-          state = action.payload;
-          return state;
-      }
-  }
+    name: "appContext",
+    initialState,
+    reducers: {
+        updateAppContext(state, action) {
+            state = action.payload;
+            return state;
+        },
+    },
 });
 
 const rootReducer = combineReducers({
     [baseApi.reducerPath]: baseApi.reducer,
-    "appContext": appContextSlice.reducer,
+    appContext: appContextSlice.reducer,
 });
 
 // Instantiate the persistent reducer to pull state from cache

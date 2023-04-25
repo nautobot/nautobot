@@ -50,7 +50,7 @@ export default function GenericObjectListView() {
         for (const group in menuInfo[context].groups) {
             for (const urlPattern in menuInfo[context].groups[group].items) {
                 let tokens = urlPattern.split("/");
-                if (tokens.length == 4) {
+                if (tokens.length === 4) {
                     let appLabel = tokens[1];
                     let modelNamePlural = tokens[2];
                     if (appLabel in urlPatternToContext === false) {
@@ -63,7 +63,7 @@ export default function GenericObjectListView() {
     }
 
     dispatch(updateAppContext(urlPatternToContext[app_name][model_name]));
- 
+
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable
     let page_size = 50;

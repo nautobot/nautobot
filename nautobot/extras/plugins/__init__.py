@@ -12,13 +12,10 @@ from django.urls import get_resolver, URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
-    NavMenuGroup,
-    NavMenuItem,
     NavMenuTab,
     register_menu_items,
     register_homepage_panels,
 )
-from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.choices import BannerClassChoices
@@ -519,8 +516,6 @@ def register_plugin_menu_items(section_name, menu_items):
     Register a list of NavMenuTab instances for a given menu section (e.g. plugin name)
     """
     nav_menu_items = set()
-
-    permissions = set()
 
     for menu_item in menu_items:
         if isinstance(menu_item, NavMenuTab):

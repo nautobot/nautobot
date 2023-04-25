@@ -25,22 +25,22 @@ export default function SidebarNav() {
         isSuccess: isMenuSuccess,
         isError: isMenuError,
     } = useGetUIMenuQuery();
-    const appContext = useSelector(state => state.appContext);
+    const appContext = useSelector((state) => state.appContext);
     const appContextToIcon = {
-        "Inventory": DcimIcon,
-        "Networks": IpamIcon,
-        "Security": SecurityIcon,
-        "Automation": AutomationIcon,
-        "Platform": PlatformIcon,
+        Inventory: DcimIcon,
+        Networks: IpamIcon,
+        Security: SecurityIcon,
+        Automation: AutomationIcon,
+        Platform: PlatformIcon,
     };
 
-    if (appContext == "") {
-        return (<></>)
+    if (appContext === "") {
+        return <></>;
     }
     const Icon = appContextToIcon[appContext];
 
     if (!isMenuSuccess || isMenuError) {
-        return (<></>)
+        return <></>;
     }
 
     return (
@@ -61,8 +61,7 @@ export default function SidebarNav() {
                                 <Heading>
                                     <AccordionButton
                                         isLast={
-                                            group_idx ===
-                                            group_arr.length - 1
+                                            group_idx === group_arr.length - 1
                                         }
                                     >
                                         {group[0]}
