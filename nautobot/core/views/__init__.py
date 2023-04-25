@@ -12,7 +12,8 @@ from django.shortcuts import render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
-from django.views.decorators.csrf import requires_csrf_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt, requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
@@ -241,6 +242,10 @@ class CustomGraphQLView(GraphQLView):
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
 
 class NautobotAppMetricsCollector(Collector):

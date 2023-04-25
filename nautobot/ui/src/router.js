@@ -4,6 +4,7 @@ import { useRoutes } from "react-router-dom";
 import Home from "@views/Home";
 import CreateView from "@views/generic/ObjectCreate";
 import DetailView from "@views/generic/ObjectRetrieve";
+import GraphQLObjectRetrieve from "@views/generic/GraphQLObjectRetrieve";
 import ListView from "@views/generic/ObjectList";
 import InstalledApps from "@views/InstalledApps";
 import Login from "@views/Login";
@@ -38,6 +39,11 @@ export default function NautobotRouter() {
         {
             path: "/:app_name/:model_name/:object_id",
             element: <DetailView />,
+            children: [],
+        },
+        {
+            path: "graphql-ui/:app_name/:model_name/:object_id",
+            element: <GraphQLObjectRetrieve />,
             children: [],
         },
         {

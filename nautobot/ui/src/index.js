@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
+import { ApolloClient, ApolloProvider, createHttpLink, InMemoryCache } from "@apollo/client";
 import { store } from "@utils/store";
 import { PersistGate } from "redux-persist/integration/react";
 import { persistStore } from "redux-persist";
@@ -49,13 +50,25 @@ let persistor = persistStore(store);
 // }
 /// ===
 
+const graphql_link = createHttpLink({
+    uri: "/graphql/",
+    credentials: "same-origin"
+});
+const apollo_client = new ApolloClient({
+    link: graphql_link,
+    cache: new InMemoryCache(),
+});
+
+
 root.render(
     <React.StrictMode>
-        <Provider store={store}>
-            <PersistGate loading={null} persistor={persistor}>
-                <App />
-            </PersistGate>
-        </Provider>
+        <ApolloProvider client={apollo_client}>
+            <Provider store={store}>
+                <PersistGate loading={null} persistor={persistor}>
+                    <App />
+                </PersistGate>
+            </Provider>
+        </ApolloProvider>
     </React.StrictMode>
 );
 
