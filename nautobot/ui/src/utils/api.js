@@ -16,6 +16,7 @@ import {
 */
 export const baseApi = createApi({
     baseQuery: fetchBaseQuery({ baseUrl: API_BASE }),
+    keepUnusedDataFor: 5,
     refetchOnMountOrArgChange: true,
     refetchOnFocus: true,
     refetchOnReconnect: true,
