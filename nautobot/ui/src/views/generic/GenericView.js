@@ -47,9 +47,9 @@ export default function GenericView({
             (function () {
                 for (const context in menu.data) {
                     for (const group in menu.data[context].groups) {
-                        for (const item in menu.data[context].groups[group]
-                            .items) {
-                            if (pathname.startsWith(item)) {
+                        for (const urlPatternOrSubgroup in menu.data[context]
+                            .groups[group].items) {
+                            if (pathname.startsWith(urlPatternOrSubgroup)) {
                                 return [
                                     {
                                         children: context,
@@ -77,7 +77,8 @@ export default function GenericView({
                                     {
                                         children:
                                             menu.data[context].groups[group]
-                                                .items[item].name,
+                                                .items[urlPatternOrSubgroup]
+                                                .name,
                                         items: Object.entries(
                                             menu.data[context].groups[group]
                                                 .items
@@ -86,7 +87,7 @@ export default function GenericView({
                                             children: name,
                                             to,
                                         })),
-                                        key: `2_${menu.data[context].groups[group].items[item].name}`,
+                                        key: `2_${menu.data[context].groups[group].items[urlPatternOrSubgroup].name}`,
                                         type: "menu",
                                     },
                                     ...(objectData
@@ -95,12 +96,106 @@ export default function GenericView({
                                                   as: ReactRouterLink,
                                                   children: objectData.name,
                                                   key: `3_${objectData.id}`,
-                                                  to: `${item}${objectData.id}`,
+                                                  to: `${urlPatternOrSubgroup}${objectData.id}`,
                                                   type: "link",
                                               },
                                           ]
                                         : []),
                                 ];
+                            }
+                            for (const urlPattern in menu.data[context].groups[
+                                group
+                            ].items[urlPatternOrSubgroup].items) {
+                                console.log(
+                                    menu.data[context].groups[group].items[
+                                        urlPatternOrSubgroup
+                                    ]
+                                );
+                                if (pathname.startsWith(urlPattern)) {
+                                    return [
+                                        {
+                                            children: context,
+                                            key: `0_${context}`,
+                                            type: "text",
+                                        },
+                                        {
+                                            children: group,
+                                            items: Object.keys(
+                                                menu.data[context].groups
+                                            ).map((name) => ({
+                                                as: ReactRouterLink,
+                                                children: name,
+                                                to: Object.entries(
+                                                    menu.data[context].groups[
+                                                        name
+                                                    ].items
+                                                ).sort(
+                                                    ([, a], [, b]) =>
+                                                        a.weight - b.weight
+                                                )[0][0],
+                                            })),
+                                            key: `1_${group}`,
+                                            type: "menu",
+                                        },
+                                        {
+                                            children: urlPatternOrSubgroup,
+                                            items: Object.keys(
+                                                menu.data[context].groups[group]
+                                                    .items
+                                            ).map((name) => ({
+                                                as: ReactRouterLink,
+                                                children:
+                                                    menu.data[context].groups[
+                                                        group
+                                                    ].items[name].name || name,
+                                                to: menu.data[context].groups[
+                                                    group
+                                                ].items[name].items
+                                                    ? Object.entries(
+                                                          menu.data[context]
+                                                              .groups[group]
+                                                              .items[name]
+                                                              .items ?? {}
+                                                      ).sort(
+                                                          ([, a], [, b]) =>
+                                                              a.weight -
+                                                              b.weight
+                                                      )[0][0]
+                                                    : name,
+                                            })),
+                                            key: `2_${urlPatternOrSubgroup}`,
+                                            type: "menu",
+                                        },
+                                        {
+                                            children:
+                                                menu.data[context].groups[group]
+                                                    .items[urlPatternOrSubgroup]
+                                                    .items[urlPattern].name,
+                                            items: Object.entries(
+                                                menu.data[context].groups[group]
+                                                    .items[urlPatternOrSubgroup]
+                                                    .items
+                                            ).map(([to, { name }]) => ({
+                                                as: ReactRouterLink,
+                                                children: name,
+                                                to,
+                                            })),
+                                            key: `3_${menu.data[context].groups[group].items[urlPatternOrSubgroup].items[urlPattern].name}`,
+                                            type: "menu",
+                                        },
+                                        ...(objectData
+                                            ? [
+                                                  {
+                                                      as: ReactRouterLink,
+                                                      children: objectData.name,
+                                                      key: `3_${objectData.id}`,
+                                                      to: `${urlPatternOrSubgroup}${objectData.id}`,
+                                                      type: "link",
+                                                  },
+                                              ]
+                                            : []),
+                                    ];
+                                }
                             }
                         }
                     }

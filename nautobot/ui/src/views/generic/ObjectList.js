@@ -48,15 +48,36 @@ export default function GenericObjectListView() {
     var urlPatternToContext = {};
     for (const context in menuInfo) {
         for (const group in menuInfo[context].groups) {
-            for (const urlPattern in menuInfo[context].groups[group].items) {
-                let tokens = urlPattern.split("/");
-                if (tokens.length === 4) {
-                    let appLabel = tokens[1];
-                    let modelNamePlural = tokens[2];
-                    if (appLabel in urlPatternToContext === false) {
-                        urlPatternToContext[appLabel] = {};
+            for (const urlPatternOrSubGroup in menuInfo[context].groups[group]
+                .items) {
+                if (urlPatternOrSubGroup.startsWith("/")) {
+                    // It's a URL pattern
+                    let tokens = urlPatternOrSubGroup.split("/");
+                    if (tokens.length === 4) {
+                        let appLabel = tokens[1];
+                        let modelNamePlural = tokens[2];
+                        if (appLabel in urlPatternToContext === false) {
+                            urlPatternToContext[appLabel] = {};
+                        }
+                        urlPatternToContext[appLabel][modelNamePlural] =
+                            context;
                     }
-                    urlPatternToContext[appLabel][modelNamePlural] = context;
+                } else {
+                    // It's a submenu
+                    const subGroup = urlPatternOrSubGroup;
+                    for (const urlPattern in menuInfo[context].groups[group]
+                        .items[subGroup].items) {
+                        let tokens = urlPattern.split("/");
+                        if (tokens.length === 4) {
+                            let appLabel = tokens[1];
+                            let modelNamePlural = tokens[2];
+                            if (appLabel in urlPatternToContext === false) {
+                                urlPatternToContext[appLabel] = {};
+                            }
+                            urlPatternToContext[appLabel][modelNamePlural] =
+                                context;
+                        }
+                    }
                 }
             }
         }
