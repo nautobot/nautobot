@@ -24,7 +24,7 @@ export default function ObjectListTable({
             gridColumn={gridColumn}
             padding="md"
         >
-            <ButtonGroup pb={2}>
+            <ButtonGroup pb="sm">
                 <RouterButton to={`${location.pathname}add`} mr={2}>
                     <Icon.TbPlus /> Add
                 </RouterButton>

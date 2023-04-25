@@ -1,7 +1,6 @@
 import logging
 import platform
 from collections import OrderedDict
-from typing import Any, Dict, List, Union
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
@@ -12,24 +11,13 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
 from rest_framework import status
-from rest_framework import fields as drf_fields
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
-from rest_framework import serializers as drf_serializers
-from rest_framework.viewsets import GenericViewSet
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
-from drf_react_template.renderers import JSONSerializerRenderer
-from drf_react_template.schema_form_encoder import (
-    ColumnProcessor,
-    SchemaProcessor,
-    UiSchemaProcessor,
-    SerializerType,
-)
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
@@ -44,7 +32,6 @@ from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.celery import app as celery_app
-from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
@@ -274,192 +261,12 @@ class ModelViewSetMixin:
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
 
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MySchemaProcessor(SchemaProcessor):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.TYPE_MAP.update(
-            {
-                "ContentTypeField": {"type": "string", "enum": "choices"},
-                "CustomFieldsDataField": {"type": "object"},
-                "ManyRelatedField": {"type": "array", "required": []},
-                "NautobotPrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
-                "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
-                "RelationshipsDataField": {"type": "object"},
-                "SlugField": {"type": "string"},
-                "TimeZoneSerializerField": {"type": "string"},
-                "UUIDField": {"type": "string"},
-            }
-        )
-
-    def _get_type_map_value(self, field: SerializerType):
-        result = {
-            "type": field.style.get("schema:type"),
-            "enum": field.style.get("schema:enum"),
-            "widget": field.style.get("ui:widget"),
-            "required": field.style.get("schema:required"),
-        }
-        result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k in result_default:
-            if result[k] is None:
-                result[k] = result_default[k]
-        return result
-
-    def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
-        result = {}
-        type_map_obj = self._get_type_map_value(field)
-        result["type"] = type_map_obj["type"]
-        result["title"] = self._get_title(field, name)
-
-        if isinstance(field, drf_serializers.ListField):
-            if field.allow_empty:
-                result["required"] = not getattr(field, "allow_empty", True)
-            result["items"] = self._get_field_properties(field.child, "")
-            result["uniqueItems"] = True
-        elif isinstance(field, drf_serializers.ManyRelatedField):
-            if field.allow_empty:
-                result["required"] = type_map_obj.get("required", [])
-            result["items"] = self._get_field_properties(field.child_relation, "")
-            result["uniqueItems"] = True
-        else:
-            if field.allow_null:
-                result["type"] = [result["type"], "null"]
-            enum = type_map_obj.get("enum")
-            if enum:
-                if enum == "choices":
-                    choices = field.choices
-                    result["enum"] = list(choices.keys())
-                    result["enumNames"] = list(choices.values())
-                if isinstance(enum, (list, tuple)):
-                    if isinstance(enum, (list, tuple)):
-                        result["enum"] = [item[0] for item in enum]
-                        result["enumNames"] = [item[1] for item in enum]
-                    else:
-                        result["enum"] = enum
-                        result["enumNames"] = list(enum)
-            try:
-                result["default"] = field.get_default()
-            except drf_fields.SkipField:
-                pass
-
-        result = self._set_validation_properties(field, result)
-
-        return result
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MyUiSchemaProcessor(UiSchemaProcessor):
-    def _field_order(self) -> List[str]:
-        """
-        Overload the base which just returns `Meta.fields` and doesn't play nicely with "__all__".
-
-        This instead calls `get_fields()` and returns the keys.
-        """
-        if self._is_list_serializer(self.serializer):
-            return list(self.serializer.child.get_fields())
-        return list(self.serializer.get_fields())
-
-    def _get_type_map_value(self, field: SerializerType):
-        result = {
-            "type": field.style.get("schema:type"),
-            "enum": field.style.get("schema:enum"),
-            "widget": field.style.get("ui:widget"),
-            "required": field.style.get("schema:required"),
-        }
-        result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k in result_default:
-            # if not result[k]:
-            if result[k] is None:
-                result[k] = result_default[k]
-        return result
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-# FIXME(jathan): Replace NautobotKombuJSONEncoder with NautobotJSONEncoder
-
-
-class MySerializerEncoder(NautobotKombuJSONEncoder):
-    LIST_ACTION = "list"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(
-            *args,
-            skipkeys=kwargs.pop("skipkeys", False),
-            ensure_ascii=kwargs.pop("ensure_ascii", True),
-            check_circular=kwargs.pop("check_circular", True),
-            allow_nan=kwargs.pop("allow_nan", True),
-            indent=kwargs.pop("indent", None),
-            separators=kwargs.pop("separators", None),
-            default=kwargs.pop("default", None),
-            sort_keys=kwargs.pop("sort_keys", False),
-        )
-        self.renderer_context = kwargs.pop("renderer_context", {})
-        self.extra_kwargs = kwargs
-
-    def _get_view_action(self) -> str:
-        return self.renderer_context.get("view", {}).__dict__.get("action", "")
-
-    def default(self, obj: Any) -> Union[Dict, List]:
-        request = self.renderer_context["request"]
-        if isinstance(obj, drf_serializers.Serializer):
-            if self._get_view_action() == self.LIST_ACTION:
-                return ColumnProcessor(obj, self.renderer_context).get_schema()
-            # FIXME(jathan): The encoder is onnly returning schema/UIschema if
-            # request method is "OPTIONS". Not sure if this is the best place to
-            # do this right now, but it's currently working.
-            elif request.method == "OPTIONS":
-                return {
-                    "schema": MySchemaProcessor(obj, self.renderer_context).get_schema(),
-                    "uiSchema": MyUiSchemaProcessor(obj, self.renderer_context).get_ui_schema(),
-                }
-        return super().default(obj)
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MyJSONSerializerRenderer(JSONSerializerRenderer):
-    encoder_class = MySerializerEncoder
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MyFormSchemaViewSetMixin(GenericViewSet):
-    renderer_classes = (MyJSONSerializerRenderer,)
-    serializer_list_class = None
-
-    def get_serializer_class(self):
-        if self.action == "list" and self.serializer_list_class:
-            return self.serializer_list_class
-        return self.serializer_class
-
-    # FIXME(jathan): This is a quick hack to overloading the built-in metadata returned by DRF when
-    # an options query is made. It would be better to# replace the Metadata class to emit the JSON
-    # schema instead of doing it here.
-    def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, response, args, kwargs)
-        # We only want to overload the response payload IFF it's a successful
-        # OPTIONS query.
-        if all(
-            [
-                response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED),
-                request.method == "OPTIONS",
-            ]
-        ):
-            response.data = self.get_serializer()
-        return response
-
-    # FIXME(jathan): We may be able to get rid of this now that we have the schema emitted on an
-    # OPTIONS query. Calling `/:endpoint/create/` may be built into @rjsf/core (JS).
-    @action(detail=False, methods=("get",), url_path="create")
-    def create_form(self, request, *args, **kwargs):
-        return Response({})
-
-
 class ModelViewSet(
     NautobotAPIVersionMixin,
     BulkUpdateModelMixin,
     BulkDestroyModelMixin,
     ModelViewSetMixin,
     ModelViewSet_,
-    MyFormSchemaViewSetMixin,  # TODO: This can/should be limited to /api/ui/ schemas
 ):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
