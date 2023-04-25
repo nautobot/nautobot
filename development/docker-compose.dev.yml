@@ -40,3 +40,11 @@ services:
         condition: service_healthy
     command: >
       bash -c "npm run start"
+  storybook:
+    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    environment:
+      PORT: "6006"
+    ports:
+      - "6006:6006"
+    entrypoint: ""
+    command: bash -c "git clone https://github.com/nautobot/nautobot-ui.git && cd nautobot-ui && npm install && npm run storybook|| npm run storybook"
