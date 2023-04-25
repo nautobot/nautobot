@@ -848,7 +848,7 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         # TODO: do we need this local import or can it be moved globally?
         from nautobot.extras.registry import registry
 
-        return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])
+        return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"].items()])
 
 
 #
