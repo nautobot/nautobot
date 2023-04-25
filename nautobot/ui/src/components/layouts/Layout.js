@@ -9,6 +9,8 @@ import {
     Button,
 } from "@nautobot/nautobot-ui";
 
+import { useEffect } from "react";
+
 import LoadingWidget from "@components/common/LoadingWidget";
 import RouterButton from "@components/common/RouterButton";
 import RouterLink from "@components/common/RouterLink";
@@ -18,16 +20,16 @@ import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 export default function Layout({ children }) {
     const { data: sessionInfo, isSuccess: sessionLoaded } =
         useGetSessionQuery();
-    const { isSuccess: menuLoaded } = useGetUIMenuQuery();
+    const { isSuccess: menuLoaded, refetch: refetchMenu } = useGetUIMenuQuery();
 
     // TODO: Update for RTK pattern hopefully
     // Here is the safest place to check that the session and menu data are loaded
     // to then regenerate the API and update what is globally known
     // import { useEffect } from "react";
     // const fullApi = generateFullAPI(menuData)
-    // useEffect(() => {
-    //   updateStore(fullApi)
-    // }, [])
+    useEffect(() => {
+        refetchMenu();
+    }, [refetchMenu]);
 
     let toRender = children;
 
