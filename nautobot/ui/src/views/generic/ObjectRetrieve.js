@@ -3,6 +3,7 @@ import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     Heading,
+    Link,
     Tab,
     Tabs,
     TabList,
@@ -15,7 +16,7 @@ import {
 } from "@nautobot/nautobot-ui";
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
-
+import { useRef, useEffect } from 'react'
 import AppFullWidthComponentsWithProps from "@components/apps/AppFullWidthComponents";
 import create_app_tab from "@components/apps/AppTab";
 import AppComponents from "@components/core/Apps";
@@ -44,15 +45,16 @@ const fetcherTabs = (url) =>
         });
     });
 
-function render_value(value) {
+function Render_value(value) {
+    const ref = useRef();
     switch (typeof value) {
         case "object":
             return value === null ? (
                 <FontAwesomeIcon icon={faMinus} />
             ) : Array.isArray(value) ? (
-                value.map((v) => <ul key={v}>{v}</ul>)
+                value.map((v) => <div><Link ref={ref} href={v["web_url"]} >{v["display"]}</Link></div>)
             ) : (
-                value["display"]
+                < Link ref={ref} href={value["web_url"]} > {value["display"]} </Link >
             );
         case "boolean":
             return value ? (
@@ -83,11 +85,10 @@ function RenderRow(props) {
         .split("_")
         .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
         .join(" ");
-
     return (
         <Tr>
             <Td>{key}</Td>
-            <Td>{render_value(value)}</Td>
+            <Td>{Render_value(value)}</Td>
         </Tr>
     );
 }
@@ -95,7 +96,7 @@ function RenderRow(props) {
 export default function ObjectRetrieve({ api_url }) {
     const { app_name, model_name, object_id } = useParams();
     if (!!app_name && !!model_name && !!object_id && !api_url) {
-        api_url = `/api/${app_name}/${model_name}/${object_id}/`;
+        api_url = `/api/${app_name}/${model_name}/${object_id}/?depth=1`;
     }
     const { data: objectData, error } = useSWR(() => api_url, fetcher);
     const { data: appHTML } = useSWR(
@@ -125,6 +126,7 @@ export default function ObjectRetrieve({ api_url }) {
     }
 
     // if (!appConfig) return <GenericView objectData={objectData} />;
+    // TODO Right now overloading appConfig to see if Tabs can be dynamically rendered
     appConfig = {
         "main": "main page",
         "advanced": "advanced attributes",
