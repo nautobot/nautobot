@@ -178,7 +178,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         if service in results.stdout:
             compose_command = f"exec {service} {command}"
         else:
-            compose_command = f"run --entrypoint '{command}' {service}"
+            compose_command = f"run --rm --entrypoint '{command}' {service}"
 
         docker_compose(context, compose_command, pty=True)
 

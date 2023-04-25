@@ -12,7 +12,6 @@ from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
-from taggit.managers import TaggableManager
 
 from nautobot.core import constants, forms
 from nautobot.core.forms import widgets
@@ -557,7 +556,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
-            TaggableManager: {"filter_class": TagFilter},
+            core_fields.TagsField: {"filter_class": TagFilter},
         }
     )
 

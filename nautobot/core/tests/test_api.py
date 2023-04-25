@@ -401,7 +401,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
+        self.assertEqual(str(response.data["location"]), str(self.location1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.location, self.location1)
@@ -434,7 +434,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
+        self.assertEqual(str(response.data["location"]), str(self.location1.pk))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.location, self.location1)
 

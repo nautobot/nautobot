@@ -1172,7 +1172,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(str(response.data["local_config_context_schema"]["id"]), str(schema.pk))
+        self.assertEqual(str(response.data["local_config_context_schema"]), str(schema.pk))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -1398,17 +1398,50 @@ class InterfaceTest(Mixins.BasePortTestMixin):
         Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtual_chassis, vc_position=1)
         Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtual_chassis, vc_position=2)
 
+        # Interfaces have special handling around the "Active" status so let's set our interfaces to something else.
+        non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
         cls.interfaces = (
-            Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
-            Interface.objects.create(device=cls.devices[0], name="Interface 2", type="1000base-t"),
-            Interface.objects.create(device=cls.devices[0], name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
             Interface.objects.create(
-                device=cls.devices[1], name="Interface 4", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+                device=cls.devices[0],
+                name="Interface 1",
+                type="1000base-t",
+                status=non_default_status,
             ),
-            Interface.objects.create(device=cls.devices[1], name="Interface 5", type=InterfaceTypeChoices.TYPE_LAG),
-            Interface.objects.create(device=cls.devices[2], name="Interface 6", type=InterfaceTypeChoices.TYPE_LAG),
             Interface.objects.create(
-                device=cls.devices[2], name="Interface 7", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+                device=cls.devices[0],
+                name="Interface 2",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[0],
+                name="Interface 3",
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[1],
+                name="Interface 4",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[1],
+                name="Interface 5",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Interface 6",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Interface 7",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
             ),
         )
 
@@ -2189,40 +2222,47 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
         REDUNDANT = PowerFeedTypeChoices.TYPE_REDUNDANT
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[0],
             name="Power Feed 1A",
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[0],
             name="Power Feed 1B",
+            status=pf_status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[1],
             name="Power Feed 2A",
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[1],
             name="Power Feed 2B",
+            status=pf_status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[2],
             name="Power Feed 3A",
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[2],
             name="Power Feed 3B",
+            status=pf_status,
             type=REDUNDANT,
         )
 

@@ -24,8 +24,7 @@ class TagQuerySet(RestrictedQuerySet):
         """
         Return all `Tags` assigned to the given model.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.filter(content_types=content_type)
+        return self.filter(content_types__model=model._meta.model_name, content_types__app_label=model._meta.app_label)
 
 
 @extras_features(

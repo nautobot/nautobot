@@ -50,7 +50,7 @@ class TokenSerializer(ValidatedModelSerializer):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-        if "key" not in data:
+        if "key" not in data and not self.instance:
             data["key"] = Token.generate_key()
         data["user"] = self.context["request"].user
         return data

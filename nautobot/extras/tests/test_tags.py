@@ -18,14 +18,6 @@ class TaggedItemORMTest(TestCase):
 
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-    def test_tags_set_taggit_1(self):
-        """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
-        self.location.tags.set("Tag 1", "Tag 2")
-        self.assertListEqual(sorted([t.name for t in self.location.tags.all()]), ["Tag 1", "Tag 2"])
-
-        self.location.tags.set(Tag.objects.get(name="Tag 1"))
-        self.assertListEqual(sorted([t.name for t in self.location.tags.all()]), ["Tag 1"])
-
     def test_tags_set_taggit_2(self):
         """Test that obj.tags.set() works when invoked like django-taggit 2.x and later."""
         self.location.tags.set(["Tag 1", "Tag 2"])
@@ -59,7 +51,7 @@ class TaggedItemTest(APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertListEqual(sorted([t["id"] for t in response.data["tags"]]), sorted(data["tags"]))
+        self.assertListEqual(sorted([str(t) for t in response.data["tags"]]), sorted(data["tags"]))
         location = Location.objects.get(pk=response.data["id"])
         self.assertListEqual(sorted([t.name for t in location.tags.all()]), sorted([t.name for t in self.tags]))
 
@@ -78,8 +70,9 @@ class TaggedItemTest(APITestCase):
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        tag_name_list = Tag.objects.filter(pk__in=response.data["tags"]).values_list("name", flat=True)
         self.assertListEqual(
-            sorted([t["name"] for t in response.data["tags"]]),
+            sorted(list(tag_name_list)),
             sorted([t["name"] for t in data["tags"]]),
         )
         location = Location.objects.get(pk=response.data["id"])

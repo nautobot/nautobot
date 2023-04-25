@@ -517,6 +517,17 @@ class DynamicGroupTestCase(
         instance.refresh_from_db()
         self.assertEqual(instance.filter, {"serial": data["filter-serial"]})
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filter_by_content_type(self):
+        """
+        Test that filtering by `content_type` in the UI succeeds.
+
+        This is a regression test for https://github.com/nautobot/nautobot/issues/3612
+        """
+        path = self._get_url("list")
+        response = self.client.get(path + "?content_type=dcim.device")
+        self.assertHttpStatus(response, 200)
+
 
 class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,
