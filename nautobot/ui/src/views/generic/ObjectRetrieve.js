@@ -16,7 +16,7 @@ import {
 } from "@nautobot/nautobot-ui";
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
-import { useRef, useEffect } from 'react'
+import { useRef } from "react";
 import AppFullWidthComponentsWithProps from "@components/apps/AppFullWidthComponents";
 import create_app_tab from "@components/apps/AppTab";
 import AppComponents from "@components/core/Apps";
@@ -52,9 +52,18 @@ function Render_value(value) {
             return value === null ? (
                 <FontAwesomeIcon icon={faMinus} />
             ) : Array.isArray(value) ? (
-                value.map((v) => <div><Link ref={ref} href={v["web_url"]} >{v["display"]}</Link></div>)
+                value.map((v) => (
+                    <div>
+                        <Link ref={ref} href={v["web_url"]}>
+                            {v["display"]}
+                        </Link>
+                    </div>
+                ))
             ) : (
-                < Link ref={ref} href={value["web_url"]} > {value["display"]} </Link >
+                <Link ref={ref} href={value["web_url"]}>
+                    {" "}
+                    {value["display"]}{" "}
+                </Link>
             );
         case "boolean":
             return value ? (
