@@ -191,6 +191,28 @@ class TableFieldsViewSetMixin:
         ]
         return Response({"data": data})
 
+    @action(detail=False, url_path="note-table-fields", methods=["get"])
+    def note_table_fields(self, request):
+        table = get_table_for_model(Note)
+        table_instance = table(user=request.user, data=[])
+        data = [
+            {"name": item[0], "label": item[1]}
+            for item in table_instance.configurable_columns
+            if item[0] in table_instance.visible_columns
+        ]
+        return Response({"data": data})
+
+    @action(detail=False, url_path="changelog-table-fields", methods=["get"])
+    def changelog_table_fields(self, request):
+        table = get_table_for_model(ObjectChange)
+        table_instance = table(user=request.user, data=[])
+        data = [
+            {"name": item[0], "label": item[1]}
+            for item in table_instance.configurable_columns
+            if item[0] in table_instance.visible_columns
+        ]
+        return Response({"data": data})
+
 
 #
 #  Computed Fields
