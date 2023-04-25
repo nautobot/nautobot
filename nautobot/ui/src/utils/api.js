@@ -16,6 +16,9 @@ import {
 */
 export const baseApi = createApi({
     baseQuery: fetchBaseQuery({ baseUrl: API_BASE }),
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
     endpoints: (builder) => ({
         getSession: builder.query({
             query: () => API_USER_SESSION_INFO,
