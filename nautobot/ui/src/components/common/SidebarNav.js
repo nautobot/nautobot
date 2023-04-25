@@ -71,7 +71,7 @@ export default function SidebarNav() {
                                 <AccordionPanel>
                                     {Object.entries(group[1].items).map(
                                         (menu, menu_idx, menu_arr) =>
-                                            menu[0][0] == "/" ? (
+                                            menu[0].startsWith("/") ? (
                                                 <SidebarButton
                                                     as={ReactRouterLink}
                                                     key={menu_idx}
