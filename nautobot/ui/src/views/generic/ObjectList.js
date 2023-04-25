@@ -1,10 +1,13 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { Text } from "@nautobot/nautobot-ui";
 import useSWR from "swr";
+import { useDispatch } from "react-redux";
 
 import { LoadingWidget } from "@components/common/LoadingWidget";
 import ObjectListTable from "@components/common/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
+import { useGetUIMenuQuery } from "@utils/api";
+import { updateAppContext } from "@utils/store";
 
 const fetcher = (...urls) => {
     const f = (url) =>
@@ -31,6 +34,36 @@ export default function GenericObjectListView() {
     } = useSWR(urls, fetcher);
     const { 0: tableData, 1: tableFields } = data;
 
+    const {
+        data: menuInfo,
+        isSuccess: isMenuSuccess,
+        isError: isMenuError,
+    } = useGetUIMenuQuery();
+    const dispatch = useDispatch();
+
+    if (isMenuError) return <div>Failed to load menu</div>;
+    if (!isMenuSuccess) return <span>Loading...</span>;
+
+    // Construct reverse-lookup from URL patterns to menu context
+    var urlPatternToContext = {};
+    for (const context in menuInfo) {
+        for (const group in menuInfo[context].groups) {
+            for (const urlPattern in menuInfo[context].groups[group].items) {
+                let tokens = urlPattern.split("/");
+                if (tokens.length == 4) {
+                    let appLabel = tokens[1];
+                    let modelNamePlural = tokens[2];
+                    if (appLabel in urlPatternToContext === false) {
+                        urlPatternToContext[appLabel] = {};
+                    }
+                    urlPatternToContext[appLabel][modelNamePlural] = context;
+                }
+            }
+        }
+    }
+
+    dispatch(updateAppContext(urlPatternToContext[app_name][model_name]));
+ 
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable
     let page_size = 50;

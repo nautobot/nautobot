@@ -43,29 +43,26 @@ export default function GenericView({
     const session = useGetSessionQuery();
 
     const breadcrumbs = useMemo(
-        () =>
-            (menu?.data ?? []).reduce((breadcrumbs, root) => {
-                // Use `for ... in` instead of array methods to simplify return.
-                for (const group in root.properties.groups) {
-                    const { items } = root.properties.groups[group];
-
-                    for (const item in items) {
+        () => function() {
+            for (const context in menu.data) {
+                for (const group in menu.data[context].groups) {
+                    for (const item in menu.data[context].groups[group].items) {
                         if (pathname.startsWith(item)) {
                             return [
                                 {
-                                    children: root.name,
-                                    key: `0_${root.name}`,
+                                    children: context,
+                                    key: `0_${context}`,
                                     type: "text",
                                 },
                                 {
                                     children: group,
                                     items: Object.keys(
-                                        root.properties.groups
+                                        menu.data[context].groups
                                     ).map((name) => ({
                                         as: ReactRouterLink,
                                         children: name,
                                         to: Object.entries(
-                                            root.properties.groups[name].items
+                                            menu.data[context].groups[name].items
                                         ).sort(
                                             ([, a], [, b]) =>
                                                 a.weight - b.weight
@@ -75,15 +72,15 @@ export default function GenericView({
                                     type: "menu",
                                 },
                                 {
-                                    children: items[item].name,
-                                    items: Object.entries(items).map(
+                                    children: menu.data[context].groups[group].items[item].name,
+                                    items: Object.entries(menu.data[context].groups[group].items).map(
                                         ([to, { name }]) => ({
                                             as: ReactRouterLink,
                                             children: name,
                                             to,
                                         })
                                     ),
-                                    key: `2_${items[item].name}`,
+                                    key: `2_${menu.data[context].groups[group].items[item].name}`,
                                     type: "menu",
                                 },
                                 ...(objectData
@@ -101,9 +98,8 @@ export default function GenericView({
                         }
                     }
                 }
-
-                return breadcrumbs;
-            }, []),
+            }
+        }(),
         [menu, objectData, pathname]
     );
 
@@ -124,12 +120,12 @@ export default function GenericView({
                         {
                             children: "Inventory",
                             leftIcon: <DcimIcon />,
-                            to: "/dcim",
+                            to: "/dcim/devices/",
                         },
                         {
                             children: "Networks",
                             leftIcon: <IpamIcon />,
-                            to: "/ipam",
+                            to: "/ipam/ip-addresses/",
                         },
                         {
                             children: "Security",
@@ -139,12 +135,12 @@ export default function GenericView({
                         {
                             children: "Automation",
                             leftIcon: <AutomationIcon />,
-                            to: "/automation",
+                            to: "/extras/jobs/",
                         },
                         {
                             children: "Platform",
                             leftIcon: <PlatformIcon />,
-                            to: "/platform",
+                            to: "/plugins/installed-plugins/",
                         },
                     ].map(({ to, ...rest }) => (
                         <ReactRouterNavLink key={to} to={to}>
