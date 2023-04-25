@@ -16,7 +16,7 @@ export default function NautobotTable({ data, headers }) {
         <Table>
             <Thead>
                 <Tr>
-                    <Th>
+                    <Th borderTopLeftRadius="md">
                         <Checkbox></Checkbox>
                     </Th>
                     {headers.map(({ name, label }) => (

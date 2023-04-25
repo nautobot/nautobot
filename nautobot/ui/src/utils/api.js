@@ -27,6 +27,20 @@ export const baseApi = createApi({
         getUIMenu: builder.query({
             query: () => API_UI_MENU_INFO,
         }),
+        getRESTAPI: builder.query({
+            query: ({ app_name, model_name, uuid = null, schema = false }) => {
+                if (schema) {
+                    return {
+                        url: `${app_name}/${model_name}/`,
+                        method: "OPTIONS",
+                    };
+                }
+                if (uuid) {
+                    return { url: `${app_name}/${model_name}/${uuid}/` };
+                }
+                return { url: `${app_name}/${model_name}/` };
+            },
+        }),
     }),
 });
 
@@ -37,7 +51,8 @@ export const baseApi = createApi({
 //   baseApi.useGetSessionQuery
 //   // or
 //   baseApi.endpoints.getSession.getQuery
-export const { useGetSessionQuery, useGetUIMenuQuery } = baseApi;
+export const { useGetSessionQuery, useGetUIMenuQuery, useGetRESTAPIQuery } =
+    baseApi;
 
 // TODO: Below is a pattern for taking the menu API and building an entire RTK-Query API for it
 // Few things need to be done here:

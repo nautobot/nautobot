@@ -118,17 +118,32 @@ export default function ObjectRetrieve({ api_url }) {
         : null;
     var { data: appConfig } = useSWR(() => ui_url, fetcherTabs);
 
-    const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`
-    const { data: changelogData, changelog_error } = useSWR(() => changelog_url, fetcher);
-    const changelog_header_url = `/api/${app_name}/${model_name}/changelog-table-fields/`
-    const { data: changelogTableFields, changelog_table_error } = useSWR(() => changelog_header_url, fetcher);
-    const notes_url = `/api/${app_name}/${model_name}/${object_id}/notes/`
+    const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`;
+    const { data: changelogData, changelog_error } = useSWR(
+        () => changelog_url,
+        fetcher
+    );
+    const changelog_header_url = `/api/${app_name}/${model_name}/changelog-table-fields/`;
+    const { data: changelogTableFields, changelog_table_error } = useSWR(
+        () => changelog_header_url,
+        fetcher
+    );
+    const notes_url = `/api/${app_name}/${model_name}/${object_id}/notes/`;
     const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
 
-    const notes_header_url = `/api/${app_name}/${model_name}/note-table-fields/`
+    const notes_header_url = `/api/${app_name}/${model_name}/note-table-fields/`;
     // Current fetcher allows to be passed multiple endpoints and fetch them at once
-    const { data: noteTableFields, note_table_error } = useSWR(() => notes_header_url, fetcher);
-    if (error || note_error || changelog_error || note_table_error || changelog_table_error) {
+    const { data: noteTableFields, note_table_error } = useSWR(
+        () => notes_header_url,
+        fetcher
+    );
+    if (
+        error ||
+        note_error ||
+        changelog_error ||
+        note_table_error ||
+        changelog_table_error
+    ) {
         return (
             <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>
@@ -224,8 +239,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 tableData={noteData.results}
                                 tableHeader={noteTableFields.data}
                                 totalCount={noteData.count}
-                            >
-                            </ObjectListTableNoButtons>
+                            ></ObjectListTableNoButtons>
                         </Card>
                     </TabPanel>
                     <TabPanel
@@ -241,8 +255,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 tableData={changelogData.results}
                                 tableHeader={changelogTableFields.data}
                                 totalCount={changelogData.count}
-                            >
-                            </ObjectListTableNoButtons>
+                            ></ObjectListTableNoButtons>
                         </Card>
                     </TabPanel>
                 </TabPanels>
