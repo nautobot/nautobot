@@ -2134,6 +2134,7 @@ class RelationshipAssociationTestCase(
             source_type=device_type,
             destination_type=vlan_type,
         )
+        cls.relationship = relationship
         relationship.validated_save()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -2171,6 +2172,28 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
             destination_id=vlans[2].pk,
         ).validated_save()
+
+    def test_list_objects_with_constrained_permission(self):
+        instance1, instance2 = self.relationship.relationship_associations.all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+        self.assertIn(instance1.source.name, content, msg=content)
+        self.assertIn(instance1.destination.name, content, msg=content)
+        self.assertNotIn(instance2.source.name, content, msg=content)
+        self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
 class StatusTestCase(

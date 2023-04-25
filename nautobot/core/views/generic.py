@@ -13,7 +13,7 @@ from django.core.exceptions import (
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
 from django.utils.http import is_safe_url
@@ -92,16 +92,35 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
-        return render(
-            request,
-            self.get_template_name(),
-            {
+        # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
+        # on the object-retrieve endpoint?
+        # TODO: similar functionality probably needed in NautobotUIViewSet as well, not currently present
+        if request.GET.get("viewconfig", None) == "true":
+            # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
+            from nautobot.extras.templatetags.plugins import _get_registered_content
+
+            temp_fake_context = {
                 "object": instance,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                **self.get_extra_context(request, instance),
-            },
-        )
+                "request": request,
+                "settings": {},
+                "csrf_token": "",
+                "perms": {},
+            }
+
+            plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
+            resp = {"tabs": plugin_tabs}
+            return JsonResponse(resp)
+        else:
+            return render(
+                request,
+                self.get_template_name(),
+                {
+                    "object": instance,
+                    "verbose_name": self.queryset.model._meta.verbose_name,
+                    "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                    **self.get_extra_context(request, instance),
+                },
+            )
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):

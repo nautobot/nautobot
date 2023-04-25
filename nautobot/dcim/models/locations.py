@@ -2,7 +2,6 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
 from django.utils.functional import classproperty
 
 from timezone_field import TimeZoneField
@@ -53,9 +52,6 @@ class LocationType(TreeModel, OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:locationtype", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -283,9 +279,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         while len(args) > len(natural_key_field_lookups):
             natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
         return dict(zip(natural_key_field_lookups, args))
-
-    def get_absolute_url(self):
-        return reverse("dcim:location", args=[self.slug])
 
     def to_csv(self):
         return (

@@ -29,6 +29,8 @@ include = [
     "NOTICE",
     # Poetry by default will exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+    # Bundle all of the UI code
+    "nautobot/ui/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -80,6 +82,8 @@ django-tree-queries = "~0.14.0"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.14.0"
+# Adds JSON schema support to API endpoints for rendering JSON schema forms.
+drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.26.0", extras = ["sidecar"]}
 # Git integrations for Python

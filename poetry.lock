@@ -1134,6 +1134,21 @@ trio = ["trio (>=0.14,<0.23)"]
 wmi = ["wmi (>=1.5.1,<2.0.0)"]
 
 [[package]]
+name = "drf-react-template-framework"
+version = "0.0.17"
+description = "Django REST Framework plugin that creates form schemas for react-jsonschema-form"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "drf-react-template-framework-0.0.17.tar.gz", hash = "sha256:25b115981528977fa703fb2a9b354f3874fff82830b56fc4c7269b287a0a9580"},
+    {file = "drf_react_template_framework-0.0.17-py3-none-any.whl", hash = "sha256:d8116b0c03459574a3b0f2885ce80702127f49fc66960d50deef1c7a35151593"},
+]
+
+[package.dependencies]
+djangorestframework = ">=3.12.0,<4.0.0"
+
+[[package]]
 name = "drf-spectacular"
 version = "0.26.1"
 description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework"
@@ -4040,4 +4055,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.11"
-content-hash = "966b436e5ac74c9d6f39e3fc49086328d3ce9badc8ec6333cf28d12cdc32097a"
+content-hash = "de6c18941bba37363a22c6172f04b7a0d1eb36feb91c4d25e80a240becf6efa8"
