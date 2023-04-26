@@ -5,10 +5,7 @@
             "@utils/*": ["src/utils/*"],
             "@constants/*": ["src/constants/*"],
             "@views/*": ["src/views/*"],
-            "@components/*": ["src/components/*"],
-            "@layouts/*": ["src/components/layouts/*"],
-            "@common/*": ["src/components/common/*"],
-            "@core/*": ["src/components/core/*"]
+            "@components/*": ["src/components/*"]
         }
     }
 }
