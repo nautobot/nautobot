@@ -52,13 +52,15 @@ export default function GenericObjectCreateView({ list_url }) {
             headers: {
                 "Content-Type": "application/json",
             },
-        }).then(function (res) {
-            navigate(res.data.web_url);
-        }).catch((error) => {
-            if( error.response ){
-                console.log(error.response.data); // => the response payload
-            }
-        });
+        })
+            .then(function (res) {
+                navigate(res.data.web_url);
+            })
+            .catch((error) => {
+                if (error.response) {
+                    console.log(error.response.data); // => the response payload
+                }
+            });
 
     return (
         <GenericView>
