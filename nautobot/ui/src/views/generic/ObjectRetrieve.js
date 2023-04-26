@@ -297,7 +297,15 @@ export default function ObjectRetrieve({ api_url }) {
                                                 appConfig[tab][item].rowspan
                                             }
                                         >
-                                            <Heading>
+                                            <Heading
+                                                display="flex"
+                                                alignItems="center"
+                                            >
+                                                <NtcThumbnailIcon
+                                                    width="25px"
+                                                    height="30px"
+                                                />
+                                                &nbsp;
                                                 {render_header(
                                                     appConfig[tab][item].name
                                                 )}
