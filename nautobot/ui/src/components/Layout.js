@@ -51,7 +51,7 @@ export default function Layout({ children }) {
     //   It would save us the `toRender` above.
     return (
         <Flex height="full" overflow="hidden" width="full">
-            <Sidebar>
+            <Sidebar overflow="hidden">
                 <Heading
                     as="h1"
                     paddingBottom="md"
