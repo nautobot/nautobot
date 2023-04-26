@@ -275,7 +275,7 @@ export default function GenericView({
                                 <NavbarSection
                                     as="span"
                                     isActive={
-                                        isActive || children == appContext
+                                        isActive || children === appContext
                                     }
                                     children={children}
                                     {...rest}
