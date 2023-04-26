@@ -158,7 +158,7 @@ export default function ObjectRetrieve({ api_url }) {
     }
     // if (!objectData) return <GenericView objectData={objectData} />;
 
-    if (!objectData || !noteData || !noteTableFields || !changelogTableFields) {
+    if (!objectData || !noteData || !changelogData || !noteTableFields || !changelogTableFields) {
         return (
             <GenericView>
                 <LoadingWidget />
