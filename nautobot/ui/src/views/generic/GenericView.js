@@ -51,12 +51,15 @@ export default function GenericView({
                         for (const urlPatternOrSubgroup in menu.data[context]
                             .groups[group].items) {
                             if (pathname.startsWith(urlPatternOrSubgroup)) {
+                                // It's a urlPattern, no subGroup currently selected
                                 return [
+                                    // Selected context
                                     {
                                         children: context,
                                         key: `0_${context}`,
                                         type: "text",
                                     },
+                                    // Selected group, with menu of all available groups in the context
                                     {
                                         children: group,
                                         items: Object.keys(
@@ -75,22 +78,36 @@ export default function GenericView({
                                         key: `1_${group}`,
                                         type: "menu",
                                     },
+                                    // Selected item within the group, with menu of peer items and/or subgroups
                                     {
                                         children:
                                             menu.data[context].groups[group]
                                                 .items[urlPatternOrSubgroup]
                                                 .name,
-                                        items: Object.entries(
+                                        items: Object.keys(
                                             menu.data[context].groups[group]
                                                 .items
-                                        ).map(([to, { name }]) => ({
+                                        ).map((name) => ({
                                             as: ReactRouterLink,
-                                            children: name,
-                                            to,
+                                            children:
+                                                menu.data[context].groups[group]
+                                                    .items[name].name || name,
+                                            to: menu.data[context].groups[group]
+                                                .items[name].items
+                                                ? Object.entries(
+                                                      menu.data[context].groups[
+                                                          group
+                                                      ].items[name].items ?? {}
+                                                  ).sort(
+                                                      ([, a], [, b]) =>
+                                                          a.weight - b.weight
+                                                  )[0][0]
+                                                : name,
                                         })),
                                         key: `2_${menu.data[context].groups[group].items[urlPatternOrSubgroup].name}`,
                                         type: "menu",
                                     },
+                                    // Selected object instance
                                     ...(objectData
                                         ? [
                                               {
@@ -104,6 +121,7 @@ export default function GenericView({
                                         : []),
                                 ];
                             }
+                            // It might also be a sub-group with its own nested items
                             for (const urlPattern in menu.data[context].groups[
                                 group
                             ].items[urlPatternOrSubgroup].items) {
@@ -114,11 +132,13 @@ export default function GenericView({
                                 );
                                 if (pathname.startsWith(urlPattern)) {
                                     return [
+                                        // Selected context
                                         {
                                             children: context,
                                             key: `0_${context}`,
                                             type: "text",
                                         },
+                                        // Selected group, with menu of all available groups in the context
                                         {
                                             children: group,
                                             items: Object.keys(
@@ -138,6 +158,7 @@ export default function GenericView({
                                             key: `1_${group}`,
                                             type: "menu",
                                         },
+                                        // Selected subgroup within the group, with menu of peer items and/or subgroups
                                         {
                                             children: urlPatternOrSubgroup,
                                             items: Object.keys(
@@ -167,6 +188,7 @@ export default function GenericView({
                                             key: `2_${urlPatternOrSubgroup}`,
                                             type: "menu",
                                         },
+                                        // Selected item within the subgroup, with menu of peer items
                                         {
                                             children:
                                                 menu.data[context].groups[group]
@@ -184,6 +206,7 @@ export default function GenericView({
                                             key: `3_${menu.data[context].groups[group].items[urlPatternOrSubgroup].items[urlPattern].name}`,
                                             type: "menu",
                                         },
+                                        // Selected object instance
                                         ...(objectData
                                             ? [
                                                   {
@@ -251,7 +274,9 @@ export default function GenericView({
                             {({ isActive }) => (
                                 <NavbarSection
                                     as="span"
-                                    isActive={isActive || children == appContext}
+                                    isActive={
+                                        isActive || children == appContext
+                                    }
                                     children={children}
                                     {...rest}
                                 />
