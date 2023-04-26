@@ -54,6 +54,10 @@ export default function GenericObjectCreateView({ list_url }) {
             },
         }).then(function (res) {
             navigate(res.data.web_url);
+        }).catch((error) => {
+            if( error.response ){
+                console.log(error.response.data); // => the response payload
+            }
         });
 
     return (
