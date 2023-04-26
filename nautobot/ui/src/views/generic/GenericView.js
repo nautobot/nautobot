@@ -125,11 +125,6 @@ export default function GenericView({
                             for (const urlPattern in menu.data[context].groups[
                                 group
                             ].items[urlPatternOrSubgroup].items) {
-                                console.log(
-                                    menu.data[context].groups[group].items[
-                                        urlPatternOrSubgroup
-                                    ]
-                                );
                                 if (pathname.startsWith(urlPattern)) {
                                     return [
                                         // Selected context
