@@ -30,3 +30,6 @@ is not functioning as it should, Hence overideing its css class.
     display: inline-flex !important;
     border-radius: 8px !important;
 }
+.css-uos33e:hover, .css-uos33e[data-hover] {
+    box-shadow: none !important;
+}

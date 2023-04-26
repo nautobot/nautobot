@@ -26,7 +26,6 @@ const TextOrButton = ({obj}) => {
 }
 
 const TableColumDisplay = ({obj}) => {
-    
     if (!obj) {
         return (<FontAwesomeIcon icon={faMinus} />)
     }
@@ -55,9 +54,10 @@ const TableColumDisplay = ({obj}) => {
 }
 
 
-export default function TableItem({ name, obj, url, link = false }) {
-    if (link) {
-        return <Link to={url}><TableColumDisplay obj={obj} /></Link>
+export default function TableItem({ name, obj, url }) {
+    if (url) {
+        // #TODO(timizuo): Use the secondary color here instead of hardcoding it
+        return <Link style={{color: "#007dff"}} to={url}><TableColumDisplay obj={obj} /></Link>
     } else {
         return <TableColumDisplay obj={obj} />;
     }
