@@ -23,6 +23,7 @@ import {
     SecurityIcon,
 } from "@nautobot/nautobot-ui";
 import { useMemo } from "react";
+import { useSelector } from "react-redux";
 import {
     Link as ReactRouterLink,
     NavLink as ReactRouterNavLink,
@@ -206,6 +207,8 @@ export default function GenericView({
 
     const isLoggedIn = !!session?.data?.logged_in;
 
+    const appContext = useSelector((state) => state.appContext);
+
     return (
         <Flex
             direction="column"
@@ -241,14 +244,15 @@ export default function GenericView({
                         {
                             children: "Platform",
                             leftIcon: <PlatformIcon />,
-                            to: "/plugins/installed-plugins/",
+                            to: "/extras/relationships/",
                         },
-                    ].map(({ to, ...rest }) => (
+                    ].map(({ children, to, ...rest }) => (
                         <ReactRouterNavLink key={to} to={to}>
                             {({ isActive }) => (
                                 <NavbarSection
                                     as="span"
-                                    isActive={isActive}
+                                    isActive={isActive || children == appContext}
+                                    children={children}
                                     {...rest}
                                 />
                             )}
