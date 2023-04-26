@@ -117,7 +117,10 @@ export default function GenericObjectListView() {
             return { name: key, label: value.title };
         }
     );
-
+    let table_name = model_name
+        .split("-")
+        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
+        .join(" ");
     return (
         <GenericView>
             <ObjectListTable
@@ -126,6 +129,7 @@ export default function GenericObjectListView() {
                 totalCount={listData.count}
                 active_page_number={1}
                 page_size={50}
+                model_name={table_name}
             />
         </GenericView>
     );
