@@ -94,45 +94,38 @@ export default function ObjectListTable({
             gridColumn={gridColumn}
             padding="md"
         >
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "20px",
-                }}
-            >
+            <Box display="flex" justifyContent="space-between" mb="sm">
                 <Heading
                     as="h1"
-                    color="black-0"
                     size="H1"
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "5px",
-                    }}
+                    display="flex"
+                    alignItems="center"
+                    gap="5px"
+                    pb="sm"
                 >
                     <NtcThumbnailIcon width="25px" height="30px" /> {tableTitle}
                 </Heading>
-                <ButtonGroup pb={2} style={{ alignItems: "center" }}>
+                <ButtonGroup pb="sm" alignItems="center">
                     <UIButton size="sm" variant="secondary">
-                        {" "}
-                        Filters{" "}
+                        Filters
                     </UIButton>
                     <UIButton
                         size="sm"
                         variant="primary"
                         leftIcon={<MeatballsIcon />}
                     >
-                        {" "}
-                        Actions{" "}
+                        Actions
                     </UIButton>
                     <Icon.TbMinusVertical />
-                    <UIButton size="sm" leftIcon={<PlusIcon />}>
-                        {" "}
-                        Add {tableTitle}{" "}
-                    </UIButton>
+                    <RouterButton
+                        to={`${location.pathname}add`}
+                        size="sm"
+                        leftIcon={<PlusIcon />}
+                    >
+                        Add {tableTitle}
+                    </RouterButton>
                 </ButtonGroup>
-            </div>
+            </Box>
 
             <TableRenderer table={table} />
             {/* <Paginator
