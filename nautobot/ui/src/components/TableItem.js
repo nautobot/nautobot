@@ -11,6 +11,8 @@ const TextOrButton = ({ obj }) => {
         if (!obj.color) {
             return display;
         }
+        // TODO: xs button padding left/right, borderradius and margin should be defaults in nautobot-ui?
+        //       also should hover box shadow be disabled?
         return (
             <Button
                 size="xs"
