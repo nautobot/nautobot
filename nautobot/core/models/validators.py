@@ -50,3 +50,7 @@ def validate_regex(value):
         re.compile(value)
     except re.error:
         raise ValidationError(f"{value} is not a valid regular expression.")
+
+
+# FIXME(jathan): Mke this a real validator subclass?
+validate_regex.message = "Jathan was here."

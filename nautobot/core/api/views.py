@@ -33,10 +33,12 @@ from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.extras.registry import registry
 from . import serializers
 
 
@@ -694,24 +696,58 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
 
 class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
-    """API View that returns the registered nav-menu content."""
+    """API View that returns the nav-menu content applicable to the requesting user."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # TODO: should be IsAuthenticated but this breaks the landing page if logged out
 
-    # TODO: the schema here is clearly wrong
-    @extend_schema(
-        responses={
-            200: {
-                "type": "object",
-            }
-        },
-        exclude=True,
-    )
+    @extend_schema(exclude=True)
     def get(self, request):
-        # TODO: do we need this local import or can it be moved globally?
-        from nautobot.extras.registry import registry
+        base_menu = registry["nav_menu"]
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
 
-        return Response(registry["nav_menu"])
+        filtered_menu = {}
+        for context, context_details in base_menu.items():
+            if HIDE_RESTRICTED_UI and not any(
+                request.user.has_perm(permission) for permission in context_details["permissions"]
+            ):
+                continue
+            filtered_menu[context] = {"weight": context_details["weight"], "groups": {}}
+            for group_name, group_details in context_details["groups"].items():
+                if HIDE_RESTRICTED_UI and not any(
+                    request.user.has_perm(permission) for permission in group_details["permissions"]
+                ):
+                    continue
+                filtered_menu[context]["groups"][group_name] = {"weight": group_details["weight"], "items": {}}
+                for item_url_or_name, item_details in group_details["items"].items():
+                    if HIDE_RESTRICTED_UI and not any(
+                        request.user.has_perm(permission) for permission in item_details["permissions"]
+                    ):
+                        continue
+                    if "items" in item_details:
+                        # It's a sub-group
+                        filtered_menu[context]["groups"][group_name]["items"][item_url_or_name] = {
+                            "weight": item_details["weight"],
+                            "items": {},
+                        }
+                        for subitem_url, subitem_details in item_details["items"].items():
+                            if HIDE_RESTRICTED_UI and not any(
+                                request.user.has_perm(perm) for perm in subitem_details["permissions"]
+                            ):
+                                continue
+                            filtered_menu[context]["groups"][group_name]["items"][item_url_or_name]["items"][
+                                subitem_url
+                            ] = {
+                                "name": subitem_details["name"],
+                                "weight": subitem_details["weight"],
+                            }
+                    else:
+                        # It's a menu item
+                        filtered_menu[context]["groups"][group_name]["items"][item_url_or_name] = {
+                            "name": item_details["name"],
+                            "weight": item_details["weight"],
+                        }
+
+        return Response(filtered_menu)
 
 
 #

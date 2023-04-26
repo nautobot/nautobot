@@ -92,8 +92,6 @@ export default function GenericObjectListView() {
         );
     }
 
-    console.log(urlPatternToContext);
-
     dispatch(updateAppContext(urlPatternToContext[app_name][model_name]));
 
     if (listDataLoading || headerDataLoading) {

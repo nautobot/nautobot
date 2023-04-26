@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.utils.encoding import force_str
-from drf_react_template.schema_form_encoder import SchemaProcessor, SerializerType, UiSchemaProcessor
+from drf_react_template.schema_form_encoder import ProcessingMixin, SchemaProcessor, SerializerType, UiSchemaProcessor
 from rest_framework import exceptions
 from rest_framework import fields as drf_fields
 from rest_framework import serializers as drf_serializers
@@ -64,50 +64,31 @@ class NautobotMetadataV1(SimpleMetadata):
         return field_info
 
 
-class NautobotSchemaProcessor(SchemaProcessor):
-    """
-    SchemaProcessor to account for custom field types and behaviors for Nautobot.
-    """
+class NautobotProcessingMixin(ProcessingMixin):
+    """Processing mixin  to account for custom field types and behaviors for Nautobot."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # FIXME(jathan): These custom type maps can go into # settings.DRF_REACT_TEMPLATE_TYPE_MAP.
-        self.TYPE_MAP.update(
-            {
-                "ContentTypeField": {"type": "string", "enum": "choices"},
-                "CustomFieldsDataField": {"type": "object"},
-                # FIXME(jathan): ImageField of type "image" reports "Unsupported field schema", so
-                # it's coerced to "string" for now.
-                # "ImageField": {"type": "image", "widget": "file"},
-                # "ImageField": {"type": "string", "format": "data-url"},
-                "ImageField": {"type": "string", "widget": "file"},
-                "IPFieldSerializer": {"type": "string"},
-                "JSONField": {"type": "string", "widget": "textarea"},
-                "ManyRelatedField": {"type": "array", "required": []},
-                "NautobotPrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
-                "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
-                "RelationshipsDataField": {"type": "object"},
-                "SlugField": {"type": "string"},
-                "TimeZoneSerializerField": {"type": "string"},
-                "UUIDField": {"type": "string"},
-            }
-        )
-
-    # FIXME(jathan): For these methods there was a need to account for certain field types/values
-    # such a "required" fields and "array" types. Need tox revisit the original source from
-    # drf_react_template to see if we can reduct the overloaded code back down.
     def _get_type_map_value(self, field: SerializerType):
+        """Overload default to add "required" as a default mapping."""
+        # This adds "required" as a default type mapping compared to drf_react_template core.
         result = {
             "type": field.style.get("schema:type"),
             "enum": field.style.get("schema:enum"),
+            "format": field.style.get("schema:format"),
             "widget": field.style.get("ui:widget"),
             "required": field.style.get("schema:required"),
+            "readOnly": field.style.get("schema:readOnly"),
         }
         result_default = self.TYPE_MAP.get(type(field).__name__, {})
         for k in result_default:
             if result[k] is None:
                 result[k] = result_default[k]
         return result
+
+
+class NautobotSchemaProcessor(NautobotProcessingMixin, SchemaProcessor):
+    """
+    SchemaProcessor to account for custom field types and behaviors for Nautobot.
+    """
 
     def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
         result = {}
@@ -141,6 +122,17 @@ class NautobotSchemaProcessor(SchemaProcessor):
                     else:
                         result["enum"] = enum
                         result["enumNames"] = list(enum)
+
+            # Process "format"
+            format_ = type_map_obj["format"]
+            if format_:
+                result["format"] = format_
+
+            # Process "readOnly"
+            read_only = type_map_obj["readOnly"]
+            if read_only:
+                result["readOnly"] = read_only
+
             try:
                 result["default"] = field.get_default()
             except drf_fields.SkipField:
@@ -151,7 +143,7 @@ class NautobotSchemaProcessor(SchemaProcessor):
         return result
 
 
-class NautobotUiSchemaProcessor(UiSchemaProcessor):
+class NautobotUiSchemaProcessor(NautobotProcessingMixin, UiSchemaProcessor):
     """
     UiSchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
@@ -163,24 +155,18 @@ class NautobotUiSchemaProcessor(UiSchemaProcessor):
         This instead calls `get_fields()` and returns the keys.
         """
         if self._is_list_serializer(self.serializer):
-            return list(self.serializer.child.get_fields())
-        return list(self.serializer.get_fields())
+            fields = self.serializer.child.get_fields()
+        else:
+            fields = self.serializer.get_fields()
 
-    # FIXME(jathan): For this method there was a need to account for certain field types/values
-    # such a "required" fields. Need tox revisit the original source from drf_react_template to see
-    # if we can reduct the overloaded code back down.
-    def _get_type_map_value(self, field: SerializerType):
-        result = {
-            "type": field.style.get("schema:type"),
-            "enum": field.style.get("schema:enum"),
-            "widget": field.style.get("ui:widget"),
-            "required": field.style.get("schema:required"),
-        }
-        result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k in result_default:
-            if result[k] is None:
-                result[k] = result_default[k]
-        return result
+        field_names = list(fields)
+        bottom_fields = ["computed_fields", "custom_fields", "relationships"]
+        for field_name in bottom_fields:
+            if field_name in field_names:
+                field_names.remove(field_name)
+                field_names.append(field_name)
+
+        return field_names
 
 
 class NautobotMetadata(SimpleMetadata):
@@ -191,13 +177,69 @@ class NautobotMetadata(SimpleMetadata):
     - uiSchema: The object UI schema which describes the form layout in the UI
     """
 
+    def _determine_actions(self, request, view):
+        """
+        Replace the stock determine_actions() method to assess object permissions only
+        when viewing a specific object. This is necessary to support OPTIONS requests
+        with bulk update in place (see #5470).
+        """
+        actions = {}
+        for method in {"PUT", "POST"} & set(view.allowed_methods):
+            view.request = clone_request(request, method)
+            try:
+                # Test global permissions
+                if hasattr(view, "check_permissions"):
+                    view.check_permissions(view.request)
+                # Test object permissions (if viewing a specific object)
+                if method == "PUT" and view.lookup_url_kwarg and hasattr(view, "get_object"):
+                    view.get_object()
+            except (exceptions.APIException, PermissionDenied, Http404):
+                pass
+            else:
+                # If user has appropriate permissions for the view, include
+                # appropriate metadata about the fields that should be supplied.
+                serializer = view.get_serializer()
+                actions[method] = {}
+                # actions[method] = self.get_serializer_info(serializer)
+                actions[method]["schema"] = NautobotSchemaProcessor(serializer, request.parser_context).get_schema()
+                actions[method]["uiSchema"] = NautobotUiSchemaProcessor(
+                    serializer, request.parser_context
+                ).get_ui_schema()
+            finally:
+                view.request = request
+
+        return actions
+
+    def determine_actions(self, request, view):
+        actions = []
+        for method in {"PUT", "POST"} & set(view.allowed_methods):
+            view.request = clone_request(request, method)
+            try:
+                # Test global permissions
+                if hasattr(view, "check_permissions"):
+                    view.check_permissions(view.request)
+                # Test object permissions (if viewing a specific object)
+                if method == "PUT" and view.lookup_url_kwarg and hasattr(view, "get_object"):
+                    view.get_object()
+            except (exceptions.APIException, PermissionDenied, Http404):
+                pass
+            else:
+                actions.append(method)
+            finally:
+                view.request = request
+        return actions
+
     def determine_metadata(self, request, view):
-        # If there's a serializer, do the needful.
+        metadata = super().determine_metadata(request, view)
+
+        # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
-            return {
-                "schema": NautobotSchemaProcessor(serializer, request.parser_context).get_schema(),
-                "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
-            }
-        # Otherwise return the default DRF metadata for this view.
-        return super().determine_metadata(request, view)
+            metadata.update(
+                {
+                    "schema": NautobotSchemaProcessor(serializer, request.parser_context).get_schema(),
+                    "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
+                }
+            )
+
+        return metadata

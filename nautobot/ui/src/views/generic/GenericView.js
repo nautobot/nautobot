@@ -46,6 +46,15 @@ export default function GenericView({
     const breadcrumbs = useMemo(
         () =>
             (function () {
+                if (pathname === "/") {
+                    return [
+                        {
+                            children: "Home",
+                            key: `0_home`,
+                            type: "text",
+                        },
+                    ];
+                }
                 for (const context in menu.data) {
                     for (const group in menu.data[context].groups) {
                         for (const urlPatternOrSubgroup in menu.data[context]
@@ -125,11 +134,6 @@ export default function GenericView({
                             for (const urlPattern in menu.data[context].groups[
                                 group
                             ].items[urlPatternOrSubgroup].items) {
-                                console.log(
-                                    menu.data[context].groups[group].items[
-                                        urlPatternOrSubgroup
-                                    ]
-                                );
                                 if (pathname.startsWith(urlPattern)) {
                                     return [
                                         // Selected context

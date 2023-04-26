@@ -1,5 +1,5 @@
 // Import the RTK Query methods from the React-specific entry point
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
 import {
     API_BASE,
     API_USER_SESSION_INFO,
@@ -14,8 +14,13 @@ import {
   A standardized convention for retrieving data which should make developer's lives easier and is already extensively documented
   in React and Redux's sites.
 */
+
+const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: API_BASE }), {
+    maxRetries: 5,
+});
+
 export const baseApi = createApi({
-    baseQuery: fetchBaseQuery({ baseUrl: API_BASE }),
+    baseQuery: staggeredBaseQuery,
     keepUnusedDataFor: 5,
     refetchOnMountOrArgChange: true,
     refetchOnFocus: true,
@@ -23,9 +28,12 @@ export const baseApi = createApi({
     endpoints: (builder) => ({
         getSession: builder.query({
             query: () => API_USER_SESSION_INFO,
+            providesTags: ["Session"],
+            invalidatesTags: ["APIData", "AppData"],
         }),
         getUIMenu: builder.query({
             query: () => API_UI_MENU_INFO,
+            providesTags: ["AppData"],
         }),
         getRESTAPI: builder.query({
             query: ({ app_name, model_name, uuid = null, schema = false }) => {
@@ -40,6 +48,7 @@ export const baseApi = createApi({
                 }
                 return { url: `${app_name}/${model_name}/` };
             },
+            providesTags: ["APIData"],
         }),
     }),
 });
