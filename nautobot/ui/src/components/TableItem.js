@@ -1,7 +1,7 @@
 // import Badge from 'react-bootstrap/Badge';
 import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Link } from "react-router-dom";
+import { Link } from "@components/RouterLink";
 import { Button } from "@nautobot/nautobot-ui";
 import { calculateLuminance } from "@utils/color";
 
@@ -58,7 +58,7 @@ export default function TableItem({ name, obj, url }) {
     if (url) {
         // #TODO(timizuo): Use the secondary color here instead of hardcoding it
         return (
-            <Link style={{ color: "#007dff" }} to={url}>
+            <Link to={url}>
                 <TableColumnDisplay obj={obj} />
             </Link>
         );

@@ -11,7 +11,6 @@ import App from "./App";
 import "@fontsource/ubuntu/400.css";
 import "@fontsource/ubuntu/500.css";
 import "@fontsource/ubuntu-mono/400.css";
-import "./styles/shared.css";
 
 // const dev = process.env.NODE_ENV !== "production";
 const container = document.getElementById("root");

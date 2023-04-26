@@ -15,8 +15,6 @@ import {
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
-import NautobotTable from "@components/Table";
-import Paginator from "@components/paginator";
 import TableItem from "@components/TableItem";
 
 const getTableItemLink = (idx, obj) => {
@@ -61,7 +59,7 @@ export default function ObjectListTable({
                         // Get the column data from the object
                         // e.g from {"status": {"display": "Active"}, "id": ....} get => {"display": "Active"}
                         const column_data =
-                            idx == 0
+                            idx === 0
                                 ? props.row.original
                                 : props.row.original[props.column.id];
                         return (
