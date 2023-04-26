@@ -92,8 +92,6 @@ export default function GenericObjectListView() {
         );
     }
 
-    console.log(urlPatternToContext);
-
     dispatch(updateAppContext(urlPatternToContext[app_name][model_name]));
 
     if (listDataLoading || headerDataLoading) {
@@ -117,7 +115,10 @@ export default function GenericObjectListView() {
             return { name: key, label: value.title };
         }
     );
-
+    let table_name = model_name
+        .split("-")
+        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
+        .join(" ");
     return (
         <GenericView>
             <ObjectListTable
@@ -126,9 +127,7 @@ export default function GenericObjectListView() {
                 totalCount={listData.count}
                 active_page_number={1}
                 page_size={50}
-                tableTitle={
-                    model_name.charAt(0).toUpperCase() + model_name.slice(1)
-                }
+                tableTitle={table_name}
             />
         </GenericView>
     );

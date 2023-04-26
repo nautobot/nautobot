@@ -66,7 +66,9 @@ def register_menu_items(tab_list):
     """
     Create or update the `registry["nav_menu"]` dictionary with the provided objects to define the nav bar.
 
-    The dictionary is built from three key objects, NavMenuTab, NavMenuGroup (which may be nested), and NavMenuItem.
+    The dictionary is built from three key objects, NavMenuTab, NavMenuGroup (which may be nested, once),
+    and NavMenuItem.
+
     This dictionary is then presented via the REST API to the Nautobot UI frontend.
     """
     for nav_tab in tab_list:
@@ -77,7 +79,7 @@ def register_menu_items(tab_list):
 
         create_or_check_entry(registry["nav_menu"], nav_tab, nav_tab.name, f"{nav_tab.name}")
 
-        tab_perms = set()
+        tab_perms = registry["nav_menu"].get("permissions", set())
         registry_groups = registry["nav_menu"][nav_tab.name]["groups"]
         # TODO: allow for recursive (more than two-level) nesting of groups?
         for group in nav_tab.groups:
@@ -86,7 +88,7 @@ def register_menu_items(tab_list):
 
             create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-            group_perms = set()
+            group_perms = registry_groups[group.name].get("permissions", set())
             for item in group.items:
                 if isinstance(item, NavMenuItem):
                     # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
@@ -104,7 +106,8 @@ def register_menu_items(tab_list):
                         f"{nav_tab.name} -> {group.name} -> {item.link}",
                     )
 
-                    group_perms |= set(perms for perms in item.permissions)
+                    item_perms = set(perms for perms in item.permissions)
+                    registry_groups[group.name]["items"][item.link]["permissions"] = item_perms
                 elif isinstance(item, NavMenuGroup):
                     create_or_check_entry(
                         registry_groups[group.name]["items"],
@@ -113,6 +116,7 @@ def register_menu_items(tab_list):
                         f"{nav_tab.name} -> {group.name} -> {item.name}",
                     )
 
+                    item_perms = registry_groups[group.name]["items"][item.name].get("permissions", set())
                     for inner_item in item.items:
                         if not isinstance(inner_item, NavMenuItem):
                             raise TypeError(f"Expected a NavMenuItem, but found {inner_item}")
@@ -129,8 +133,18 @@ def register_menu_items(tab_list):
                             inner_item.link,
                             f"{nav_tab.name} -> {group.name} -> {item.name} -> {inner_item.link}",
                         )
+                        inner_item_perms = set(perms for perms in inner_item.permissions)
+                        registry_groups[group.name]["items"][item.name]["items"][inner_item.link][
+                            "permissions"
+                        ] = inner_item_perms
+                        item_perms |= inner_item_perms
+
+                    # Add collected permissions to group
+                    registry_groups[group.name]["items"][item.name]["permissions"] = item_perms
                 else:
                     raise TypeError(f"Expected NavMenuItem or NavMenuGroup, but found {item}")
+
+                group_perms |= item_perms
 
             # Add sorted items to group registry dict
             registry_groups[group.name]["items"] = OrderedDict(
@@ -427,15 +441,14 @@ class HomePageItem(HomePageBase, PermissionsMixin):
 
 class NavMenuTab(NavMenuBase, PermissionsMixin):
     """
-    This class represents a top-level Nautobot "menu group" such as Inventory or Networks.
+    This class represents a top-level Nautobot "menu context" such as Inventory or Networks.
 
-    It has a `name` (the title of the menu group) and a `weight` (which is mostly irrelevant these days).
+    It has a `name` (the menu context name) and a `weight` (which is mostly irrelevant these days).
 
     It contains a list of `NavMenuGroup` instances as children.
 
     In Nautobot 1.x, these could be augmented arbitrarily by apps and plugins;
-    but in 2.0 and later there is a fixed list of these that cannot be altered.
-    See <<TODO>> for specifics.
+    but in 2.0 and later there is a fixed list of these (`nautobot.core.apps.MENU_TABS`) that cannot be altered.
     """
 
     permissions = []
@@ -466,6 +479,8 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
             weight (int): The weight of this tab.
         """
         super().__init__(permissions)
+        if name not in MENU_TABS:
+            raise ValueError(f"NavMenuTab name must be one of {MENU_TABS}")
         self.name = name
         self.weight = weight
         if groups is not None:
@@ -483,7 +498,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
     It has a `name` (display string) and a `weight` which controls its position relative to other groups/items.
 
     In Nautobot 1.x this could only contain `NavMenuItem`s as children;
-    in 2.x this has been relaxed to also permit a hierarchy of `NavMenuGroup` objects.
+    in 2.x this has been relaxed to also permit a top-level `NavMenuGroup` to contain other `NavMenuGroup` objects.
     """
 
     permissions = []
@@ -524,6 +539,8 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
 class NavMenuItem(NavMenuBase, PermissionsMixin):
     """
     This class represents a navigation menu item that leads to a specific page (a "leaf" in the nav menu, if you will).
+
+    These are contained within `NavMenuGroup` objects.
 
     Links are specified as Django reverse URL strings.
     """
