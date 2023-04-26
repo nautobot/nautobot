@@ -127,7 +127,7 @@ export default function GenericObjectListView() {
                 totalCount={listData.count}
                 active_page_number={1}
                 page_size={50}
-                model_name={table_name}
+                tableTitle={table_name}
             />
         </GenericView>
     );

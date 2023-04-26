@@ -22,7 +22,6 @@ import { useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useRef } from "react";
 import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
-import create_app_tab from "@components/AppTab";
 import AppComponents from "@components/Apps";
 import { LoadingWidget } from "@components/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
