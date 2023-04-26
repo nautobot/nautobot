@@ -5,7 +5,7 @@ import { Link } from "@components/RouterLink";
 import { Button } from "@nautobot/nautobot-ui";
 import { calculateLuminance } from "@utils/color";
 
-const TextOrButton = ({ obj }) => {
+function TextOrButton({ obj }) {
     if (typeof obj === "object") {
         const display = obj.display || obj.label;
         if (!obj.color) {
@@ -30,9 +30,9 @@ const TextOrButton = ({ obj }) => {
         );
     }
     return obj;
-};
+}
 
-const TableColumnDisplay = ({ obj }) => {
+function TableColumnDisplay({ obj }) {
     if (!obj) {
         return <FontAwesomeIcon icon={faMinus} />;
     } else if (typeof obj === "object" && !Array.isArray(obj)) {
@@ -52,7 +52,7 @@ const TableColumnDisplay = ({ obj }) => {
     } else {
         return obj;
     }
-};
+}
 
 export default function TableItem({ name, obj, url }) {
     if (url) {
