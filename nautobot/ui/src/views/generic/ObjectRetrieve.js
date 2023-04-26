@@ -54,11 +54,17 @@ function Render_value(value) {
                 <FontAwesomeIcon icon={faMinus} />
             ) : Array.isArray(value) ? (
                 value.map((v) => (
-                    <div>
-                        <Link ref={ref} href={v["web_url"]}>
-                            {v["display"]}
-                        </Link>
-                    </div>
+                    typeof v === 'object' && v !== null ? (
+                        <div>
+                            <Link ref={ref} href={v["web_url"]}>
+                                {v["display"]}
+                            </Link>
+                        </div>
+                    ) : (
+                        <div>
+                            {v}
+                        </div>
+                    )
                 ))
             ) : (
                 <Link ref={ref} href={value["web_url"]}>
@@ -113,10 +119,10 @@ export default function ObjectRetrieve({ api_url }) {
         () => (api_url ? api_url + "app_full_width_fragment/" : null),
         fetcherHTML
     );
-    const ui_url = objectData?.formData
-        ? `${objectData.formData.web_url}?viewconfig=true`
+    const ui_url = objectData?.web_url
+        ? `${objectData.web_url}?viewconfig=true`
         : null;
-    var { data: appConfig } = useSWR(() => ui_url, fetcherTabs);
+    var { data: extraAppConfig } = useSWR(() => ui_url, fetcher);
 
     const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`;
     const { data: changelogData, changelog_error } = useSWR(
@@ -161,12 +167,23 @@ export default function ObjectRetrieve({ api_url }) {
     }
     // if (!appConfig) return <GenericView objectData={objectData} />;
     // TODO Right now overloading appConfig to see if Tabs can be dynamically rendered
-    appConfig = {
+    const defaultAppConfig = {
         main: "main page",
         advanced: "advanced attributes",
         note: "object notes",
         change_log: "object changes",
     };
+    extraAppConfig = {
+        "tabs": [
+            { "plugin_tab_1": "tab_1_content" },
+            { "plugin_tab_2": "tab_2_content" },
+            { "plugin_tab_3": "tab_3_content" },
+        ]
+    }
+    const appConfig = {
+        ...defaultAppConfig,
+        ...extraAppConfig,
+    }
 
     const route_name = `${app_name}:${model_name}`;
 
@@ -177,9 +194,19 @@ export default function ObjectRetrieve({ api_url }) {
                 <Heading>{obj.display}</Heading>
                 <br></br>
                 <TabList>
-                    {Object.keys(appConfig).map((key, idx) => (
-                        <Tab>{key.charAt(0).toUpperCase() + key.slice(1)}</Tab>
-                    ))}
+                    {
+                        Object.keys(appConfig).map((key, idx) => (
+                            Array.isArray(appConfig[key]) ? (
+                                Object.keys(appConfig[key]).map((tab) => (
+                                    Object.keys(appConfig[key][tab]).map((name) => (
+                                        <Tab>{name.charAt(0).toUpperCase() + name.slice(1)}</Tab>
+                                    ))
+                                )
+                                )
+                            ) : (
+                                <Tab>{key.charAt(0).toUpperCase() + key.slice(1)}</Tab>
+                            )))
+                    }
                 </TabList>
                 <TabPanels>
                     <TabPanel key="main" eventKey="main" title="Main">
@@ -201,10 +228,10 @@ export default function ObjectRetrieve({ api_url }) {
                                 </Tbody>
                             </Table>
                         </Card>
-                        <br />
+                        {/* <br />
                         <div dangerouslySetInnerHTML={{ __html: appHTML }} />
                         <br />
-                        {AppFullWidthComponentsWithProps(route_name, obj)}
+                        {AppFullWidthComponentsWithProps(route_name, obj)} */}
                     </TabPanel>
                     <TabPanel
                         key="advanced"
@@ -258,6 +285,19 @@ export default function ObjectRetrieve({ api_url }) {
                             ></ObjectListTableNoButtons>
                         </Card>
                     </TabPanel>
+                    {
+                        Object.keys(appConfig).map((key, idx) => (
+                            Array.isArray(appConfig[key]) ? (
+                                Object.keys(appConfig[key]).map((tab) => (
+                                    Object.values(appConfig[key][tab]).map((content) => (
+                                        <TabPanel>{content.charAt(0).toUpperCase() + content.slice(1)}</TabPanel>
+                                    ))
+                                )
+                                )
+                            ) : (
+                                () => { }
+                            )))
+                    }
                 </TabPanels>
             </Tabs>
         </GenericView>
