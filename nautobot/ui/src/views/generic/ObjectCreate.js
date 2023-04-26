@@ -45,6 +45,7 @@ export default function GenericObjectCreateView({ list_url }) {
 
     // Using axios so that we can do a POST.
     const onSubmit = ({ formData }) => {
+        setExtraErrors({});
         axios({
             method: "post",
             url: list_url,
@@ -80,11 +81,13 @@ export default function GenericObjectCreateView({ list_url }) {
                             uiSchema={ui_schema}
                             validator={validator}
                             formData={formData}
-                            onChange={(e) =>
-                                setFormData(Object.assign(e.formData))
-                            }
+                            onChange={(e) => {
+                                setFormData(Object.assign(e.formData));
+                                setExtraErrors({});
+                            }}
                             onSubmit={onSubmit}
                             extraErrors={extraErrors}
+                            liveValidate
                         >
                             <Button type="submit">Create</Button>
                         </Form>
