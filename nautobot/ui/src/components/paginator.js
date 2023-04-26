@@ -1,6 +1,6 @@
 import { Frame } from "@nautobot/nautobot-ui";
 
-import PaginatorForm from "@components/common/paginator_form";
+import PaginatorForm from "@components/paginator_form";
 
 export default function Paginator({ url, data_count, page_size, active_page }) {
     let num_pages;

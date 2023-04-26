@@ -10,10 +10,10 @@ import {
 
 import { useEffect } from "react";
 
-import LoadingWidget from "@components/common/LoadingWidget";
-import RouterButton from "@components/common/RouterButton";
-import RouterLink from "@components/common/RouterLink";
-import SidebarNav from "@components/common/SidebarNav";
+import LoadingWidget from "@components/LoadingWidget";
+import RouterButton from "@components/RouterButton";
+import RouterLink from "@components/RouterLink";
+import SidebarNav from "@components/SidebarNav";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 
 export default function Layout({ children }) {

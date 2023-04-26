@@ -2,8 +2,8 @@ import { useParams } from "react-router-dom";
 import { Text } from "@nautobot/nautobot-ui";
 import { useDispatch } from "react-redux";
 
-import { LoadingWidget } from "@components/common/LoadingWidget";
-import ObjectListTable from "@components/common/ObjectListTable";
+import { LoadingWidget } from "@components/LoadingWidget";
+import ObjectListTable from "@components/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
 import { useGetUIMenuQuery, useGetRESTAPIQuery } from "@utils/api";
 import { updateAppContext } from "@utils/store";

@@ -1,4 +1,4 @@
-import AppComponents from "@components/core/Apps";
+import AppComponents from "@components/Apps";
 
 export default function AppFullWidthComponentsWithProps(route, props) {
     if (!AppComponents.FullWidthComponents?.[route]) return <></>;

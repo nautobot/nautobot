@@ -17,12 +17,12 @@ import {
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useRef } from "react";
-import AppFullWidthComponentsWithProps from "@components/apps/AppFullWidthComponents";
-import create_app_tab from "@components/apps/AppTab";
-import AppComponents from "@components/core/Apps";
-import { LoadingWidget } from "@components/common/LoadingWidget";
+import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
+import create_app_tab from "@components/AppTab";
+import AppComponents from "@components/Apps";
+import { LoadingWidget } from "@components/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
-import ObjectListTableNoButtons from "@components/common/ObjectListTableNoButtons";
+import ObjectListTableNoButtons from "@components/ObjectListTableNoButtons";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>

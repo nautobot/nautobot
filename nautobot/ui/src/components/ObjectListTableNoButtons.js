@@ -1,8 +1,8 @@
 import { Box } from "@nautobot/nautobot-ui";
 import { useLocation } from "react-router-dom";
 
-import NautobotTable from "@components/core/Table";
-import Paginator from "@components/common/paginator";
+import NautobotTable from "@components/Table";
+import Paginator from "@components/paginator";
 
 // A composite component for displaying a object list table. Just the data!
 export default function ObjectListTableNoButtons({
