@@ -3,6 +3,7 @@ import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "react-router-dom";
 import { Button } from "@nautobot/nautobot-ui";
+import { calculateLuminance } from "@utils/color";
 
 const TextOrButton = ({ obj }) => {
     if (typeof obj === "object") {
@@ -11,7 +12,17 @@ const TextOrButton = ({ obj }) => {
             return display;
         }
         return (
-            <Button size="xs" className={"ntc-btn-" + obj.color}>
+            <Button
+                size="xs"
+                bg={"#" + obj.color}
+                color={
+                    calculateLuminance(obj.color) > 186 ? "#000000" : "#ffffff"
+                }
+                borderRadius="sm"
+                pl="xs"
+                pr="xs"
+                m="xs"
+            >
                 {display}
             </Button>
         );
