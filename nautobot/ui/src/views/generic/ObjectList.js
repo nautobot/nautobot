@@ -126,6 +126,9 @@ export default function GenericObjectListView() {
                 totalCount={listData.count}
                 active_page_number={1}
                 page_size={50}
+                tableTitle={
+                    model_name.charAt(0).toUpperCase() + model_name.slice(1)
+                }
             />
         </GenericView>
     );

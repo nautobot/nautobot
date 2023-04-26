@@ -1,11 +1,44 @@
-import { Box, Heading } from "@nautobot/nautobot-ui";
 import { RouterButton } from "./RouterButton";
 import { ButtonGroup } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
+import {
+    Box,
+    Heading,
+    NtcThumbnailIcon,
+    MeatballsIcon,
+    Button as UIButton,
+    TableRenderer,
+    useTableRenderer,
+    createColumnHelper,
+    PlusIcon,
+} from "@nautobot/nautobot-ui";
+import { useCallback, useMemo } from "react";
 
 import NautobotTable from "@components/Table";
 import Paginator from "@components/paginator";
+import TableItem from "@components/TableItem";
+
+const getTableItemLink = (idx, obj) => {
+    if (idx === 0) {
+        return window.location.pathname + obj.id;
+    }
+    if (typeof obj !== "object" || !obj || !obj.url) {
+        return null;
+    }
+    // Remove domain + /api prefix
+    const url = obj.url.replace(window.location.origin + "/api", "");
+
+    // Statuses and Roles should not be linkable
+    if (
+        ["/extras/statuses", "/extras/roles"].some((prefix) =>
+            url.startsWith(prefix)
+        )
+    ) {
+        return null;
+    }
+    return url;
+};
 
 // A composite component for displaying a object list table. Just the data!
 export default function ObjectListTable({
@@ -15,9 +48,45 @@ export default function ObjectListTable({
     active_page_number,
     page_size,
     gridColumn,
-    model_name = "Model Name",
+    tableTitle,
 }) {
     let location = useLocation();
+    const columnHelper = useMemo(() => createColumnHelper(), []);
+    const columns = useMemo(
+        () =>
+            tableHeader.map(({ name, label }, idx) =>
+                columnHelper.accessor(name, {
+                    cell: (props) => {
+                        // Get the column data from the object
+                        // e.g from {"status": {"display": "Active"}, "id": ....} get => {"display": "Active"}
+                        const column_data =
+                            idx == 0
+                                ? props.row.original
+                                : props.row.original[props.column.id];
+                        return (
+                            <TableItem
+                                name={name}
+                                obj={props.getValue()}
+                                url={getTableItemLink(idx, column_data)}
+                            />
+                        );
+                    },
+                    header: label,
+                })
+            ),
+        [columnHelper, tableHeader]
+    );
+    const onRowSelectionChange = useCallback(() => {
+        // Do something.
+    }, []);
+
+    const table = useTableRenderer({
+        columns: columns,
+        data: tableData,
+        enableMultiRowSelection: true,
+        onRowSelectionChange,
+    });
+
     return (
         <Box
             background="white-0"
@@ -25,27 +94,53 @@ export default function ObjectListTable({
             gridColumn={gridColumn}
             padding="md"
         >
-            <Box display="flex" justifyContent="space-between">
-                <Heading>&gt; &gt; &gt; {model_name}</Heading>
-                <ButtonGroup pb="sm">
-                    <RouterButton to={`${location.pathname}add`} mr={2}>
-                        <Icon.TbPlus /> Add
-                    </RouterButton>
-                    <RouterButton to="#" variant="secondary" mr={2}>
-                        <Icon.TbDatabaseImport /> Import
-                    </RouterButton>
-                    <RouterButton to="#" variant="secondary" mr={2}>
-                        <Icon.TbDatabaseExport /> Export
-                    </RouterButton>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "20px",
+                }}
+            >
+                <Heading
+                    as="h1"
+                    color="black-0"
+                    size="H1"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                    }}
+                >
+                    <NtcThumbnailIcon width="25px" height="30px" /> {tableTitle}
+                </Heading>
+                <ButtonGroup pb={2} style={{ alignItems: "center" }}>
+                    <UIButton size="sm" variant="secondary">
+                        {" "}
+                        Filters{" "}
+                    </UIButton>
+                    <UIButton
+                        size="sm"
+                        variant="primary"
+                        leftIcon={<MeatballsIcon />}
+                    >
+                        {" "}
+                        Actions{" "}
+                    </UIButton>
+                    <Icon.TbMinusVertical />
+                    <UIButton size="sm" leftIcon={<PlusIcon />}>
+                        {" "}
+                        Add {tableTitle}{" "}
+                    </UIButton>
                 </ButtonGroup>
-            </Box>
-            <NautobotTable data={tableData} headers={tableHeader} />
-            <Paginator
+            </div>
+
+            <TableRenderer table={table} />
+            {/* <Paginator
                 url={location.pathname}
                 data_count={totalCount}
                 page_size={page_size}
                 active_page={active_page_number}
-            ></Paginator>
+            ></Paginator> */}
         </Box>
     );
 }

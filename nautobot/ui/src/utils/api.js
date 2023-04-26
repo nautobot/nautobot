@@ -36,9 +36,11 @@ export const baseApi = createApi({
                     };
                 }
                 if (uuid) {
-                    return { url: `${app_name}/${model_name}/${uuid}/` };
+                    return {
+                        url: `${app_name}/${model_name}/${uuid}/?depth=1`,
+                    };
                 }
-                return { url: `${app_name}/${model_name}/` };
+                return { url: `${app_name}/${model_name}/?depth=1` };
             },
         }),
     }),
