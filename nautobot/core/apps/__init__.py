@@ -79,7 +79,7 @@ def register_menu_items(tab_list):
 
         create_or_check_entry(registry["nav_menu"], nav_tab, nav_tab.name, f"{nav_tab.name}")
 
-        tab_perms = set()
+        tab_perms = registry["nav_menu"].get("permissions", set())
         registry_groups = registry["nav_menu"][nav_tab.name]["groups"]
         # TODO: allow for recursive (more than two-level) nesting of groups?
         for group in nav_tab.groups:
@@ -88,7 +88,7 @@ def register_menu_items(tab_list):
 
             create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-            group_perms = set()
+            group_perms = registry_groups[group.name].get("permissions", set())
             for item in group.items:
                 if isinstance(item, NavMenuItem):
                     # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
@@ -106,7 +106,8 @@ def register_menu_items(tab_list):
                         f"{nav_tab.name} -> {group.name} -> {item.link}",
                     )
 
-                    group_perms |= set(perms for perms in item.permissions)
+                    item_perms = set(perms for perms in item.permissions)
+                    registry_groups[group.name]["items"][item.link]["permissions"] = item_perms
                 elif isinstance(item, NavMenuGroup):
                     create_or_check_entry(
                         registry_groups[group.name]["items"],
@@ -115,6 +116,7 @@ def register_menu_items(tab_list):
                         f"{nav_tab.name} -> {group.name} -> {item.name}",
                     )
 
+                    item_perms = registry_groups[group.name]["items"][item.name].get("permissions", set())
                     for inner_item in item.items:
                         if not isinstance(inner_item, NavMenuItem):
                             raise TypeError(f"Expected a NavMenuItem, but found {inner_item}")
@@ -131,8 +133,18 @@ def register_menu_items(tab_list):
                             inner_item.link,
                             f"{nav_tab.name} -> {group.name} -> {item.name} -> {inner_item.link}",
                         )
+                        inner_item_perms = set(perms for perms in inner_item.permissions)
+                        registry_groups[group.name]["items"][item.name]["items"][inner_item.link][
+                            "permissions"
+                        ] = inner_item_perms
+                        item_perms |= inner_item_perms
+
+                    # Add collected permissions to group
+                    registry_groups[group.name]["items"][item.name]["permissions"] = item_perms
                 else:
                     raise TypeError(f"Expected NavMenuItem or NavMenuGroup, but found {item}")
+
+                group_perms |= item_perms
 
             # Add sorted items to group registry dict
             registry_groups[group.name]["items"] = OrderedDict(
