@@ -15,6 +15,7 @@ const fetcher = (url) =>
 export default function GenericObjectCreateView({ list_url }) {
     const { app_name, model_name } = useParams();
     const [formData, setFormData] = useState(null);
+    const [extraErrors, setExtraErrors] = useState({});
     const navigate = useNavigate();
 
     if (!list_url) {
@@ -43,7 +44,7 @@ export default function GenericObjectCreateView({ list_url }) {
     const model_name_title = post_schema.title;
 
     // Using axios so that we can do a POST.
-    const onSubmit = ({ formData }) =>
+    const onSubmit = ({ formData }) => {
         axios({
             method: "post",
             url: list_url,
@@ -57,22 +58,24 @@ export default function GenericObjectCreateView({ list_url }) {
                 navigate(res.data.web_url);
             })
             .catch((error) => {
-                if (error.response) {
-                    console.log(error.response.data); // => the response payload
-                }
+                let errors = Object.fromEntries(
+                    Object.entries(error.response.data).map(([k, v], i) => [
+                        k,
+                        { __errors: v },
+                    ])
+                );
+                setExtraErrors(errors);
             });
+    };
 
     return (
         <GenericView>
             <Frame>
                 <Card>
-                    <CardHeader>
-                        Add a new {model_name_title} "{list_url}"
-                    </CardHeader>
+                    <CardHeader>Add a new {model_name_title}</CardHeader>
                     <CardBody>
                         <Form
                             action={list_url}
-                            method="post"
                             schema={post_schema}
                             uiSchema={ui_schema}
                             validator={validator}
@@ -81,6 +84,7 @@ export default function GenericObjectCreateView({ list_url }) {
                                 setFormData(Object.assign(e.formData))
                             }
                             onSubmit={onSubmit}
+                            extraErrors={extraErrors}
                         >
                             <Button type="submit">Create</Button>
                         </Form>
