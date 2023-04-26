@@ -56,7 +56,6 @@ const TableColumnDisplay = ({ obj }) => {
 
 export default function TableItem({ name, obj, url }) {
     if (url) {
-        // #TODO(timizuo): Use the secondary color here instead of hardcoding it
         return (
             <Link to={url}>
                 <TableColumnDisplay obj={obj} />
