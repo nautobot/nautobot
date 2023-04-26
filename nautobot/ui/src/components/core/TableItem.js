@@ -2,53 +2,63 @@
 import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "react-router-dom";
+import { Button } from "@nautobot/nautobot-ui";
 
-export default function TableItem({ name, obj, url, link = false }) {
-    let display = "";
-    if (obj == null) {
-        display = <FontAwesomeIcon icon={faMinus} />;
-    } else if (Array.isArray(obj)) {
-        display = JSON.stringify(obj);
-        if (typeof obj[0] == "object") {
-            display = obj.map((item, idx) => (
-                <span
-                    className="badge"
-                    key={idx}
-                    style={{ backgroundColor: "#" + item.color }}
-                >
-                    {item.display || item.label}
-                </span>
-            ));
-        } else {
-            display = obj.join(", ");
+
+const TextOrButton = ({obj}) => {
+    if (typeof obj === "object") {
+        const display = obj.display || obj.label
+        if (!obj.color) {
+            return display
         }
-    } else if (typeof obj === "object") {
-        display = obj.display || obj.label;
-    } else {
-        if (obj === "") {
-            display = <FontAwesomeIcon icon={faMinus} />;
+        return (
+            <Button 
+                size="xs"
+                className={"ntc-btn-" + obj.color}
+            >
+                {display}
+            </Button>
+        )
+    }
+    return obj
+
+    
+}
+
+const TableColumDisplay = ({obj}) => {
+    
+    if (!obj) {
+        return (<FontAwesomeIcon icon={faMinus} />)
+    }
+
+    else if (typeof obj === "object"  && !Array.isArray(obj)) {
+        return <TextOrButton obj={obj} />
+    }
+
+    else if (Array.isArray(obj)) {
+        if (typeof obj[0] == "object") {
+            return (
+                <>
+                    {
+                        obj.map((item, idx) => <TextOrButton obj={item} key={idx} />)
+                    }
+                </>
+            )
         } else {
-            display = obj;
+            return obj.join(", ");
         }
     }
-    return (
-        <>
-            {/* {JSON.stringify(obj)} */}
-            {/* {
-        !href
-          ? <>null</>
-          : <>{href}</>
-      } */}
-            {!!link ? <Link to={url}>{display}</Link> : display}
-        </>
-        // item[header.name] == null
-        //     ? "-"
-        //     : Array.isArray(item[header.name])
-        //         ? item[header.name].join(", ")
-        //         : typeof item[header.name] == "object"
-        //             ? item[header.name].label || item[header.name].display
-        //             : idx === 0
-        //                 ? <Link href={window.location.pathname + "/" + item["id"]}>{item[header.name]}</Link>
-        //                 : item[header.name]
-    );
+
+    else {
+        return obj
+    }
+}
+
+
+export default function TableItem({ name, obj, url, link = false }) {
+    if (link) {
+        return <Link to={url}><TableColumDisplay obj={obj} /></Link>
+    } else {
+        return <TableColumDisplay obj={obj} />;
+    }
 }

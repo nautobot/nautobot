@@ -23,7 +23,7 @@ export default function GenericObjectListView() {
     const headers_url = list_url + "table-fields/";
 
     // Current fetcher allows to be passed multiple endpoints and fetch them at once
-    const urls = [list_url, headers_url];
+    const urls = [list_url + "?depth=1", headers_url];
     const {
         data = [{}, {}],
         error,
@@ -96,6 +96,7 @@ export default function GenericObjectListView() {
                 totalCount={tableData.count}
                 active_page_number={active_page_number}
                 page_size={page_size}
+                tableTitle={model_name.charAt(0).toUpperCase() + model_name.slice(1)}
             />
         </GenericView>
     );
