@@ -187,8 +187,8 @@ class NavRestrictedUI(TestCase):
         return response.content.decode(response.charset)
 
     @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_true(self):
-        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_true(self):
+        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
         # Make user admin
         self.user.is_staff = True
         self.user.save()
@@ -198,15 +198,15 @@ class NavRestrictedUI(TestCase):
             f"""
             <li>
               <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
             </li>
             """,
             response_content,
         )
 
     @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_false(self):
-        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_false(self):
+        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
         # Make user admin
         self.user.is_staff = True
         self.user.save()
@@ -216,29 +216,29 @@ class NavRestrictedUI(TestCase):
             f"""
             <li>
               <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
             </li>
             """,
             response_content,
         )
 
     @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
-        """The "Installed Plugins" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
+    def test_installed_apps_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
+        """The "Installed Apps" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
         response_content = self.make_request()
 
-        self.assertNotRegex(response_content, r"Installed\s+Plugins")
+        self.assertNotRegex(response_content, r"Installed\s+Apps")
 
     @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
-        """The "Installed Plugins" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
+    def test_installed_apps_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
+        """The "Installed Apps" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
         response_content = self.make_request()
 
         self.assertInHTML(
             f"""
             <li class="disabled">
               <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
             </li>
             """,
             response_content,
