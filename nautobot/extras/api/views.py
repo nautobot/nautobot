@@ -384,6 +384,8 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
         all_fields = list(obj_serializer.get_fields().keys())
         extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
         advanced_fields = ["id", "url", "display", "slug", "notes_url"]
+        plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
+        plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
         main_fields = [field for field in all_fields if field not in extra_fields and field not in advanced_fields]
         response = {
             "main": [
@@ -407,6 +409,28 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
                     "colspan": "3",
                     "rowspan": str(len(advanced_fields)),
                     "advanced": "true",
+                }
+            ],
+            "plugin_tab_1": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": "3",
+                    "rowspan": str(len(plugin_tab_1_fields)),
+                },
+                {
+                    "name": "extra_plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": "1",
+                    "rowspan": str(len(plugin_tab_1_fields)),
+                },
+            ],
+            "plugin_tab_2": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_2_fields,
+                    "colspan": "3",
+                    "rowspan": str(len(plugin_tab_2_fields)),
                 }
             ],
         }
