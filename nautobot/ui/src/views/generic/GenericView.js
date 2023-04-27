@@ -37,6 +37,7 @@ export default function GenericView({
     columns = "4",
     objectData,
     rows,
+    gridBackground = "",
 }) {
     const { pathname } = useLocation();
 
@@ -339,7 +340,12 @@ export default function GenericView({
                     ))}
                 </Breadcrumbs>
 
-                <NautobotGrid alignItems="start" columns={columns} rows={rows}>
+                <NautobotGrid
+                    alignItems="start"
+                    columns={columns}
+                    rows={rows}
+                    background={gridBackground}
+                >
                     {children}
                 </NautobotGrid>
             </Box>
