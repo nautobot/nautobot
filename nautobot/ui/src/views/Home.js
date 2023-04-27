@@ -1,7 +1,11 @@
 import {
-    Button,
+    AutomationIcon,
+    DcimIcon,
+    IpamIcon,
     NautobotGrid,
     NautobotGridItem,
+    PlatformIcon,
+    SecurityIcon,
     Table,
     TableContainer,
     Tab,
@@ -9,6 +13,8 @@ import {
     TabList,
     TabPanel,
     TabPanels,
+    Tag,
+    TagLabel,
     Tbody,
     Td,
     Th,
@@ -16,265 +22,103 @@ import {
     Tr,
 } from "@nautobot/nautobot-ui";
 import GenericView from "@views/generic/GenericView";
+import HomePanel from "@components/HomePanel";
 
 export default function Home() {
     return (
-        <GenericView columns="1 1 1 1">
-            <NautobotGrid background="white-0">
-                <TableContainer>
-                    <Table>
-                        <Thead>
-                            <Tr _hover={{}}>
-                                <Th colspan={2}>Inventory</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td>Racks</Td>
-                                <Td>
-                                    <Button variant="primary">275</Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Device Types</Td>
-                                <Td>
-                                    <Button variant="primary">9</Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Devices</Td>
-                                <Td>
-                                    <Button variant="primary">9</Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Virtual Chassis</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Device Redundancy Groups</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Connections</Td>
-                                <Td>
-                                    <Button variant="primary">2618</Button>
-                                </Td>
-                            </Tr>
-                        </Tbody>
-                    </Table>
-                </TableContainer>
-                <TableContainer>
-                    <Table>
-                        <Thead>
-                            <Tr _hover={{}}>
-                                <Th colspan={2}>Networks</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td>VRFs</Td>
-                                <Td>
-                                    <Button variant="primary">2</Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Prefixes</Td>
-                                <Td>
-                                    <Button variant="primary">1470</Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>IP Addresses</Td>
-                                <Td>
-                                    <Button variant="primary">2426</Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>VLANs</Td>
-                                <Td>
-                                    <Button variant="primary">536</Button>
-                                </Td>
-                            </Tr>
-                        </Tbody>
-                    </Table>
-                </TableContainer>
-                <TableContainer>
-                    <Table>
-                        <Thead>
-                            <Tr _hover={{}}>
-                                <Th colspan={2}>Security</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td>Menu Item 1</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Menu Item 2</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Menu Item 3</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Menu Item 4</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Menu Item 5</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Menu Item 6</Td>
-                                <Td>
-                                    <Button variant="primary">0</Button>
-                                </Td>
-                            </Tr>
-                        </Tbody>
-                    </Table>
-                </TableContainer>
-                <TableContainer>
-                    <Table>
-                        <Thead>
-                            <Tr _hover={{}}>
-                                <Th colspan={2}>Platform</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td>Installed Apps/Plugins</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Git Repositories</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Tags</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Statuses</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Roles</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Relationships</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Computed Fields</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Custom Fields</Td>
-                                <Td>
-                                    <Button variant="primary" isDisabled={true}>
-                                        0
-                                    </Button>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td>Custom Links</Td>
-                                <Td>
-                                    <Button variant="primary">3</Button>
-                                </Td>
-                            </Tr>
-                        </Tbody>
-                    </Table>
-                </TableContainer>
+        <GenericView>
+            <NautobotGrid background="white-0" columns="1 1 1 1 3 1">
+                <HomePanel
+                    icon=<DcimIcon />
+                    title="Inventory"
+                    data={{
+                        Racks: 275,
+                        "Device Types": 9,
+                        Devices: 9,
+                        "Virtual Chassis": 0,
+                        "Device Redundancy Groups": 0,
+                        Connections: 2618,
+                    }}
+                />
+                <HomePanel
+                    icon=<IpamIcon />
+                    title="Networks"
+                    data={{
+                        VRFs: 2,
+                        Prefixes: 1470,
+                        "IP Addresses": 2426,
+                        VLANs: 536,
+                    }}
+                />
+                <HomePanel
+                    icon=<SecurityIcon />
+                    title="Security"
+                    data={{
+                        "Menu Item 1": 0,
+                        "Menu Item 2": 0,
+                        "Menu Item 3": 0,
+                        "Menu Item 4": 0,
+                        "Menu Item 5": 0,
+                        "Menu Item 6": 0,
+                    }}
+                />
+                <HomePanel
+                    icon=<PlatformIcon />
+                    title="Platform"
+                    data={{
+                        "Installed Apps/Plugins": 0,
+                        "Git Repositories": 0,
+                        Tags: 0,
+                        Statuses: 0,
+                        Roles: 0,
+                        Relationships: 0,
+                        "Computed Fields": 0,
+                        "Custom Fields": 0,
+                        "Custom Links": 0,
+                    }}
+                />
                 <NautobotGridItem colSpan="3">
                     <TableContainer>
                         <Table>
                             <Thead>
                                 <Tr _hover={{}}>
+                                    <Th width="3em">
+                                        <AutomationIcon />
+                                    </Th>
                                     <Th>Automation</Th>
                                 </Tr>
                             </Thead>
                             <Tbody>
                                 <Tr>
-                                    <Td>
+                                    <Td colspan={2}>
                                         <Tabs variant="outline">
                                             <TabList>
                                                 <Tab>
                                                     Job History{" "}
-                                                    <Button variant="primary">
-                                                        5
-                                                    </Button>
+                                                    <Tag
+                                                        size="sm"
+                                                        variant="info"
+                                                    >
+                                                        <TagLabel>5</TagLabel>
+                                                    </Tag>
                                                 </Tab>
                                                 <Tab>
                                                     Schedule{" "}
-                                                    <Button variant="primary">
-                                                        7
-                                                    </Button>
+                                                    <Tag
+                                                        size="sm"
+                                                        variant="info"
+                                                    >
+                                                        <TagLabel>7</TagLabel>
+                                                    </Tag>
                                                 </Tab>
                                                 <Tab>
                                                     Approvals{" "}
-                                                    <Button variant="primary">
-                                                        3
-                                                    </Button>
+                                                    <Tag
+                                                        size="sm"
+                                                        variant="info"
+                                                    >
+                                                        <TagLabel>3</TagLabel>
+                                                    </Tag>
                                                 </Tab>
                                             </TabList>
                                             <TabPanels>
