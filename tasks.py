@@ -886,7 +886,7 @@ def eslint(context, autoformat=False):
         eslint_command += " --fix"
 
     command = f"{eslint_command} ."
-    run_command(context, command)
+    run_command(context, command, service="nodejs")
 
 
 @task(

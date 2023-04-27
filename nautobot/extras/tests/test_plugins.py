@@ -286,13 +286,10 @@ class PluginTest(TestCase):
         """
         Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
-        self.assertTrue(registry["nav_menu"]["tabs"].get("Example Menu"))
-        self.assertTrue(registry["nav_menu"]["tabs"]["Example Menu"]["groups"].get("Example Group 1"))
+        self.assertIn("Example App", registry["nav_menu"]["Inventory"]["groups"])
         # Modified this statement since we are passing the url into registry directly instead of the reverse url string
-        self.assertTrue(
-            registry["nav_menu"]["tabs"]["Example Menu"]["groups"]["Example Group 1"]["items"].get(
-                "/plugins/example-plugin/models/"
-            )
+        self.assertIn(
+            "/plugins/example-plugin/models/", registry["nav_menu"]["Inventory"]["groups"]["Example App"]["items"]
         )
 
     def test_nautobot_database_ready_signal(self):
