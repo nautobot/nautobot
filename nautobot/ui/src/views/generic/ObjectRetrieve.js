@@ -21,7 +21,7 @@ import {
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useRef } from "react";
-import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
+// import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
 import AppComponents from "@components/Apps";
 import { LoadingWidget } from "@components/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
@@ -31,10 +31,10 @@ const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
         res.ok ? res.json() : null
     );
-const fetcherHTML = (url) =>
-    fetch(url, { credentials: "include" }).then((res) =>
-        res.ok ? res.text() : null
-    );
+// const fetcherHTML = (url) =>
+//     fetch(url, { credentials: "include" }).then((res) =>
+//         res.ok ? res.text() : null
+//     );
 // const fetcherTabs = (url) =>
 //     fetch(url, { credentials: "include" }).then((res) => {
 //         return res.json().then((data) => {
@@ -82,11 +82,35 @@ function Render_value(value) {
                         <div>{v}</div>
                     )
                 )
-            ) : (
+            ) : "web_url" in value ? (
                 <Link ref={ref} href={value["web_url"]}>
                     {" "}
                     {value["display"]}{" "}
                 </Link>
+            ) : (
+                <Table>
+                    {Object.entries(value).map(([k, v]) => (
+                        <Tr>
+                            <Td>
+                                <strong>{k.toString()}</strong>
+                            </Td>
+                            <Td>
+                                {v === null
+                                    ? "None"
+                                    : typeof v === "object" && v !== null
+                                    ? Object.entries(v).map(
+                                          ([json_key, json_value]) => (
+                                              <span>
+                                                  {json_key}
+                                                  {": "} {json_value}
+                                              </span>
+                                          )
+                                      )
+                                    : v.toString()}
+                            </Td>
+                        </Tr>
+                    ))}
+                </Table>
             );
         case "boolean":
             return value ? (
@@ -131,12 +155,12 @@ export default function ObjectRetrieve({ api_url }) {
         api_url = `/api/${app_name}/${model_name}/${object_id}/?depth=1`;
     }
     const { data: objectData, error } = useSWR(() => api_url, fetcher);
-    const { data: appHTML } = useSWR(
-        () => (api_url ? api_url + "app_full_width_fragment/" : null),
-        fetcherHTML
-    );
-    const ui_url = objectData?.web_url
-        ? `${objectData.web_url}?viewconfig=true`
+    // const { data: appHTML } = useSWR(
+    //     () => (api_url ? api_url + "app_full_width_fragment/" : null),
+    //     fetcherHTML
+    // );
+    const ui_url = objectData?.url
+        ? `${objectData.url}/detail_view_config/`
         : null;
     var { data: extraAppConfig } = useSWR(() => ui_url, fetcher);
 
@@ -179,7 +203,8 @@ export default function ObjectRetrieve({ api_url }) {
         !noteData ||
         !changelogData ||
         !noteTableFields ||
-        !changelogTableFields
+        !changelogTableFields ||
+        !extraAppConfig
     ) {
         return (
             <GenericView>
@@ -187,78 +212,7 @@ export default function ObjectRetrieve({ api_url }) {
             </GenericView>
         );
     }
-    // if (!appConfig) return <GenericView objectData={objectData} />;
-    // TODO Right now overloading appConfig to see if Tabs can be dynamically rendered
-    extraAppConfig = {
-        plugin_tab_1: [
-            {
-                name: "tab_1_content",
-                fields: ["id", "url", "display", "slug", "notes_url"],
-                colspan: "3",
-                advanced: true,
-            },
-        ],
-        plugin_tab_2: [
-            {
-                name: "tab_2_content",
-                fields: ["id", "url", "display", "slug", "notes_url"],
-                colspan: "3",
-                advanced: true,
-            },
-        ],
-    };
-    const newTabConfig = {
-        main: [
-            {
-                name: model_name,
-                fields: Object.keys(objectData),
-                colspan: "2",
-                rowspan: Object.keys(objectData).length.toString(),
-            },
-            {
-                name: "Extra",
-                fields: ["created", "last_updated"],
-                colspan: "2",
-                rowspan: "2",
-            },
-            {
-                name: "Plugin Table 1",
-                fields: ["plugin_attribute_1", "plugin_attribute_2"],
-                colspan: "2",
-                rowspan: "2",
-            },
-            {
-                name: "Plugin Table 2",
-                fields: ["plugin_attribute_3", "plugin_attribute_4"],
-                colspan: "2",
-                rowspan: "2",
-            },
-            {
-                name: "Plugin Table 3",
-                fields: ["plugin_attribute_5", "plugin_attribute_6"],
-                colspan: "2",
-                rowspan: "2",
-            },
-        ],
-        advanced: [
-            {
-                name: "Data",
-                fields: ["id", "url", "display", "slug", "notes_url"],
-                colspan: "3",
-                advanced: true,
-            },
-        ],
-        config_context: [
-            {
-                name: "Config Context",
-                fields: ["id", "url", "display", "slug", "notes_url"],
-                colspan: "3",
-                advanced: true,
-            },
-        ],
-    };
     const appConfig = {
-        ...newTabConfig,
         ...extraAppConfig,
     };
     const route_name = `${app_name}:${model_name}`;
