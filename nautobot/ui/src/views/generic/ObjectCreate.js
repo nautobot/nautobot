@@ -87,7 +87,6 @@ export default function GenericObjectCreateView({ list_url }) {
                             }}
                             onSubmit={onSubmit}
                             extraErrors={extraErrors}
-                            liveValidate
                         >
                             <Button type="submit">Create</Button>
                         </Form>
