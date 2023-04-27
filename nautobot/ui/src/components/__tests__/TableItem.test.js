@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import TableItem from "../TableItem";
 
 describe("TableItem", () => {
@@ -20,12 +20,11 @@ describe("TableItem", () => {
 
     it("renders span with className=badge when obj is an array", () => {
         const obj = [{ label: "test", color: "123456" }];
-        const { container } = render(<TableItem name="test" obj={obj} />);
-        expect(container.firstChild.tagName.toLowerCase()).toBe("button");
-        expect(container.firstChild).toHaveStyle(
+        render(<TableItem name="test" obj={obj} />);
+        expect(screen.getByRole("button")).toHaveStyle(
             `background-color: #${obj[0].color}`
         );
-        expect(container.firstChild.innerHTML).toBe(obj[0].label);
+        expect(screen.getByRole("button").innerHTML).toBe(obj[0].label);
     });
 
     it("renders text when obj is an object", () => {
