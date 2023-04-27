@@ -1376,7 +1376,12 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(datetime.fromisoformat(response.data["scheduled_job"]["start_time"]), schedule.start_time)
+        # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
+        # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
+        self.assertEqual(
+            datetime.fromisoformat(response.data["scheduled_job"]["start_time"].replace("Z", "+00:00")),
+            schedule.start_time,
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1574,7 +1579,12 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(datetime.fromisoformat(response.data["scheduled_job"]["start_time"]), schedule.start_time)
+        # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
+        # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
+        self.assertEqual(
+            datetime.fromisoformat(response.data["scheduled_job"]["start_time"].replace("Z", "+00:00")),
+            schedule.start_time,
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1714,7 +1724,12 @@ class JobTest(
             "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
         )
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(datetime.fromisoformat(response.data["scheduled_job"]["start_time"]), schedule.start_time)
+        # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
+        # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
+        self.assertEqual(
+            datetime.fromisoformat(response.data["scheduled_job"]["start_time"].replace("Z", "+00:00")),
+            schedule.start_time,
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
