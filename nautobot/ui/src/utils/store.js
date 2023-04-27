@@ -101,7 +101,7 @@ const appStateSlice = createSlice({
 export function getCurrentAppContextSelector(app_label, model_name) {
     return (store) => {
         return (
-            store?.appState?.routeToContext[app_label][model_name] ||
+            store?.appState?.routeToContext[app_label]?.[model_name] ||
             "Inventory"
         );
     };
