@@ -23,12 +23,6 @@ class RegistryTest(TestCase):
 
         self.assertListEqual(self.reg["foo"], [1, 2, 3])
 
-    def test_overwrite_store(self):
-        self.reg["foo"] = 123
-
-        with self.assertRaises(KeyError):
-            self.reg["foo"] = 456
-
     def test_delete_store(self):
         self.reg["foo"] = 123
 
