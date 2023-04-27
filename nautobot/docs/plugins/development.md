@@ -388,7 +388,10 @@ def banner(context, *args, **kwargs):
 
 Apps can extend the existing navigation bar layout. By default, Nautobot looks for a `menu_items` list inside of `navigation.py`. (This can be overridden by setting `menu_items` to a custom value on the app's `NautobotAppConfig`.)
 
-Using a key and weight system, a developer can integrate the app's menu additions amongst existing menu tabs, groups, items and buttons, and/or create entirely new menus as desired.
+Using a key and weight system, a developer can integrate the app's menu additions amongst existing menu tabs, groups, and items.
+
+--- 2.0.0
+    As part of the Nautobot 2.0 UI redesign, the option for apps to add entirely new top-level menu "tabs" has been removed. Additionally, buttons can no longer be added to menu items.
 
 More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
 
