@@ -69,11 +69,11 @@ class="label label-{% if entry.content_identifier in record.provided_contents %}
 """
 
 GITREPOSITORY_BUTTONS = """
-<button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
+<button data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
+<a href="{% url 'extras:job_run' pk=record.pk %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -169,7 +169,7 @@ class ConfigContextSchemaTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     owner = tables.LinkColumn()
-    actions = ButtonsColumn(ConfigContextSchema, pk_field="slug")
+    actions = ButtonsColumn(ConfigContextSchema)
 
     class Meta(BaseTable.Meta):
         model = ConfigContextSchema
@@ -429,7 +429,7 @@ class GitRepositoryTable(BaseTable):
 
     last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html", verbose_name="Sync Status")
     provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
-    actions = ButtonsColumn(GitRepository, pk_field="slug", prepend_template=GITREPOSITORY_BUTTONS)
+    actions = ButtonsColumn(GitRepository, prepend_template=GITREPOSITORY_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = GitRepository
@@ -526,7 +526,7 @@ class JobTable(BaseTable):
     is_job_button_receiver = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
-    actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
+    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
@@ -661,12 +661,12 @@ class JobResultTable(BaseTable):
             {% load helpers %}
             {% if perms.extras.run_job %}
                 {% if record.job_model and record.task_kwargs %}
-                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
+                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
                        class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                         <i class="mdi mdi-repeat"></i>
                     </a>
                 {% elif record.job_model is not None %}
-                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}" class="btn btn-primary btn-xs"
+                    <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
                        title="Run job">
                         <i class="mdi mdi-play"></i>
                     </a>
@@ -766,7 +766,7 @@ class JobButtonTable(BaseTable):
 
 
 class NoteTable(BaseTable):
-    actions = ButtonsColumn(Note, pk_field="slug")
+    actions = ButtonsColumn(Note)
 
     class Meta(BaseTable.Meta):
         model = Note
@@ -835,7 +835,7 @@ class ObjectChangeTable(BaseTable):
 class RelationshipTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    actions = ButtonsColumn(Relationship, pk_field="slug", buttons=("edit", "delete"))
+    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = Relationship
@@ -973,10 +973,10 @@ class StatusTableMixin(BaseTable):
 
 class TagTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("slug")])
+    name = tables.LinkColumn(viewname="extras:tag", args=[Accessor("pk")])
     color = ColorColumn()
     content_types = ContentTypesColumn(truncate_words=15)
-    actions = ButtonsColumn(Tag, pk_field="slug")
+    actions = ButtonsColumn(Tag)
 
     class Meta(BaseTable.Meta):
         model = Tag

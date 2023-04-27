@@ -1182,13 +1182,13 @@ urlpatterns = [
     # changelog, notes and etc.
     ...
     path(
-        "yourappmodels/<slug:slug>/changelog/",
+        "yourappmodels/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="yourappmodel_changelog",
         kwargs={"model": yourappmodel},
     ),
     path(
-        "yourappmodels/<slug:slug>/notes/",
+        "yourappmodels/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="yourappmodel_notes",
         kwargs={"model": yourappmodel},
@@ -1422,7 +1422,7 @@ try:
     from nautobot.extras.views import ObjectNotesView
     urlpatterns.append(
         path(
-            'random/<slug:slug>/notes/),
+            'random/<uuid:pk>/notes/),
             ObjectNotesView.as_view(),
             name="random_notes",
             kwargs={"model": Random},
