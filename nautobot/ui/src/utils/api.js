@@ -36,19 +36,34 @@ export const baseApi = createApi({
             providesTags: ["AppData"],
         }),
         getRESTAPI: builder.query({
-            query: ({ app_name, model_name, uuid = null, schema = false }) => {
+            query: ({
+                app_name,
+                model_name,
+                uuid = null,
+                schema = false,
+                limit = null,
+                offset = null,
+                depth = 1,
+            }) => {
                 if (schema) {
                     return {
                         url: `${app_name}/${model_name}/`,
                         method: "OPTIONS",
                     };
                 }
+                let url = `${app_name}/${model_name}/`;
                 if (uuid) {
-                    return {
-                        url: `${app_name}/${model_name}/${uuid}/?depth=1`,
-                    };
+                    url += `${uuid}/`;
                 }
-                return { url: `${app_name}/${model_name}/?depth=1` };
+                let queryParams = new URLSearchParams([["depth", depth]]);
+                if (limit) {
+                    queryParams.append("limit", limit);
+                }
+                if (offset) {
+                    queryParams.append("offset", offset);
+                }
+                url += `?${queryParams.toString()}`;
+                return { url: url };
             },
             providesTags: ["APIData"],
         }),

@@ -32,11 +32,20 @@ export default function Home() {
                 icon=<DcimIcon />
                 title="Inventory"
                 data={{
-                    Racks: 275,
-                    "Device Types": 9,
-                    Devices: 9,
-                    "Virtual Chassis": 0,
-                    "Device Redundancy Groups": 0,
+                    Racks: { app_name: "dcim", model_name: "racks" },
+                    "Device Types": {
+                        app_name: "dcim",
+                        model_name: "device-types",
+                    },
+                    Devices: { app_name: "dcim", model_name: "devices" },
+                    "Virtual Chassis": {
+                        app_name: "dcim",
+                        model_name: "virtual-chassis",
+                    },
+                    "Device Redundancy Groups": {
+                        app_name: "dcim",
+                        model_name: "device-redundancy-groups",
+                    },
                     Connections: 2618,
                 }}
             />
@@ -44,10 +53,13 @@ export default function Home() {
                 icon=<IpamIcon />
                 title="Networks"
                 data={{
-                    VRFs: 2,
-                    Prefixes: 1470,
-                    "IP Addresses": 2426,
-                    VLANs: 536,
+                    VRFs: { app_name: "ipam", model_name: "vrfs" },
+                    Prefixes: { app_name: "ipam", model_name: "prefixes" },
+                    "IP Addresses": {
+                        app_name: "ipam",
+                        model_name: "ip-addresses",
+                    },
+                    VLANs: { app_name: "ipam", model_name: "vlans" },
                 }}
             />
             <HomePanel
@@ -67,14 +79,29 @@ export default function Home() {
                 title="Platform"
                 data={{
                     "Installed Apps/Plugins": 0,
-                    "Git Repositories": 0,
-                    Tags: 0,
-                    Statuses: 0,
-                    Roles: 0,
-                    Relationships: 0,
-                    "Computed Fields": 0,
-                    "Custom Fields": 0,
-                    "Custom Links": 0,
+                    "Git Repositories": {
+                        app_name: "extras",
+                        model_name: "git-repositories",
+                    },
+                    Tags: { app_name: "extras", model_name: "tags" },
+                    Statuses: { app_name: "extras", model_name: "statuses" },
+                    Roles: { app_name: "extras", model_name: "roles" },
+                    Relationships: {
+                        app_name: "extras",
+                        model_name: "relationships",
+                    },
+                    "Computed Fields": {
+                        app_name: "extras",
+                        model_name: "computed-fields",
+                    },
+                    "Custom Fields": {
+                        app_name: "extras",
+                        model_name: "custom-fields",
+                    },
+                    "Custom Links": {
+                        app_name: "extras",
+                        model_name: "custom-links",
+                    },
                 }}
             />
             <NautobotGridItem colSpan="3">
