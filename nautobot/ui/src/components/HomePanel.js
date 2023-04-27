@@ -12,7 +12,6 @@ import {
 
 // A panel in the Home view displaying a table of objects and their counts.
 export default function HomePanel({ icon, title, data }) {
-    console.log(data);
     return (
         <TableContainer>
             <Table>

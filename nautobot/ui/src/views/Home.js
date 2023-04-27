@@ -1,6 +1,7 @@
 import {
     AutomationIcon,
     DcimIcon,
+    HistoryIcon,
     IpamIcon,
     NautobotGrid,
     NautobotGridItem,
@@ -23,6 +24,7 @@ import {
 } from "@nautobot/nautobot-ui";
 import GenericView from "@views/generic/GenericView";
 import HomePanel from "@components/HomePanel";
+import JobHistoryTable from "@components/JobHistoryTable";
 
 export default function Home() {
     return (
@@ -89,7 +91,7 @@ export default function Home() {
                                 </Tr>
                             </Thead>
                             <Tbody>
-                                <Tr>
+                                <Tr _hover={{}}>
                                     <Td colspan={2}>
                                         <Tabs variant="outline">
                                             <TabList>
@@ -122,7 +124,42 @@ export default function Home() {
                                                 </Tab>
                                             </TabList>
                                             <TabPanels>
-                                                <TabPanel></TabPanel>
+                                                <TabPanel>
+                                                    <JobHistoryTable
+                                                        rows={[
+                                                            {
+                                                                user: "John Smith",
+                                                                completed:
+                                                                    "2022-12-19 10:31",
+                                                                job: "Generate Vulnerabilities / We can also put more details here since it's longer / We can also put more details here since it's longer / We can also put more details here since it's longer.",
+                                                            },
+                                                            {
+                                                                user: "John Smith",
+                                                                completed:
+                                                                    "2022-12-18 10:31",
+                                                                job: "Generate Vulnerabilities",
+                                                            },
+                                                            {
+                                                                user: "John Smith",
+                                                                completed:
+                                                                    "2022-12-17 10:31",
+                                                                job: "Generate Vulnerabilities",
+                                                            },
+                                                            {
+                                                                user: "John Smith",
+                                                                completed:
+                                                                    "2022-12-16 10:31",
+                                                                job: "Generate Vulnerabilities",
+                                                            },
+                                                            {
+                                                                user: "John Smith",
+                                                                completed:
+                                                                    "2022-12-15 10:31",
+                                                                job: "Generate Vulnerabilities",
+                                                            },
+                                                        ]}
+                                                    />
+                                                </TabPanel>
                                                 <TabPanel></TabPanel>
                                                 <TabPanel></TabPanel>
                                             </TabPanels>
@@ -137,6 +174,9 @@ export default function Home() {
                     <Table>
                         <Thead>
                             <Tr _hover={{}}>
+                                <Th width="3em">
+                                    <HistoryIcon />
+                                </Th>
                                 <Th>Change Log</Th>
                             </Tr>
                         </Thead>
