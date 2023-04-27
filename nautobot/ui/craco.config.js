@@ -4,7 +4,7 @@ const {
 
 // Suppress console logging unless debugging is explicitly enabled.
 if (!process.env.NAUTOBOT_DEBUG) {
-    console.log = function () {};
+    // console.log = function () {};
 }
 
 module.exports = {
