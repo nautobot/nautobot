@@ -223,32 +223,32 @@ export default function ObjectRetrieve({ api_url }) {
                 <Heading>{obj.display}</Heading>
                 <br></br>
                 <TabList>
-                    {Object.keys(appConfig).map((key, idx) => (
-                        <Tab>{render_header(key)}</Tab>
+                    {Object.keys(appConfig).map((tab_name) => (
+                        <Tab>{render_header(tab_name)}</Tab>
                     ))}
                     <Tab>Notes</Tab>
                     <Tab>Change Log</Tab>
                 </TabList>
                 <TabPanels>
-                    {Object.keys(appConfig).map((tab, idx) => (
+                    {Object.keys(appConfig).map((tab_name) => (
                         <TabPanel
-                            key={tab}
-                            eventKey={tab}
-                            title={render_header(tab)}
+                            key={tab_name}
+                            eventKey={tab_name}
+                            title={render_header(tab_name)}
                         >
                             <Card>
                                 <CardHeader>
-                                    <strong>{render_header(tab)}</strong>
+                                    <strong>{render_header(tab_name)}</strong>
                                 </CardHeader>
                                 <br></br>
-                                <NautobotGrid row={{ count: 5 }}>
-                                    {Object.keys(appConfig[tab]).map((item) => (
+                                <NautobotGrid>
+                                    {Object.keys(appConfig[tab_name]).map((table) => (
                                         <NautobotGridItem
                                             colSpan={
-                                                appConfig[tab][item].colspan
+                                                appConfig[tab_name][table].colspan
                                             }
                                             rowSpan={
-                                                appConfig[tab][item].rowspan
+                                                appConfig[tab_name][table].rowspan
                                             }
                                         >
                                             <Heading
@@ -261,7 +261,7 @@ export default function ObjectRetrieve({ api_url }) {
                                                 />
                                                 &nbsp;
                                                 {render_header(
-                                                    appConfig[tab][item].name
+                                                    appConfig[tab_name][table].name
                                                 )}
                                             </Heading>
                                             <br />
@@ -269,14 +269,14 @@ export default function ObjectRetrieve({ api_url }) {
                                                 <Table>
                                                     <Tbody>
                                                         {Object.keys(
-                                                            appConfig[tab][item]
+                                                            appConfig[tab_name][table]
                                                                 .fields
                                                         ).map((key, idx) => (
                                                             <RenderRow
                                                                 identifier={
                                                                     appConfig[
-                                                                        tab
-                                                                    ][item]
+                                                                        tab_name
+                                                                    ][table]
                                                                         .fields[
                                                                         key
                                                                     ]
@@ -284,8 +284,8 @@ export default function ObjectRetrieve({ api_url }) {
                                                                 value={
                                                                     obj[
                                                                         appConfig[
-                                                                            tab
-                                                                        ][item]
+                                                                            tab_name
+                                                                        ][table]
                                                                             .fields[
                                                                             key
                                                                         ]
@@ -293,8 +293,8 @@ export default function ObjectRetrieve({ api_url }) {
                                                                 }
                                                                 advanced={
                                                                     appConfig[
-                                                                        tab
-                                                                    ][item]
+                                                                        tab_name
+                                                                    ][table]
                                                                         .advanced
                                                                 }
                                                                 key={idx}
