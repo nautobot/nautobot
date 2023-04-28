@@ -177,40 +177,8 @@ class NautobotMetadata(SimpleMetadata):
     - uiSchema: The object UI schema which describes the form layout in the UI
     """
 
-    def _determine_actions(self, request, view):
-        """
-        Replace the stock determine_actions() method to assess object permissions only
-        when viewing a specific object. This is necessary to support OPTIONS requests
-        with bulk update in place (see #5470).
-        """
-        actions = {}
-        for method in {"PUT", "POST"} & set(view.allowed_methods):
-            view.request = clone_request(request, method)
-            try:
-                # Test global permissions
-                if hasattr(view, "check_permissions"):
-                    view.check_permissions(view.request)
-                # Test object permissions (if viewing a specific object)
-                if method == "PUT" and view.lookup_url_kwarg and hasattr(view, "get_object"):
-                    view.get_object()
-            except (exceptions.APIException, PermissionDenied, Http404):
-                pass
-            else:
-                # If user has appropriate permissions for the view, include
-                # appropriate metadata about the fields that should be supplied.
-                serializer = view.get_serializer()
-                actions[method] = {}
-                # actions[method] = self.get_serializer_info(serializer)
-                actions[method]["schema"] = NautobotSchemaProcessor(serializer, request.parser_context).get_schema()
-                actions[method]["uiSchema"] = NautobotUiSchemaProcessor(
-                    serializer, request.parser_context
-                ).get_ui_schema()
-            finally:
-                view.request = request
-
-        return actions
-
     def determine_actions(self, request, view):
+        """Generate the actions and return the names of the allowed methods."""
         actions = []
         for method in {"PUT", "POST"} & set(view.allowed_methods):
             view.request = clone_request(request, method)
@@ -229,7 +197,26 @@ class NautobotMetadata(SimpleMetadata):
                 view.request = request
         return actions
 
+    def determine_view_options(self, request, view, serializer):
+        """Determine view options that will be used for non-form display metadata."""
+        view_options = {}
+        list_display = []
+        field_info = self.get_serializer_info(serializer)
+
+        # TODO(jathan): For now, this is defined on the viewset. This is the cleanest since metadata
+        # generation always gets the view instance.
+        list_display_fields = getattr(view, "list_display", None) or []
+        for field_name in list_display_fields:
+            # This is currently designed around the v2 UI table header format which is a list of
+            # dicts with keys for `name` and `label`.
+            list_display.append({"name": field_name, "label": field_info[field_name]["label"]})
+
+        view_options["list_display"] = list_display
+
+        return view_options
+
     def determine_metadata(self, request, view):
+        """This is the metadata that gets returned on an `OPTIONS` request."""
         metadata = super().determine_metadata(request, view)
 
         # If there's a serializer, do the needful to bind the schema/uiSchema.
@@ -241,5 +228,7 @@ class NautobotMetadata(SimpleMetadata):
                     "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
                 }
             )
+
+        metadata["view_options"] = self.determine_view_options(request, view, serializer)
 
         return metadata

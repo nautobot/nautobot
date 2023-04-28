@@ -110,11 +110,18 @@ export default function GenericObjectListView() {
         );
     }
 
-    const transformedHeader = Object.entries(headerData.schema.properties).map(
+    const transformedHeaders = Object.entries(headerData.schema.properties).map(
         ([key, value]) => {
             return { name: key, label: value.title };
         }
     );
+    let defaultHeaders = headerData.view_options.list_display;
+
+    // If list_display is not defined or empty, default to showing all headers.
+    if (!defaultHeaders.length) {
+        defaultHeaders = transformedHeaders;
+    }
+
     let table_name = model_name
         .split("-")
         .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
@@ -123,7 +130,8 @@ export default function GenericObjectListView() {
         <GenericView>
             <ObjectListTable
                 tableData={listData.results}
-                tableHeader={transformedHeader}
+                defaultHeaders={defaultHeaders}
+                tableHeaders={transformedHeaders}
                 totalCount={listData.count}
                 active_page_number={1}
                 page_size={50}

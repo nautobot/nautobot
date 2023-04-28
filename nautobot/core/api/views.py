@@ -166,6 +166,9 @@ class ModelViewSetMixin:
     # select_related
     logger = logging.getLogger(__name__ + ".ModelViewSet")
 
+    #: Ordered list of field names that are displayed by default on object list view in the web UI.
+    list_display = None
+
     # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
     #       UUID PKs and also do NOT support natural-key-slugs.
     #       The impact of NOT setting this is that per the OpenAPI schema, only UUIDs are permitted for most ViewSets;
