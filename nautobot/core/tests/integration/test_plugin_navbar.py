@@ -60,6 +60,6 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
         for group_name, items in self.navbar["Inventory"].items():
             group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
-            for item_name, item_details in items.items():
+            for item_name in items:
                 item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                 group.find_by_xpath(item_xpath)

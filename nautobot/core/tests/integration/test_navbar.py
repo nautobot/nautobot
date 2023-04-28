@@ -59,7 +59,7 @@ class NavBarTestCase(SeleniumTestCase):
                 # Append onto tab xpath with group name search
                 group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
 
-                for item_name, item_details in items.items():
+                for item_name in items:
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     group.find_by_xpath(item_xpath)
 
@@ -111,7 +111,7 @@ class NavBarTestCase(SeleniumTestCase):
                 # Append onto tab xpath with group name search
                 group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
 
-                for item_name, _ in items.items():
+                for item_name in items:
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_by_xpath(item_xpath)
                     self.assertEqual(item["class"], "disabled", f"Item `{item_name}` should be disabled.")
