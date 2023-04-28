@@ -288,9 +288,7 @@ class PluginTest(TestCase):
         """
         self.assertIn("Example App", registry["nav_menu"]["Inventory"]["groups"])
         # Modified this statement since we are passing the url into registry directly instead of the reverse url string
-        self.assertIn(
-            "/plugins/example-plugin/models/", registry["nav_menu"]["Inventory"]["groups"]["Example App"]["items"]
-        )
+        self.assertIn("Example Model", registry["nav_menu"]["Inventory"]["groups"]["Example App"]["items"])
 
     def test_nautobot_database_ready_signal(self):
         """
