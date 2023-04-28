@@ -85,49 +85,55 @@ export default function SidebarNav() {
                                                     variant="sidebarLevel1"
                                                     key={menu_idx}
                                                 >
-                                                    <Heading>
-                                                        <AccordionButton
-                                                            isLast={
-                                                                menu_idx ===
-                                                                menu_arr.length -
-                                                                    1
-                                                            }
-                                                        >
-                                                            {menu[0]}
-                                                            <AccordionIcon />
-                                                        </AccordionButton>
-                                                    </Heading>
-                                                    <AccordionPanel>
-                                                        {Object.entries(
-                                                            menu[1]
-                                                        ).map(
-                                                            (
-                                                                submenu,
-                                                                submenu_idx,
-                                                                submenu_arr
-                                                            ) => (
-                                                                <SidebarButton
-                                                                    as={
-                                                                        ReactRouterLink
-                                                                    }
-                                                                    key={
-                                                                        submenu_idx
-                                                                    }
-                                                                    level={2}
-                                                                    to={
-                                                                        submenu[1]
-                                                                    }
-                                                                    isLast={
-                                                                        submenu_idx ===
-                                                                        submenu_arr.length -
-                                                                            1
-                                                                    }
-                                                                >
-                                                                    {submenu[0]}
-                                                                </SidebarButton>
-                                                            )
-                                                        )}
-                                                    </AccordionPanel>
+                                                    <AccordionItem>
+                                                        <Heading>
+                                                            <AccordionButton
+                                                                isLast={
+                                                                    menu_idx ===
+                                                                    menu_arr.length -
+                                                                        1
+                                                                }
+                                                            >
+                                                                {menu[0]}
+                                                                <AccordionIcon />
+                                                            </AccordionButton>
+                                                        </Heading>
+                                                        <AccordionPanel>
+                                                            {Object.entries(
+                                                                menu[1]
+                                                            ).map(
+                                                                (
+                                                                    submenu,
+                                                                    submenu_idx,
+                                                                    submenu_arr
+                                                                ) => (
+                                                                    <SidebarButton
+                                                                        as={
+                                                                            ReactRouterLink
+                                                                        }
+                                                                        key={
+                                                                            submenu_idx
+                                                                        }
+                                                                        level={
+                                                                            2
+                                                                        }
+                                                                        to={
+                                                                            submenu[1]
+                                                                        }
+                                                                        isLast={
+                                                                            submenu_idx ===
+                                                                            submenu_arr.length -
+                                                                                1
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            submenu[0]
+                                                                        }
+                                                                    </SidebarButton>
+                                                                )
+                                                            )}
+                                                        </AccordionPanel>
+                                                    </AccordionItem>
                                                 </Accordion>
                                             )
                                     )}
