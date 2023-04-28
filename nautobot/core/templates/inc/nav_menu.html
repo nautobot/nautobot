@@ -29,38 +29,33 @@
                                     {% for group_name, group_details in tab_details.groups.items %}
                                         {% if request.user|has_one_or_more_perms:group_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
-                                            {% for item_link, item_details in group_details.items.items %}
+                                            {% for item_name, item_details in group_details.items.items %}
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                                                    <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
-                                                        <div class="buttons pull-right">
-                                                            {% for button_title, button_details in item_details.buttons.items %}
-                                                                {% if request.user|has_perms:button_details.permissions %}
-                                                                    {% comment %}
-                                                                        Use 'url xxx as variable' so that an invalid
-                                                                        link doesn't throw a NoReverseMatch exception.
-                                                                    {% endcomment %}
-                                                                    {% url button_details.link as button_url %}
-                                                                    {% if button_url %}
-                                                                        <a href="{{ button_url }}"
-                                                                           data-button-weight="{{ button_details.weight }}"
-                                                                           class="btn btn-xs btn-{{ button_details.button_class }}"
-                                                                           title="{{ button_title }}">
-                                                                            <i class="mdi {{ button_details.icon_class }}"></i>
-                                                                        </a>
-                                                                    {% else %}
-                                                                        <a class="btn btn-xs btn-danger"
-                                                                           title="ERROR: Invalid link!">
-                                                                            <i class="mdi mdi-alert"></i>
-                                                                        </a>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        </div>
-                                                        <a href="{{ item_details.link }}"
-                                                            data-item-weight="{{ item_details.weight }}">
-                                                            {{ item_link }}
-                                                        </a>
-                                                    </li>
+                                                    {% if item_details.link %}
+                                                        <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
+                                                            <a href="{{ item_details.link }}"
+                                                                data-item-weight="{{ item_details.weight }}">
+                                                                {{ item_name }}
+                                                            </a>
+                                                        </li>
+                                                    {% else %}
+                                                        {% comment %}
+                                                            This UI doesn't have support for sub-groups in menus, so
+                                                            we render them at the same level as a workaround for now.
+                                                        {% endcomment %}
+                                                        <li class="divider"></li>
+                                                        <li class="dropdown-header" data-group-weight="{{ item_details.weight }}">{{ item_name }}</li>
+                                                        {% for subitem_name, subitem_details in item_details.items.items %}
+                                                            {% if request.user|has_one_or_more_perms:subitem_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+                                                                <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
+                                                                    <a href="{{ subitem_details.link }}"
+                                                                        data-item-weight="{{ subitem_details.weight }}">
+                                                                        {{ subitem_name }}
+                                                                    </a>
+                                                                </li>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
                                                 {% endif %}
                                             {% endfor %}
                                             {% if not forloop.last %}

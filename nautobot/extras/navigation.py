@@ -43,6 +43,29 @@ menu_items = (
         ),
     ),
     NavMenuTab(
+        name="Security",
+        groups=(
+            NavMenuGroup(
+                name="Secrets",
+                weight=500,
+                items=(
+                    NavMenuItem(
+                        name="Secrets",
+                        weight=100,
+                        link="extras:secret_list",
+                        permissions=["extras.view_secret"],
+                    ),
+                    NavMenuItem(
+                        name="Secret Groups",
+                        weight=200,
+                        link="extras:secretsgroup_list",
+                        permissions=["extras.view_secretsgroup"],
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
         name="Automation",
         groups=(
             NavMenuGroup(
@@ -210,24 +233,6 @@ menu_items = (
                         weight=400,
                         link="extras:customlink_list",
                         permissions=["extras.view_customlink"],
-                    ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Secrets",
-                weight=500,
-                items=(
-                    NavMenuItem(
-                        name="Secrets",
-                        weight=100,
-                        link="extras:secret_list",
-                        permissions=["extras.view_secret"],
-                    ),
-                    NavMenuItem(
-                        name="Secret Groups",
-                        weight=200,
-                        link="extras:secretsgroup_list",
-                        permissions=["extras.view_secretsgroup"],
                     ),
                 ),
             ),
