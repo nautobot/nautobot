@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.utils.encoding import force_str
-from drf_react_template.schema_form_encoder import ProcessingMixin, SchemaProcessor, SerializerType, UiSchemaProcessor
+import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
 from rest_framework import fields as drf_fields
 from rest_framework import serializers as drf_serializers
@@ -64,10 +64,10 @@ class NautobotMetadataV1(SimpleMetadata):
         return field_info
 
 
-class NautobotProcessingMixin(ProcessingMixin):
+class NautobotProcessingMixin(schema.ProcessingMixin):
     """Processing mixin  to account for custom field types and behaviors for Nautobot."""
 
-    def _get_type_map_value(self, field: SerializerType):
+    def _get_type_map_value(self, field: schema.SerializerType):
         """Overload default to add "required" as a default mapping."""
         # This adds "required" as a default type mapping compared to drf_react_template core.
         result = {
@@ -85,12 +85,12 @@ class NautobotProcessingMixin(ProcessingMixin):
         return result
 
 
-class NautobotSchemaProcessor(NautobotProcessingMixin, SchemaProcessor):
+class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
     """
     SchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
 
-    def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
+    def _get_field_properties(self, field: schema.SerializerType, name: str) -> Dict[str, Any]:
         result = {}
         type_map_obj = self._get_type_map_value(field)
         result["type"] = type_map_obj["type"]
@@ -143,7 +143,7 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, SchemaProcessor):
         return result
 
 
-class NautobotUiSchemaProcessor(NautobotProcessingMixin, UiSchemaProcessor):
+class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcessor):
     """
     UiSchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
@@ -201,17 +201,46 @@ class NautobotMetadata(SimpleMetadata):
         """Determine view options that will be used for non-form display metadata."""
         view_options = {}
         list_display = []
-        field_info = self.get_serializer_info(serializer)
+        fields = []
+
+        # FIXME(jathan): This mapping of fields and re-ordering things is currently a hack that MUST
+        # be replaced by a central solution where field order is consistent and defined in one
+        # place. All of the "bottom fields" stuff and coercion of ordering here will go away.
+        processor = schema.ColumnProcessor(serializer, request.parser_context)
+        field_map = dict(processor.fields)
 
         # TODO(jathan): For now, this is defined on the viewset. This is the cleanest since metadata
         # generation always gets the view instance.
+        all_fields = list(field_map)
         list_display_fields = getattr(view, "list_display", None) or []
+
+        # Explicitly order the "big ugly" fields to the bottom.
+        bottom_fields = ["computed_fields", "custom_fields", "relationships"]
+        for field_name in bottom_fields:
+            if field_name in all_fields:
+                all_fields.remove(field_name)
+                all_fields.append(field_name)
+            if field_name in list_display_fields:
+                list_display_fields.remove(field_name)
+                list_display_fields.append(field_name)
+
+        # Process the list_display fields first.
         for field_name in list_display_fields:
-            # This is currently designed around the v2 UI table header format which is a list of
-            # dicts with keys for `name` and `label`.
-            list_display.append({"name": field_name, "label": field_info[field_name]["label"]})
+            field = field_map[field_name]
+            column_data = processor._get_column_properties(field, field_name)
+            list_display.append(column_data)
+            fields.append(column_data)
+
+        # Process the rest of the fields second.
+        for field_name in all_fields:
+            if field_name in list_display_fields:
+                continue
+            field = field_map[field_name]
+            column_data = processor._get_column_properties(field, field_name)
+            fields.append(column_data)
 
         view_options["list_display"] = list_display
+        view_options["fields"] = fields
 
         return view_options
 

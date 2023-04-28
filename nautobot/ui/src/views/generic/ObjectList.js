@@ -71,16 +71,13 @@ export default function GenericObjectListView() {
         );
     }
 
-    const transformedHeaders = Object.entries(headerData.schema.properties).map(
-        ([key, value]) => {
-            return { name: key, label: value.title };
-        }
-    );
+    // tableHeaders = all fields; and defaultHeaders = only the ones we want to see at first.
+    const tableHeaders = headerData.view_options.fields;
     let defaultHeaders = headerData.view_options.list_display;
 
     // If list_display is not defined or empty, default to showing all headers.
     if (!defaultHeaders.length) {
-        defaultHeaders = transformedHeaders;
+        defaultHeaders = tableHeaders;
     }
 
     let table_name = model_name
@@ -92,7 +89,7 @@ export default function GenericObjectListView() {
             <ObjectListTable
                 tableData={listData.results}
                 defaultHeaders={defaultHeaders}
-                tableHeaders={transformedHeaders}
+                tableHeaders={tableHeaders}
                 totalCount={listData.count}
                 active_page_number={1}
                 page_size={50}

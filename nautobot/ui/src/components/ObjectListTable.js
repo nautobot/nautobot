@@ -55,10 +55,8 @@ export default function ObjectListTable({
 }) {
     let location = useLocation();
     const columnHelper = useMemo(() => createColumnHelper(), []);
-    // let default_names = new Set(defaultHeaders.map((e) => e.name))
-    // let all_names = new Set(tableHeaders.map((e) => e.name))
-    let defaultNames = defaultHeaders.map((e) => e.name);
-    let allNames = tableHeaders.map((e) => e.name);
+    let defaultNames = defaultHeaders.map((e) => e.key);
+    let allNames = tableHeaders.map((e) => e.key);
     let disabledNames = allNames.filter((v) => !defaultNames.includes(v));
     const columnState = {};
     for (const key of disabledNames) {
@@ -68,8 +66,8 @@ export default function ObjectListTable({
     const [columnVisibility, setColumnVisibility] = useState(columnState);
     const columns = useMemo(
         () =>
-            tableHeaders.map(({ name, label }, idx) =>
-                columnHelper.accessor(name, {
+            tableHeaders.map(({ key, title }, idx) =>
+                columnHelper.accessor(key, {
                     cell: (props) => {
                         // Get the column data from the object
                         // e.g from {"status": {"display": "Active"}, "id": ....} get => {"display": "Active"}
@@ -79,13 +77,13 @@ export default function ObjectListTable({
                                 : props.row.original[props.column.id];
                         return (
                             <TableItem
-                                name={name}
+                                name={key}
                                 obj={props.getValue()}
                                 url={getTableItemLink(idx, column_data)}
                             />
                         );
                     },
-                    header: label,
+                    header: title,
                 })
             ),
         [columnHelper, tableHeaders]

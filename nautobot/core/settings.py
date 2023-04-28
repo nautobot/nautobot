@@ -814,6 +814,7 @@ def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
 DRF_REACT_TEMPLATE_TYPE_MAP = {
     "ContentTypeField": {"type": "string", "enum": "choices"},
     "CustomFieldsDataField": {"type": "object", "widget": "textarea"},
+    "DateTimeField": {"type": "string", "format": "date-time", "widget": "date-time"},
     "ImageField": {"type": "string", "format": "data-url"},
     "IPFieldSerializer": {"type": "string"},
     "JSONField": {"type": "string", "widget": "textarea"},
