@@ -4,7 +4,6 @@ from nautobot.core.apps import NavMenuGroup, NavMenuItem, NavMenuTab
 menu_items = (
     NavMenuTab(
         name="Networks",
-        weight=200,
         groups=(
             NavMenuGroup(
                 name="IP Management",

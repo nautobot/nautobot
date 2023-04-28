@@ -711,13 +711,13 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
                 request.user.has_perm(permission) for permission in context_details["permissions"]
             ):
                 continue
-            filtered_menu[context] = {"weight": context_details["weight"], "groups": {}}
+            filtered_menu[context] = {"groups": {}}
             for group_name, group_details in context_details["groups"].items():
                 if HIDE_RESTRICTED_UI and not any(
                     request.user.has_perm(permission) for permission in group_details["permissions"]
                 ):
                     continue
-                filtered_menu[context]["groups"][group_name] = {"weight": group_details["weight"], "items": {}}
+                filtered_menu[context]["groups"][group_name] = {"items": {}}
                 for item_url_or_name, item_details in group_details["items"].items():
                     if HIDE_RESTRICTED_UI and not any(
                         request.user.has_perm(permission) for permission in item_details["permissions"]
@@ -725,10 +725,7 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
                         continue
                     if "items" in item_details:
                         # It's a sub-group
-                        filtered_menu[context]["groups"][group_name]["items"][item_url_or_name] = {
-                            "weight": item_details["weight"],
-                            "items": {},
-                        }
+                        filtered_menu[context]["groups"][group_name]["items"][item_url_or_name] = {"items": {}}
                         for subitem_url, subitem_details in item_details["items"].items():
                             if HIDE_RESTRICTED_UI and not any(
                                 request.user.has_perm(perm) for perm in subitem_details["permissions"]
@@ -736,15 +733,11 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
                                 continue
                             filtered_menu[context]["groups"][group_name]["items"][item_url_or_name]["items"][
                                 subitem_url
-                            ] = {
-                                "name": subitem_details["name"],
-                                "weight": subitem_details["weight"],
-                            }
+                            ] = {"name": subitem_details["name"]}
                     else:
                         # It's a menu item
                         filtered_menu[context]["groups"][group_name]["items"][item_url_or_name] = {
                             "name": item_details["name"],
-                            "weight": item_details["weight"],
                         }
 
         return Response(filtered_menu)
