@@ -197,7 +197,6 @@ class NavRestrictedUI(TestCase):
         self.assertInHTML(
             f"""
             <li>
-              <div class="buttons pull-right"></div>
               <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
             </li>
             """,
@@ -215,7 +214,6 @@ class NavRestrictedUI(TestCase):
         self.assertInHTML(
             f"""
             <li>
-              <div class="buttons pull-right"></div>
               <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
             </li>
             """,
@@ -237,7 +235,6 @@ class NavRestrictedUI(TestCase):
         self.assertInHTML(
             f"""
             <li class="disabled">
-              <div class="buttons pull-right"></div>
               <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
             </li>
             """,
