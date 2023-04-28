@@ -22,7 +22,7 @@
                     {% for tab_name, tab_details in registry.nav_menu.items %}
                         {% if request.user|has_one_or_more_perms:tab_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                             <li class="dropdown">
-                                <a href="#" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     {{ tab_name }} <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
@@ -56,9 +56,9 @@
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
-                                                        <a href="{{ item_link }}"
+                                                        <a href="{{ item_details.link }}"
                                                             data-item-weight="{{ item_details.weight }}">
-                                                            {{ item_details.name }}
+                                                            {{ item_link }}
                                                         </a>
                                                     </li>
                                                 {% endif %}

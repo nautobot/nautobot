@@ -40,6 +40,9 @@
     /*
     Dropdown menu overflow screen view control
     */
+    // TODO: this nav menu dropdown fix from #2186 was broken in 2.0 legacy ui
+    // causing the dropdowns to always right align. disabled for now
+    /*
     $(".dropdown .dropdown-toggle").on("click", function(){
         var dropdown = $(this).next("ul");
         var distanceOfDropDownFromNavStart = $(this).offset().left + dropdown.width();
@@ -51,4 +54,5 @@
         else
             dropdown.removeClass('edge');
     })
+    */
 </script>
