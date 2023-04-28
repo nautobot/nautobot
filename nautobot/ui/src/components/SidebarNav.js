@@ -12,6 +12,8 @@ import { useSelector } from "react-redux";
 import { updateRouteToContext } from "@utils/store";
 import { useGetUIMenuQuery } from "@utils/api";
 import { appContextIcons } from "@constants/icons";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
 
 // The sidebar accordion
 export default function SidebarNav() {
@@ -20,16 +22,19 @@ export default function SidebarNav() {
         isSuccess: isMenuSuccess,
         isError: isMenuError,
     } = useGetUIMenuQuery();
+    const dispatch = useDispatch();
 
     const currentContext = useSelector(
         (state) => state.appState.currentContext
     );
 
+    useEffect(() => {
+        dispatch(updateRouteToContext(menuInfo));
+    }, [dispatch, menuInfo]);
+
     if (!isMenuSuccess || isMenuError) {
         return <></>;
     }
-
-    updateRouteToContext(menuInfo);
 
     const Icon = appContextIcons[currentContext];
 
