@@ -59,9 +59,6 @@ export default function GenericView({
                                             to: Object.entries(
                                                 menu.data[context].groups[name]
                                                     .items
-                                            ).sort(
-                                                ([, a], [, b]) =>
-                                                    a.weight - b.weight
                                             )[0][0],
                                         })),
                                         key: `1_${group}`,
@@ -87,9 +84,6 @@ export default function GenericView({
                                                       menu.data[context].groups[
                                                           group
                                                       ].items[name].items ?? {}
-                                                  ).sort(
-                                                      ([, a], [, b]) =>
-                                                          a.weight - b.weight
                                                   )[0][0]
                                                 : name,
                                         })),
@@ -134,9 +128,6 @@ export default function GenericView({
                                                     menu.data[context].groups[
                                                         name
                                                     ].items
-                                                ).sort(
-                                                    ([, a], [, b]) =>
-                                                        a.weight - b.weight
                                                 )[0][0],
                                             })),
                                             key: `1_${group}`,
@@ -162,10 +153,6 @@ export default function GenericView({
                                                               .groups[group]
                                                               .items[name]
                                                               .items ?? {}
-                                                      ).sort(
-                                                          ([, a], [, b]) =>
-                                                              a.weight -
-                                                              b.weight
                                                       )[0][0]
                                                     : name,
                                             })),

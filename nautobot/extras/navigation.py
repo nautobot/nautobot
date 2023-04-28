@@ -4,7 +4,6 @@ from nautobot.core.apps import NavMenuGroup, NavMenuItem, NavMenuTab
 menu_items = (
     NavMenuTab(
         name="Inventory",
-        weight=100,
         groups=(
             NavMenuGroup(
                 name="Devices",
@@ -22,7 +21,6 @@ menu_items = (
     ),
     NavMenuTab(
         name="Networks",
-        weight=200,
         groups=(
             NavMenuGroup(
                 name="Config Contexts",
@@ -46,7 +44,6 @@ menu_items = (
     ),
     NavMenuTab(
         name="Automation",
-        weight=400,
         groups=(
             NavMenuGroup(
                 name="Jobs",
@@ -131,7 +128,6 @@ menu_items = (
     ),
     NavMenuTab(
         name="Platform",
-        weight=500,
         groups=(
             NavMenuGroup(
                 name="Platform",

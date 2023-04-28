@@ -7,7 +7,6 @@ on:  # yamllint disable
       - "main"
       - "develop"
       - "next"
-      - "next-ui"
   workflow_call:
 
 jobs:

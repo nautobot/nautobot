@@ -20,7 +20,6 @@ This pattern works for modifying all objects in the tree. New groups can be adde
 menu_items = (
     NavMenuTab(
         name="Inventory",
-        weight=100,
         groups=(
             NavMenuGroup(
                 name="Example App",
@@ -48,9 +47,11 @@ menu_items = (
 A `NavMenuTab` has the following attributes:
 
 * `name` - Display name to be shown in navigation menu
-* `weight` - Defines the position the object should be displayed at (optional)
 * `permissions` - A list of permissions required to display this object (optional)
 * `groups` - List or tuple of `NavMenuGroup`
+
+--- 2.0.0
+    As the sequence of menu "tabs"/"contexts" in Nautobot is now constant, the `weight` property has been removed from `NavMenuTab`.
 
 A `NavMenuGroup` has the following attributes:
 

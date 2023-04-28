@@ -4,7 +4,6 @@ from nautobot.core.apps import NavMenuGroup, NavMenuItem, NavMenuTab
 menu_items = (
     NavMenuTab(
         name="Inventory",
-        weight=100,
         groups=(
             NavMenuGroup(
                 name="Virtualization",
