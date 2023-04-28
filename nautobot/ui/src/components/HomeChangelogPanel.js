@@ -15,21 +15,7 @@ import {
     Tr,
 } from "@nautobot/nautobot-ui";
 import { useGetRESTAPIQuery } from "@utils/api";
-
-function humanFriendlyDate(dateStr) {
-    const date = new Date(dateStr);
-    return (
-        date.getFullYear().toString() +
-        "-" +
-        date.getMonth().toString().padStart(2, "0") +
-        "-" +
-        date.getDate().toString().padStart(2, "0") +
-        " " +
-        date.getHours().toString().padStart(2, "0") +
-        ":" +
-        date.getMinutes().toString().padStart(2, "0")
-    );
-}
+import { humanFriendlyDate } from "@utils/date";
 
 export default function HomeChangelogPanel() {
     const { data, isError } = useGetRESTAPIQuery({
