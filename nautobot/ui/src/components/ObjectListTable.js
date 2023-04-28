@@ -13,6 +13,8 @@ import {
     useTableRenderer,
     createColumnHelper,
     PlusIcon,
+    Button,
+    EditIcon,
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
@@ -92,6 +94,20 @@ export default function ObjectListTable({
         // Do something.
     }, []);
 
+    const ActionMenu = useCallback(
+        ({ cellContext }) => (
+            <Button
+                leftIcon={<EditIcon size="sm" />}
+                size="xs"
+                variant="table"
+                onClick={() =>
+                    alert(`Clicked ${cellContext.row.original.name}!`)
+                }
+            />
+        ),
+        []
+    );
+
     const table = useTableRenderer({
         columns: columns,
         data: tableData,
@@ -99,6 +115,7 @@ export default function ObjectListTable({
         onRowSelectionChange,
         state: { columnVisibility },
         onColumnVisibilityChange: setColumnVisibility,
+        actionMenu: ActionMenu,
     });
 
     return (
@@ -141,7 +158,10 @@ export default function ObjectListTable({
                 </ButtonGroup>
             </Box>
 
-            <TableRenderer table={table} />
+            <TableRenderer
+                table={table}
+                containerProps={{ overflow: "auto" }}
+            />
             {/* <Paginator
                 url={location.pathname}
                 data_count={totalCount}

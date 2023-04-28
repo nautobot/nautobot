@@ -220,7 +220,10 @@ export default function ObjectRetrieve({ api_url }) {
     const default_view = (
         <GenericView>
             <Tabs>
-                <Heading>{obj.display}</Heading>
+                <Heading display="flex" alignItems="center">
+                    <NtcThumbnailIcon width="25px" height="30px" mr="md" />
+                    {obj.display}
+                </Heading>
                 <br></br>
                 <TabList>
                     {Object.keys(appConfig).map((key, idx) => (
@@ -237,10 +240,6 @@ export default function ObjectRetrieve({ api_url }) {
                             title={render_header(tab)}
                         >
                             <Card>
-                                <CardHeader>
-                                    <strong>{render_header(tab)}</strong>
-                                </CardHeader>
-                                <br></br>
                                 <NautobotGrid row={{ count: 5 }}>
                                     {Object.keys(appConfig[tab]).map((item) => (
                                         <NautobotGridItem
