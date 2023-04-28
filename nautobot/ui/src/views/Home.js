@@ -1,7 +1,6 @@
 import {
     AutomationIcon,
     DcimIcon,
-    HistoryIcon,
     IpamIcon,
     NautobotGridItem,
     PlatformIcon,
@@ -22,6 +21,7 @@ import {
     Tr,
 } from "@nautobot/nautobot-ui";
 import GenericView from "@views/generic/GenericView";
+import HomeChangelogPanel from "@components/HomeChangelogPanel";
 import HomePanel from "@components/HomePanel";
 import JobHistoryTable from "@components/JobHistoryTable";
 
@@ -186,142 +186,7 @@ export default function Home() {
                     </Table>
                 </TableContainer>
             </NautobotGridItem>
-            <NautobotGridItem>
-                <TableContainer>
-                    <Table>
-                        <Thead>
-                            <Tr _hover={{}}>
-                                <Th width="3em">
-                                    <HistoryIcon />
-                                </Th>
-                                <Th colspan={4}>Change Log</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="critical">
-                                        <TagLabel>Error</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                        </Tbody>
-                    </Table>
-                </TableContainer>
-            </NautobotGridItem>
+            <HomeChangelogPanel />
         </GenericView>
     );
 }
