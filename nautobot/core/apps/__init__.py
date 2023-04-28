@@ -77,7 +77,7 @@ def register_menu_items(tab_list):
         if nav_tab.name not in MENU_TABS:
             raise ValueError(f"Unexpected NavMenuTab name: {nav_tab.name}")
 
-        tab_perms = registry["nav_menu"][nav_tab.name].get("permissions", set())
+        tab_perms = registry["nav_menu"][nav_tab.name]["permissions"]
         registry_groups = registry["nav_menu"][nav_tab.name]["groups"]
         # TODO: allow for recursive (more than two-level) nesting of groups?
         for group in nav_tab.groups:
@@ -86,61 +86,40 @@ def register_menu_items(tab_list):
 
             create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-            group_perms = registry_groups[group.name].get("permissions", set())
+            group_perms = registry_groups[group.name]["permissions"]
             for item in group.items:
-                if isinstance(item, NavMenuItem):
-                    # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
-                    try:
-                        item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
-                    except NoReverseMatch as e:
-                        # Catch the invalid link here and render the link name as an error message in the template
-                        logger.debug("%s", e)
-                        item.name = "ERROR: Invalid link!"
+                if not isinstance(item, (NavMenuGroup, NavMenuItem)):
+                    raise TypeError(f"Expected NavMenuItem or NavMenuGroup, but found {item}")
+                create_or_check_entry(
+                    registry_groups[group.name]["items"],
+                    item,
+                    item.name,
+                    f"{nav_tab.name} -> {group.name} -> {item.name}",
+                )
 
-                    create_or_check_entry(
-                        registry_groups[group.name]["items"],
-                        item,
-                        item.link,
-                        f"{nav_tab.name} -> {group.name} -> {item.link}",
-                    )
-
-                    item_perms = set(perms for perms in item.permissions)
-                    registry_groups[group.name]["items"][item.link]["permissions"] = item_perms
-                elif isinstance(item, NavMenuGroup):
-                    create_or_check_entry(
-                        registry_groups[group.name]["items"],
-                        item,
-                        item.name,
-                        f"{nav_tab.name} -> {group.name} -> {item.name}",
-                    )
-
-                    item_perms = registry_groups[group.name]["items"][item.name].get("permissions", set())
+                item_perms = registry_groups[group.name]["items"][item.name]["permissions"]
+                if isinstance(item, NavMenuGroup):
                     for inner_item in item.items:
                         if not isinstance(inner_item, NavMenuItem):
                             raise TypeError(f"Expected a NavMenuItem, but found {inner_item}")
 
-                        try:
-                            inner_item.link = reverse(inner_item.link, args=inner_item.args, kwargs=inner_item.kwargs)
-                        except NoReverseMatch as err:
-                            logger.debug("%s", err)
-                            inner_item.name = "ERROR: Invalid link!"
-
                         create_or_check_entry(
                             registry_groups[group.name]["items"][item.name]["items"],
                             inner_item,
-                            inner_item.link,
-                            f"{nav_tab.name} -> {group.name} -> {item.name} -> {inner_item.link}",
+                            inner_item.name,
+                            f"{nav_tab.name} -> {group.name} -> {item.name} -> {inner_item.name}",
                         )
-                        inner_item_perms = set(perms for perms in inner_item.permissions)
-                        registry_groups[group.name]["items"][item.name]["items"][inner_item.link][
-                            "permissions"
-                        ] = inner_item_perms
-                        item_perms |= inner_item_perms
+                        item_perms |= inner_item.permissions
 
-                    # Add collected permissions to group
-                    registry_groups[group.name]["items"][item.name]["permissions"] = item_perms
-                else:
-                    raise TypeError(f"Expected NavMenuItem or NavMenuGroup, but found {item}")
+                    registry_groups[group.name]["items"][item.name]["items"] = OrderedDict(
+                        sorted(
+                            registry_groups[group.name]["items"][item.name]["items"].items(),
+                            key=lambda kv_pair: kv_pair[1]["weight"],
+                        )
+                    )
+
+                # Add collected permissions to group
+                registry_groups[group.name]["items"][item.name]["permissions"] = item_perms
 
                 group_perms |= item_perms
 
@@ -275,14 +254,13 @@ class PermissionsMixin:
         """Ensure permissions."""
         if permissions is not None and not isinstance(permissions, (list, tuple)):
             raise TypeError("Permissions must be passed as a tuple or list.")
-        self.permissions = permissions
+        self.permissions = set(permissions) if permissions else set()
 
 
 class HomePagePanel(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel."""
 
-    permissions = []
-    items = []
+    items = None
     template_path = None
 
     @property
@@ -312,13 +290,10 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this panel.
             weight (int): The weight of this panel.
         """
-        if permissions is None:
-            permissions = []
         super().__init__(permissions)
         self.custom_data = custom_data
         self.custom_template = custom_template
         self.name = name
-        self.permissions = permissions
         self.weight = weight
 
         if items is not None and custom_template is not None:
@@ -329,19 +304,20 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             elif not all(isinstance(item, (HomePageGroup, HomePageItem)) for item in items):
                 raise TypeError("All items defined in a panel must be an instance of HomePageGroup or HomePageItem")
             self.items = items
+        else:
+            self.items = []
 
 
 class HomePageGroup(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel group."""
 
-    permissions = []
     items = []
 
     @property
     def initial_dict(self):
         return {
             "items": {},
-            "permissions": set(),
+            "permissions": self.permissions,
             "weight": self.weight,
         }
 
@@ -359,8 +335,6 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this group.
             weight (int): The weight of this group.
         """
-        if permissions is None:
-            permissions = []
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -376,7 +350,6 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
 class HomePageItem(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel item."""
 
-    permissions = []
     items = []
     template_path = None
 
@@ -444,7 +417,6 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
     but in 2.0 and later there is a fixed list of these (`nautobot.core.apps.MENU_TABS`) that cannot be altered.
     """
 
-    permissions = []
     groups = []
 
     @property
@@ -452,7 +424,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "groups": {},
-            "permissions": set(),
+            "permissions": self.permissions,
         }
 
     @property
@@ -491,7 +463,6 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
     in 2.x this has been relaxed to also permit a top-level `NavMenuGroup` to contain other `NavMenuGroup` objects.
     """
 
-    permissions = []
     items = []
 
     @property
@@ -499,6 +470,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "weight": self.weight,
+            "permissions": self.permissions,
             "items": {},
         }
 
@@ -507,15 +479,17 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (("weight", self.weight),)
 
-    def __init__(self, name, items=None, weight=1000):
+    def __init__(self, name, weight=1000, permissions=None, items=None):
         """
         Ensure group properties.
 
         Args:
             name (str): The name of the group.
-            items (list): List of items to be rendered in this group.
             weight (int): The weight of this group.
+            permissions (set): The permissions to access this group.
+            items (list): List of items to be rendered in this group.
         """
+        super().__init__(permissions)
         self.name = name
         self.weight = weight
 
@@ -539,32 +513,26 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     def initial_dict(self) -> dict:
         """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
-            "name": self.name,
             "weight": self.weight,
             "permissions": self.permissions,
-            "args": [],
-            "kwargs": {},
+            "link": self.link,
         }
 
     @property
     def fixed_fields(self) -> tuple:
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (
-            ("name", self.name),
             ("weight", self.weight),
             ("permissions", self.permissions),
+            ("link", self.link),
         )
-
-    permissions = []
-    args = []
-    kwargs = {}
 
     def __init__(self, link, name, args=None, kwargs=None, permissions=None, weight=1000):
         """
         Ensure item properties.
 
         Args:
-            link (str): The link to be used for this item.
+            link (str): The named link to be used for this item. `reverse(link, args, kwargs)` will be called.
             name (str): The name of the item.
             args (list): Arguments that are being passed to the url with reverse() method
             kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
@@ -572,11 +540,13 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             weight (int): The weight of this item.
         """
         super().__init__(permissions)
-        self.link = link
         self.name = name
         self.weight = weight
-        self.args = args
-        self.kwargs = kwargs
+        try:
+            self.link = reverse(link, args=args, kwargs=kwargs)
+        except NoReverseMatch as e:
+            logger.error("Error in link construction for %s: %s", self.name, e)
+            self.link = ""
 
 
 def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
