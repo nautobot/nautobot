@@ -88,6 +88,7 @@ class PrefixViewSet(NautobotModelViewSet):
     ).prefetch_related("tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
+    list_display = ["prefix", "type", "location", "vrf"]
 
     def get_serializer_class(self):
         if self.action == "available_prefixes" and self.request.method == "POST":

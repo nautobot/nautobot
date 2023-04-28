@@ -36,10 +36,18 @@ export default function GenericView({
                     ];
                 }
                 for (const context in menu.data) {
-                    for (const group in menu.data[context].groups) {
-                        for (const urlPatternOrSubgroup in menu.data[context]
-                            .groups[group].items) {
-                            if (pathname.startsWith(urlPatternOrSubgroup)) {
+                    for (const group in menu.data[context]) {
+                        for (const subgroup_or_item in menu.data[context][
+                            group
+                        ]) {
+                            if (
+                                typeof menu.data[context][group][
+                                    subgroup_or_item
+                                ] === "string" &&
+                                pathname.startsWith(
+                                    menu.data[context][group][subgroup_or_item]
+                                )
+                            ) {
                                 // It's a urlPattern, no subGroup currently selected
                                 return [
                                     // Selected context
@@ -52,42 +60,43 @@ export default function GenericView({
                                     {
                                         children: group,
                                         items: Object.keys(
-                                            menu.data[context].groups
-                                        ).map((name) => ({
+                                            menu.data[context]
+                                        ).map((group_name) => ({
                                             as: ReactRouterLink,
-                                            children: name,
+                                            children: group_name,
+                                            // Link to the first sub-item in that group
                                             to: Object.entries(
-                                                menu.data[context].groups[name]
-                                                    .items
-                                            )[0][0],
+                                                menu.data[context][group_name]
+                                            )[0][1],
                                         })),
                                         key: `1_${group}`,
                                         type: "menu",
                                     },
                                     // Selected item within the group, with menu of peer items and/or subgroups
                                     {
-                                        children:
-                                            menu.data[context].groups[group]
-                                                .items[urlPatternOrSubgroup]
-                                                .name,
+                                        children: subgroup_or_item,
                                         items: Object.keys(
-                                            menu.data[context].groups[group]
-                                                .items
-                                        ).map((name) => ({
+                                            menu.data[context][group]
+                                        ).map((subgroup_or_item_name) => ({
                                             as: ReactRouterLink,
-                                            children:
-                                                menu.data[context].groups[group]
-                                                    .items[name].name || name,
-                                            to: menu.data[context].groups[group]
-                                                .items[name].items
-                                                ? Object.entries(
-                                                      menu.data[context].groups[
-                                                          group
-                                                      ].items[name].items ?? {}
-                                                  )[0][0]
-                                                : name,
+                                            children: subgroup_or_item_name,
+                                            to:
+                                                typeof menu.data[context][
+                                                    group
+                                                ][subgroup_or_item_name] ==
+                                                "object"
+                                                    ? Object.entries(
+                                                          menu.data[context][
+                                                              group
+                                                          ][
+                                                              subgroup_or_item_name
+                                                          ] ?? {}
+                                                      )[0][1]
+                                                    : menu.data[context][group][
+                                                          subgroup_or_item_name
+                                                      ],
                                         })),
-                                        key: `2_${menu.data[context].groups[group].items[urlPatternOrSubgroup].name}`,
+                                        key: `2_${subgroup_or_item}`,
                                         type: "menu",
                                     },
                                     // Selected object instance
@@ -97,99 +106,106 @@ export default function GenericView({
                                                   as: ReactRouterLink,
                                                   children: objectData.name,
                                                   key: `3_${objectData.id}`,
-                                                  to: `${urlPatternOrSubgroup}${objectData.id}`,
+                                                  to: `${menu.data[context][group][subgroup_or_item]}${objectData.id}`,
                                                   type: "link",
                                               },
                                           ]
                                         : []),
                                 ];
                             }
-                            // It might also be a sub-group with its own nested items
-                            for (const urlPattern in menu.data[context].groups[
-                                group
-                            ].items[urlPatternOrSubgroup].items) {
-                                if (pathname.startsWith(urlPattern)) {
-                                    return [
-                                        // Selected context
-                                        {
-                                            children: context,
-                                            key: `0_${context}`,
-                                            type: "text",
-                                        },
-                                        // Selected group, with menu of all available groups in the context
-                                        {
-                                            children: group,
-                                            items: Object.keys(
-                                                menu.data[context].groups
-                                            ).map((name) => ({
-                                                as: ReactRouterLink,
-                                                children: name,
-                                                to: Object.entries(
-                                                    menu.data[context].groups[
-                                                        name
-                                                    ].items
-                                                )[0][0],
-                                            })),
-                                            key: `1_${group}`,
-                                            type: "menu",
-                                        },
-                                        // Selected subgroup within the group, with menu of peer items and/or subgroups
-                                        {
-                                            children: urlPatternOrSubgroup,
-                                            items: Object.keys(
-                                                menu.data[context].groups[group]
-                                                    .items
-                                            ).map((name) => ({
-                                                as: ReactRouterLink,
-                                                children:
-                                                    menu.data[context].groups[
-                                                        group
-                                                    ].items[name].name || name,
-                                                to: menu.data[context].groups[
-                                                    group
-                                                ].items[name].items
-                                                    ? Object.entries(
-                                                          menu.data[context]
-                                                              .groups[group]
-                                                              .items[name]
-                                                              .items ?? {}
-                                                      )[0][0]
-                                                    : name,
-                                            })),
-                                            key: `2_${urlPatternOrSubgroup}`,
-                                            type: "menu",
-                                        },
-                                        // Selected item within the subgroup, with menu of peer items
-                                        {
-                                            children:
-                                                menu.data[context].groups[group]
-                                                    .items[urlPatternOrSubgroup]
-                                                    .items[urlPattern].name,
-                                            items: Object.entries(
-                                                menu.data[context].groups[group]
-                                                    .items[urlPatternOrSubgroup]
-                                                    .items
-                                            ).map(([to, { name }]) => ({
-                                                as: ReactRouterLink,
-                                                children: name,
-                                                to,
-                                            })),
-                                            key: `3_${menu.data[context].groups[group].items[urlPatternOrSubgroup].items[urlPattern].name}`,
-                                            type: "menu",
-                                        },
-                                        // Selected object instance
-                                        ...(objectData
-                                            ? [
-                                                  {
-                                                      as: ReactRouterLink,
-                                                      children: objectData.name,
-                                                      key: `3_${objectData.id}`,
-                                                      to: `${urlPatternOrSubgroup}${objectData.id}`,
-                                                      type: "link",
-                                                  },
-                                              ]
-                                            : []),
-                                    ];
+                            if (
+                                typeof menu.data[context][group][
+                                    subgroup_or_item
+                                ] === "object"
+                            ) {
+                                // It is a sub-group with its own nested items
+                                for (const subitem in menu.data[context][group][
+                                    subgroup_or_item
+                                ]) {
+                                    if (
+                                        pathname.startsWith(
+                                            menu.data[context][group][
+                                                subgroup_or_item
+                                            ][subitem]
+                                        )
+                                    ) {
+                                        return [
+                                            // Selected context
+                                            {
+                                                children: context,
+                                                key: `0_${context}`,
+                                                type: "text",
+                                            },
+                                            // Selected group, with menu of all available groups in the context
+                                            {
+                                                children: group,
+                                                items: Object.keys(
+                                                    menu.data[context]
+                                                ).map((group_name) => ({
+                                                    as: ReactRouterLink,
+                                                    children: group_name,
+                                                    to: Object.entries(
+                                                        menu.data[context][
+                                                            group_name
+                                                        ]
+                                                    )[0][0],
+                                                })),
+                                                key: `1_${group}`,
+                                                type: "menu",
+                                            },
+                                            // Selected subgroup within the group, with menu of peer items and/or subgroups
+                                            {
+                                                children: subgroup_or_item,
+                                                items: Object.keys(
+                                                    menu.data[context][group]
+                                                ).map((subgroup_name) => ({
+                                                    as: ReactRouterLink,
+                                                    children: subgroup_name,
+                                                    to: Object.entries(
+                                                        menu.data[context][
+                                                            group
+                                                        ][subgroup_name]
+                                                    )[0][0],
+                                                })),
+                                                key: `2_${subgroup_or_item}`,
+                                                type: "menu",
+                                            },
+                                            // Selected item within the subgroup, with menu of peer items
+                                            {
+                                                children: subitem,
+                                                items: Object.keys(
+                                                    menu.data[context][group][
+                                                        subgroup_or_item
+                                                    ]
+                                                ).map((subitem_name) => ({
+                                                    as: ReactRouterLink,
+                                                    children: subitem_name,
+                                                    to: Object.entries(
+                                                        menu.data[context][
+                                                            group
+                                                        ][subgroup_or_item][
+                                                            subitem_name
+                                                        ]
+                                                    )[0][0],
+                                                })),
+                                                key: `3_${subitem}`,
+                                                type: "menu",
+                                            },
+                                            // Selected object instance
+                                            ...(objectData
+                                                ? [
+                                                      {
+                                                          as: ReactRouterLink,
+                                                          children:
+                                                              objectData.name,
+                                                          key: `4_${objectData.id}`,
+                                                          to: `${menu.data[context][group][subgroup_or_item][subitem]}${objectData.id}`,
+                                                          type: "link",
+                                                      },
+                                                  ]
+                                                : []),
+                                        ];
+                                    }
                                 }
                             }
                         }

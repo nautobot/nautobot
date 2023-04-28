@@ -40,7 +40,7 @@ export default function SidebarNav() {
                 {currentContext}
             </Heading>
             <Accordion allowMultiple variant="sidebarLevel0">
-                {Object.entries(menuInfo[currentContext].groups).map(
+                {Object.entries(menuInfo[currentContext]).map(
                     (group, group_idx, group_arr) => (
                         <Accordion
                             allowMultiple
@@ -59,20 +59,20 @@ export default function SidebarNav() {
                                     </AccordionButton>
                                 </Heading>
                                 <AccordionPanel>
-                                    {Object.entries(group[1].items).map(
+                                    {Object.entries(group[1]).map(
                                         (menu, menu_idx, menu_arr) =>
-                                            menu[0].startsWith("/") ? (
+                                            typeof menu[1] === "string" ? (
                                                 <SidebarButton
                                                     as={ReactRouterLink}
                                                     key={menu_idx}
                                                     level={1}
-                                                    to={menu[0]}
+                                                    to={menu[1]}
                                                     isLast={
                                                         menu_idx ===
                                                         menu_arr.length - 1
                                                     }
                                                 >
-                                                    {menu[1].name}
+                                                    {menu[0]}
                                                 </SidebarButton>
                                             ) : (
                                                 <Accordion
@@ -94,7 +94,7 @@ export default function SidebarNav() {
                                                     </Heading>
                                                     <AccordionPanel>
                                                         {Object.entries(
-                                                            menu[1].items
+                                                            menu[1]
                                                         ).map(
                                                             (
                                                                 submenu,
@@ -110,7 +110,7 @@ export default function SidebarNav() {
                                                                     }
                                                                     level={2}
                                                                     to={
-                                                                        submenu[0]
+                                                                        submenu[1]
                                                                     }
                                                                     isLast={
                                                                         submenu_idx ===
@@ -118,10 +118,7 @@ export default function SidebarNav() {
                                                                             1
                                                                     }
                                                                 >
-                                                                    {
-                                                                        submenu[1]
-                                                                            .name
-                                                                    }
+                                                                    {submenu[0]}
                                                                 </SidebarButton>
                                                             )
                                                         )}
