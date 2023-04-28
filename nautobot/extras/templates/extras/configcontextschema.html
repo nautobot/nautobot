@@ -3,7 +3,7 @@
 
 {% block extra_nav_tabs %}
     <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
-        <a href="{% url 'extras:configcontextschema_object_validation' slug=object.slug %}">Validation</a>
+        <a href="{% url 'extras:configcontextschema_object_validation' pk=object.pk %}">Validation</a>
     </li>
 {% endblock extra_nav_tabs %}
 

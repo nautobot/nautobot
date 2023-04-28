@@ -8,7 +8,6 @@ from nautobot.apps.ui import (
 menu_items = (
     NavMenuTab(
         name="Inventory",
-        weight=100,
         groups=(
             NavMenuGroup(
                 name="Example App",

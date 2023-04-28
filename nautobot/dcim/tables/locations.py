@@ -25,7 +25,7 @@ class LocationTypeTable(BaseTable):
     parent = tables.Column(linkify=True)
     nestable = BooleanColumn()
     content_types = ContentTypesColumn(truncate_words=15)
-    actions = ButtonsColumn(LocationType, pk_field="slug")
+    actions = ButtonsColumn(LocationType)
 
     class Meta(BaseTable.Meta):
         model = LocationType
@@ -57,7 +57,7 @@ class LocationTable(StatusTableMixin, BaseTable):
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:location_list")
-    actions = ButtonsColumn(Location, pk_field="slug")
+    actions = ButtonsColumn(Location)
 
     class Meta(BaseTable.Meta):
         model = Location

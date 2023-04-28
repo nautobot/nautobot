@@ -189,7 +189,8 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 ## Removed Python Code
 
-Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
+- Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
+- In the redesigned UI of Nautobot 2.0, menu items may no longer contain buttons, and so the `NavMenuButton` class and its subclasses have been removed as they are no longer needed/supported.
 
 ??? info "Full table of code removals"
     {data-table installation/tables/v2-code-removals.yaml}

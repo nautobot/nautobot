@@ -11,7 +11,6 @@ import {
 import { useEffect } from "react";
 
 import LoadingWidget from "@components/LoadingWidget";
-import RouterButton from "@components/RouterButton";
 import RouterLink from "@components/RouterLink";
 import SidebarNav from "@components/SidebarNav";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
@@ -65,18 +64,7 @@ export default function Layout({ children }) {
                         to="/"
                     />
                 </Heading>
-                {sessionInfo && sessionInfo.logged_in ? (
-                    <>
-                        <SidebarNav />
-                        <RouterButton m={3} to="/logout/">
-                            Log Out
-                        </RouterButton>
-                    </>
-                ) : (
-                    <RouterButton m={3} to="/login/">
-                        Log In
-                    </RouterButton>
-                )}
+                {sessionInfo && sessionInfo.logged_in && <SidebarNav />}
                 <Button onClick={legacyUI} variant="link" color="white">
                     Return to Legacy UI
                 </Button>

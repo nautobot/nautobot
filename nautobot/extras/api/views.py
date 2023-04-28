@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -367,6 +367,74 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
         obj = get_object_or_404(self.queryset, pk=pk)
 
         return render(request, "generic/object_retrieve_plugin_full_width.html", {"object": obj})
+
+    @action(detail=True, url_path="detail_view_config")
+    def detail_view_config(self, request, pk):
+        """
+        Return a JSON of the ObjectDetailView configuration
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        obj_serializer_class = get_serializer_for_model(obj)
+        obj_serializer = obj_serializer_class(data=None)
+        response = self.get_detail_view_config(obj_serializer)
+        response = JsonResponse(response)
+        return response
+
+    def get_detail_view_config(self, obj_serializer):
+        all_fields = list(obj_serializer.get_fields().keys())
+        extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
+        advanced_fields = ["id", "url", "display", "slug", "notes_url"]
+        plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
+        plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
+        main_fields = [field for field in all_fields if field not in extra_fields and field not in advanced_fields]
+        response = {
+            "main": [
+                {
+                    "name": obj_serializer.Meta.model._meta.model_name,
+                    "fields": main_fields,
+                    "colspan": "2",
+                    "rowspan": str(int(len(main_fields))),
+                },
+                {
+                    "name": "extra",
+                    "fields": extra_fields,
+                    "colspan": "2",
+                    "rowspan": str(len(extra_fields)),
+                },
+            ],
+            "advanced": [
+                {
+                    "name": "advanced data",
+                    "fields": advanced_fields,
+                    "colspan": "3",
+                    "rowspan": str(len(advanced_fields)),
+                    "advanced": "true",
+                }
+            ],
+            "plugin_tab_1": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": "3",
+                    "rowspan": str(len(plugin_tab_1_fields)),
+                },
+                {
+                    "name": "extra_plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": "1",
+                    "rowspan": str(len(plugin_tab_1_fields)),
+                },
+            ],
+            "plugin_tab_2": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_2_fields,
+                    "colspan": "3",
+                    "rowspan": str(len(plugin_tab_2_fields)),
+                }
+            ],
+        }
+        return response
 
 
 #

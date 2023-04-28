@@ -24,10 +24,10 @@ class NoteTestCase(SeleniumTestCase):
         Test initial add and then update of a new Note
         """
         location_type, _ = LocationType.objects.get_or_create(name="Campus")
-        Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
+        location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
 
         # Navigate to the created location.
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:location", kwargs={"slug": "location-1"})}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:location", kwargs={"pk": location.pk})}')
 
         # Verify notes tab shows up and click it.
         self.assertTrue(self.browser.links.find_by_partial_href("/dcim/locations/location-1/notes/"))

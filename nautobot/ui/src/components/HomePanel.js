@@ -1,4 +1,5 @@
 import {
+    Link,
     NautobotGridItem,
     Table,
     TableContainer,
@@ -10,6 +11,48 @@ import {
     Thead,
     Tr,
 } from "@nautobot/nautobot-ui";
+import { useGetRESTAPIQuery } from "@utils/api";
+
+function HomePanelData(attrs) {
+    const { data, isLoading, isError } = useGetRESTAPIQuery({
+        app_name: attrs["app_name"],
+        model_name: attrs["model_name"],
+        limit: 1,
+        depth: 0,
+    });
+
+    if (isLoading) {
+        return (
+            <Tag size="sm" variant="unknown">
+                <TagLabel>Loading...</TagLabel>
+            </Tag>
+        );
+    }
+    if (isError) {
+        return (
+            <Tag size="sm" variant="critical">
+                <TagLabel>Unknown</TagLabel>
+            </Tag>
+        );
+    }
+
+    if (data.count) {
+        return (
+            <Link href={`/${attrs["app_name"]}/${attrs["model_name"]}/`}>
+                <Tag size="sm" variant="info">
+                    <TagLabel>{data.count}</TagLabel>
+                </Tag>
+            </Link>
+        );
+    }
+    return (
+        <Link href={`/${attrs["app_name"]}/${attrs["model_name"]}/`}>
+            <Tag size="sm" variant="unknown">
+                <TagLabel>{data.count}</TagLabel>
+            </Tag>
+        </Link>
+    );
+}
 
 // A panel in the Home view displaying a table of objects and their counts.
 export default function HomePanel({ icon, title, data }) {
@@ -31,14 +74,18 @@ export default function HomePanel({ icon, title, data }) {
                                     width="4em"
                                     style={{ "text-align": "right" }}
                                 >
-                                    {row[1] ? (
-                                        <Tag size="sm" variant="info">
-                                            <TagLabel>{row[1]}</TagLabel>
-                                        </Tag>
+                                    {typeof row[1] === "number" ? (
+                                        row[1] === 0 ? (
+                                            <Tag size="sm" variant="unknown">
+                                                <TagLabel>{row[1]}</TagLabel>
+                                            </Tag>
+                                        ) : (
+                                            <Tag size="sm" variant="info">
+                                                <TagLabel>{row[1]}</TagLabel>
+                                            </Tag>
+                                        )
                                     ) : (
-                                        <Tag size="sm" variant="unknown">
-                                            <TagLabel>{row[1]}</TagLabel>
-                                        </Tag>
+                                        HomePanelData(row[1])
                                     )}
                                 </Td>
                             </Tr>

@@ -4,53 +4,43 @@ import {
     AccordionItem,
     AccordionPanel,
     AccordionIcon,
-    AutomationIcon,
-    DcimIcon,
     Heading,
-    IpamIcon,
-    PlatformIcon,
-    SecurityIcon,
     SidebarButton,
 } from "@nautobot/nautobot-ui";
 import { Link as ReactRouterLink } from "react-router-dom";
 import { useSelector } from "react-redux";
-
+import { updateRouteToContext } from "@utils/store";
 import { useGetUIMenuQuery } from "@utils/api";
+import { appContextIcons } from "@constants/icons";
 
 // The sidebar accordion
 export default function SidebarNav() {
-    // Grab the UI menu from the RTK Query API
     const {
         data: menuInfo,
         isSuccess: isMenuSuccess,
         isError: isMenuError,
     } = useGetUIMenuQuery();
-    const appContext = useSelector((state) => state.appContext);
-    const appContextToIcon = {
-        Inventory: DcimIcon,
-        Networks: IpamIcon,
-        Security: SecurityIcon,
-        Automation: AutomationIcon,
-        Platform: PlatformIcon,
-    };
 
-    if (appContext === "") {
-        return <></>;
-    }
-    const Icon = appContextToIcon[appContext];
+    const currentContext = useSelector(
+        (state) => state.appState.currentContext
+    );
 
     if (!isMenuSuccess || isMenuError) {
         return <></>;
     }
 
+    updateRouteToContext(menuInfo);
+
+    const Icon = appContextIcons[currentContext];
+
     return (
         <>
             <Heading variant="sidebar">
                 <Icon />
-                {appContext}
+                {currentContext}
             </Heading>
             <Accordion allowMultiple variant="sidebarLevel0">
-                {Object.entries(menuInfo[appContext].groups).map(
+                {Object.entries(menuInfo[currentContext].groups).map(
                     (group, group_idx, group_arr) => (
                         <Accordion
                             allowMultiple

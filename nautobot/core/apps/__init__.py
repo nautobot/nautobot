@@ -18,12 +18,12 @@ from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 
 
-logger = logging.getLogger(__name__)
-registry["nav_menu"] = {}
-registry["homepage_layout"] = {"panels": {}}
-
-
 MENU_TABS = ("Inventory", "Networks", "Security", "Automation", "Platform")
+
+
+logger = logging.getLogger(__name__)
+registry["nav_menu"] = dict({tab: {"groups": {}, "permissions": set()} for tab in MENU_TABS})
+registry["homepage_layout"] = {"panels": {}}
 
 
 class NautobotConfig(AppConfig):
@@ -75,11 +75,9 @@ def register_menu_items(tab_list):
         if not isinstance(nav_tab, NavMenuTab):
             raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {nav_tab}")
         if nav_tab.name not in MENU_TABS:
-            raise RuntimeError(f"Unexpected NavMenuTab name: {nav_tab.name}")
+            raise ValueError(f"Unexpected NavMenuTab name: {nav_tab.name}")
 
-        create_or_check_entry(registry["nav_menu"], nav_tab, nav_tab.name, f"{nav_tab.name}")
-
-        tab_perms = registry["nav_menu"].get("permissions", set())
+        tab_perms = registry["nav_menu"][nav_tab.name].get("permissions", set())
         registry_groups = registry["nav_menu"][nav_tab.name]["groups"]
         # TODO: allow for recursive (more than two-level) nesting of groups?
         for group in nav_tab.groups:
@@ -161,11 +159,6 @@ def register_menu_items(tab_list):
         )
         # Add collected permissions to tab dict
         registry["nav_menu"][nav_tab.name]["permissions"] |= tab_perms
-
-        # Order all tabs in dict
-        registry["nav_menu"] = OrderedDict(
-            sorted(registry["nav_menu"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
-        )
 
 
 def register_homepage_panels(path, label, homepage_layout):
@@ -458,7 +451,6 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
     def initial_dict(self) -> dict:
         """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
-            "weight": self.weight,
             "groups": {},
             "permissions": set(),
         }
@@ -468,7 +460,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (("weight", self.weight),)
 
-    def __init__(self, name, permissions=None, groups=None, weight=1000):
+    def __init__(self, name, permissions=None, groups=None):
         """
         Ensure tab properties.
 
@@ -476,13 +468,11 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
             name (str): The name of the tab.
             permissions (list): The permissions required to view this tab.
             groups (list): List of groups to be rendered in this tab.
-            weight (int): The weight of this tab.
         """
         super().__init__(permissions)
         if name not in MENU_TABS:
             raise ValueError(f"NavMenuTab name must be one of {MENU_TABS}")
         self.name = name
-        self.weight = weight
         if groups is not None:
             if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")
@@ -560,6 +550,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     def fixed_fields(self) -> tuple:
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (
+            ("name", self.name),
             ("weight", self.weight),
             ("permissions", self.permissions),
         )
