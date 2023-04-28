@@ -50,11 +50,13 @@ const appStateSlice = createSlice({
             let urlPatternToContext = {};
             let menuInfo = action.payload;
             for (const context in menuInfo) {
-                for (const group in menuInfo[context].groups) {
-                    for (const urlPatternOrSubGroup in menuInfo[context].groups[
+                for (const group in menuInfo[context]) {
+                    for (const urlPatternOrSubGroupName in menuInfo[context][
                         group
-                    ].items) {
-                        if (urlPatternOrSubGroup.startsWith("/")) {
+                    ]) {
+                        const urlPatternOrSubGroup =
+                            menuInfo[context][group][urlPatternOrSubGroupName];
+                        if (typeof urlPatternOrSubGroup === "string") {
                             // It's a URL pattern
                             let tokens = urlPatternOrSubGroup.split("/");
                             if (tokens.length === 4) {
@@ -68,10 +70,7 @@ const appStateSlice = createSlice({
                             }
                         } else {
                             // It's a submenu
-                            const subGroup = urlPatternOrSubGroup;
-                            for (const urlPattern in menuInfo[context].groups[
-                                group
-                            ].items[subGroup].items) {
+                            for (const urlPattern in urlPatternOrSubGroup) {
                                 let tokens = urlPattern.split("/");
                                 if (tokens.length === 4) {
                                     let appLabel = tokens[1];
