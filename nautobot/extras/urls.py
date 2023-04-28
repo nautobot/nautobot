@@ -32,8 +32,8 @@ router.register("roles", views.RoleUIViewSet)
 
 urlpatterns = [
     # Change logging
-    path("changelog/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
-    path("changelog/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
+    path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
+    path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # Computed Fields
     path("computed-fields/", views.ComputedFieldListView.as_view(), name="computedfield_list"),
     path("computed-fields/add/", views.ComputedFieldEditView.as_view(), name="computedfield_add"),

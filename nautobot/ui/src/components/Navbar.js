@@ -43,7 +43,7 @@ export function Navbar({ session, currentContext }) {
                     {
                         children: "Security",
                         leftIcon: <SecurityIcon />,
-                        to: "/security",
+                        to: "/extras/secrets/",
                     },
                     {
                         children: "Automation",
