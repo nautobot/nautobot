@@ -488,3 +488,12 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+
+
+class UIModelFieldsSchemaTestCase(testing.APITestCase):
+    def test_get_model_fields_schema(self):
+        url = reverse("ui-api:model-fields-schema")
+        response = self.client.get(url + "?content_type=dcim.location", **self.header)
+        
+        print(response.data)
+        self.assertEqual(1, 2)

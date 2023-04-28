@@ -6,12 +6,12 @@ import sys
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
-from nautobot.core.api import exceptions
+from nautobot.core.api import exceptions, serializers as nautobot_serializers
 
 
 logger = logging.getLogger(__name__)
@@ -353,3 +353,83 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
             return field_class(
                 obj_related_field, context={"request": serializer.context.get("request")}, **field_kwargs
             ).data
+
+
+class ModelAndFilterSetToUISchema:
+    """
+    Helper class to generate a JSON schema representation of a model or filterset, with fields mapped to UI widgets.
+
+    Args:
+        model (Model): The model to generate the schema for.
+        field_name (str): Optional. The name of a specific field to generate the schema for.
+        build_for (str): Optional. Generate the schema for a model form or a filter set form (default is "model_form").
+    """
+    def __init(self, model, field_name=None, build_for="model_form"):
+        self.model = model
+        self.field_name = field_name
+        self.build_for = build_for
+        
+        # A mapping of Django Rest Framework serializer fields to their corresponding UI schemas.
+        self.serializer_field_mapping = {
+            serializers.CharField: self.char_field_schema,
+            serializers.IntegerField: self.integer_field_schema,
+            serializers.BooleanField: self.boolean_field_schema,
+            nautobot_serializers.NautobotPrimaryKeyRelatedField: self.dynamic_model_choice_field_schema,
+            serializers.ManyRelatedField: self.dynamic_model_multiple_choice_field_schema,
+            serializers.DateField: self.inheritance_schema_build,
+            serializers.DateTimeField: self.inheritance_schema_build,
+            serializers.TimeField: self.inheritance_schema_build,
+            serializers.JSONField: self.inheritance_schema_build,
+        }
+    
+    @property
+    def schema_representation(self):
+        """Generates the schema representation for the provided model."""
+        if self.build_for == "model_form":
+            return self.build_model_fields_to_ui_schema()
+        return self.build_filterset_fields_to_ui_schema()
+    
+    def build_filterset_fields_to_ui_schema(self):
+        pass
+    
+    def build_model_fields_to_ui_schema(self):
+        """Builds the schema representation for each field of the provided model."""
+        serializer = get_serializer_for_model(self.model)(context={"depth": 0})
+        field_names = list(serializer.fields)
+        data = {
+            "model": self.model._meta.verbose_name, 
+            "fields": {}
+        }
+        
+        for field_name in field_names:
+            # First skip over all readonly fields; Remeber this might not always be the case;
+            # maybe some readonly fields should be shown in the UI even though it cant be edited
+            field = serializer.fields[field_name]
+            if field.read_only:
+                continue
+            
+            # Get the UI element or just use the class name if not found
+            # TODO: if field class not found in mapping try going down class inheritance till you find one
+            build_schema_func = self.serializer_field_mapping.get(field.__class__, self.inheritance_schema_build)
+            data["fields"][field_name] = build_schema_func(field)
+        return data
+    
+    
+    def inheritance_schema_build(self):
+        return {"type": "Inheritance"}
+    
+    def char_field_schema(self):
+        return {"type": "CharField"}
+
+    def integer_field_schema(self):
+        return {"type": "IntegerField"}
+    
+    def boolean_field_schema(self):
+        return {"type": "BooleanField"}
+    
+    def dynamic_model_choice_field_schema(self):
+        return {"type": "DynamicModelChoiceField"}
+    
+    def dynamic_model_multiple_choice_field_schema(self):
+        return {"type": "DynamicModelMultipleChoiceField"}
+

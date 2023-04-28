@@ -31,6 +31,7 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.utils import ModelAndFilterSetToUISchema, get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.config import get_settings_or_config
@@ -815,3 +816,17 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
 
         bound_field = form_field.get_bound_field(model_form_instance, field_name)
         return Response({"dom_element": bound_field.as_widget()})
+
+
+class UIModelFieldsSchema(NautobotAPIVersionMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        try:
+            _,  model = ensure_content_type_and_field_name_in_query_params(request.GET, require_field_name=False)
+        except ValidationError as err:
+            return Response(err.args[0], status=err.code)
+        
+        schema_builder = ModelAndFilterSetToUISchema(model=model)
+        return Response(schema_builder.schema_representation)

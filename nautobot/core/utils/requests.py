@@ -177,13 +177,14 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     return query_dict
 
 
-def ensure_content_type_and_field_name_in_query_params(query_params):
+def ensure_content_type_and_field_name_in_query_params(query_params, require_field_name=True):
     """Ensure `query_params` includes `content_type` and `field_name` and `content_type` is a valid ContentType.
 
     Return the 'ContentTypes' model and 'field_name' if validation was successful.
     """
-    if "content_type" not in query_params or "field_name" not in query_params:
-        raise ValidationError("content_type and field_name are required parameters", code=400)
+    if "content_type" not in query_params or (require_field_name and "field_name" not in query_params):
+        error_message = "content_type and field_name are" if require_field_name else "content_type is a"
+        raise ValidationError(f"{error_message} required parameter(s)", code=400)
     contenttype = query_params.get("content_type")
     app_label, model_name = contenttype.split(".")
     try:
@@ -193,7 +194,7 @@ def ensure_content_type_and_field_name_in_query_params(query_params):
             raise ValidationError(f"model for content_type: <{model_contenttype}> not found", code=500)
     except ContentType.DoesNotExist:
         raise ValidationError("content_type not found", code=404)
-    field_name = query_params.get("field_name")
+    field_name = query_params.get("field_name") if require_field_name else None
 
     return field_name, model
 

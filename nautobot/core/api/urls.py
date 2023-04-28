@@ -15,6 +15,7 @@ from nautobot.core.api.views import (
     StatusView,
     NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
+    UIModelFieldsSchema,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
@@ -34,6 +35,8 @@ ui_api_patterns = [
     # Lookup Expr
     path("core/", include((core_api_patterns, "core-api"))),
     path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
+    path("model-fields-schema/", UIModelFieldsSchema.as_view(), name="model-fields-schema"),
+    
 ]
 
 urlpatterns = [
